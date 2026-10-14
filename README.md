@@ -1,19 +1,41 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.61**.
+Finalized Playgama package for YouTube Playables: **v3.62**.
 
-[Download the Playgama ZIP](haircut-studio-v3.61-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.62-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.61-playgama.zip`
-- Size: 370,202 bytes
-- SHA-256: `0e75505dabc50efa494cff7c18457be3948e5151e75b0877199582083b5e4e5c`
+- File: `haircut-studio-v3.62-playgama.zip`
+- Size: 378,919 bytes
+- SHA-256: `a01e2db966cc111843a2550a11e33d1015acc2ca37fff014e75ed88b4989b5f2`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.62: Engagement and ad revenue upgrades, all wordless.
+  - Reveal hub: after the reveal spin the screen shows the barber level (star + number, pips filling per
+    haircut), a portrait of the next customer, and at most one optional video offer.
+  - Video offers (rewarded placements `try-on`, `keep-clipper`, `vip-customer`, plus `unlock-item` in the
+    Rewards panel):
+    - Try-on: the customer wears a gown the player does not own through the reveal; one video keeps it.
+    - Trial clipper: every 4th customer from the 6th on, a locked clipper skin is lent for that haircut;
+      one video keeps it.
+    - VIP swap: a VIP portrait (crown) next to the next-customer card; one video makes the VIP the next
+      customer. VIPs have a full, even head of hair and, from level 2, a big beard.
+    - Rules: no offers on the first 2 haircuts, one offer per reveal (alternating try-on / VIP), no VIP
+      offer on a level-up reveal, and after 3 declines in a row offers pause for 3 customers. Each offer
+      type pulses the first time it appears.
+  - Barber level: levels at 2, 4, 7 and 10 haircuts, then every 5. Customer features arrive with levels:
+    level 1 clean-shaven young / middle-aged men with full hair, 2 beards and moustaches, 3 older men and
+    grey hair, 4 hair loss, 5+ VIPs sometimes walk in. The customer after a level-up shows the new feature
+    (sparkle on the portrait). The four customer classes are never gated.
+  - Daily VIP: from the second day of play, the first customer each day is a VIP (the same one for every
+    player that day). Streak: a flame with the number of days in a row, next to the gift button.
+  - First customer: a full, even head of hair, clean-shaven, young or middle-aged.
+  - No interstitial within 60 s of a rewarded video.
+  - Brush-off: at the reveal the clippings on the gown are flicked off in a sweep.
 - v3.61: No more free gift every 5 customers. Locked clipper and gown items unlock only with a rewarded
   video. Items a player already received as gifts stay unlocked.
 - v3.60:
