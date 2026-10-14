@@ -3,9 +3,9 @@
 This folder holds the heavier build that is **not** used for YouTube Playables. Use it as the starting
 point for the Android app. The Playables package is in the repository root.
 
-- File: `haircut-studio-v3.67-full-detail.zip`
-- Size: 388,395 bytes
-- SHA-256: `3f69f5eb295e9d84fec185f764163a39bb299b2853f8bd5b78929bad144d97b3`
+- File: `haircut-studio-v3.68-full-detail.zip`
+- Size: 388,291 bytes
+- SHA-256: `ca9b7d3dfe01f3a527463eb513a1efd59ee96a04d8f42680eb4fb10e07c72b0e`
 
 ## What it has over the Playables build
 
@@ -18,6 +18,6 @@ point for the Android app. The Playables package is in the repository root.
   clippings.
 - Low detail matches the Playables build.
 
-The game content is otherwise the same as Playables v3.67 (customers, age-based walk-in styles, guard 0,
+The game content is otherwise the same as Playables v3.68 (customers, age-based walk-in styles, guard 0,
 beards, trimming, clippings, wardrobe with daily picks, levels, streak). It is still packaged for Playgama/YouTube (Playgama Bridge). For the Android app it will
 need wrapping (for example a WebView or Trusted Web Activity) and its own store, ads and save setup.
