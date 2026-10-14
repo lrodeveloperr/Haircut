@@ -1,17 +1,19 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package: **v3.56**.
+Finalized Playgama package: **v3.57**.
 
-[Download the Playgama ZIP](haircut-studio-v3.56-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.57-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.56-playgama.zip`
-- Size: 368,856 bytes
-- SHA-256: `1b71d7efde05ffaa5999b58ae7397f5ea7572b84332b20f8297cd3430db99ff1`
+- File: `haircut-studio-v3.57-playgama.zip`
+- Size: 368,747 bytes
+- SHA-256: `5d2b85b6f7398ff7e7e824f818b14ffeb292dd92342679fc722965bfdae824f7`
 
 ## Changes
 
+- v3.57: Removed the bare circles that v3.56 left at the mouth corners of full beards. The beard now
+  meets the lip corners naturally; hair beside the corners still grows down and outward, away from the mouth.
 - v3.56: Mouth corners kept clear: a small bare slit continues the mouth line at each corner, and beard
   hair rooted beside the corners grows down and outward (no spin or coils back toward the mouth), so
   full, long and coily beards no longer reach over the lip corners.
