@@ -1,17 +1,20 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package: **v3.52**.
+Finalized Playgama package: **v3.53**.
 
-[Download the Playgama ZIP](haircut-studio-v3.52-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.53-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.52-playgama.zip`
-- Size: 364,798 bytes
-- SHA-256: `76219baebb1f943e14143f4d3a771279c1cf5628e352ab1ac61f1958699429f8`
+- File: `haircut-studio-v3.53-playgama.zip`
+- Size: 364,996 bytes
+- SHA-256: `f9080105a1d59ea3921eb332f232e83d07bf9b09a75a0e7b50fa0ccffbf21418`
 
 ## Changes
 
+- v3.53: Full beards by the ears: beard hair in front of the ear now grows straight down and a little
+  forward along the jaw (as real beards do from the sideburns), lies close to the face and hangs with
+  length instead of fanning back toward the ear. The beard area reaches up to join the sideburns.
 - v3.52:
   - Four customer classes, equally likely: White, Black, East Asian, South Asian. The class sets the skin
     tone range and the hair types (every curl sub-type from 1a to 4c); age sets greying and baldness.
