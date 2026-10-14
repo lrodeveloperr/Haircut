@@ -1,19 +1,31 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.62**.
+Finalized Playgama package for YouTube Playables: **v3.63**.
 
-[Download the Playgama ZIP](haircut-studio-v3.62-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.63-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.62-playgama.zip`
-- Size: 378,919 bytes
-- SHA-256: `a01e2db966cc111843a2550a11e33d1015acc2ca37fff014e75ed88b4989b5f2`
+- File: `haircut-studio-v3.63-playgama.zip`
+- Size: 380,552 bytes
+- SHA-256: `ba98f5fdca47298dc1fc0838df7afc7cfac0393ebb5ba81d67fdb2c43a88bcad`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.63: Playtest fixes.
+  - Brighter lighting for every customer (exposure x1.2), and dark hair gets a lifted, warm sheen so cut
+    lines read clearly on the darkest skin. Light hair keeps its colour.
+  - Rewards panel: tap a swatch to preview it; one big button under the preview says what happens: grey
+    tick (in use), green tick (use this), blue play + lock (watch a video to unlock and use it).
+  - Only the starting look is owned at the start (2 clipper colours, chrome, solid; 2 gown colours,
+    solid). Everything else unlocks with a rewarded video; colours and patterns given away by earlier
+    builds are taken back on load.
+  - The next-customer picture is a real render of that customer with their exact walk-in hair and beard
+    (crown on VIPs). It sits in one dock with the next button, with a chevron between them.
+  - Reveal sound: a soft whoosh as the camera spins and a bell chime when it lands (brighter on a
+    level-up), following the game's sound setting.
 - v3.62: Engagement and ad revenue upgrades, all wordless.
   - Reveal hub: after the reveal spin the screen shows the barber level (star + number, pips filling per
     haircut), a portrait of the next customer, and at most one optional video offer.
