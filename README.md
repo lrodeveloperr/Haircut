@@ -1,17 +1,30 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package: **v3.53**.
+Finalized Playgama package: **v3.54**.
 
-[Download the Playgama ZIP](haircut-studio-v3.53-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.54-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.53-playgama.zip`
-- Size: 364,996 bytes
-- SHA-256: `f9080105a1d59ea3921eb332f232e83d07bf9b09a75a0e7b50fa0ccffbf21418`
+- File: `haircut-studio-v3.54-playgama.zip`
+- Size: 368,131 bytes
+- SHA-256: `bd469e3ec2261ddc0840a203399fb50129326dbb4f7f8ee7a85738b0c14f5f8b`
 
 ## Changes
 
+- v3.54: Research-based variety by class and age:
+  - Hair colour: White customers follow UK Biobank proportions (light brown, dark brown, blond, red,
+    black), with blond a little more common in young men; other classes are black / soft black with a
+    little very dark brown.
+  - Greying: onset mid-30s White, late 30s East Asian, mid-40s Black; frequent premature greying in young
+    South Asian men; slow build-up (6-23% of people are half grey at 50). Four patterns (temples, front,
+    crown, even), silver / pewter / white grey, and beards that usually grey ahead of the scalp (chin,
+    sides or even).
+  - Hair loss: Norwood, Norwood A (straight-back hairline), crown-only and diffuse thinning, with class
+    prevalence and pattern mix (more crown / diffuse loss in East Asian and Black men), plus alopecia
+    areata patches on the scalp or in the beard. Crown loss now thins gradually from a bald centre.
+  - Beards by age and class: clean-shaven most common in older men; new pencil, walrus and horseshoe
+    moustaches and the Shenandoah (beard without moustache).
 - v3.53: Full beards by the ears: beard hair in front of the ear now grows straight down and a little
   forward along the jaw (as real beards do from the sideburns), lies close to the face and hangs with
   length instead of fanning back toward the ear. The beard area reaches up to join the sideburns.
