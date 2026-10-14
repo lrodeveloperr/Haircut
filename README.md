@@ -1,19 +1,33 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.59**.
+Finalized Playgama package for YouTube Playables: **v3.60**.
 
-[Download the Playgama ZIP](haircut-studio-v3.59-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.60-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.59-playgama.zip`
-- Size: 370,333 bytes
-- SHA-256: `84333d7eb4c952c04109d2d73324a1247883706f018f00db08d500e0d18075d3`
+- File: `haircut-studio-v3.60-playgama.zip`
+- Size: 370,658 bytes
+- SHA-256: `6780563334c120483df42ad01fc1c873ba4b0c8f6d258008ef454198c0d8d2ee`
 
-The full-detail build for the future Android app is kept separately in [`android/`](android/README.md).
+The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.60:
+  - Guard 0 (0.5 mm, no comb) is back on the clipper for scalp and beard. It had been removed because of
+    the scalp scar fixed in v3.48.
+  - Walk-in hair depends on age. Every customer arrives with a 16 mm top. Young men more often have the
+    sides and back already shorter (only 15% come in even); older men are mostly even or have a soft, low
+    taper (53% even). Every starting length is above guard 0, so any style a customer walks in with can
+    be cut.
+  - Rewards section (the gift button next to sound) replaces the coin wardrobe. It has Clipper and Gown
+    tabs, and the item in use has a check mark. A locked item shows a video badge: tap it, watch one
+    rewarded video, and it unlocks and is put on straight away. A free gift still arrives every 5
+    customers. Coins are gone.
+  - Rewarded videos are now enabled on YouTube (Playgama Bridge lists YouTube as supported), with one
+    placement, `unlock-item`. The existing interstitial on "next customer" (after 2 completed haircuts
+    and at least 60 s of play) is unchanged.
 - v3.59: Playables closeout. The Playables build now uses one light detail level on every device so the
   game runs the same on cheap phones and fast desktops: 1x resolution, no anti-aliasing, 14k scalp strands
   (down to 9k on slow frames), 45% beard density, simpler strand geometry and skin shading, and at most
