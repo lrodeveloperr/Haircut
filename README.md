@@ -1,19 +1,22 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.68**.
+Finalized Playgama package for YouTube Playables: **v3.69**.
 
-[Download the Playgama ZIP](haircut-studio-v3.68-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.69-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.68-playgama.zip`
-- Size: 387,081 bytes
-- SHA-256: `b32d8a52b3e2928ac0f0cccc2ee3a7b3a2b67d7c70fa325bc3ae456e42833795`
+- File: `haircut-studio-v3.69-playgama.zip`
+- Size: 387,880 bytes
+- SHA-256: `dcef174e5f34d89d78413251f6e50b04adddaa0786e0ed4676371c2707babc5f`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.69: The wardrobe shows at most two rows of owned designs; with more, orange arrows and a page number
+  (e.g. 3/38) sit under the rows. The newest and the worn design come first, and only the open page is drawn,
+  so even hundreds of designs open instantly. The clipper tab uses the same clipper icon as the game.
 - v3.68: Every daily pick unlocks with one rewarded video (no more two-video premium picks). The wardrobe
   shows only the designs the player owns plus a single empty slot as a hint, so the panel stays small.
 - v3.67: Simpler wardrobe and completion screen.
