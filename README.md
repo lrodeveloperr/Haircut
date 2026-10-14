@@ -1,19 +1,39 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.64**.
+Finalized Playgama package for YouTube Playables: **v3.65**.
 
-[Download the Playgama ZIP](haircut-studio-v3.64-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.65-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.64-playgama.zip`
-- Size: 380,545 bytes
-- SHA-256: `929f8b5b5a9f9321975adc070d976a9e33bc13251f531badc74edccc0df948c0`
+- File: `haircut-studio-v3.65-playgama.zip`
+- Size: 383,385 bytes
+- SHA-256: `35540837dfb461a92f61fcc6bb1828830a5a5d08843ba9f01717d7b53cf72eea`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.65: Rewards gallery and a radically simple completion screen.
+  - Rewards is a gallery of 40 complete clipper designs and 40 complete gown designs (no mixing parts).
+    Tap a design you own and it goes on; tap a locked one and the rewarded video starts, then it unlocks
+    and goes on. 20 premium designs take two videos (a tick appears on the badge after the first). Only
+    the starting clipper and gown are free.
+  - Featured design of the day at the top of each tab (the same for every player that day), a counter of
+    designs owned, and sparkles on designs that are new.
+  - "One more": right after an unlock, a matching design from the other tab slides up with its video
+    button (placement `one-more`).
+  - The gallery starts with 12 designs of each kind and grows by 4 at every barber level; the new designs
+    fly into the rewards button.
+  - The rewards button keeps the gift icon and gets a red dot once a day, and whenever there are new
+    designs.
+  - Completion screen: only the finished customer, one video offer (a picture of the gown, clipper or
+    VIP plus the video button) and the next-customer dock. The top buttons are hidden; the level badge
+    shows only on a level-up. Offers alternate between gown try-ons and VIP customers, with the trial
+    clipper every few customers.
+  - First-time tutorial: turn the customer (hint centred above the head, sized from the head on every
+    screen), switch the clipper on, change the guard. No cutting line.
+  - Rewards progress uses a new save; unlocks from earlier test builds are reset.
 - v3.64: Shorter first-time tutorial: only the clipper on/off button, then the guard ladder (0-4). The
   rotate hint and the cutting line are gone. The game stays free-style.
 - v3.63: Playtest fixes.
