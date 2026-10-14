@@ -1,19 +1,33 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.66**.
+Finalized Playgama package for YouTube Playables: **v3.67**.
 
-[Download the Playgama ZIP](haircut-studio-v3.66-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.67-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.66-playgama.zip`
-- Size: 390,886 bytes
-- SHA-256: `715ecefc0cfde97d6e4c31a7b40b212c732cac6f871b9e6e470bbc9323f4d342`
+- File: `haircut-studio-v3.67-playgama.zip`
+- Size: 387,188 bytes
+- SHA-256: `4a96b7b606749ec4690693f312efb63d934b96c6550f1b1e6df7492a4d7a2d40`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.67: Simpler wardrobe and completion screen.
+  - The rewards section is now the Wardrobe (hanger icon). It shows only the clippers and robes the
+    player owns; tap one to wear it.
+  - Each day exactly one new clipper and one new robe are on offer (the same for every player), each with
+    a live countdown to midnight. One rewarded video unlocks the pick and puts it on (premium picks take
+    two; a tick shows after the first). At midnight the picks change, and a half-watched premium is lost.
+    The red dot on the hanger comes up once a day while a pick is waiting.
+  - The gallery of locked designs, shelves, featured design, "one more" and the level-up fly-in are gone.
+    The 1,600 designs remain the source of the daily picks.
+  - Completion screen: only the finished customer in the robe they already wear, and the next-customer
+    dock. No try-on robe, no offer button, no VIP or trial-clipper offers. The level badge still shows
+    on a level-up.
+  - The finish button (top right) is the same size as the top-left buttons (48 px).
+  - Rewarded placements: `unlock-item` only.
 - v3.66: 1,000 clipper designs and 600 gown designs.
   - Generated once with colour-harmony rules and frozen in the code (about 8 KB): every pair of colours
     goes together, colours that look the same side by side were merged (32 distinct colours), and
