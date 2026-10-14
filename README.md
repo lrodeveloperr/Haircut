@@ -1,19 +1,27 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.73**.
+Finalized Playgama package for YouTube Playables: **v3.74**.
 
-[Download the Playgama ZIP](haircut-studio-v3.73-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.74-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.73-playgama.zip`
-- Size: 392,372 bytes
-- SHA-256: `e90765920a73fb6f38d1adc35b16f54d31d91b1e0b43391ff343fd7ebdb6584d`
+- File: `haircut-studio-v3.74-playgama.zip`
+- Size: 393,946 bytes
+- SHA-256: `2492ac468aa7f7cd3d85a0119402994be4aaf315ce18f4d0e0fc49c0a253ad01`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.74: One UI scale on every screen. All controls (the game's buttons, guard ladder, wardrobe, completion
+  screen, tutorial hints) are laid out at phone size and drawn at the screen's scale: 1 on phones, larger on
+  tablets and desktops (up to 2.4), smaller in tiny embeds (down to 0.6), so spacing and proportions match
+  everywhere. The wardrobe's pick card sizes itself to its column, the sheet shrinks to fit instead of
+  scrolling, short landscape screens use 4 columns and tiny square embeds one row. On the completion screen
+  the replay button mirrors the next row in portrait and joins it on the outer side in landscape (never over
+  the customer). The rotate hint stays below the top buttons when there is no room above the head.
+  Audited on 27 screens (phones, foldables, tablets, laptops, desktops, ultra-wide, embeds) in 4 states.
 - v3.73: End-to-end logic review (persistence, ads, game flow, UI) and fixes.
   - Saves: progress, level and unlocked designs now survive a reload on the real Playgama Bridge (v2 parses
     stored JSON itself; the game parsed it again and fell back to defaults). The latest strokes are saved when
