@@ -1,19 +1,40 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.72**.
+Finalized Playgama package for YouTube Playables: **v3.73**.
 
-[Download the Playgama ZIP](haircut-studio-v3.72-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.73-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.72-playgama.zip`
-- Size: 389,473 bytes
-- SHA-256: `e600ee54e15bf8c3516d0b60078264443f7b8baf941eab0b883a340db19eb5f8`
+- File: `haircut-studio-v3.73-playgama.zip`
+- Size: 392,372 bytes
+- SHA-256: `e90765920a73fb6f38d1adc35b16f54d31d91b1e0b43391ff343fd7ebdb6584d`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.73: End-to-end logic review (persistence, ads, game flow, UI) and fixes.
+  - Saves: progress, level and unlocked designs now survive a reload on the real Playgama Bridge (v2 parses
+    stored JSON itself; the game parsed it again and fell back to defaults). The latest strokes are saved when
+    the page closes. Corrupt or hostile saves can no longer stop the game from starting; a corrupt wardrobe
+    save unlocks nothing. Only one tab plays at a time (the one in front); the other pauses and does not save.
+    A haircut that reached the session save but not the progress save is counted on the next load.
+  - Ads: rewarded videos now pay out on Bridge v2 (the client stopped waiting 1.5 s after the call, before
+    the reward arrived). The game stays paused and muted until the ad closes. Slow-loading interstitials count
+    as shown. Without rewarded videos on a platform, the wardrobe offers no video picks and shows no dot.
+    A paid replay waits for the game to resume. A video that does not come shakes its button.
+  - Wardrobe: at midnight an open wardrobe switches to the new day's picks (yesterday's can no longer be
+    claimed). The countdown ring uses the real length of the day (clock-change days). The tab dots stay while
+    the panel is open. Escape closes it, rotating re-flows the two rows, and small screens fit.
+  - Flow: the next-customer picture uses that customer's own hair colour; a replay keeps the next customer
+    (the daily VIP too); finishing without a cut is not counted; a new level's showcase customer comes before
+    the daily VIP, which is never given twice for one day; the level badge survives a reload; fewer repeated
+    walk-in haircuts; huge level numbers are computed directly.
+  - UI: a tap on the dimmed backdrop no longer reaches the game under it; a cancelled press on next no longer
+    hides the completion screen; a short guard after a screen closes stops the second tap of a double tap
+    turning the clipper on; the next-customer picture is tappable as part of next; the replay button moves
+    above the next row on narrow screens and keeps clear of notches; the HUD stays hidden for the whole reveal.
 - v3.72: Replays have their own rewarded ad placement, `replay-customer`, so they can be told apart from
   wardrobe unlocks (`unlock-item`) in ad reports. Both are listed in `playgama-bridge-config.json`;
   `unlock-item` stays the fallback.
