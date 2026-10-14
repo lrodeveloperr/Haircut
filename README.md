@@ -1,19 +1,22 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.71**.
+Finalized Playgama package for YouTube Playables: **v3.72**.
 
-[Download the Playgama ZIP](haircut-studio-v3.71-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.72-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.71-playgama.zip`
-- Size: 389,461 bytes
-- SHA-256: `274e975c0364a20be3284e21d1dba60d991c41b1b1a34f20e03297974c360fe4`
+- File: `haircut-studio-v3.72-playgama.zip`
+- Size: 389,473 bytes
+- SHA-256: `e600ee54e15bf8c3516d0b60078264443f7b8baf941eab0b883a340db19eb5f8`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.72: Replays have their own rewarded ad placement, `replay-customer`, so they can be told apart from
+  wardrobe unlocks (`unlock-item`) in ad reports. Both are listed in `playgama-bridge-config.json`;
+  `unlock-item` stays the fallback.
 - v3.71: The completion screen has a replay button: a blue round button with the video icon as a subscript,
   in the corner opposite the next customer. One rewarded video brings the same customer back with the hair and
   beard they walked in with, so the haircut can be done again; the next customer stays the same. If the video
