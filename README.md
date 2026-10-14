@@ -1,19 +1,34 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.65**.
+Finalized Playgama package for YouTube Playables: **v3.66**.
 
-[Download the Playgama ZIP](haircut-studio-v3.65-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.66-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.65-playgama.zip`
-- Size: 383,385 bytes
-- SHA-256: `35540837dfb461a92f61fcc6bb1828830a5a5d08843ba9f01717d7b53cf72eea`
+- File: `haircut-studio-v3.66-playgama.zip`
+- Size: 390,886 bytes
+- SHA-256: `715ecefc0cfde97d6e4c31a7b40b212c732cac6f871b9e6e470bbc9323f4d342`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.66: 1,000 clipper designs and 600 gown designs.
+  - Generated once with colour-harmony rules and frozen in the code (about 8 KB): every pair of colours
+    goes together, colours that look the same side by side were merged (32 distinct colours), and
+    two-colour patterns have enough contrast to show (motif patterns need more). No design changes
+    between versions.
+  - 373 premium clippers and 135 premium gowns take two videos (wild patterns, precious metals, neon on
+    black, flowers / palms / scissors / argyle / houndstooth / barber-pole gowns).
+  - Gallery shelves: clippers classic, bright, stripes, checks, waves, metal, neon, wild; gowns plain,
+    stripes, checks, waves, wild. Each shelf shows its pattern chip and how many of it the player owns;
+    new designs sit on their own shelf at the top. The gallery starts with 30 clippers and 24 gowns and
+    adds 20 and 12 at every barber level; the featured design of the day can be any design.
+  - Tile pictures are drawn as they scroll into view (a few hundred kept in memory); owned designs are
+    saved as one bit each (about 200 bytes for all 1,600).
+  - Flower, palm and scissors patterns are bigger and bolder, on gallery tiles and on the gown.
+  - Rewards progress uses a new save; unlocks from earlier test builds are reset.
 - v3.65: Rewards gallery and a radically simple completion screen.
   - Rewards is a gallery of 40 complete clipper designs and 40 complete gown designs (no mixing parts).
     Tap a design you own and it goes on; tap a locked one and the rewarded video starts, then it unlocks
