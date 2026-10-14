@@ -1,17 +1,21 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package: **v3.54**.
+Finalized Playgama package: **v3.55**.
 
-[Download the Playgama ZIP](haircut-studio-v3.54-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.55-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.54-playgama.zip`
-- Size: 368,131 bytes
-- SHA-256: `bd469e3ec2261ddc0840a203399fb50129326dbb4f7f8ee7a85738b0c14f5f8b`
+- File: `haircut-studio-v3.55-playgama.zip`
+- Size: 368,661 bytes
+- SHA-256: `4150d06bb968556a3c79b423c94c6d7b464a4ab59ee0c2a803b23e20462735e8`
 
 ## Changes
 
+- v3.55: Beards and moustaches keep out of the mouth. Moustache hair is combed down along the upper lip
+  and stops at the style's trimmed line (pencil above the lip, chevron and most beards partway over the
+  upper lip, walrus down to the mouth line but never past it); hair under the lower lip grows downward,
+  and curls near the mouth are kept tight.
 - v3.54: Research-based variety by class and age:
   - Hair colour: White customers follow UK Biobank proportions (light brown, dark brown, blond, red,
     black), with blond a little more common in young men; other classes are black / soft black with a
