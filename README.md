@@ -1,17 +1,26 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package: **v3.58**.
+Finalized Playgama package for YouTube Playables: **v3.59**.
 
-[Download the Playgama ZIP](haircut-studio-v3.58-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.59-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.58-playgama.zip`
-- Size: 371,486 bytes
-- SHA-256: `25631bcaad509103daa269d49523f471592bc6220d8c6e3c11d999406d337714`
+- File: `haircut-studio-v3.59-playgama.zip`
+- Size: 370,333 bytes
+- SHA-256: `84333d7eb4c952c04109d2d73324a1247883706f018f00db08d500e0d18075d3`
+
+The full-detail build for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.59: Playables closeout. The Playables build now uses one light detail level on every device so the
+  game runs the same on cheap phones and fast desktops: 1x resolution, no anti-aliasing, 14k scalp strands
+  (down to 9k on slow frames), 45% beard density, simpler strand geometry and skin shading, and at most
+  1,200 falling clippings. The heavy extras (2x resolution, anti-aliasing, 30k strands, full-density
+  beards, detailed skin, 4,000 clippings) are removed from this build, along with the automatic switching
+  and the detail button in the wardrobe. Customers, beards, trimming, clippings and the wardrobe are unchanged.
+  The v3.58 full-detail build moved to `android/`.
 - v3.58: Low-detail setting for weaker phones. The default is Auto: the game checks the device when it
   starts (memory of 3 GB or less, 4 CPU cores or fewer, older Mali/Adreno/PowerVR GPUs or software
   rendering) and picks High or Low. If frames are still slow after the game's own quality scaling, it
