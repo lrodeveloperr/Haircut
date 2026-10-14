@@ -1,19 +1,21 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.60**.
+Finalized Playgama package for YouTube Playables: **v3.61**.
 
-[Download the Playgama ZIP](haircut-studio-v3.60-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.61-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.60-playgama.zip`
-- Size: 370,658 bytes
-- SHA-256: `6780563334c120483df42ad01fc1c873ba4b0c8f6d258008ef454198c0d8d2ee`
+- File: `haircut-studio-v3.61-playgama.zip`
+- Size: 370,202 bytes
+- SHA-256: `0e75505dabc50efa494cff7c18457be3948e5151e75b0877199582083b5e4e5c`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.61: No more free gift every 5 customers. Locked clipper and gown items unlock only with a rewarded
+  video. Items a player already received as gifts stay unlocked.
 - v3.60:
   - Guard 0 (0.5 mm, no comb) is back on the clipper for scalp and beard. It had been removed because of
     the scalp scar fixed in v3.48.
