@@ -1,17 +1,28 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package: **v3.51**.
+Finalized Playgama package: **v3.52**.
 
-[Download the Playgama ZIP](haircut-studio-v3.51-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.52-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.51-playgama.zip`
-- Size: 347,774 bytes
-- SHA-256: `7f761f60a386e38b42f8a434d7f1605ab88979893e2315a42a8cbaa2dc3b60a8`
+- File: `haircut-studio-v3.52-playgama.zip`
+- Size: 364,798 bytes
+- SHA-256: `76219baebb1f943e14143f4d3a771279c1cf5628e352ab1ac61f1958699429f8`
 
 ## Changes
 
+- v3.52:
+  - Four customer classes, equally likely: White, Black, East Asian, South Asian. The class sets the skin
+    tone range and the hair types (every curl sub-type from 1a to 4c); age sets greying and baldness.
+  - Wardrobe (hanger button next to the sound button): customise the clipper (body colour, accent colour,
+    metal finish, pattern) and the barber gown (main colour, pattern colour, pattern, collar). 46 colours,
+    11 metal finishes, 18 clipper patterns and 18 gown patterns, unlocked separately so they combine freely.
+  - Unlocks: coins (25 per customer, +10 when the beard was trimmed), a free gift every 5 customers, and
+    rewarded videos (unlock an item, or +100 coins). Rewarded placements `unlock-item` and `bonus-coins`
+    are enabled in `playgama-bridge-config.json`. Progress is saved under `skin-fade-studio-wardrobe-v1`.
+  - Falling hair: cut pieces the length of what was removed, in the customer's colour, curl and grey,
+    flutter down, tumble, land and settle on the gown until the next customer. Beard trims fall too.
 - v3.51: Every customer is now a different person (new `runtime/customers.js`, loaded before the game):
   - Age (young 18-30, middle 31-55, old 56-84) drives greying, wrinkles, age spots, jowls, brow
     greying and which baldness patterns and beard styles are likely.
