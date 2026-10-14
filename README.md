@@ -1,17 +1,25 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package: **v3.57**.
+Finalized Playgama package: **v3.58**.
 
-[Download the Playgama ZIP](haircut-studio-v3.57-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.58-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.57-playgama.zip`
-- Size: 368,747 bytes
-- SHA-256: `5d2b85b6f7398ff7e7e824f818b14ffeb292dd92342679fc722965bfdae824f7`
+- File: `haircut-studio-v3.58-playgama.zip`
+- Size: 371,486 bytes
+- SHA-256: `25631bcaad509103daa269d49523f471592bc6220d8c6e3c11d999406d337714`
 
 ## Changes
 
+- v3.58: Low-detail setting for weaker phones. The default is Auto: the game checks the device when it
+  starts (memory of 3 GB or less, 4 CPU cores or fewer, older Mali/Adreno/PowerVR GPUs or software
+  rendering) and picks High or Low. If frames are still slow after the game's own quality scaling, it
+  switches to Low during play. The detail button in the wardrobe header cycles Auto, Low and High, and
+  the choice is saved. Low draws fewer and simpler hair strands (14k scalp strands, fewer segments,
+  45% beard density), fewer falling clippings, renders at 1x resolution without anti-aliasing and uses
+  cheaper skin shading. In a software-renderer test it ran about 3x faster per frame. Add `?detail=low`
+  or `?detail=high` to the page URL to force a level for testing.
 - v3.57: Removed the bare circles that v3.56 left at the mouth corners of full beards. The beard now
   meets the lip corners naturally; hair beside the corners still grows down and outward, away from the mouth.
 - v3.56: Mouth corners kept clear: a small bare slit continues the mouth line at each corner, and beard
