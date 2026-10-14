@@ -1,19 +1,21 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.63**.
+Finalized Playgama package for YouTube Playables: **v3.64**.
 
-[Download the Playgama ZIP](haircut-studio-v3.63-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.64-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.63-playgama.zip`
-- Size: 380,552 bytes
-- SHA-256: `ba98f5fdca47298dc1fc0838df7afc7cfac0393ebb5ba81d67fdb2c43a88bcad`
+- File: `haircut-studio-v3.64-playgama.zip`
+- Size: 380,545 bytes
+- SHA-256: `929f8b5b5a9f9321975adc070d976a9e33bc13251f531badc74edccc0df948c0`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.64: Shorter first-time tutorial: only the clipper on/off button, then the guard ladder (0-4). The
+  rotate hint and the cutting line are gone. The game stays free-style.
 - v3.63: Playtest fixes.
   - Brighter lighting for every customer (exposure x1.2), and dark hair gets a lifted, warm sheen so cut
     lines read clearly on the darkest skin. Light hair keeps its colour.
