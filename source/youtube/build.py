@@ -38,6 +38,18 @@ s = replace(s, s[start:end], 'function he(ue){if(Pe){let quality=HSC.detail.samp
 s = replace(s, 'resetTiming(){Pe=0}', 'resetTiming(){Pe=0;HSC.detail.resetHistory()}')
 s = replace(s, 'let ye=Math.max(1,e.clientWidth),Ie=Math.max(1,e.clientHeight),B=Math.floor(ye*$),E=Math.floor(Ie*$);',
     'let ye=Math.max(1,e.clientWidth),Ie=Math.max(1,e.clientHeight);J=HSC.detail.pixelRatio(ye,Ie);$=Math.min(J,Math.max(HSC.detail.pixelFloor(ye,Ie),$));let B=Math.floor(ye*$),E=Math.floor(Ie*$);')
+# A static customer needs no recurring GPU redraw. Keep clocks/input responsive in RAF, and
+# redraw on scene changes or active cutting/rotation/reveal/clippings. Full-detail idle frames
+# otherwise waste GPU time while bypassing the active-animation quality sampler.
+s = replace(s, 'function J(){var j,ae;s=HSC.ensure(s)', 'let needsRender=true;function J(){needsRender=true;var j,ae;s=HSC.ensure(s)')
+s = replace(s, 'function Ae(){if(f)try{a.releasePointerCapture(f.id)}', 'function Ae(){needsRender=true;if(f)try{a.releasePointerCapture(f.id)}')
+s = replace(s, 'let ce=()=>{if(c)return;Ae(),C||n.render(!1)}', 'let ce=()=>{if(c)return;Ae();if(!C){n.render(!1);needsRender=false}}')
+s = replace(s, 'if(s.status==="reveal"&&!x){D+=ae;', 'if(s.status==="reveal"&&!x){needsRender=true;D+=ae;')
+s = replace(s, '(f||s.status==="reveal"&&!x||j%66<20||HSC.clippingsActive&&HSC.clippingsActive())&&n.render(!!(f||s.status==="reveal"&&!x||HSC.clippingsActive&&HSC.clippingsActive()))',
+    '(()=>{let active=!!(f||s.status==="reveal"&&!x||HSC.clippingsActive&&HSC.clippingsActive());if(active||needsRender){n.render(active);needsRender=false}})()')
+s = replace(s, 'renderFirstPlayableFrame(){n.render()}', 'renderFirstPlayableFrame(){n.render(!1);needsRender=false}')
+s = replace(s, 'globalThis.addEventListener("resize",ce);let L=', 'globalThis.addEventListener("resize",ce);a.addEventListener("webglcontextrestored",ce);let L=')
+s = replace(s, 'globalThis.removeEventListener("resize",ce),', 'globalThis.removeEventListener("resize",ce),a.removeEventListener("webglcontextrestored",ce),')
 game_path.write_text(s)
 
 customer_path = out / 'runtime/customers.js'
