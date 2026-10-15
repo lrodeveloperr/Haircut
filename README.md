@@ -1,19 +1,22 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.77**.
+Finalized Playgama package for YouTube Playables: **v3.78**.
 
-[Download the Playgama ZIP](haircut-studio-v3.77-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.78-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.77-playgama.zip`
-- Size: 393,949 bytes
-- SHA-256: `487798c67d8199cefd4363c273d8182e557a2978de0edf620b4c80d3e7dd0015`
+- File: `haircut-studio-v3.78-playgama.zip`
+- Size: 393,950 bytes
+- SHA-256: `2208738f6befa4a33e77c7f9e6f9332c61dad58a5f8336e01480a7d883785949`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.78: The replay icon is centred in the small top-left replay button (it sat against the button's left edge:
+  the grid used for centring shrank to the icon and stayed at the start). Every icon button and badge now centres
+  its icon with flex, and an in-game check confirms every icon is centred on all screen sizes.
 - v3.77: A new replay icon, centred in its button: a circular arrow with a filled arrowhead at the top (the old
   one's arrowhead pulled its weight to the top-left).
 - v3.76: The level badge (star and dots) is gone from the completion screen; levels still count and unlock new
