@@ -47,14 +47,16 @@
   }
   HSC.lifecycle = scheduler();
 
-  HSC.createYouTubeClient = async function () {
+  HSC.createYouTubeClient = async function ({preload = false} = {}) {
     const sdk = globalThis.ytgame;
     if (!sdk || !sdk.game || !sdk.system) throw new Error('YouTube Playables SDK could not load');
     const hosted = sdk.IN_PLAYABLES_ENV === true;
     let disposed = false, loaded = false, envelope = null, loadPromise;
     let queue = Promise.resolve(), game = null, hostAudio = sdk.system.isAudioEnabled() === true;
     let userAudio = true, adPending = false, ready = false, lastAttempt = -Infinity, interstitialAccepted = false;
+    let acknowledgedCuts = 0, reportedCuts = 0, scorePending = false;
     const reasons = new Set(), listeners = new Set(), cleanup = [];
+    if (preload) reasons.add('startup');
     const state = () => ({paused: reasons.size > 0, executionPaused: reasons.has('host') || reasons.has('advertisement-request'), audioEnabled: hostAudio && userAudio && reasons.size === 0});
     const report = () => { try { sdk.health?.logWarning(); } catch (_) {} };
     function publish() {
@@ -63,11 +65,12 @@
       HSC.executionPaused = next.executionPaused;
       HSC.lifecycle.setPaused(next.executionPaused);
       document.documentElement.classList.toggle('yt-paused', next.executionPaused);
-      if (document.body) document.body.inert = next.executionPaused;
+      if (document.body) document.body.inert = next.executionPaused || reasons.has('startup');
       game?.setPaused(next.paused);
       game?.setAudioEnabled(next.audioEnabled);
       HSC.setRevealAudio?.(next.audioEnabled);
       for (const callback of [...listeners]) callback(next);
+      reportScore();
     }
     function pause(reason, value) { if (value) reasons.add(reason); else reasons.delete(reason); publish(); }
     function whenResumed() {
@@ -80,6 +83,27 @@
         listeners.add(callback);
       });
     }
+    function afterPaint() {
+      return new Promise((resolve, reject) => {
+        let handle = 0;
+        const update = next => {
+          if (disposed) {
+            if (handle) cancelAnimationFrame(handle);
+            listeners.delete(update);
+            reject(new Error('Game disposed'));
+          } else if (next.executionPaused) {
+            if (handle) cancelAnimationFrame(handle);
+            handle = 0;
+          } else if (!handle) {
+            handle = requestAnimationFrame(() => { handle = 0; listeners.delete(update); resolve(); });
+          }
+        };
+        listeners.add(update);
+        update(state());
+      });
+    }
+    // Available synchronously to the early bootstrap, before the SDK requests resolve.
+    if (preload) HSC.whenYouTubeResumed = whenResumed;
     // Register before awaiting any asynchronous initialization so early host events cannot be lost.
     cleanup.push(sdk.system.onPause(() => {
       pause('host', true);
@@ -92,7 +116,10 @@
     async function load() {
       if (loadPromise) return loadPromise;
       loadPromise = (async () => {
+        await whenResumed();
+        if (HSC.startupTiming) HSC.startupTiming.saveRequest = performance.now();
         const raw = hosted ? await sdk.game.loadData() : globalThis.localStorage.getItem(previewKey);
+        await whenResumed();
         let parsed = raw;
         if (typeof raw === 'string') {
           // The SDK owns the transport, not our save schema. A new account/test host may
@@ -116,8 +143,31 @@
         }
         envelope = parsed;
         loaded = true;
+        acknowledgedCuts = savedCuts(envelope);
+        if (HSC.startupTiming) HSC.startupTiming.savesLoaded = performance.now();
       })();
       return loadPromise;
+    }
+    function savedCuts(value) {
+      const cuts = value.slots['skin-fade-studio-meta-v1']?.cuts;
+      return Number.isSafeInteger(cuts) && cuts > 0 ? cuts : 0;
+    }
+    function reportScore() {
+      if (!hosted || !ready || disposed || state().executionPaused || scorePending ||
+          !sdk.engagement?.sendScore || acknowledgedCuts <= reportedCuts) return;
+      const value = acknowledgedCuts;
+      scorePending = true;
+      // Reporting is independent of the save queue and never delays readiness, input or ads.
+      Promise.resolve().then(async () => {
+        if (disposed || state().executionPaused) return;
+        await sdk.engagement.sendScore({value});
+        reportedCuts = Math.max(reportedCuts, value);
+      }).catch(report).finally(() => {
+        scorePending = false;
+        // A newer acknowledged completion may have arrived while this report was in flight.
+        // On failure, retry the same score at the next save/resume, not in a tight loop.
+        if (acknowledgedCuts > value) reportScore();
+      });
     }
     function requireLoaded() {
       if (disposed) throw new Error('Game disposed');
@@ -129,9 +179,12 @@
       const pending = queue.catch(() => {}).then(async () => {
         requireLoaded();
         const data = JSON.stringify(envelope);
+        const cuts = savedCuts(envelope);
         if (new TextEncoder().encode(data).byteLength >= 3 * 1024 * 1024) throw new Error('Cloud save exceeds size limit');
         if (hosted) await sdk.game.saveData(data);
         else globalThis.localStorage.setItem(previewKey, data);
+        acknowledgedCuts = cuts;
+        reportScore();
       });
       queue = pending;
       return pending;
@@ -179,19 +232,28 @@
       if (document.body) document.body.inert = false;
       HSC.setRevealAudio?.(false);
     }
+    // The first cloud read and locale lookup are independent. Attach an immediate rejection
+    // handler to the eager read; hC still consumes the original rejection and protects saves.
+    if (preload) load().catch(() => {});
     let language = 'en';
-    try { language = await sdk.system.getLanguage(); } catch (_) { report(); }
+    try {
+      await whenResumed();
+      if (HSC.startupTiming) HSC.startupTiming.localeRequest = performance.now();
+      language = await sdk.system.getLanguage();
+      if (HSC.startupTiming) HSC.startupTiming.localeLoaded = performance.now();
+    } catch (_) { report(); }
     return {
       platformId: 'youtube', language: language || 'en', isLocalPreview: !hosted,
       rewardedSupported: hosted && typeof sdk.ads?.requestRewardedAd === 'function',
       async loadProgress(key, fallback) { await load(); const value = envelope.slots[key]; return value == null ? fallback : clone(value); },
       async saveProgress(key, value) { requireLoaded(); envelope.slots[key] = clone(value); return persist(); },
       async deleteProgress(key) { requireLoaded(); delete envelope.slots[key]; return persist(); },
-      flushProgress: flush, whenResumed, setPauseReason: pause,
+      flushProgress: flush, whenResumed, afterPaint, setPauseReason: pause,
+      finishStartup() { pause('startup', false); },
       setUserAudioEnabled(value) { userAudio = !!value; publish(); },
       bindGame(value) { game = value; publish(); },
       onStateChange(callback) { listeners.add(callback); callback(state()); return () => listeners.delete(callback); },
-      async gameReady() { if (!ready) { ready = true; sdk.game.gameReady(); } },
+      async gameReady() { await whenResumed(); if (!ready) { ready = true; sdk.game.gameReady(); if (HSC.startupTiming) HSC.startupTiming.gameReady = performance.now(); reportScore(); } },
       showInterstitial: () => advertisement('interstitial'),
       get lastInterstitialRequestAccepted() { return interstitialAccepted; },
       showRewarded: placement => advertisement('rewarded', placement),

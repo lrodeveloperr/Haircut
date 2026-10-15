@@ -3,8 +3,9 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),asse
 const root=path.resolve(process.env.RELEASE_DIR||'source/build-youtube');
 const source=fs.readFileSync(path.join(root,'runtime/customers.js'),'utf8');
 const end=source.indexOf('})(globalThis.HSC || (globalThis.HSC = {}));')+'})(globalThis.HSC || (globalThis.HSC = {}));'.length;
+const start=source.indexOf('(function (HSC) {');
 const results=[];
-function fixture(dpr=3){const context=vm.createContext({devicePixelRatio:dpr,innerWidth:390,innerHeight:844,navigator:{deviceMemory:2,hardwareConcurrency:2},HSC:{}});vm.runInContext(source.slice(0,end),context);return context.HSC.detail;}
+function fixture(dpr=3){const context=vm.createContext({devicePixelRatio:dpr,innerWidth:390,innerHeight:844,navigator:{deviceMemory:2,hardwareConcurrency:2},HSC:{}});vm.runInContext(source.slice(start,end),context);return context.HSC.detail;}
 function test(name,fn){try{fn();results.push({name,status:'PASS'});}catch(e){results.push({name,status:'FAIL',error:e.stack});}console.log(JSON.stringify(results.at(-1)));}
 function sample(d,state,ms,count){for(let i=0;i<count;i++){const next=d.sample(ms,state.strands,state.pixel,2);if(next)Object.assign(state,next);}return state;}
 function warm(d,state){sample(d,state,25,60);}

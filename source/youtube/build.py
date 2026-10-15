@@ -19,7 +19,7 @@ game_path = out / 'runtime/game.js'
 s = game_path.read_text()
 start, end = s.index('function Iw(){'), s.index('var Rw=Object.defineProperty')
 assert start < end
-s = s[:start] + 'async function Gu(){return HSC.createYouTubeClient()}'+s[end:]
+s = s[:start] + 'async function Gu(){return HSC.youtubeClientPromise}'+s[end:]
 s = replace(s, 'let ce=()=>{Ae(),C||n.render(!1)}', 'let ce=()=>{if(c)return;Ae(),C||n.render(!1)}')
 s = replace(s, 'w=requestAnimationFrame(ve)}t.setUserAudioEnabled(m),J(),te(),w=requestAnimationFrame(ve);function ge(){c=u||h,S=performance.now(),n.resetTiming(),c&&(Ae(),$(!0).catch(()=>{})),te(),Z()}',
     'w=c?0:requestAnimationFrame(ve)}t.setUserAudioEnabled(m),J(),te(),w=requestAnimationFrame(ve);function ge(){c=u||h;cancelAnimationFrame(w);w=0;S=performance.now();n.resetTiming();if(c){Ae();$(!0).catch(()=>{})}else{ce();w=requestAnimationFrame(ve)}te();Z()}')
@@ -28,6 +28,9 @@ s = replace(s, 'ae&&(l=j.adSession)', 't.lastInterstitialRequestAccepted&&(l=j.a
 s = replace(s, 'game = Pu({root, client, savedSession: session, savedAudio: audio});', 'await client.whenResumed();\n    game = Pu({root, client, savedSession: session, savedAudio: true});')
 s = replace(s, 'client.bindGame({root, setPaused: game.setPaused, setAudioEnabled: game.setPlatformAudio});', 'client.bindGame({root, setPaused: game.setPaused, setAudioEnabled: game.setPlatformAudio, flush: game.flushProgress});')
 s = replace(s, '    await client.gameReady();', '    HSC.dismissLoading();\n    await client.gameReady();')
+s = replace(s, '    game.renderFirstPlayableFrame();', '    await game.renderFirstPlayableFrame();')
+s = replace(s, 'async function hC() {', 'async function hC() {\n  HSC.startupTiming.geometryReady=performance.now();')
+s = replace(s, '    if (HSC.wardrobeInit)', '    HSC.startupTiming.rendererReady=performance.now();\n    if (HSC.wardrobeInit)')
 s = replace(s, "    globalThis.addEventListener('pagehide', () => { unmount(); game.destroy(); client.destroy(); }, {once: true});", '')
 s = replace(s, 'function showBootError(error) {', 'function showBootError(error) {\n  HSC.dismissLoading();')
 # Full-fidelity geometry and shading remain enabled. Adapt from sustained scene frame times,
@@ -41,15 +44,62 @@ s = replace(s, 'let ye=Math.max(1,e.clientWidth),Ie=Math.max(1,e.clientHeight),B
 # A static customer needs no recurring GPU redraw. Keep clocks/input responsive in RAF, and
 # redraw on scene changes or active cutting/rotation/reveal/clippings. Full-detail idle frames
 # otherwise waste GPU time while bypassing the active-animation quality sampler.
-s = replace(s, 'function J(){var j,ae;s=HSC.ensure(s)', 'let needsRender=true;function J(){needsRender=true;var j,ae;s=HSC.ensure(s)')
+s = replace(s, 'function J(){var j,ae;s=HSC.ensure(s)', 'let initialBoot=true,needsRender=true;function J(){needsRender=true;var j,ae;s=HSC.ensure(s)')
 s = replace(s, 'function Ae(){if(f)try{a.releasePointerCapture(f.id)}', 'function Ae(){needsRender=true;if(f)try{a.releasePointerCapture(f.id)}')
-s = replace(s, 'let ce=()=>{if(c)return;Ae(),C||n.render(!1)}', 'let ce=()=>{if(c)return;Ae();if(!C){n.render(!1);needsRender=false}}')
+s = replace(s, 'let ce=()=>{if(c)return;Ae(),C||n.render(!1)}',
+    'let startupLost=false,lastSize="";let ce=(force=false)=>{if(c)return;let size=[a.clientWidth,a.clientHeight,globalThis.devicePixelRatio||1].join();if(force!==true&&size===lastSize)return;lastSize=size;Ae();if(!C){n.render(!1);needsRender=false}}')
+s = replace(s, 'else{ce();w=requestAnimationFrame(ve)}te();Z()}', 'else{if(!initialBoot)ce(true);w=requestAnimationFrame(ve)}te();Z()}')
+s = replace(s, 'setPaused(j){u=!!j,ge()}', 'setPaused(j){if(u===!!j)return;u=!!j;ge()}')
 s = replace(s, 'if(s.status==="reveal"&&!x){D+=ae;', 'if(s.status==="reveal"&&!x){needsRender=true;D+=ae;')
 s = replace(s, '(f||s.status==="reveal"&&!x||j%66<20||HSC.clippingsActive&&HSC.clippingsActive())&&n.render(!!(f||s.status==="reveal"&&!x||HSC.clippingsActive&&HSC.clippingsActive()))',
     '(()=>{let active=!!(f||s.status==="reveal"&&!x||HSC.clippingsActive&&HSC.clippingsActive());if(active||needsRender){n.render(active);needsRender=false}})()')
-s = replace(s, 'renderFirstPlayableFrame(){n.render()}', 'renderFirstPlayableFrame(){n.render(!1);needsRender=false}')
-s = replace(s, 'globalThis.addEventListener("resize",ce);let L=', 'globalThis.addEventListener("resize",ce);a.addEventListener("webglcontextrestored",ce);let L=')
-s = replace(s, 'globalThis.removeEventListener("resize",ce),', 'globalThis.removeEventListener("resize",ce),a.removeEventListener("webglcontextrestored",ce),')
+s = replace(s, 'renderFirstPlayableFrame(){n.render()}',
+    '''async renderFirstPlayableFrame(){
+  HSC.startupTiming.materialsReady=performance.now();
+  await t.whenResumed();
+  await n.prepareFirstFrame();await t.whenResumed();
+  HSC.startupTiming.shadersReady=performance.now();n.beginFirstFrame();
+  do {
+    await t.whenResumed();
+    lastSize=[a.clientWidth,a.clientHeight,globalThis.devicePixelRatio||1].join();
+    n.render(!1);needsRender=false;HSC.startupTiming.firstDraw=performance.now();HSC.dismissLoading();
+    await t.afterPaint();await t.afterPaint();
+    if(startupLost)throw Error('Game graphics could not initialize');
+  }while(lastSize!==[a.clientWidth,a.clientHeight,globalThis.devicePixelRatio||1].join());
+  t.finishStartup();initialBoot=false;needsRender=false;
+  HSC.startupTiming.firstPlayable=performance.now();
+}''')
+s = replace(s, 'globalThis.addEventListener("resize",ce);let L=', 'globalThis.addEventListener("resize",ce);let restore=()=>ce(true),lost=()=>{if(initialBoot)startupLost=true};a.addEventListener("webglcontextrestored",restore);a.addEventListener("webglcontextlost",lost);let L=')
+s = replace(s, 'globalThis.removeEventListener("resize",ce),', 'globalThis.removeEventListener("resize",ce),a.removeEventListener("webglcontextrestored",restore),a.removeEventListener("webglcontextlost",lost),')
+# Hold all customer draws until final saved materials are installed and their shaders are ready.
+# The startup pause reason separately blocks keyboard/pointer actions and the controller RAF.
+s = replace(s, 'function _(ue=!0){if(k)return;', 'let firstFramePending=true;function _(ue=!0){if(k||firstFramePending)return;')
+s = replace(s, 'render:_,setYaw(ue)', '''async prepareFirstFrame(){
+  P();L();X();z();
+  const visible=Zt.clone(false);
+  visible.traverse=visit=>{
+    Zt.traverseVisible(visit);
+    // The clipper is needed by the first gesture; compile its current guard without drawing it.
+    for(const child of i.children)child.traverseVisible(visit);
+  };
+  await t.compileAsync(visible,ze,Zt);
+  await HSC.whenYouTubeResumed();
+  // Keep diagnostics enabled, but resolve reflection/log queries before any full customer draw.
+  // Interleaving these synchronous queries with draws serializes earlier GPU work.
+  for(const program of t.info.programs){
+    program.getUniforms();program.getAttributes();
+    if(program.diagnostics?.runnable===false)throw Error('Game graphics could not initialize');
+  }
+},beginFirstFrame(){firstFramePending=false},render:_,setYaw(ue)''')
+# Three's asynchronous completion polling obeys the same host-owned execution scheduler.
+start = s.index('this.compileAsync=function(')
+end = s.index(';let ut=null;', start)
+polling = s[start:end]
+assert polling.count('setTimeout(oe,10)') == 2
+guarded = polling.replace('new Promise(F=>{function oe(){', 'new Promise((F,reject)=>{function oe(){try{if(x===!0)throw Error("Game graphics could not initialize");')
+guarded = guarded.replace('setTimeout(oe,10)}Ee.get', 'setTimeout(oe,10)}catch(error){reject(error)}}Ee.get')
+assert guarded != polling and 'catch(error)' in guarded
+s = replace(s, polling, guarded.replace('setTimeout(oe,10)', 'HSC.lifecycle.timeout(oe,10)'))
 game_path.write_text(s)
 
 customer_path = out / 'runtime/customers.js'
@@ -69,15 +119,17 @@ s = replace(s, "  const sfx = { ctx: null, out: null, noise: null };", """  cons
     sfx.out.gain.value = enabled ? 0.55 * (view()?.volume ?? 1) : 0;
     (enabled ? sfx.ctx.resume() : sfx.ctx.suspend()).catch(() => {});
   };""")
-customer_path.write_text(s)
-for name in ['client.js', 'loader.js']:
+customer_path.write_text('HSC.youtubeModulesReady=(HSC.whenYouTubeResumed?HSC.whenYouTubeResumed():Promise.resolve()).then(()=>{\n' + s + '\n});\nHSC.youtubeModulesReady.catch(()=>{});\n')
+game_path.write_text('HSC.youtubeModulesReady.then(()=>HSC.whenYouTubeResumed?.()).then(()=>{\nHSC.startupTiming.engineStart=performance.now();\n' + game_path.read_text() + '\n}).catch(HSC.bootstrapError);\n')
+for name in ['client.js', 'loader.js', 'startup.js']:
     shutil.copy2(root / 'youtube' / name, out / 'runtime' / ('youtube-' + name))
 
 s = (out / 'index.html').read_text()
 s = replace(s, '  <script src="https://bridge.playgama.com/v2/stable/playgama-bridge.js"></script>', '''  <div id="yt-loading" role="status" aria-label="Loading game"><span aria-hidden="true">✂</span><span>Loading…</span></div>
   <script src="https://www.youtube.com/game_api/v1"></script>
   <script src="./runtime/youtube-loader.js"></script>
-  <script src="./runtime/youtube-client.js"></script>''')
+  <script src="./runtime/youtube-client.js"></script>
+  <script src="./runtime/youtube-startup.js"></script>''')
 (out / 'index.html').write_text(s)
 with (out / 'styles.css').open('a') as f:
     f.write('\n#yt-loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#f5e7d7;color:#493326;font-size:18px;z-index:9999}#yt-loading [aria-hidden]{font-size:64px}html.yt-paused *{animation-play-state:paused!important}\n')

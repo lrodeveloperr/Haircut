@@ -56,14 +56,16 @@ uniform sampler2D uBeard;
 uniform float uDebug;
 // Pattern baldness (Hamilton-Norwood): 1 where hair grows, 0 where it is gone, a soft thinning band between.
 float baldDensity(vec3 p){
-  if (uBaldA.x + uBaldA.y + uBaldA.z + uBaldB.x + uBaldB.y < .001) return areataKeep(p);
+  float density = 1.0;
+  if (uBaldA.x + uBaldA.y + uBaldA.z + uBaldB.x + uBaldB.y >= .001) {
   vec3 q = vec3(p.x, p.y - 2.1, p.z + .13);
   float th = atan(q.z, q.y);                  // 0 on top, + toward the face, - toward the nape
   float ph = atan(p.x, length(q.yz));         // left / right
   float aph = abs(ph);
   float wob = (n3(p * 2.7 + uBaldB.z) - .5) * .10 + (n3(p * 8.0 + uBaldB.z) - .5) * .035;
   // frontal and temporal recession: the hairline moves back from its natural line
-  float templ = exp(-pow((aph - .58) / .22, 2.0));
+  float templeOffset = (aph - .58) / .22;
+  float templ = exp(-templeOffset * templeOffset);
   float rec = uBaldA.x + uBaldA.y * templ;
   float hairline = 1.13 - rec + wob;
   float front = smoothstep(hairline - .07, hairline + .1, th) * step(.001, rec) * smoothstep(2.35, 2.7, p.y);
@@ -76,13 +78,15 @@ float baldDensity(vec3 p){
   float bridge = uBaldA.w * smoothstep(-.3, -.15, th) * (1.0 - smoothstep(bw - .08, bw + .04, aph)) * smoothstep(2.35, 2.7, p.y);
   // horseshoe: only a fringe stays around the sides and back
   // the fringe sits low over the ears and rises toward the back of the head
-  float fringe = 3.08 - uBaldB.x - .18 * smoothstep(.9, 1.5, aph) + .22 * smoothstep(-.2, -.9, th) * (1.0 - smoothstep(.6, 1.3, aph)) + wob * 1.4;
+  float fringe = 3.08 - uBaldB.x - .18 * smoothstep(.9, 1.5, aph) + .22 * (1.0 - smoothstep(-.9, -.2, th)) * (1.0 - smoothstep(.6, 1.3, aph)) + wob * 1.4;
   float top = step(.001, uBaldB.x) * smoothstep(fringe - .06, fringe + .1, p.y);
   float b = max(max(front, crown), max(bridge, top));
   float d = 1.0 - b;
   // diffuse thinning over the top
   d *= 1.0 - uBaldB.y * smoothstep(2.9, 3.5, p.y) * (.55 + .45 * n3(p * 3.3 + 9.0));
-  return clamp(d, 0.0, 1.0) * areataKeep(p);
+  density = clamp(d, 0.0, 1.0);
+  }
+  return density * areataKeep(p);
 }
 const vec3 BEARD_C = vec3(${BC.join(',')});
 vec2 beardUV(vec3 p){
@@ -308,13 +312,15 @@ float wrinkles(vec3 P, float age){
   // unpigmented (grey / white) strands, a little yellowed toward the root
   vec3 white=mix(vec3(.30,.29,.27),vec3(.62,.61,.58),fract(vSeed.x*13.7))*${grey};
   base=mix(base,white*mix(vec3(.92,.88,.8),vec3(1.0),smoothstep(.0,.6,vAlong)),vGrey);
-  float light=.58+.80*sqrt(max(0.0,1.0-pow(dot(tangent,lA),2.0)));
+  float tangentA=dot(tangent,lA);
+  float light=.58+.80*sqrt(max(0.0,1.0-tangentA*tangentA));
   vec3 halfA=normalize(view+lA),halfB=normalize(view+lB);
   // a broad sheen and a bright rim, as under a barber's ring light, so dark hair reads on dark skin;
   // light hair already reads and keeps its normal sheen
   float lf=uLift*(1.0-smoothstep(.03,.14,dot(base,vec3(.3,.59,.11))));
-  float glint=pow(sqrt(max(0.0,1.0-pow(dot(tangent,halfA),2.0))),mix(65.0,42.0,lf))*mix(.08,.14,vGrey)*(1.0+.6*lf);
-  float rim=pow(sqrt(max(0.0,1.0-pow(dot(tangent,halfB),2.0))),mix(45.0,32.0,lf))*.04*(1.0+1.5*lf);
+  float tangentHalfA=dot(tangent,halfA),tangentHalfB=dot(tangent,halfB);
+  float glint=pow(sqrt(max(0.0,1.0-tangentHalfA*tangentHalfA)),mix(65.0,42.0,lf))*mix(.08,.14,vGrey)*(1.0+.6*lf);
+  float rim=pow(sqrt(max(0.0,1.0-tangentHalfB*tangentHalfB)),mix(45.0,32.0,lf))*.04*(1.0+1.5*lf);
   // the hair's own colour is lifted (a warm brown-black, not white highlights, which read as grey)
   vec3 lit=base*light*(1.0+2.2*lf)+vec3(1.0,.86,.66)*(glint+rim)*smoothstep(.05,.6,vAlong);
   gl_FragColor=vec4(lit,1.0);

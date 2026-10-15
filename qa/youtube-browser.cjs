@@ -13,21 +13,36 @@ async function fixture(options={}){
  const calls=[],errors=[],requests=[];
  const ctx=await browser.newContext({viewport:options.viewport||{width:390,height:844},deviceScaleFactor:options.dpr||1,reducedMotion:'reduce',hasTouch:!!options.touch});
  const page=await ctx.newPage();page.setDefaultTimeout(30000);
- page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('request',r=>requests.push(r.url()));
- await ctx.exposeBinding('readCloud',async()=>{calls.push(['load']);if(readFail)throw Error('Injected cloud read failure');return raw;});
+ page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'||/THREE\.WebGLProgram/.test(m.text()))errors.push(m.text());});page.on('request',r=>requests.push(r.url()));
+ await ctx.exposeBinding('readCloud',async()=>{calls.push(['load']);if(options.loadDelay)await new Promise(r=>setTimeout(r,options.loadDelay));if(readFail)throw Error('Injected cloud read failure');return raw;});
  await ctx.exposeBinding('writeCloud',async(_,value)=>{calls.push(['save-start']);if(writeFail)throw Error('Injected cloud write failure');raw=value;calls.push(['save-ack']);});
  await ctx.addInitScript(()=>{
    const raf=window.requestAnimationFrame;window.__frames={requested:0,executed:0};
    window.requestAnimationFrame=fn=>{__frames.requested++;return raf.call(window,t=>{__frames.executed++;fn(t);});};
  });
+ if(options.pauseAtCompile||options.loseAtCompile)await ctx.addInitScript(({lose})=>{
+  const P=WebGL2RenderingContext.prototype,compile=P.compileShader;let fired=false;
+  P.compileShader=function(...args){const result=compile.apply(this,args);if(!fired&&globalThis.HSC?.startupTiming?.materialsReady){fired=true;queueMicrotask(()=>{window.__startupInterrupted=true;if(lose)this.getExtension('WEBGL_lose_context').loseContext();else __yt.callbacks.pause();});}return result;};
+ },{lose:!!options.loseAtCompile});
+ if(process.env.PROFILE_STARTUP==='1')await ctx.addInitScript(()=>{
+  window.__glProfile=[];const shaders=new WeakMap(),programs=new WeakMap();let sequence=0;
+  for(const name of ['shaderSource','attachShader','linkProgram','getProgramInfoLog']){
+   const P=WebGL2RenderingContext.prototype,fn=P[name];P[name]=function(...args){const at=performance.now();
+    if(name==='shaderSource')shaders.set(args[0],{len:args[1].length,defines:args[1].match(/^#define.*$/gm),bald:args[1].includes('float baldDensity')});
+    if(name==='attachShader'){if(!programs.has(args[0]))programs.set(args[0],{id:++sequence,shaders:[]});programs.get(args[0]).shaders.push(shaders.get(args[1]));}
+    const result=fn.apply(this,args);if(['linkProgram','getProgramInfoLog'].includes(name))__glProfile.push({name,at,ms:performance.now()-at,program:programs.get(args[0])});return result;
+   };
+  }
+ });
  const releaseRoot=path.resolve(options.releaseRoot||root);
  await ctx.route('http://release.test/**',async route=>{const pathname=new URL(route.request().url()).pathname;const file=path.join(releaseRoot,pathname==='/'?'index.html':pathname);if(!file.startsWith(releaseRoot+path.sep)||!fs.existsSync(file))return route.fulfill({status:404,body:'not found'});await route.fulfill({path:file,headers:{'Content-Security-Policy':csp},contentType:({'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp'})[path.extname(file)]||'text/plain'});});
  if(!options.realSdk)await ctx.route('https://www.youtube.com/game_api/v1',route=>options.missing?route.abort():route.fulfill({contentType:'application/javascript',body:`
-   window.__yt={messages:[],ads:[],callbacks:{},rewardMode:'${options.rewardMode||'earned'}',paused:false,audio:${options.audio!==false}};
+   window.__yt={messages:[],ads:[],scores:[],timings:{},callbacks:{},rewardMode:'${options.rewardMode||'earned'}',paused:false,audio:${options.audio!==false}};
    const sub=k=>fn=>{__yt.callbacks[k]=fn;${options.initialPause?"if(k==='pause'){__yt.paused=true;fn();}":''}return()=>delete __yt.callbacks[k];};
    window.ytgame={IN_PLAYABLES_ENV:${options.hosted!==false},SDK_VERSION:'strict-test-fixture',
-     system:{getLanguage:async()=> 'fr-CA',isAudioEnabled:()=>__yt.audio,onPause:sub('pause'),onResume:sub('resume'),onAudioEnabledChange:sub('audio')},
-     game:{loadData:()=>readCloud(),saveData:v=>writeCloud(v),firstFrameReady(){__yt.messages.push({name:'firstFrameReady',loading:!!document.getElementById('yt-loading'),loadingText:document.getElementById('yt-loading')?.textContent});},gameReady(){__yt.messages.push({name:'gameReady',loading:!!document.getElementById('yt-loading'),hud:!!document.getElementById('hud')});}},
+     system:{getLanguage:async()=>{__yt.timings.languageStart=performance.now();if(${options.languageDelay||0})await new Promise(r=>setTimeout(r,${options.languageDelay||0}));return 'fr-CA';},isAudioEnabled:()=>__yt.audio,onPause:sub('pause'),onResume:sub('resume'),onAudioEnabledChange:sub('audio')},
+     game:{loadData:()=>{__yt.timings.loadStart=performance.now();return readCloud();},saveData:v=>writeCloud(v),firstFrameReady(){__yt.messages.push({name:'firstFrameReady',at:performance.now(),loading:!!document.getElementById('yt-loading'),loadingText:document.getElementById('yt-loading')?.textContent});},gameReady(){__yt.messages.push({name:'gameReady',at:performance.now(),loading:!!document.getElementById('yt-loading'),hud:!!document.getElementById('hud')});}},
+     engagement:{sendScore:async score=>{if(!Number.isSafeInteger(score.value))throw Error('Non-integer score');__yt.scores.push({value:score.value,at:performance.now()});}},
      health:{logWarning(){}},
      ads:{requestRewardedAd:async id=>{__yt.ads.push({kind:'rewarded',id});await new Promise(r=>setTimeout(r,100));if(__yt.rewardMode==='error')throw Error('no fill');return __yt.rewardMode==='earned';},requestInterstitialAd:async()=>{__yt.ads.push({kind:'interstitial'});await new Promise(r=>setTimeout(r,100));}}
    };` }));
@@ -64,7 +79,7 @@ async function standard(){
  await test('Wardrobe remains interactive while gameplay is paused',async()=>{await p.locator('#hsc-hud .hsc-rw').click();await p.locator('#hsc-panel.open').waitFor({state:'visible'});assert.equal(await p.evaluate(()=>skinFadeStudio.getView().paused),true);assert.equal(await p.evaluate(()=>document.body.inert),false);assert(await p.locator('.hsc-vbtn').isEnabled());});
  await test('Cancelled and unavailable videos grant nothing and allow retry',async()=>{const before=await p.evaluate(()=>JSON.stringify(HSC.wardrobe.data.own));for(const mode of ['cancel','error']){await reward(p,mode);assert.equal(await p.evaluate(()=>JSON.stringify(HSC.wardrobe.data.own)),before);assert(await p.locator('.hsc-vbtn').isEnabled());}});
  await test('Completed rewarded video unlocks one daily item and survives reload',async()=>{const count=await p.evaluate(()=>HSC.wardrobe.data.recent.length);await reward(p,'earned');assert.equal(await p.evaluate(()=>HSC.wardrobe.data.recent.length),count+1);const look=await p.evaluate(()=>JSON.stringify(HSC.wardrobe.data.look));await p.keyboard.press('Escape');await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);assert.equal(await p.evaluate(()=>JSON.stringify(HSC.wardrobe.data.look)),look);});
- await test('Paid replay restores the same customer and preserves the next queue',async()=>{await finish(p);await p.screenshot({timeout:60000,path:path.join(out,'completion.png')});const before=await state(p),queue=await p.evaluate(()=>JSON.stringify(HSC.meta.data.queue));await p.locator('.hsc-replay').click();await p.getByRole('button',{name:'Finish haircut',exact:true}).waitFor({state:'visible',timeout:30000});const after=await state(p);assert.equal(after.look.person.seed,before.look.person.seed);assert.deepEqual(after.hair,after.startHair);assert.equal(await p.evaluate(()=>JSON.stringify(HSC.meta.data.queue)),queue);});
+ await test('Paid replay restores the same customer and preserves the next queue and saved haircut score',async()=>{await finish(p);await p.waitForFunction(()=>__yt.scores.some(s=>s.value===HSC.meta.data.cuts&&s.value>0));assert.equal(JSON.parse(f.raw()).slots['skin-fade-studio-meta-v1'].cuts,await p.evaluate(()=>Math.max(...__yt.scores.map(s=>s.value))));await p.screenshot({timeout:60000,path:path.join(out,'completion.png')});const before=await state(p),queue=await p.evaluate(()=>JSON.stringify(HSC.meta.data.queue));await p.locator('.hsc-replay').click();await p.getByRole('button',{name:'Finish haircut',exact:true}).waitFor({state:'visible',timeout:30000});const after=await state(p);assert.equal(after.look.person.seed,before.look.person.seed);assert.deepEqual(after.hair,after.startHair);assert.equal(await p.evaluate(()=>JSON.stringify(HSC.meta.data.queue)),queue);});
  await test('A cloud write failure blocks the reward request and preserves usability',async()=>{await p.locator('#hsc-hud .hsc-rw').click();await p.locator('.hsc-tab').last().click();f.writeFail(true);const ads=await p.evaluate(()=>__yt.ads.length);await reward(p,'earned');assert.equal(await p.evaluate(()=>__yt.ads.length),ads);assert(await p.locator('.hsc-vbtn').isEnabled());f.writeFail(false);await p.keyboard.press('Escape');});
  await test('Only bundled resources and the official YouTube SDK are requested',async()=>{assert.deepEqual(f.errors,[]);assert(f.requests.every(url=>url.startsWith('http://release.test/')||url==='https://www.youtube.com/game_api/v1'));});
  const saved=f.raw();await f.close();
@@ -74,7 +89,7 @@ async function standard(){
  await test('Missing SDK gives a keyboard-focused Retry in a tiny embed',async()=>{const g=await fixture({missing:true,viewport:{width:225,height:400}});try{const retry=g.page.getByRole('button',{name:'Retry',exact:true});await retry.waitFor({state:'visible'});assert.equal(await retry.evaluate(e=>e===document.activeElement),true);await g.page.screenshot({timeout:60000,path:path.join(out,'missing-sdk.png')});}finally{await g.close();}});
  await test('An initial host pause defers gameplay until the host resumes',async()=>{const g=await fixture({initialPause:true});try{await g.page.waitForTimeout(600);assert.equal(await g.page.evaluate(()=>!!window.skinFadeStudio),false);await g.page.evaluate(()=>__yt.callbacks.resume());await g.page.waitForFunction(()=>!!window.skinFadeStudio);assert.equal(await g.page.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),1);}finally{await g.close();}});
  await test('Off-platform preview uses the official SDK mode without rewarded CTAs',async()=>{const g=await fixture({hosted:false});try{await finish(g.page);assert.equal(await g.page.locator('.hsc-replay').isVisible(),false);assert.equal(g.calls.filter(c=>c[0]==='load'||c[0]==='save-start').length,0);assert.equal(await g.page.evaluate(()=>HSC.wardrobe.client.isLocalPreview),true);}finally{await g.close();}});
- if(engine==='chromium')await test('The real official SDK loads under YouTube CSP in off-platform preview',async()=>{const g=await fixture({realSdk:true});try{assert.equal(await g.page.evaluate(()=>typeof ytgame.game.loadData),'function');assert.equal(await g.page.evaluate(()=>HSC.wardrobe.client.isLocalPreview),true);assert.deepEqual(g.errors,[]);}finally{await g.close();}});
+ if(engine==='chromium'&&process.env.SKIP_REAL_SDK!=='1')await test('The real official SDK loads under YouTube CSP in off-platform preview',async()=>{const g=await fixture({realSdk:true});try{assert.equal(await g.page.evaluate(()=>typeof ytgame.game.loadData),'function');assert.equal(await g.page.evaluate(()=>HSC.wardrobe.client.isLocalPreview),true);assert.deepEqual(g.errors,[]);}finally{await g.close();}});
 }
 const viewports=[[225,400],[320,568],[360,640],[375,667],[390,844],[412,915],[430,932],[568,320],[640,360],[844,390],[932,430],[717,512],[768,1024],[820,1180],[1024,1366],[1024,768],[1180,820],[1366,1024],[1280,720],[1366,768],[1440,900],[1920,1080],[2560,1440],[3440,1440],[400,400],[480,270],[270,480]];
 async function layouts(){
@@ -116,7 +131,7 @@ async function quality(){
     assert.equal(metrics.level,'high');assert.equal(metrics.shaderLow,false);assert.equal(metrics.segments,8);assert.equal(metrics.beardSegments,8);assert.equal(metrics.beardCount,metrics.beardRoots);assert.equal(metrics.antialias,true);assert(metrics.width*metrics.height<=4000000);assert(metrics.width/metrics.cssWidth>=1.49);
     await p.evaluate(()=>__yt.callbacks.pause());await p.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-high.png`)});
     const g=await fixture({viewport:{width,height},dpr,touch:true,saved,releaseRoot:baseline});
-    try{assert.deepEqual((await state(g.page)).look,before.look);await g.page.evaluate(()=>__yt.callbacks.pause());await g.page.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-v3.84.png`)});assert.deepEqual(g.errors,[]);}finally{await g.close();}
+    try{assert.deepEqual((await state(g.page)).look,before.look);await g.page.evaluate(()=>__yt.callbacks.pause());await g.page.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-baseline.png`)});assert.deepEqual(g.errors,[]);}finally{await g.close();}
     await p.evaluate(()=>{__yt.callbacks.resume();HSC.setDetail(0.5);});assert.equal(await p.evaluate(()=>HSC.debugState.beardMesh.geometry.instanceCount),metrics.beardRoots);
     await p.setViewportSize({width:3840,height:2160});await p.waitForTimeout(500);
     const resized=await p.locator('#scene').evaluate(c=>({width:c.width,height:c.height}));assert(resized.width*resized.height<=4000000);assert.deepEqual((await state(p)).hair,before.hair);assert.deepEqual(f.errors,[]);
@@ -125,8 +140,67 @@ async function quality(){
   });
  }
 }
+async function startup(){
+ await test('Startup overlaps host reads, preserves full graphics and reports genuine readiness',async()=>{
+  const f=await fixture({languageDelay:500,loadDelay:500,dpr:2}),p=f.page;
+  try{
+   const evidence=await p.evaluate(()=>({timing:HSC.startupTiming,host:__yt.timings,ready:__yt.messages.find(m=>m.name==='gameReady'),quality:{level:HSC.detail.level,segments:HSC.detail.segments,shaderLow:HSC.detail.shaderLow,maxStrands:HSC.detail.maxStrands},renderer:(()=>{const g=document.getElementById('scene').getContext('webgl2'),e=g.getExtension('WEBGL_debug_renderer_info');return e?g.getParameter(e.UNMASKED_RENDERER_WEBGL):g.getParameter(g.RENDERER);})()}));
+   assert(Math.abs(evidence.host.languageStart-evidence.host.loadStart)<100,'Host requests were serialized');
+   assert(evidence.host.loadStart<evidence.timing.geometryReady,'Cloud read started after geometry');
+   assert(evidence.timing.materialsReady<=evidence.timing.shadersReady);
+   assert(evidence.timing.shadersReady<=evidence.timing.firstPlayable);
+   assert.equal(evidence.ready.loading,false);assert.equal(await p.locator('body').evaluate(b=>b.inert),false);
+   assert.deepEqual(evidence.quality,{level:'high',segments:8,shaderLow:false,maxStrands:30000});
+   if(process.env.ANGLE_D3D11==='1')assert.match(evidence.renderer,/Direct3D11|D3D11/i,'The shader regression must use the affected HLSL backend');
+   if(process.env.PROFILE_STARTUP==='1')fs.writeFileSync(path.join(out,'gl-profile.json'),JSON.stringify(await p.evaluate(()=>({timing:HSC.startupTiming,gl:__glProfile})),null,2));
+   assert.deepEqual(f.errors,[]);return evidence;
+  }finally{await f.close();}
+ });
+ await test('A host pause during compilation freezes startup and input until resume',async()=>{
+  const f=await fixture({blocked:true,pauseAtCompile:true}),p=f.page;
+  try{
+   await p.waitForFunction(()=>window.__startupInterrupted&&document.body.inert);
+   assert.equal(await p.evaluate(()=>!!window.skinFadeStudio),false);
+   const before=await p.evaluate(()=>__frames.executed);await p.keyboard.press('ArrowRight');await p.keyboard.press('Space');await p.waitForTimeout(200);
+   assert.equal(await p.evaluate(()=>__frames.executed),before);assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),0);
+   await p.evaluate(()=>__yt.callbacks.resume());await p.waitForFunction(()=>!!window.skinFadeStudio);
+   assert.equal((await state(p)).cameraYawDeg,-55);assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),1);assert.deepEqual(f.errors,[]);
+  }finally{await f.close();}
+ });
+ if(engine==='chromium')await test('Context loss during compilation reaches Retry without hanging or reporting readiness',async()=>{
+  const f=await fixture({blocked:true,loseAtCompile:true}),p=f.page;
+  try{await p.getByRole('button',{name:'Retry',exact:true}).waitFor({state:'visible'});assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),0);assert.equal(await p.locator('body').evaluate(b=>b.inert),false);assert(f.errors.some(e=>/graphics|WebGL/.test(e)));}
+  finally{await f.close();}
+ });
+ await test('Shader programs stay clean through baldness, ageing, hair and beard variants',async()=>{
+  const f=await fixture({viewport:{width:320,height:568}}),p=f.page;
+  try{
+   const variants=await p.evaluate(async()=>{
+    const options=[{noLoss:true,beard:'clean'},{norwood:'3v',beard:'full',age:'old'},{norwood:'6',beard:'goatee'},{baldType:'diffuse',beard:'boxed'}];
+    for(let i=0;i<options.length;i++){const person=HSC.makePerson(6200+i,options[i]);HSC.view.setPerson(person);HSC.view.setBeard(HSC.beardStartFor(person));HSC.view.render(false);await new Promise(r=>requestAnimationFrame(r));}
+    return options.length;
+   });
+   assert.deepEqual(f.errors,[]);return {variants};
+  }finally{await f.close();}
+ });
+}
+async function launch(){return({chromium,firefox,webkit}[engine]).launch({headless:process.env.HEADED!=='1',...(engine==='chromium'?{...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE}:{}),args:['--no-sandbox',process.env.ANGLE_D3D11==='1'?'--use-angle=d3d11':'--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']}:{}) ,...(engine==='firefox'?{firefoxUserPrefs:{'webgl.force-enabled':true,'webgl.disabled':false,'gfx.webrender.software':true}}:{})});}
+async function benchmark(){
+ const builds=[['baseline',process.env.BASELINE_DIR],['candidate',root]],samples={baseline:[],candidate:[]};
+ for(let round=0;round<5;round++)for(const [name,releaseRoot]of builds){
+  await browser?.close();browser=await launch();
+  await test(`Cold startup ${name} ${round+1}/5, 390x844 DPR2`,async()=>{
+   const f=await fixture({releaseRoot,dpr:2}),p=f.page;
+   try{
+    const evidence=await p.evaluate(async()=>{await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));return{reportedReady:__yt.messages.find(m=>m.name==='gameReady').at,frameCheckpoint:performance.now(),timing:HSC.startupTiming||null};});
+    samples[name].push(evidence);assert.deepEqual(f.errors,[]);return evidence;
+   }finally{await f.close();}
+  });
+ }
+ fs.writeFileSync(path.join(out,'startup-benchmark.json'),JSON.stringify({environment:{browser:engine,viewport:[390,844],dpr:2,host:'controlled SDK fixture, no live platform/network latency',cold:'fresh browser process per sample'},samples},null,2));
+}
 (async()=>{
- browser=await({chromium,firefox,webkit}[engine]).launch({headless:process.env.HEADED!=='1',...(engine==='chromium'?{args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']}:{}) ,...(engine==='firefox'?{firefoxUserPrefs:{'webgl.force-enabled':true,'webgl.disabled':false,'gfx.webrender.software':true}}:{})});
- if(process.env.QUALITY==='1')await quality();else if(process.env.LAYOUT==='1')await layouts();else if(process.env.SOAK==='1')await soak();else await standard();
+ browser=await launch();
+ if(process.env.BENCHMARK==='1')await benchmark();else if(process.env.STARTUP==='1')await startup();else if(process.env.QUALITY==='1')await quality();else if(process.env.LAYOUT==='1')await layouts();else if(process.env.SOAK==='1')await soak();else await standard();
  await browser.close();const failed=results.filter(x=>x.status==='FAIL');console.log('YOUTUBE BROWSER',engine,results.length-failed.length+'/'+results.length);process.exitCode=failed.length?1:0;
 })().catch(async e=>{console.error(e);fs.writeFileSync(path.join(out,'fatal.txt'),e.stack);await browser?.close();process.exitCode=2;});

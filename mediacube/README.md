@@ -2,14 +2,14 @@
 
 ## File to upload
 
-Use `releases/asmr-barber-fade-master-v3.85-mediacube-youtube.zip` in McPlay's **Replace game bundle** field.
+Use `releases/asmr-barber-fade-master-v3.86-mediacube-youtube.zip` in McPlay's **Replace game bundle** field.
 This is a WebGL/HTML5 runtime archive with `index.html` at the root, not a source ZIP or Android package.
 
 This target uses the direct official YouTube Playables SDK at `https://www.youtube.com/game_api/v1`.
 It does not load Playgama Bridge, Playgama configuration, a mock SDK, external analytics or remote game assets.
 The existing Playgama and full-detail Android builds remain separate.
 
-See [validation results](VALIDATION-v3.85.md) and [exact build identity](BUILD-v3.85.json).
+See [validation results](VALIDATION-v3.86.md) and [exact build identity](BUILD-v3.86.json).
 
 ## Rebuild
 
@@ -17,7 +17,7 @@ See [validation results](VALIDATION-v3.85.md) and [exact build identity](BUILD-v
 bash source/build-youtube.sh
 # Produces source/build-youtube/, without an upload archive.
 
-bash source/release-youtube.sh v3.85
+bash source/release-youtube.sh v3.86
 # Creates the immutable release ZIP; refuses to overwrite an existing release.
 ```
 
@@ -28,6 +28,22 @@ plus McPlay's 15,000,000-byte per-file advisory budget.
 
 The official SDK is loaded first. A visible loading state sends `firstFrameReady`; `gameReady` is sent only
 after the saved game, wardrobe and controller are initialized and the loading state has been removed.
+
+## Startup and score reporting (v3.86)
+
+The official SDK still loads first. Language and a single protected cloud read now start before
+procedural geometry, and run concurrently. Initial host pauses defer module execution and host reads.
+The saved wardrobe is applied before the first customer draw. Visible materials and the current clipper
+are compiled in advance; shader reflection/diagnostics are resolved before any customer draw.
+Startup input stays paused until the final scene has rendered and crossed two host-aware paint frames.
+Duplicate initial resize draws are skipped. Shader compilation failure or context loss during boot
+reaches Retry while preserving progress. `HSC.startupTiming` exposes local stage timestamps for a
+hosted pre-flight diagnosis; no external analytics or extra network resource is introduced.
+
+The game sends the existing completed-haircuts count through `engagement.sendScore({value})` only after
+that exact progress snapshot is acknowledged by cloud saving. Restored positive progress is synchronized
+after readiness. Empty accounts send no artificial zero, and failed/pending score requests never block
+saving, readiness or gameplay. The haircut rules, progression, UI and graphics policy are unchanged.
 
 ## Graphics
 

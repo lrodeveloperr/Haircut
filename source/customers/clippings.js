@@ -37,7 +37,8 @@ void main(){
   vec3 side=normalize(cross(tang,view)+vec3(1e-5));
   p+=side*position.x*iCurl.w;
   vCol=iCol; vEdge=position.x;
-  vShade=.62+.5*sqrt(max(0.0,1.0-pow(dot(tang,normalize(vec3(-.3,.8,.5))),2.0)));
+  float tangentLight=dot(tang,normalize(vec3(-.3,.8,.5)));
+  vShade=.62+.5*sqrt(max(0.0,1.0-tangentLight*tangentLight));
   gl_Position=projectionMatrix*viewMatrix*vec4(p,1.0);
 }`;
   const FRAG = `

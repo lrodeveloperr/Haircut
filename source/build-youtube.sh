@@ -7,3 +7,4 @@ node --check build-youtube/runtime/game.js
 node --check build-youtube/runtime/customers.js
 node --check build-youtube/runtime/youtube-client.js
 node --check build-youtube/runtime/youtube-loader.js
+node --check build-youtube/runtime/youtube-startup.js
