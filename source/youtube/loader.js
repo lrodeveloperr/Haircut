@@ -19,10 +19,23 @@
     return 'BOOT';
   };
   HSC.bootErrorCode = error => {
+    const box = document.createElement('div');
+    box.className = 'boot-error-info';
     const code = document.createElement('p');
     code.className = 'boot-error-code';
     code.textContent = 'Code: ' + HSC.bootCode(error);
-    return code;
+    box.append(code);
+    const lines = Array.isArray(error?.detail) ? error.detail.slice() : [];
+    if (globalThis.ytgame) lines.push('Mode: ' + (globalThis.ytgame.IN_PLAYABLES_ENV === true ? 'YouTube' : 'preview'));
+    const cuts = HSC.meta?.data?.cuts;
+    if (Number.isFinite(cuts)) lines.push('Saved haircuts: ' + cuts);
+    if (lines.length) {
+      const detail = document.createElement('pre');
+      detail.className = 'boot-error-detail';
+      detail.textContent = lines.join('\n');
+      box.append(detail);
+    }
+    return box;
   };
   // Covers a module-evaluation failure before the ordinary engine recovery handler exists.
   HSC.bootstrapError = error => {

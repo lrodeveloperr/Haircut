@@ -108,7 +108,21 @@ s = replace(s, 'render:_,setYaw(ue)', '''async prepareFirstFrame(){
   // Interleaving these synchronous queries with draws serializes earlier GPU work.
   for(const program of t.info.programs){
     program.getUniforms();program.getAttributes();
-    if(program.diagnostics?.runnable===false)throw HSC.graphicsError('GFX_SHADER');
+    const failed=program.diagnostics;
+    if(failed?.runnable===false){
+      // Carry the GPU's own reason to the recovery screen; a phone has no console.
+      const gl=t.getContext(),info=gl.getExtension('WEBGL_debug_renderer_info');
+      const lines=text=>String(text||'').trim().split(/\\n/).filter(Boolean).slice(0,4).map(line=>line.slice(0,240)).join(' / ');
+      throw Object.assign(HSC.graphicsError('GFX_SHADER'),{detail:[
+        // A short fingerprint of the program's cache key identifies the exact variant offline.
+        'Shader: '+(program.name||program.type||'custom')+' #'+[...String(program.cacheKey)].reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619)>>>0,2166136261).toString(16),
+        failed.vertexShader.log&&'Vertex: '+lines(failed.vertexShader.log),
+        failed.fragmentShader.log&&'Fragment: '+lines(failed.fragmentShader.log),
+        failed.programLog&&'Link: '+lines(failed.programLog),
+        'GPU: '+(info?gl.getParameter(info.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER)),
+        'Limits: varyings '+gl.getParameter(gl.MAX_VARYING_VECTORS)+', vertex uniforms '+gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS)+', fragment uniforms '+gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS),
+      ].filter(Boolean)});
+    }
   }
 },async waitForFirstFrame(){
   const gl=t.getContext(),sync=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);

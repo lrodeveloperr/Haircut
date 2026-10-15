@@ -1,0 +1,30 @@
+{
+  "version": "v3.92",
+  "target": "MediaCube / direct YouTube Playables",
+  "archive": "releases/asmr-barber-fade-master-v3.92-mediacube-youtube.zip",
+  "sha256": "08a0e9cdf4c38a44e98e361584d7ab8eb7d1c3fcc972eb1b70d9e877141e9e97",
+  "zipBytes": 405895,
+  "expandedBytes": 1075116,
+  "files": {
+    "THIRD-PARTY-NOTICES.md": 604,
+    "assets/backdrop-landscape.webp": 23832,
+    "assets/backdrop-portrait.webp": 20566,
+    "index.html": 954,
+    "licenses/preact-MIT.txt": 1087,
+    "licenses/three-MIT.txt": 1081,
+    "runtime/customers.js": 226341,
+    "runtime/game.js": 766072,
+    "runtime/youtube-client.js": 14509,
+    "runtime/youtube-loader.js": 2824,
+    "runtime/youtube-startup.js": 417,
+    "styles.css": 16829
+  },
+  "baseCommit": "feecf25",
+  "changes": "Diagnostics only: the recovery screen shows the failing shader fingerprint, the GPU compile/link log, GPU model and limits, mode and saved haircut count. Game and graphics unchanged from v3.91.",
+  "validation": {
+    "directSdkContracts": "40/40 PASS",
+    "simulatedShaderFailure": "recovery screen shows shader, link log, GPU, limits, mode, saved haircuts",
+    "phoneTestPage": "loads in YouTube mode with no errors (local Chromium)"
+  },
+  "hostedStatus": "Not uploaded to McPlay; not run on a physical phone."
+}
