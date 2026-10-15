@@ -380,7 +380,8 @@ async function benchmark(){
  }
  fs.writeFileSync(path.join(out,'startup-benchmark.json'),JSON.stringify({environment:{browser:engine,viewport:[390,844],dpr:2,host:'controlled SDK fixture, no live platform/network latency',cold:'fresh browser process per sample'},samples},null,2));
 }
-(async()=>{
+if(require.main!==module)module.exports={start:async()=>{browser=await launch();return browser;},fixture,state,stroke,finish,next};
+else (async()=>{
  browser=await launch();
  if(process.env.STANDALONE_PREVIEW==='1')await standalonePreview();else if(process.env.PARITY==='1')await test('All rendered pixels match baseline for seeded customer variants',parity);else if(process.env.MOBILE_STARTUP==='1')await mobileStartup();else if(process.env.BENCHMARK==='1')await benchmark();else if(process.env.STARTUP==='1')await startup();else if(process.env.QUALITY==='1')await quality();else if(process.env.LAYOUT==='1')await layouts();else if(process.env.SOAK==='1')await soak();else await standard();
  await browser.close();const failed=results.filter(x=>x.status==='FAIL');console.log('YOUTUBE BROWSER',engine,results.length-failed.length+'/'+results.length);process.exitCode=failed.length?1:0;

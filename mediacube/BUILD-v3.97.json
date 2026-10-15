@@ -1,6 +1,6 @@
 {
   "version": "v3.97",
-  "status": "hardware retest candidate",
+  "status": "automated checks passed; owner-reported physical phone boot passed",
   "baseCommit": "986dede76fe3615d77f92d479e754e672a80c6d9",
   "archive": "releases/asmr-barber-fade-master-v3.97-mediacube-youtube.zip",
   "sha256": "33f95fd7e4063d6d5f52ebbbcd61a8d7b38b159abb32fc61443fdcf5f637c7fa",
@@ -50,7 +50,8 @@
     "chromium": "18/18 PASS",
     "firefox": "16/16 PASS",
     "webkit": "16/16 PASS",
-    "graphics": "3/3 full-detail cases plus 5 seeded image variants byte-identical to v3.94 in CI"
+    "graphics": "3/3 full-detail cases plus 5 seeded image variants byte-identical to v3.94 in CI",
+    "replayAlignment": "31/31 local checks across 30 viewport sizes, both layouts; native Replay interaction PASS; no runtime change"
   },
   "shaderSourceBytes": {
     "scalpVertex": {
@@ -63,7 +64,7 @@
       "v396": 7428
     }
   },
-  "limits": "The screenshot proves the failing program, not the hidden driver cause. Shader simplification is a compatibility correction requiring a new Adreno 660 hardware test. Desktop/software-GPU tests cannot establish that the phone is fixed. Sites adapter removes the PC SDK dependency. Not uploaded to McPlay.",
+  "limits": "The screenshot identifies the failing program, but the low-level driver cause was not logged. The owner subsequently confirmed fast successful boot on their phone. Exact physical-phone and actual McPlay/YouTube startup durations remain unmeasured. The Site removes the external SDK dependency. Not uploaded to McPlay.",
   "testedRuntimeCommit": "13cf9dc46d2591c1dd8d0988508893be388e4e60",
   "ciRun": "https://github.com/lrodeveloperr/Haircut/actions/runs/38806039918",
   "ciStatus": "6/6 affected jobs passed; contracts/layouts/soak were not repeated in this browser-only run",
@@ -71,5 +72,6 @@
     "contracts": "v3.96 CI PASS and unchanged local contract inputs: domain/legacy 35/35, direct SDK 41/41, graphics policy 5/5",
     "layouts": "All 27 viewports in four states passed in v3.96 CI; v3.97 only initializes an existing shader helper output"
   },
-  "sites": "Published private test Site with the exact v3.97 engine/customer bytes and explicit standalone adapter. Adreno 660 hardware retest remains pending."
+  "sites": "Published private test Site with exact v3.97 engine/customer bytes and explicit standalone adapter. Owner reports fast successful phone boot; exact timing and broader physical-device flows were not measured.",
+  "ownerReportedPhoneBoot": "2026-10-15: owner confirmed the current Sites build loaded very fast on their phone. Exact elapsed time was not measured; this confirms that boot, not every physical-device flow."
 }

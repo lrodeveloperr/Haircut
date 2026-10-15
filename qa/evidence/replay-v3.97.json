@@ -1,0 +1,147 @@
+{
+  "version": "v3.97",
+  "archiveSha256": "33f95fd7e4063d6d5f52ebbbcd61a8d7b38b159abb32fc61443fdcf5f637c7fa",
+  "runtimeGameSha256": "117c9d5593cc47b71119652128733c2c7af5f53c6bac99c3cf27881f390f0034",
+  "runtimeCustomerSha256": "c5f1b9a51054f4fffb050603f96dcd416942aa88a012fa394d4f5f505a1c9f30",
+  "environment": {
+    "browser": "Chromium headless 151, existing local executable",
+    "gpu": "ANGLE SwiftShader software GPU",
+    "dpr": 2,
+    "sdk": "controlled hosted YouTube fixture supplied by the QA runner, never packaged",
+    "reducedMotion": true,
+    "physicalDevices": false
+  },
+  "result": "PASS",
+  "checks": 31,
+  "uniqueViewportSizes": 30,
+  "viewports": [
+    [
+      390,
+      844
+    ],
+    [
+      225,
+      400
+    ],
+    [
+      320,
+      568
+    ],
+    [
+      360,
+      640
+    ],
+    [
+      375,
+      667
+    ],
+    [
+      412,
+      915
+    ],
+    [
+      430,
+      932
+    ],
+    [
+      568,
+      320
+    ],
+    [
+      640,
+      360
+    ],
+    [
+      844,
+      390
+    ],
+    [
+      932,
+      430
+    ],
+    [
+      717,
+      512
+    ],
+    [
+      768,
+      1024
+    ],
+    [
+      820,
+      1180
+    ],
+    [
+      1024,
+      1366
+    ],
+    [
+      1024,
+      768
+    ],
+    [
+      1180,
+      820
+    ],
+    [
+      1366,
+      1024
+    ],
+    [
+      1280,
+      720
+    ],
+    [
+      1366,
+      768
+    ],
+    [
+      1440,
+      900
+    ],
+    [
+      1920,
+      1080
+    ],
+    [
+      2560,
+      1440
+    ],
+    [
+      3440,
+      1440
+    ],
+    [
+      400,
+      400
+    ],
+    [
+      480,
+      270
+    ],
+    [
+      270,
+      480
+    ],
+    [
+      225,
+      800
+    ],
+    [
+      320,
+      1120
+    ],
+    [
+      3840,
+      1080
+    ]
+  ],
+  "maxSvgCenterOffsetCssPx": 0.0078125,
+  "cornerLayoutChecks": 16,
+  "rowLayoutChecks": 15,
+  "clippingOrOverlapFailures": 0,
+  "consoleErrors": [],
+  "replayInteraction": "PASS: native Replay click returned to same customer, hair equals starting hair; no errors",
+  "visualReview": "All 30 cropped controls plus full portrait, landscape and desktop completion screenshots inspected; no visible alignment defect.",
+  "runtimeChanges": "None; v3.97 release and Site remain byte-for-byte unchanged."
+}
