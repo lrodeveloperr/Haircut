@@ -29,7 +29,7 @@ Readable `source/storage.js` and `source/boot.js` are inserted by the final asse
 | Browser integration | PASS — Chromium 16/16, Firefox 15/15, WebKit 15/15 |
 | 3,000-customer source audit | PASS — no rule breaks or browser errors |
 | Existing replay, wardrobe pagination, brush cleanup, single-file and top-row suites | PASS |
-| Layout matrix | COMPLETE — 27 viewports × four states; 568 expected overlap observations and 71 retained small-target warnings; no other flags |
+| Layout matrix | COMPLETE — 27 viewports × four states; 568 raw overlap observations and 71 retained small-target warnings; no other flags |
 | Sustained run | PASS — 50 transitions over 781,638 ms (13 minutes 1.6 seconds); stable resource counts |
 | Recovery screen visual review | PASS — inspected startup-error, unsupported-save and missing-SDK screenshots; text and focused Retry fit in normal phone and 225×400 viewports |
 | Repeated build | PASS — repeated primary builds are byte-identical |
