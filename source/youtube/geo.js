@@ -1,7 +1,10 @@
 /* Disposable acceleration data. Player saves are owned by youtube-client.js. */
 (function (HSC) {
   'use strict';
-  const DB = 'asmr-barber-models', STORE = 'models', CACHE_WAIT_MS = 100, ENV_WAIT_MS = 4000;
+  // A fast HTTP-cache hit can outrun IndexedDB on a busy phone. Give an existing
+  // model record a bounded 400 ms to arrive instead of unnecessarily rebuilding it.
+  // An absent record resolves immediately; denied/stalled storage still falls back.
+  const DB = 'asmr-barber-models', STORE = 'models', CACHE_WAIT_MS = 400, ENV_WAIT_MS = 4000;
   const build = 'models-v2:' + (HSC.geoBuild || 'dev');
   const envKey = 'lighting:' + (HSC.environmentBuild || 'dev');
   let cached = null, pending = new Map(), db = null, saveTimer = 0, environmentBytes = null;

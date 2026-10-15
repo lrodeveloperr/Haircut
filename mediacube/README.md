@@ -2,10 +2,12 @@
 
 ## File to upload
 
-Current phone-confirmed official SDK release: `releases/asmr-barber-fade-master-v3.99-mediacube-youtube.zip`.
-The owner confirmed successful SDK-enabled phone boot on this exact runtime. All 15 ZIP files
-match the working Sites deployment. Content-versioned startup URLs prevent mixed cached assets;
-the engine, customer module, full graphics and game behavior match v3.98. Final affected CI is pending.
+Current optimized official SDK candidate: `releases/asmr-barber-fade-master-v3.100-mediacube-youtube.zip`.
+The previous v3.99 release was confirmed on the owner's Android phone. This candidate keeps its
+game/customer runtime bytes and full graphics, and adds lossless compact cloud transport, SDK-only
+visibility handling, complete loading-screen removal and a bounded 400 ms derived-model cache read.
+Content-versioned startup URLs prevent mixed cached assets. Physical-device and hosted certification
+results for v3.99 do not certify this new candidate.
 It has not been uploaded to McPlay.
 This is a WebGL/HTML5 runtime archive with `index.html` at the root, not a source ZIP or Android package.
 
@@ -13,7 +15,7 @@ This target uses the direct official YouTube Playables SDK at `https://www.youtu
 It does not load Playgama Bridge, Playgama configuration, a mock SDK, external analytics or remote game assets.
 The existing Playgama and full-detail Android builds remain separate.
 
-See [phone-confirmed validation](VALIDATION-v3.99.md), [load-time evidence](VALIDATION-v3.98.md) and [exact build identity](BUILD-v3.99.json).
+See [candidate validation and timing](VALIDATION-v3.100.md), [phone-confirmed baseline](VALIDATION-v3.99.md) and [exact build identity](BUILD-v3.100.json).
 
 ## Rebuild
 
@@ -21,7 +23,7 @@ See [phone-confirmed validation](VALIDATION-v3.99.md), [load-time evidence](VALI
 bash source/build-youtube.sh
 # Produces source/build-youtube/, without an upload archive.
 
-bash source/release-youtube.sh v3.99
+bash source/release-youtube.sh v3.100
 # Creates the immutable release ZIP; refuses to overwrite an existing release.
 ```
 

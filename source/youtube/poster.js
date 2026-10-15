@@ -1,5 +1,5 @@
 /* Loading-screen picture. The loading screen shows a picture of the scene while the game starts, then
- * fades into the live game. Returning players see a snapshot of their own scene, taken by this device
+ * is replaced by the live game. Returning players see a snapshot of their own scene, taken by this device
  * at quiet moments. A first visit (or a changed screen shape) shows the barbershop backdrop the game draws
  * behind every customer, so only the customer fades in. The game itself is unchanged. */
 (function (HSC) {
@@ -41,7 +41,7 @@
     // The drawing buffer is only readable in the task that drew it, so draw, then read.
     function capture() {
       try {
-        if (pointer || HSC.executionPaused || document.hidden || HSC.view.isContextLost()) return;
+        if (pointer || HSC.executionPaused || HSC.view.isContextLost()) return;
         const sig = signature();
         if (sig === last) return;
         last = sig;

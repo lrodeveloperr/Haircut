@@ -39,6 +39,75 @@
   }
   const tooNew = () => Object.assign(new Error('Progress needs a newer game version'), {code: 'SAVE_TOO_NEW'});
 
+  // Transport-only, lossless run-length encoding for repeated numeric arrays. The
+  // game continues to receive its original numbers and arrays, without quantization.
+  // Small or irregular saves keep the existing v1 representation. Older releases
+  // protect the new envelope as a future save rather than misreading packed arrays.
+  function encodeSave(value) {
+    const plain = JSON.stringify(value);
+    if (new TextEncoder().encode(plain).byteLength >= 3 * 1024 * 1024)
+      throw new Error('Cloud save exceeds size limit');
+    const data = JSON.parse(plain), paths = [];
+    function pack(parent, key, path) {
+      // Keep every produced transport within the decoder's defensive bounds.
+      if (paths.length >= 1024 || path.length > 64) return;
+      const item = parent[key];
+      if (!item || typeof item !== 'object') return;
+      if (Array.isArray(item) && item.length >= 16 && item.every(Number.isFinite)) {
+        const runs = [];
+        for (let i = 0; i < item.length;) {
+          let end = i + 1;
+          while (end < item.length && item[end] === item[i]) end++;
+          runs.push(end - i, item[i]); i = end;
+        }
+        if (JSON.stringify(runs).length + JSON.stringify(path).length + 8 < JSON.stringify(item).length) {
+          parent[key] = runs; paths.push(path); return;
+        }
+      }
+      for (const name of Object.keys(item)) pack(item, name, [...path, name]);
+    }
+    pack(data, 'slots', []);
+    if (!paths.length) return plain;
+    const packed = JSON.stringify({version: 2, codec: 'numeric-rle-v1', slots: data.slots, arrays: paths});
+    return packed.length < plain.length ? packed : plain;
+  }
+  function decodeSave(value) {
+    if (value?.version !== 2 || value.codec !== 'numeric-rle-v1') return value;
+    const invalid = () => new Error('Saved progress has an invalid compact format');
+    if (!value.slots || typeof value.slots !== 'object' || Array.isArray(value.slots) ||
+        !Array.isArray(value.arrays) || value.arrays.length > 1024) throw invalid();
+    let expanded = 0;
+    const seen = new Set();
+    for (const path of value.arrays) {
+      if (!Array.isArray(path) || !path.length || path.length > 64 ||
+          path.some(key => typeof key !== 'string')) throw invalid();
+      const identity = JSON.stringify(path);
+      if (seen.has(identity)) throw invalid();
+      seen.add(identity);
+      let parent = value.slots;
+      for (const key of path.slice(0, -1)) {
+        if (!parent || typeof parent !== 'object' || !Object.hasOwn(parent, key)) throw invalid();
+        parent = parent[key];
+      }
+      const key = path[path.length - 1];
+      if (!parent || typeof parent !== 'object' || !Object.hasOwn(parent, key)) throw invalid();
+      const runs = parent[key];
+      if (!Array.isArray(runs) || runs.length % 2) throw invalid();
+      let length = 0;
+      for (let i = 0; i < runs.length; i += 2) {
+        if (!Number.isSafeInteger(runs[i]) || runs[i] < 1 || !Number.isFinite(runs[i + 1])) throw invalid();
+        length += runs[i];
+        if (length + expanded > 3 * 1024 * 1024) throw invalid();
+      }
+      const array = new Array(length); let offset = 0;
+      for (let i = 0; i < runs.length; i += 2) {
+        array.fill(runs[i + 1], offset, offset + runs[i]); offset += runs[i];
+      }
+      parent[key] = array; expanded += length;
+    }
+    return {version: 1, slots: value.slots};
+  }
+
   // Only game-owned UI work uses this scheduler. SDK callbacks remain responsive while paused.
   function scheduler() {
     let paused = false, disposed = false, sequence = 0;
@@ -156,6 +225,7 @@
           try { parsed = raw.trim() === '' ? null : JSON.parse(raw); }
           catch (_) { throw new Error('Saved progress could not be decoded'); }
         }
+        parsed = decodeSave(parsed);
         const empty = parsed == null || parsed === '' || parsed === false || parsed === 0 ||
           (typeof parsed === 'string' && parsed.trim() === '') ||
           (typeof parsed === 'object' && Object.keys(parsed).length === 0);
@@ -210,7 +280,7 @@
       // Serialize at execution time: concurrently changing slots cannot overwrite one another.
       const pending = queue.catch(() => {}).then(async () => {
         requireLoaded();
-        const data = JSON.stringify(envelope);
+        const data = encodeSave(envelope);
         const cuts = savedCuts(envelope);
         if (new TextEncoder().encode(data).byteLength >= 3 * 1024 * 1024) throw new Error('Cloud save exceeds size limit');
         if (hosted) await sdk.game.saveData(data);

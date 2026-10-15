@@ -2,8 +2,9 @@
 
 ## MediaCube / YouTube Playables
 
-Current hardware retest candidate: [`asmr-barber-fade-master-v3.97-mediacube-youtube.zip`](releases/asmr-barber-fade-master-v3.97-mediacube-youtube.zip).
-Validate on the reported Adreno 660 phone before replacing the McPlay bundle. This direct-YouTube build includes the reliability corrections,
+Current optimized candidate: [`asmr-barber-fade-master-v3.100-mediacube-youtube.zip`](releases/asmr-barber-fade-master-v3.100-mediacube-youtube.zip).
+This extends the phone-confirmed v3.99 build with lossless compact saves, SDK lifecycle cleanup and a bounded model-cache read improvement.
+Validate this candidate on physical Android/iOS and the hosted SDK before replacing the McPlay bundle. This direct-YouTube build includes the reliability corrections,
 official SDK integration, protected cloud saves, host lifecycle handling and complete license files.
 See [`mediacube/README.md`](mediacube/README.md) for build commands, ad behavior and validation scope.
 

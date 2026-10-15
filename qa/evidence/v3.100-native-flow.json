@@ -1,0 +1,58 @@
+{
+  "cut": [
+    {
+      "freshBytes": 2292,
+      "cutBytes": 2614,
+      "cutStrokeCount": 11,
+      "cloudReloadExactlyRestored": true,
+      "readiness": [
+        {
+          "type": "firstFrameReady",
+          "t": 1885.2999999970198
+        },
+        {
+          "type": "gameReady",
+          "t": 6007.099999997765,
+          "data": {
+            "loading": false,
+            "inert": false
+          }
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "finishReplay": [
+    {
+      "stage": "ready",
+      "before": {
+        "seed": 1009795063,
+        "job": 1,
+        "queue": "null"
+      }
+    },
+    {
+      "stage": "finished",
+      "state": {
+        "status": "reveal",
+        "revealComplete": true,
+        "paused": false,
+        "executionPaused": false
+      }
+    },
+    {
+      "stage": "replayed",
+      "after": {
+        "status": "cutting",
+        "seed": 1009795063,
+        "job": 1,
+        "queue": "{\"job\":2,\"person\":{\"v\":1,\"seed\":3673727366,\"heritage\":\"white\",\"age\":\"young\",\"years\":25,\"skin\":{\"tone\":1.48,\"under\":\"neutral\"},\"hair\":{\"texture\":\"curly\",\"type\":\"3a\",\"curl\":0.086,\"colour\":3,\"grey\":0,\"greyPattern\":\"crown\",\"greyTone\":\"silver\"},\"bald\":{\"type\":\"none\",\"norwood\":\"1\",\"diffuse\":0,\"edge\":0.102,\"patches\":[]},\"beard\":{\"style\":\"clean\",\"mm\":{},\"grey\":0,\"greyPattern\":\"chin\",\"patchy\":0.247,\"cheekLine\":0.89,\"neckLine\":-0.361,\"warm\":0.21},\"eyes\":\"hazel\",\"brow\":{\"thick\":1.081,\"grey\":0},\"morph\":{\"noseW\":-1,\"noseBridge\":0.182,\"noseTip\":-0.756,\"lips\":-0.078,\"jaw\":0.243,\"chin\":-0.127,\"cheek\":0.562,\"brow\":0.432}},\"profile\":\"s1-b2-t4-low-v0\"}",
+        "hairReset": true
+      },
+      "sameCustomer": true,
+      "sameJob": true,
+      "sameQueue": true,
+      "errors": []
+    }
+  ]
+}

@@ -12,6 +12,11 @@ for name in ['index.html', 'styles.css', 'THIRD-PARTY-NOTICES.md', 'assets', 'ru
     source, target = src / name, out / name
     shutil.copytree(source, target) if source.is_dir() else shutil.copy2(source, target)
 
+notices = out / 'THIRD-PARTY-NOTICES.md'
+notices.write_text(notices.read_text().replace(
+    '- Playgama Bridge: official CDN runtime, subject to platform distribution terms.',
+    '- YouTube Playables SDK: official YouTube runtime, subject to platform distribution terms.'))
+
 def replace(text, old, new):
     assert text.count(old) == 1, f'YouTube patch expected exactly one occurrence: {old[:100]}'
     return text.replace(old, new)

@@ -1,0 +1,116 @@
+{
+  "scope": {
+    "coldTypicalSeconds": 3,
+    "coldPlanningRangeSeconds": [
+      2,
+      5
+    ],
+    "repeatPlanningRangeSeconds": [
+      1,
+      3
+    ],
+    "constrainedDevices": "Can exceed 5\u201310 seconds. No universal latency guarantee.",
+    "scope": "Inference for modern phones on healthy WiFi/4G, excluding pre-roll/platform navigation. Not an actual YouTube-host measurement.",
+    "measuredFixtureColdSeconds": {
+      "local": 2.45,
+      "CPU4x_10Mbps_50msLatency": 5.7,
+      "CPU4x_2Mbps_150msLatency": 9.27
+    },
+    "warmCacheCPUWorkSavedSeconds": 1.2,
+    "caveats": "Chromium SwiftShader software GPU; host delays synthetic; small-sample timing estimates. No total-startup speedup claim from contended candidate runs."
+  },
+  "baselineMeasurements": [
+    {
+      "scenario": "local",
+      "run": "cold",
+      "settings": {
+        "name": "local",
+        "cpu": 1,
+        "mbps": 0,
+        "latency": 0,
+        "sdk": 0,
+        "host": 50
+      },
+      "gameReadyMs": 2449.699999999255,
+      "modelWorkMs": 510.9000000022352,
+      "cache": "miss"
+    },
+    {
+      "scenario": "local",
+      "run": "warm",
+      "settings": {
+        "name": "local",
+        "cpu": 1,
+        "mbps": 0,
+        "latency": 0,
+        "sdk": 0,
+        "host": 50
+      },
+      "gameReadyMs": 2368.099999997765,
+      "modelWorkMs": 169.39999999850988,
+      "cache": "hit"
+    },
+    {
+      "scenario": "mid-mobile",
+      "run": "cold",
+      "settings": {
+        "name": "mid-mobile",
+        "cpu": 4,
+        "mbps": 10,
+        "latency": 50,
+        "sdk": 150,
+        "host": 150
+      },
+      "gameReadyMs": 5696.300000000745,
+      "modelWorkMs": 2004.2999999970198,
+      "cache": "miss"
+    },
+    {
+      "scenario": "mid-mobile",
+      "run": "warm",
+      "settings": {
+        "name": "mid-mobile",
+        "cpu": 4,
+        "mbps": 10,
+        "latency": 50,
+        "sdk": 150,
+        "host": 150
+      },
+      "gameReadyMs": 5743.199999999255,
+      "modelWorkMs": 2046.800000000745,
+      "cache": "miss"
+    },
+    {
+      "scenario": "slow-mobile",
+      "run": "cold",
+      "settings": {
+        "name": "slow-mobile",
+        "cpu": 4,
+        "mbps": 2,
+        "latency": 150,
+        "sdk": 250,
+        "host": 300
+      },
+      "gameReadyMs": 9270,
+      "modelWorkMs": 2195.2999999970198,
+      "cache": "miss"
+    },
+    {
+      "scenario": "slow-mobile",
+      "run": "warm",
+      "settings": {
+        "name": "slow-mobile",
+        "cpu": 4,
+        "mbps": 2,
+        "latency": 150,
+        "sdk": 250,
+        "host": 300
+      },
+      "gameReadyMs": 5039,
+      "modelWorkMs": 1897.5,
+      "cache": "miss"
+    }
+  ],
+  "cacheA_B": "100\u2192400 ms recovers warm-cache hits under CPU4\u00d7; model work 2047\u2192817 ms and 1898\u2192680 ms. A/B trial also lengthened environment timeout to 6 s; no cold total benefit demonstrated, so production retains 4 s.",
+  "excluded": "Contended candidate wall-clock samples excluded; HTTP routing originally disabled HTTP cache, corrected before selected baseline/A-B measurements."
+}
