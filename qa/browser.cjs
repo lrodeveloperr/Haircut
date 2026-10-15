@@ -10,7 +10,7 @@ async function launch(){browser=await({chromium,firefox,webkit}[engine]).launch(
 async function fixture(options={}){
  const data=new Map(Object.entries(options.saved||{})),errors=[],requests=[],calls=[];
  let readError=!!options.readError,writeError=false;
- const ctx=await browser.newContext({viewport:options.viewport||{width:390,height:844},hasTouch:options.touch!==false,reducedMotion:options.reduced?'reduce':'no-preference'});
+ const ctx=await browser.newContext({viewport:options.viewport||{width:390,height:844},hasTouch:options.touch===true,reducedMotion:options.reduced?'reduce':'no-preference'});
  const page=await ctx.newPage();
  page.setDefaultTimeout(7000);page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});page.on('request',r=>requests.push(r.url()));
  await page.exposeBinding('qaRead',async(_,keys)=>{if(readError)throw Error('Injected storage read failure');return keys.map(k=>{let v=data.get(k);if(v==null)return null;if(options.parse!==false&&typeof v==='string'){try{return JSON.parse(v)}catch{}}return v})});
@@ -88,7 +88,7 @@ async function inputCase(){const f=await fixture({parse:false,ads:false,touch:fa
   await test('W16','SDK initialization failure has visible recovery and never readies',async()=>{await p.waitForFunction(()=>document.documentElement.dataset.bootError==='true');assert.equal(await p.evaluate(()=>window.__qa.messages.length),0);assert.equal(await p.getByRole('button',{name:/retry|reload|try again/i}).count()>0,true,'SDK failure leaves a blank game without a retry control')});await f.close();
   f=await fixture({missing:true});p=f.page;
   await test('W17','Production origin never silently switches to preview mocks when SDK is missing',async()=>{await p.waitForFunction(()=>document.documentElement.dataset.bootError==='true');assert.equal(await p.evaluate(()=>!!window.skinFadeStudio),false)});await f.close();
-  f=await fixture({parse:false,ads:false});p=f.page;
+  f=await fixture({parse:false,ads:false,touch:true});p=f.page;
   await test('WTOUCH','Native touch cuts scalp and pointer cancellation ends the gesture',async()=>{await p.mouse.move(150,310);await p.mouse.down();await p.mouse.move(260,330,{steps:8});await p.mouse.up();await p.getByRole('radio',{name:/^Guard 2,/}).tap();await p.getByRole('radio',{name:/^Guard 1,/}).tap();await p.getByRole('button',{name:'Clipper off: drag to turn the customer',exact:true}).tap();const hint=await p.locator('.tutorial.tut-cut').evaluate(e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y}});const before=await state(p);await p.touchscreen.tap(hint.x,hint.y+72);assert((await state(p)).cutStrokeCount>before.cutStrokeCount,'native touch produced no cut');await p.mouse.move(hint.x,hint.y+20);await p.mouse.down();await p.locator('canvas').dispatchEvent('pointercancel',{pointerId:1,pointerType:'mouse'});const cancelled=await state(p);await p.mouse.move(hint.x+80,hint.y+80,{steps:8});await p.mouse.up();assert.deepEqual((await state(p)).hair,cancelled.hair)});await f.close();
   f=await fixture({platform:'youtube',language:'ar',parse:false,reduced:true});p=f.page;
   await test('W18','YouTube respects host controls; host locale reaches the page',async()=>{assert.equal(await p.getByRole('button',{name:/game sound/}).count(),0);assert.equal(await p.locator('html').getAttribute('lang'),'ar');await p.evaluate(()=>window.__qa.platform.emit('audio_state_changed',false));assert.equal((await view(p)).audio,false);await p.screenshot({path:path.join(out,'youtube-ar.png')})});
