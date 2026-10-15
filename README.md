@@ -1,6 +1,11 @@
 # ASMR Barber: Fade Master
 
-Finalized Playgama package for YouTube Playables: **v3.82**.
+Historical packaged release for YouTube Playables: **v3.82**.
+
+The source on this branch includes later reliability corrections: protected saves, startup Retry, rotation
+normalization and complete license texts. **The linked ZIPs have not been rebuilt with those corrections.**
+Game control sizes are unchanged. See [source build instructions](source/README.md) and
+[correction validation](qa/FIX-VALIDATION-2026-10-15.md).
 
 [Download the Playgama ZIP](asmr-barber-fade-master-v3.82-playgama.zip)
 
@@ -12,8 +17,9 @@ The archive includes `index.html` at its root and the Playgama Bridge configurat
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
-The complete source, with a one-command build that reproduces these packages byte for byte, is in
-[`source/`](source/README.md) (`bash source/release.sh v3.82`).
+The corrected source is in [`source/`](source/README.md); build it with `bash source/buildall.sh`.
+The historical ZIPs were reproduced byte for byte from commit
+`3ed0ef990326781164dfa9c09efc04835ee594fd` during the release audit.
 
 ## Changes
 

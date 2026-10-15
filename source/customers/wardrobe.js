@@ -585,11 +585,10 @@ body.hsc-settle .ui button,body.hsc-settle #hsc-hud *,body.hsc-settle .hsc-repla
     clearPreview() { W.preview = { clipper: null, gown: null }; applyLook(); },
     picture: (d, size) => picture(d, size),
   };
-  HSC.wardrobeInit = async function ({ client, game }) {
+  HSC.wardrobeInit = async function ({ client, game, savedData }) {
     W.client = client;
     W.game = game;
-    let d = null;
-    try { d = client && client.loadProgress ? await client.loadProgress(KEY, null) : null; } catch (e) {}
+    const d = savedData !== undefined ? savedData : client && client.loadProgress ? await client.loadProgress(KEY, null) : null;
     W.data = sanitize(d);
     try { ui.build(); } catch (e) { console.error('customers: rewards UI failed', e); }
     try { HSC.hubInit && HSC.hubInit(); } catch (e) { console.error('customers: hub failed', e); }

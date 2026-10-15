@@ -4,6 +4,8 @@ cd "$(dirname "$0")"
 if [ "${TARGET:-playables}" = full ]; then DETAIL=detail; else DETAIL=detail-playables; fi
 mkdir -p build/runtime
 cp -r src/assets src/THIRD-PARTY-NOTICES.md src/styles.css build/
+cp -r src/licenses build/
+cat src/boot-error.css >> build/styles.css
 cp src/runtime/game.js build/runtime/game.js
 python3 patch.py build/runtime/game.js
 python3 patch2.py build/runtime/game.js
@@ -18,6 +20,7 @@ python3 patch10.py build/runtime/game.js
 python3 patch11.py build/runtime/game.js
 python3 patch12.py build/runtime/game.js
 python3 patch13.py build/runtime/game.js
+python3 patch14.py build/runtime/game.js
 { echo "/* Haircut Studio customers: generated people, skin, hair textures, baldness, trimmable beards, face shapes. */"
   for f in "$DETAIL" people glsl faces render state meta catalog patterns wardrobe hub clippings; do cat customers/$f.js; echo; done; } > build/runtime/customers.js
 python3 - <<'PY'

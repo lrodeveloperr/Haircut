@@ -60,10 +60,8 @@
   // the saved setting arrives before the renderer is created
   HSC.initDetail = async function (client) {
     D.client = client;
-    try {
-      const s = client && client.loadProgress ? await client.loadProgress(KEY, 'auto') : 'auto';
-      if (s === 'auto' || s === 'low' || s === 'high') D.setting = s;
-    } catch (e) {}
+    const s = client && client.loadProgress ? await client.loadProgress(KEY, 'auto') : 'auto';
+    if (s === 'auto' || s === 'low' || s === 'high') D.setting = s;
     if (effective() !== D.level) apply(effective());
   };
   HSC.setDetailSetting = function (s) {
