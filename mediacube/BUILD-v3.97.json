@@ -41,11 +41,16 @@
     "directSdk": "41/41 PASS",
     "graphicsPolicy": "5/5 PASS",
     "renderedParity": "5/5 byte-identical customer PNGs against v3.95, including three active scalp/beard patches",
-    "standalone": "2/2 PASS with blocked SDK and denied storage",
-    "startup": "v3.97 Windows and cross-browser checks pending; v3.96 passed local startup/mobile cases",
-    "mobile": "v3.96 8/8; same startup code in v3.97, one initialized shader helper adjustment",
+    "standalone": "2/2 PASS in each Chromium, Firefox and WebKit CI job",
+    "startup": "11/11 PASS on exact v3.97 archive in Linux CI",
+    "mobile": "8/8 PASS on exact v3.97 archive in CI",
     "reflection": "decoded bytes identical to v3.94/v3.95",
-    "shaderDiagnostics": "2/2 PASS locally: silent-link failure and all shader variants"
+    "shaderDiagnostics": "2/2 PASS locally: silent-link failure and all shader variants",
+    "windowsD3D11": "11/11 PASS without compiler warnings",
+    "chromium": "18/18 PASS",
+    "firefox": "16/16 PASS",
+    "webkit": "16/16 PASS",
+    "graphics": "3/3 full-detail cases plus 5 seeded image variants byte-identical to v3.94 in CI"
   },
   "shaderSourceBytes": {
     "scalpVertex": {
@@ -58,5 +63,13 @@
       "v396": 7428
     }
   },
-  "limits": "The screenshot proves the failing program, not the hidden driver cause. Shader simplification is a compatibility correction requiring a new Adreno 660 hardware test. Desktop/software-GPU tests cannot establish that the phone is fixed. Sites adapter removes the PC SDK dependency. Not uploaded to McPlay."
+  "limits": "The screenshot proves the failing program, not the hidden driver cause. Shader simplification is a compatibility correction requiring a new Adreno 660 hardware test. Desktop/software-GPU tests cannot establish that the phone is fixed. Sites adapter removes the PC SDK dependency. Not uploaded to McPlay.",
+  "testedRuntimeCommit": "13cf9dc46d2591c1dd8d0988508893be388e4e60",
+  "ciRun": "https://github.com/lrodeveloperr/Haircut/actions/runs/38806039918",
+  "ciStatus": "6/6 affected jobs passed; contracts/layouts/soak were not repeated in this browser-only run",
+  "inheritedChecks": {
+    "contracts": "v3.96 CI PASS and unchanged local contract inputs: domain/legacy 35/35, direct SDK 41/41, graphics policy 5/5",
+    "layouts": "All 27 viewports in four states passed in v3.96 CI; v3.97 only initializes an existing shader helper output"
+  },
+  "sites": "Published private test Site with the exact v3.97 engine/customer bytes and explicit standalone adapter. Adreno 660 hardware retest remains pending."
 }
