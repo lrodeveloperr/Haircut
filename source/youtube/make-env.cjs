@@ -37,8 +37,14 @@ const target = path.resolve(__dirname, 'env', 'room-env.dat');
   // Group the low and high bytes of the half floats. Undoing this shuffle is exact and gzip
   // compresses the smoother high-byte plane much better than interleaved half floats.
   const raw = Buffer.from(data), half = raw.length / 2, packed = Buffer.alloc(raw.length + 8);
-  packed.write('HSENV001');
+  packed.write('HSENV002');
   for (let i = 0; i < half; i++) { packed[8 + i] = raw[i * 2]; packed[8 + half + i] = raw[i * 2 + 1]; }
+  // Byte differences across adjacent texels, then rows, expose repeated lighting gradients
+  // to gzip. Work backwards so each predictor reads the original previous byte. The loader
+  // adds those bytes back forwards in reverse predictor order, with no loss or quantization.
+  const predicted = packed.subarray(8);
+  for (const stride of [4, 768 * 4])
+    for (let i = predicted.length - 1; i >= stride; i--) predicted[i] -= predicted[i - stride];
   fs.writeFileSync(target, zlib.gzipSync(packed, {level: 9}));
   console.log('wrote', path.relative(process.cwd(), target), fs.statSync(target).size, 'bytes');
 })().catch(error => { console.error(error); process.exitCode = 1; });

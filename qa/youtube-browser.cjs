@@ -76,7 +76,7 @@ async function fixture(options={}){
   }
   await route.fulfill({path:file,headers:{'Content-Security-Policy':csp},contentType:({'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp','.dat':'application/octet-stream'})[path.extname(file)]||'text/plain'});
  });
- if(!options.realSdk)await ctx.route('https://www.youtube.com/game_api/v1',route=>options.missing||options.localPreview?route.abort():route.fulfill({contentType:'application/javascript',body:`
+ if(!options.realSdk)await ctx.route('https://www.youtube.com/game_api/v1',async route=>{if(options.sdkDelay)await new Promise(r=>setTimeout(r,options.sdkDelay));return options.missing||options.localPreview?route.abort():route.fulfill({contentType:'application/javascript',body:`
    window.__yt={messages:[],ads:[],scores:[],timings:{},callbacks:{},rewardMode:'${options.rewardMode||'earned'}',paused:false,audio:${options.audio!==false}};
    const sub=k=>fn=>{__yt.callbacks[k]=fn;${options.initialPause?"if(k==='pause'){__yt.paused=true;fn();}":''}return()=>delete __yt.callbacks[k];};
    window.ytgame={IN_PLAYABLES_ENV:${options.hosted!==false},SDK_VERSION:'strict-test-fixture',
@@ -85,7 +85,7 @@ async function fixture(options={}){
      engagement:{sendScore:async score=>{if(!Number.isSafeInteger(score.value))throw Error('Non-integer score');__yt.scores.push({value:score.value,at:performance.now()});}},
      health:{logWarning(){}},
      ads:{requestRewardedAd:async id=>{__yt.ads.push({kind:'rewarded',id});await new Promise(r=>setTimeout(r,100));if(__yt.rewardMode==='error')throw Error('no fill');return __yt.rewardMode==='earned';},requestInterstitialAd:async()=>{__yt.ads.push({kind:'interstitial'});await new Promise(r=>setTimeout(r,100));}}
-   };` }));
+   };` });});
  await page.goto('http://release.test/',{waitUntil:'load'});
  if(!options.blocked&&!options.missing&&!options.readFail&&!options.initialPause)await page.waitForFunction(()=>!!window.skinFadeStudio,null,{timeout:options.fenceNeverSignals?90000:45000});
  return {ctx,page,calls,errors,requests,startupMs:Math.round(performance.now()-started),raw:()=>raw,readFail(value){readFail=value;},writeFail(value){writeFail=value;},close:()=>ctx.close()};

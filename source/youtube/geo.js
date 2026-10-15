@@ -54,15 +54,22 @@
     visit(value);
     return hash >>> 0;
   }
-  const ENV_BYTES = 768 * 1024 * 4 * 2, MAGIC = 'HSENV001';
+  const ENV_BYTES = 768 * 1024 * 4 * 2, MAGIC = 'HSENV001', DELTA_MAGIC = 'HSENV002';
   async function decodeEnvironment(input) {
     let bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
     if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
       const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
       bytes = new Uint8Array(await new Response(stream).arrayBuffer());
     }
-    if (bytes.byteLength === ENV_BYTES + MAGIC.length &&
-        MAGIC.split('').every((c, i) => bytes[i] === c.charCodeAt(0))) {
+    const magic = String.fromCharCode(...bytes.subarray(0, 8));
+    if (bytes.byteLength === ENV_BYTES + 8 && (magic === MAGIC || magic === DELTA_MAGIC)) {
+      if (magic === DELTA_MAGIC) {
+        // Undo the two byte predictors in reverse order. Uint8 assignment wraps exactly;
+        // the resulting half-float bytes, texture dimensions and lighting are unchanged.
+        const packed = bytes.subarray(8);
+        for (const stride of [768 * 4, 4])
+          for (let i = stride; i < packed.length; i++) packed[i] += packed[i - stride];
+      }
       // Restore the original half-float bytes exactly; no quantization or change to the lighting.
       const raw = new Uint8Array(ENV_BYTES), half = ENV_BYTES / 2;
       for (let i = 0; i < half; i++) { raw[i * 2] = bytes[8 + i]; raw[i * 2 + 1] = bytes[8 + half + i]; }

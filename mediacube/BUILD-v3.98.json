@@ -1,0 +1,30 @@
+{
+  "version": "v3.98",
+  "status": "Local parity and contract checks passed; affected cross-browser CI pending. Not uploaded to McPlay.",
+  "archive": "releases/asmr-barber-fade-master-v3.98-mediacube-youtube.zip",
+  "archiveSha256": "b2110be41486f0b8b3ff6ce8e175ecaffecb55c6d9c4a637f150010ac94af3b5",
+  "zipBytes": 724822,
+  "expandedBytes": 1414001,
+  "baseline": "v3.97",
+  "change": "Lossless adjacent-texel and row byte prediction before gzip; exact inverse in the lighting decoder.",
+  "reflection": {
+    "baselineBytes": 582123,
+    "bytes": 318208,
+    "reductionPercent": 45.34,
+    "originalDecodedBytes": 6291456,
+    "decodedSha256": "cd7b1d0c6440b77f0ece61d5aedf6b270a5e5e9906740303c819212cdaa2be57"
+  },
+  "gameRuntimeSha256": "117c9d5593cc47b71119652128733c2c7af5f53c6bac99c3cf27881f390f0034",
+  "customerRuntimeSha256": "c5f1b9a51054f4fffb050603f96dcd416942aa88a012fa394d4f5f505a1c9f30",
+  "validation": {
+    "domainLegacy": "35/35 PASS",
+    "directSdk": "41/41 PASS",
+    "graphicsPolicy": "5/5 PASS",
+    "renderedParity": "All five seeded customer PNGs identical to v3.97",
+    "browserDecoder": "All 3,145,728 half-float values identical; old packed format remains supported",
+    "startupAudit": "Five fresh-process pairs plus controlled SDK/cloud delay probes; local route/network and software GPU only",
+    "affectedCI": "pending"
+  },
+  "unchanged": "Game and customer bundles byte-identical to v3.97; full graphics, controls, mechanics, saves, monetization and SDK ordering unchanged.",
+  "limits": "No exact physical-phone or actual McPlay/YouTube timings. Download savings depend on hosting compression, throughput, caching and overlap. No McPlay upload."
+}

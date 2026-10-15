@@ -1,0 +1,594 @@
+{
+  "environment": {
+    "browser": "Chromium",
+    "version": "151 headless shell",
+    "gpu": "ANGLE SwiftShader software renderer",
+    "viewport": [
+      390,
+      844
+    ],
+    "dpr": 2,
+    "network": "local route fulfillment; no real host/CDN latency or bandwidth",
+    "cold": "fresh browser process per sample; OS/GPU caches not purged",
+    "physicalPhone": false
+  },
+  "samples": [
+    {
+      "name": "baseline-1",
+      "timing": {
+        "sdkReady": 39.69999999925494,
+        "requestsStarted": 42.899999998509884,
+        "saveRequest": 43.30000000074506,
+        "localeRequest": 43.5,
+        "localeLoaded": 43.5,
+        "savesLoaded": 64.5,
+        "environment": "shipped",
+        "environmentSource": "bundle",
+        "environmentReady": 82,
+        "modelCache": "miss",
+        "engineStart": 108.19999999925494,
+        "geometryReady": 659.8999999985099,
+        "rendererReady": 744.5999999977648,
+        "materialsReady": 757.0999999977648,
+        "shadersReady": 1092.5999999977648,
+        "firstDraw": 1479.300000000745,
+        "gpuReady": 3394.699999999255,
+        "firstPlayable": 3412.89999999851,
+        "gameReady": 3424.699999999255
+      },
+      "ready": [
+        {
+          "name": "firstFrameReady",
+          "at": 39.69999999925494,
+          "loading": true,
+          "loadingText": "\u2702Loading\u2026"
+        },
+        {
+          "name": "gameReady",
+          "at": 3424.699999999255,
+          "loading": false,
+          "hud": true
+        }
+      ],
+      "quality": {
+        "strands": 30000,
+        "segments": 8,
+        "antialias": true,
+        "shaderLow": false
+      },
+      "errors": []
+    },
+    {
+      "name": "candidate-1",
+      "timing": {
+        "sdkReady": 27.5,
+        "requestsStarted": 29.199999999254942,
+        "saveRequest": 29.5,
+        "localeRequest": 29.600000001490116,
+        "localeLoaded": 29.600000001490116,
+        "environment": "shipped",
+        "environmentSource": "bundle",
+        "environmentReady": 79.10000000149012,
+        "savesLoaded": 80.90000000223517,
+        "modelCache": "miss",
+        "engineStart": 105.5,
+        "geometryReady": 663.1000000014901,
+        "rendererReady": 761.1999999992549,
+        "materialsReady": 770.4000000022352,
+        "shadersReady": 1091.4000000022352,
+        "firstDraw": 1486,
+        "gpuReady": 3207.10000000149,
+        "firstPlayable": 3232.699999999255,
+        "gameReady": 3243.699999999255
+      },
+      "ready": [
+        {
+          "name": "firstFrameReady",
+          "at": 27.5,
+          "loading": true,
+          "loadingText": "\u2702Loading\u2026"
+        },
+        {
+          "name": "gameReady",
+          "at": 3243.699999999255,
+          "loading": false,
+          "hud": true
+        }
+      ],
+      "quality": {
+        "strands": 30000,
+        "segments": 8,
+        "antialias": true,
+        "shaderLow": false
+      },
+      "errors": []
+    },
+    {
+      "name": "baseline-2",
+      "timing": {
+        "sdkReady": 21.400000002235174,
+        "requestsStarted": 23.100000001490116,
+        "saveRequest": 23.5,
+        "localeRequest": 23.699999999254942,
+        "localeLoaded": 23.699999999254942,
+        "modelCache": "miss",
+        "environment": "shipped",
+        "environmentSource": "bundle",
+        "environmentReady": 75.90000000223517,
+        "engineStart": 92,
+        "geometryReady": 597.3000000007451,
+        "savesLoaded": 600.4000000022352,
+        "rendererReady": 731.5,
+        "materialsReady": 743.6999999992549,
+        "shadersReady": 948.1999999992549,
+        "firstDraw": 1419.800000000745,
+        "gpuReady": 3262.900000002235,
+        "firstPlayable": 3296.199999999255,
+        "gameReady": 3307.5
+      },
+      "ready": [
+        {
+          "name": "firstFrameReady",
+          "at": 21.300000000745058,
+          "loading": true,
+          "loadingText": "\u2702Loading\u2026"
+        },
+        {
+          "name": "gameReady",
+          "at": 3307.5,
+          "loading": false,
+          "hud": true
+        }
+      ],
+      "quality": {
+        "strands": 30000,
+        "segments": 8,
+        "antialias": true,
+        "shaderLow": false
+      },
+      "errors": []
+    },
+    {
+      "name": "candidate-2",
+      "timing": {
+        "sdkReady": 26.899999998509884,
+        "requestsStarted": 30.699999999254942,
+        "saveRequest": 31,
+        "localeRequest": 31.199999999254942,
+        "localeLoaded": 31.199999999254942,
+        "environment": "shipped",
+        "environmentSource": "bundle",
+        "environmentReady": 79.19999999925494,
+        "savesLoaded": 79.59999999776483,
+        "modelCache": "miss",
+        "engineStart": 102.19999999925494,
+        "geometryReady": 639.5999999977648,
+        "rendererReady": 728.8999999985099,
+        "materialsReady": 737.0999999977648,
+        "shadersReady": 1038.5,
+        "firstDraw": 1481.199999999255,
+        "gpuReady": 3309.39999999851,
+        "firstPlayable": 3337.099999997765,
+        "gameReady": 3347.599999997765
+      },
+      "ready": [
+        {
+          "name": "firstFrameReady",
+          "at": 26.899999998509884,
+          "loading": true,
+          "loadingText": "\u2702Loading\u2026"
+        },
+        {
+          "name": "gameReady",
+          "at": 3347.599999997765,
+          "loading": false,
+          "hud": true
+        }
+      ],
+      "quality": {
+        "strands": 30000,
+        "segments": 8,
+        "antialias": true,
+        "shaderLow": false
+      },
+      "errors": []
+    },
+    {
+      "name": "baseline-3",
+      "timing": {
+        "sdkReady": 23.100000001490116,
+        "requestsStarted": 24.699999999254942,
+        "saveRequest": 25.100000001490116,
+        "localeRequest": 25.199999999254942,
+        "localeLoaded": 25.300000000745058,
+        "modelCache": "miss",
+        "savesLoaded": 45.400000002235174,
+        "engineStart": 79.90000000223517,
+        "geometryReady": 586.1999999992549,
+        "environment": "shipped",
+        "environmentSource": "bundle",
+        "environmentReady": 607.1000000014901,
+        "rendererReady": 726.6000000014901,
+        "materialsReady": 737.8000000007451,
+        "shadersReady": 943.6000000014901,
+        "firstDraw": 1465.800000000745,
+        "gpuReady": 3401.300000000745,
+        "firstPlayable": 3432.800000000745,
+        "gameReady": 3438.400000002235
+      },
+      "ready": [
+        {
+          "name": "firstFrameReady",
+          "at": 23,
+          "loading": true,
+          "loadingText": "\u2702Loading\u2026"
+        },
+        {
+          "name": "gameReady",
+          "at": 3438.400000002235,
+          "loading": false,
+          "hud": true
+        }
+      ],
+      "quality": {
+        "strands": 30000,
+        "segments": 8,
+        "antialias": true,
+        "shaderLow": false
+      },
+      "errors": []
+    },
+    {
+      "name": "candidate-3",
+      "timing": {
+        "sdkReady": 32,
+        "requestsStarted": 33.69999999925494,
+        "saveRequest": 34.19999999925494,
+        "localeRequest": 34.30000000074506,
+        "localeLoaded": 34.30000000074506,
+        "modelCache": "miss",
+        "savesLoaded": 67.60000000149012,
+        "engineStart": 86.60000000149012,
+        "geometryReady": 651.5,
+        "environment": "shipped",
+        "environmentSource": "bundle",
+        "environmentReady": 684,
+        "rendererReady": 803.8000000007451,
+        "materialsReady": 837.3000000007451,
+        "shadersReady": 1032.199999999255,
+        "firstDraw": 1545.5,
+        "gpuReady": 3327.199999999255,
+        "firstPlayable": 3350.10000000149,
+        "gameReady": 3356.89999999851
+      },
+      "ready": [
+        {
+          "name": "firstFrameReady",
+          "at": 32,
+          "loading": true,
+          "loadingText": "\u2702Loading\u2026"
+        },
+        {
+          "name": "gameReady",
+          "at": 3356.89999999851,
+          "loading": false,
+          "hud": true
+        }
+      ],
+      "quality": {
+        "strands": 30000,
+        "segments": 8,
+        "antialias": true,
+        "shaderLow": false
+      },
+      "errors": []
+    },
+    {
+      "name": "baseline-4",
+      "timing": {
+        "sdkReady": 23.900000002235174,
+        "requestsStarted": 26.5,
+        "saveRequest": 26.800000000745058,
+        "localeRequest": 26.900000002235174,
+        "localeLoaded": 27,
+        "modelCache": "miss",
+        "engineStart": 76.70000000298023,
+        "geometryReady": 609.1000000014901,
+        "savesLoaded": 617.4000000022352,
+        "environment": "shipped",
+        "environmentSource": "bundle",
+        "environmentReady": 630.8000000007451,
+        "rendererReady": 739.9000000022352,
+        "materialsReady": 748.5,
+        "shadersReady": 968.9000000022352,
+        "firstDraw": 1396.1000000014901,
+        "gpuReady": 3100.5,
+        "firstPlayable": 3123.60000000149,
+        "gameReady": 3129
+      },
+      "ready": [
+        {
+          "name": "firstFrameReady",
+          "at": 23.900000002235174,
+          "loading": true,
+          "loadingText": "\u2702Loading\u2026"
+        },
+        {
+          "name": "gameReady",
+          "at": 3129,
+          "loading": false,
+          "hud": true
+        }
+      ],
+      "quality": {
+        "strands": 30000,
+        "segments": 8,
+        "antialias": true,
+        "shaderLow": false
+      },
+      "errors": []
+    },
+    {
+      "name": "candidate-4",
+      "timing": {
+        "sdkReady": 28.199999999254942,
+        "requestsStarted": 31.5,
+        "saveRequest": 31.699999999254942,
+        "localeRequest": 31.900000002235174,
+        "localeLoaded": 31.900000002235174,
+        "environment": "shipped",
+        "environmentSource": "bundle",
+        "environmentReady": 81.19999999925494,
+        "savesLoaded": 81.5,
+        "modelCache": "miss",
+        "engineStart": 104.19999999925494,
+        "geometryReady": 665.6000000014901,
+        "rendererReady": 784.3000000007451,
+        "materialsReady": 793,
+        "shadersReady": 1092.6000000014901,
+        "firstDraw": 1527,
+        "gpuReady": 3260.900000002235,
+        "firstPlayable": 3288.5,
+        "gameReady": 3298.400000002235
+      },
+      "ready": [
+        {
+          "name": "firstFrameReady",
+          "at": 28.100000001490116,
+          "loading": true,
+          "loadingText": "\u2702Loading\u2026"
+        },
+        {
+          "name": "gameReady",
+          "at": 3298.400000002235,
+          "loading": false,
+          "hud": true
+        }
+      ],
+      "quality": {
+        "strands": 30000,
+        "segments": 8,
+        "antialias": true,
+        "shaderLow": false
+      },
+      "errors": []
+    },
+    {
+      "name": "baseline-5",
+      "timing": {
+        "sdkReady": 20.800000000745058,
+        "modelCache": "miss",
+        "requestsStarted": 33.100000001490116,
+        "saveRequest": 33.400000002235174,
+        "localeRequest": 33.5,
+        "localeLoaded": 33.5,
+        "environment": "shipped",
+        "environmentSource": "bundle",
+        "environmentReady": 67.30000000074506,
+        "engineStart": 82.30000000074506,
+        "geometryReady": 566.3000000007451,
+        "savesLoaded": 570.6999999992549,
+        "rendererReady": 695.8000000007451,
+        "materialsReady": 704.1999999992549,
+        "shadersReady": 929.4000000022352,
+        "firstDraw": 1356.1000000014901,
+        "gpuReady": 3068,
+        "firstPlayable": 3090.900000002235,
+        "gameReady": 3101.60000000149
+      },
+      "ready": [
+        {
+          "name": "firstFrameReady",
+          "at": 20.800000000745058,
+          "loading": true,
+          "loadingText": "\u2702Loading\u2026"
+        },
+        {
+          "name": "gameReady",
+          "at": 3101.60000000149,
+          "loading": false,
+          "hud": true
+        }
+      ],
+      "quality": {
+        "strands": 30000,
+        "segments": 8,
+        "antialias": true,
+        "shaderLow": false
+      },
+      "errors": []
+    },
+    {
+      "name": "candidate-5",
+      "timing": {
+        "sdkReady": 25.800000000745058,
+        "requestsStarted": 27.400000002235174,
+        "saveRequest": 27.800000000745058,
+        "localeRequest": 27.900000002235174,
+        "localeLoaded": 27.900000002235174,
+        "environment": "shipped",
+        "environmentSource": "bundle",
+        "environmentReady": 76.20000000298023,
+        "savesLoaded": 77,
+        "modelCache": "miss",
+        "engineStart": 98.70000000298023,
+        "geometryReady": 631.9000000022352,
+        "rendererReady": 710.8000000007451,
+        "materialsReady": 719.9000000022352,
+        "shadersReady": 968.2000000029802,
+        "firstDraw": 1399.1000000014901,
+        "gpuReady": 3091.2000000029802,
+        "firstPlayable": 3115.7000000029802,
+        "gameReady": 3126
+      },
+      "ready": [
+        {
+          "name": "firstFrameReady",
+          "at": 25.700000002980232,
+          "loading": true,
+          "loadingText": "\u2702Loading\u2026"
+        },
+        {
+          "name": "gameReady",
+          "at": 3126,
+          "loading": false,
+          "hud": true
+        }
+      ],
+      "quality": {
+        "strands": 30000,
+        "segments": 8,
+        "antialias": true,
+        "shaderLow": false
+      },
+      "errors": []
+    },
+    {
+      "name": "candidate-sdk-delay-1000ms",
+      "timing": {
+        "sdkReady": 1100.800000000745,
+        "requestsStarted": 1102.5,
+        "saveRequest": 1102.699999999255,
+        "localeRequest": 1103,
+        "localeLoaded": 1103,
+        "savesLoaded": 1121.9000000022352,
+        "modelCache": "miss",
+        "engineStart": 1149.199999999255,
+        "geometryReady": 1689.300000000745,
+        "environment": "shipped",
+        "environmentSource": "bundle",
+        "environmentReady": 1720,
+        "rendererReady": 1834.9000000022352,
+        "materialsReady": 1842.699999999255,
+        "shadersReady": 2015.9000000022352,
+        "firstDraw": 2554.60000000149,
+        "gpuReady": 4294.10000000149,
+        "firstPlayable": 4317.699999999255,
+        "gameReady": 4327.800000000745
+      },
+      "ready": [
+        {
+          "name": "firstFrameReady",
+          "at": 1100.800000000745,
+          "loading": true,
+          "loadingText": "\u2702Loading\u2026"
+        },
+        {
+          "name": "gameReady",
+          "at": 4327.800000000745,
+          "loading": false,
+          "hud": true
+        }
+      ],
+      "quality": {
+        "strands": 30000,
+        "segments": 8,
+        "antialias": true,
+        "shaderLow": false
+      },
+      "errors": []
+    },
+    {
+      "name": "candidate-cloud-delay-2000ms",
+      "timing": {
+        "sdkReady": 26.699999999254942,
+        "requestsStarted": 37.900000002235174,
+        "saveRequest": 38.30000000074506,
+        "localeRequest": 38.5,
+        "localeLoaded": 38.5,
+        "environment": "shipped",
+        "environmentSource": "bundle",
+        "environmentReady": 82.10000000149012,
+        "modelCache": "miss",
+        "engineStart": 105.90000000223517,
+        "geometryReady": 638,
+        "savesLoaded": 2041.300000000745,
+        "rendererReady": 2115.300000000745,
+        "materialsReady": 2122.5,
+        "shadersReady": 2318.10000000149,
+        "firstDraw": 2748.60000000149,
+        "gpuReady": 4587.5,
+        "firstPlayable": 4610.699999999255,
+        "gameReady": 4615.5
+      },
+      "ready": [
+        {
+          "name": "firstFrameReady",
+          "at": 26.699999999254942,
+          "loading": true,
+          "loadingText": "\u2702Loading\u2026"
+        },
+        {
+          "name": "gameReady",
+          "at": 4615.5,
+          "loading": false,
+          "hud": true
+        }
+      ],
+      "quality": {
+        "strands": 30000,
+        "segments": 8,
+        "antialias": true,
+        "shaderLow": false
+      },
+      "errors": []
+    }
+  ],
+  "decoder": {
+    "identical": true,
+    "halfFloatValues": 3145728,
+    "decodeMs": [
+      [
+        21.100000001490116,
+        26.100000001490116,
+        20.300000000745058,
+        20,
+        22.5
+      ],
+      [
+        33.899999998509884,
+        39.19999999925494,
+        31,
+        33.399999998509884,
+        41.900000002235174
+      ]
+    ]
+  },
+  "sourceBaseline": "v3.97",
+  "candidate": "v3.98",
+  "summary": {
+    "baseline": {
+      "medianReadyMs": 3307.5,
+      "samples": 5
+    },
+    "candidate": {
+      "medianReadyMs": 3298.400000002235,
+      "samples": 5
+    },
+    "decoderMedianMs": [
+      21.100000001490116,
+      33.899999998509884
+    ]
+  },
+  "conclusion": "Local startup is effectively unchanged within run-to-run variability. Main verified gain is a smaller identical lighting payload; actual phone and hosted platform startup remain unmeasured."
+}

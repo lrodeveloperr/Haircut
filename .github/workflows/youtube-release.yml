@@ -110,12 +110,14 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - run: |
-          python3 -m zipfile -e releases/asmr-barber-fade-master-v3.97-mediacube-youtube.zip qa/release-under-test
+          python3 -m zipfile -e releases/asmr-barber-fade-master-v3.98-mediacube-youtube.zip qa/release-under-test
           npm install --no-save --package-lock=false playwright@1.58.2
           npx playwright install --with-deps chromium
       - name: Verify startup, interrupted compilation and portable shaders
         env: {BROWSER: chromium, STARTUP: '1', RELEASE_DIR: qa/release-under-test, QA_OUTPUT: qa/results/youtube-startup, HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1'}
-        run: xvfb-run -a node qa/youtube-browser.cjs
+        run: |
+          RELEASE_DIR=qa/release-under-test python3 qa/youtube-assets.py
+          xvfb-run -a node qa/youtube-browser.cjs
       - name: Verify mobile storage, zero viewport and lossless graphics recovery
         env: {BROWSER: chromium, MOBILE_STARTUP: '1', RELEASE_DIR: qa/release-under-test, QA_OUTPUT: qa/results/youtube-mobile-startup, HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1'}
         run: xvfb-run -a node qa/youtube-browser.cjs
@@ -133,7 +135,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - run: |
-          python -m zipfile -e releases/asmr-barber-fade-master-v3.97-mediacube-youtube.zip qa/release-under-test
+          python -m zipfile -e releases/asmr-barber-fade-master-v3.98-mediacube-youtube.zip qa/release-under-test
           npm install --no-save --package-lock=false playwright@1.58.2
           npx playwright install chromium
       - name: Verify shaders on the affected ANGLE Direct3D11 backend
