@@ -24,6 +24,10 @@ async function fixture(options={}){
   const P=WebGL2RenderingContext.prototype,compile=P.compileShader;let fired=false;
   P.compileShader=function(...args){const result=compile.apply(this,args);if(!fired&&globalThis.HSC?.startupTiming?.materialsReady){fired=true;queueMicrotask(()=>{window.__startupInterrupted=true;if(lose)this.getExtension('WEBGL_lose_context').loseContext();else __yt.callbacks.pause();});}return result;};
  },{lose:!!options.loseAtCompile});
+ if(options.pauseAtFence||options.loseAtFence||options.disposeAtFence)await ctx.addInitScript(({lose,dispose})=>{
+  const P=WebGL2RenderingContext.prototype,fence=P.fenceSync;let fired=false;
+  P.fenceSync=function(...args){const result=fence.apply(this,args);if(!fired){fired=true;queueMicrotask(()=>{window.__startupInterrupted=true;if(lose)this.getExtension('WEBGL_lose_context').loseContext();else if(dispose)HSC.view.destroy();else __yt.callbacks.pause();});}return result;};
+ },{lose:!!options.loseAtFence,dispose:!!options.disposeAtFence});
  if(process.env.PROFILE_STARTUP==='1')await ctx.addInitScript(()=>{
   window.__glProfile=[];const shaders=new WeakMap(),programs=new WeakMap();let sequence=0;
   for(const name of ['shaderSource','attachShader','linkProgram','getProgramInfoLog']){
@@ -148,7 +152,10 @@ async function startup(){
    assert(Math.abs(evidence.host.languageStart-evidence.host.loadStart)<100,'Host requests were serialized');
    assert(evidence.host.loadStart<evidence.timing.geometryReady,'Cloud read started after geometry');
    assert(evidence.timing.materialsReady<=evidence.timing.shadersReady);
-   assert(evidence.timing.shadersReady<=evidence.timing.firstPlayable);
+   assert(evidence.timing.shadersReady<=evidence.timing.firstDraw);
+   assert(evidence.timing.firstDraw<=evidence.timing.gpuReady);
+   assert(evidence.timing.gpuReady<=evidence.timing.firstPlayable);
+   assert(evidence.timing.firstPlayable<=evidence.timing.gameReady);
    assert.equal(evidence.ready.loading,false);assert.equal(await p.locator('body').evaluate(b=>b.inert),false);
    assert.deepEqual(evidence.quality,{level:'high',segments:8,shaderLow:false,maxStrands:30000});
    if(process.env.ANGLE_D3D11==='1')assert.match(evidence.renderer,/Direct3D11|D3D11/i,'The shader regression must use the affected HLSL backend');
@@ -156,8 +163,8 @@ async function startup(){
    assert.deepEqual(f.errors,[]);return evidence;
   }finally{await f.close();}
  });
- await test('A host pause during compilation freezes startup and input until resume',async()=>{
-  const f=await fixture({blocked:true,pauseAtCompile:true}),p=f.page;
+ for(const stage of ['Compile','Fence'])await test(`A host pause during ${stage.toLowerCase()} freezes startup and input until resume`,async()=>{
+  const f=await fixture({blocked:true,[`pauseAt${stage}`]:true}),p=f.page;
   try{
    await p.waitForFunction(()=>window.__startupInterrupted&&document.body.inert);
    assert.equal(await p.evaluate(()=>!!window.skinFadeStudio),false);
@@ -167,9 +174,14 @@ async function startup(){
    assert.equal((await state(p)).cameraYawDeg,-55);assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),1);assert.deepEqual(f.errors,[]);
   }finally{await f.close();}
  });
- if(engine==='chromium')await test('Context loss during compilation reaches Retry without hanging or reporting readiness',async()=>{
-  const f=await fixture({blocked:true,loseAtCompile:true}),p=f.page;
+ if(engine==='chromium')for(const stage of ['Compile','Fence'])await test(`Context loss during ${stage.toLowerCase()} reaches Retry without hanging or reporting readiness`,async()=>{
+  const f=await fixture({blocked:true,[`loseAt${stage}`]:true}),p=f.page;
   try{await p.getByRole('button',{name:'Retry',exact:true}).waitFor({state:'visible'});assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),0);assert.equal(await p.locator('body').evaluate(b=>b.inert),false);assert(f.errors.some(e=>/graphics|WebGL/.test(e)));}
+  finally{await f.close();}
+ });
+ await test('Renderer disposal cancels a pending GPU fence and reaches recovery',async()=>{
+  const f=await fixture({blocked:true,disposeAtFence:true}),p=f.page;
+  try{await p.getByRole('button',{name:'Retry',exact:true}).waitFor({state:'visible'});assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),0);assert.equal(await p.locator('body').evaluate(b=>b.inert),false);assert(f.errors.some(e=>/cancelled/.test(e)));}
   finally{await f.close();}
  });
  await test('Shader programs stay clean through baldness, ageing, hair and beard variants',async()=>{

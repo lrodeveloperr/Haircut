@@ -149,7 +149,9 @@
       return loadPromise;
     }
     function savedCuts(value) {
-      const cuts = value.slots['skin-fade-studio-meta-v1']?.cuts;
+      const meta = value.slots['skin-fade-studio-meta-v1'];
+      if (meta?.v !== 1) return 0;
+      const cuts = meta.cuts;
       return Number.isSafeInteger(cuts) && cuts > 0 ? cuts : 0;
     }
     function reportScore() {

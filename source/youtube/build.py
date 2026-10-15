@@ -62,7 +62,8 @@ s = replace(s, 'renderFirstPlayableFrame(){n.render()}',
   do {
     await t.whenResumed();
     lastSize=[a.clientWidth,a.clientHeight,globalThis.devicePixelRatio||1].join();
-    n.render(!1);needsRender=false;HSC.startupTiming.firstDraw=performance.now();HSC.dismissLoading();
+    n.render(!1);needsRender=false;HSC.startupTiming.firstDraw=performance.now();
+    await n.waitForFirstFrame();HSC.startupTiming.gpuReady=performance.now();HSC.dismissLoading();
     await t.afterPaint();await t.afterPaint();
     if(startupLost)throw Error('Game graphics could not initialize');
   }while(lastSize!==[a.clientWidth,a.clientHeight,globalThis.devicePixelRatio||1].join());
@@ -73,7 +74,7 @@ s = replace(s, 'globalThis.addEventListener("resize",ce);let L=', 'globalThis.ad
 s = replace(s, 'globalThis.removeEventListener("resize",ce),', 'globalThis.removeEventListener("resize",ce),a.removeEventListener("webglcontextrestored",restore),a.removeEventListener("webglcontextlost",lost),')
 # Hold all customer draws until final saved materials are installed and their shaders are ready.
 # The startup pause reason separately blocks keyboard/pointer actions and the controller RAF.
-s = replace(s, 'function _(ue=!0){if(k)return;', 'let firstFramePending=true;function _(ue=!0){if(k||firstFramePending)return;')
+s = replace(s, 'function _(ue=!0){if(k)return;', 'let firstFramePending=true,firstFrameCancel=null;function _(ue=!0){if(k||firstFramePending)return;')
 s = replace(s, 'render:_,setYaw(ue)', '''async prepareFirstFrame(){
   P();L();X();z();
   const visible=Zt.clone(false);
@@ -90,7 +91,31 @@ s = replace(s, 'render:_,setYaw(ue)', '''async prepareFirstFrame(){
     program.getUniforms();program.getAttributes();
     if(program.diagnostics?.runnable===false)throw Error('Game graphics could not initialize');
   }
+},async waitForFirstFrame(){
+  const gl=t.getContext(),sync=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);
+  if(!sync)throw Error('Game graphics could not initialize');
+  gl.flush();
+  try{
+    await new Promise((resolve,reject)=>{
+      let poll=0,remaining=7500,settled=false;
+      const settle=error=>{
+        if(settled)return;settled=true;HSC.lifecycle.clear(poll);firstFrameCancel=null;
+        error?reject(error):resolve();
+      };
+      firstFrameCancel=()=>settle(Error('Game graphics initialization was cancelled'));
+      const check=()=>{
+        if(gl.isContextLost()){settle(Error('Game graphics could not initialize'));return}
+        const result=gl.clientWaitSync(sync,0,0);
+        if(result===gl.ALREADY_SIGNALED||result===gl.CONDITION_SATISFIED)settle();
+        else if(result===gl.WAIT_FAILED||--remaining===0)settle(Error('Game graphics could not initialize'));
+        else poll=HSC.lifecycle.timeout(check,8);
+      };
+      check();
+    });
+  }finally{gl.deleteSync(sync)}
 },beginFirstFrame(){firstFramePending=false},render:_,setYaw(ue)''')
+s = replace(s, 'destroy(){var ue;e.removeEventListener("webglcontextlost",ae)',
+    'destroy(){firstFrameCancel?.();var ue;e.removeEventListener("webglcontextlost",ae)')
 # Three's asynchronous completion polling obeys the same host-owned execution scheduler.
 start = s.index('this.compileAsync=function(')
 end = s.index(';let ut=null;', start)

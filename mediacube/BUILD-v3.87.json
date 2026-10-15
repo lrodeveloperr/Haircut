@@ -1,0 +1,34 @@
+{
+  "version": "v3.87",
+  "target": "MediaCube / direct YouTube Playables",
+  "archive": "releases/asmr-barber-fade-master-v3.87-mediacube-youtube.zip",
+  "sha256": "5a81896c021bc512b5e42d67c3afac6f7533047bfddc6ff18fe5e8ff649f6865",
+  "zipBytes": 404365,
+  "expandedBytes": 1071037,
+  "files": {
+    "THIRD-PARTY-NOTICES.md": 604,
+    "assets/backdrop-landscape.webp": 23832,
+    "assets/backdrop-portrait.webp": 20566,
+    "index.html": 954,
+    "licenses/preact-MIT.txt": 1087,
+    "licenses/three-MIT.txt": 1081,
+    "runtime/customers.js": 227453,
+    "runtime/game.js": 763936,
+    "runtime/youtube-client.js": 13264,
+    "runtime/youtube-loader.js": 1459,
+    "runtime/youtube-startup.js": 417,
+    "styles.css": 16384
+  },
+  "baseCommit": "3f11f207a333d6929f2083a4acdd6bdb3b061bdb",
+  "validation": {
+    "domainAndLegacyContracts": "35/35 PASS",
+    "directSdkContracts": "38/38 PASS",
+    "graphicsContracts": "8/8 PASS",
+    "localStartup": "7/7 PASS, including compile/fence pause, compile/fence loss and fence disposal",
+    "crossBrowserCI": "pending final archive",
+    "windowsD3D11": "pending final archive",
+    "visualParity": "pending",
+    "coldStartupBenchmark": "pending"
+  },
+  "hostedStatus": "Updated archive not uploaded to McPlay; actual hosted cold-start time and physical-phone performance remain unmeasured."
+}

@@ -102,7 +102,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - run: |
-          python3 -m zipfile -e releases/asmr-barber-fade-master-v3.86-mediacube-youtube.zip qa/release-under-test
+          python3 -m zipfile -e releases/asmr-barber-fade-master-v3.87-mediacube-youtube.zip qa/release-under-test
           npm install --no-save --package-lock=false playwright@1.58.2
           npx playwright install --with-deps chromium
       - name: Verify startup, interrupted compilation and portable shaders
@@ -122,7 +122,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - run: |
-          python -m zipfile -e releases/asmr-barber-fade-master-v3.86-mediacube-youtube.zip qa/release-under-test
+          python -m zipfile -e releases/asmr-barber-fade-master-v3.87-mediacube-youtube.zip qa/release-under-test
           npm install --no-save --package-lock=false playwright@1.58.2
           npx playwright install chromium
       - name: Verify shaders on the affected ANGLE Direct3D11 backend
