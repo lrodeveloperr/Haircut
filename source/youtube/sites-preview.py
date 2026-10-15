@@ -48,8 +48,10 @@ s = (src / 'runtime/youtube-startup.js').read_text().replace('HSC.createYouTubeC
 s = (src / 'index.html').read_text()
 s = replace(s, '  <script src="https://www.youtube.com/game_api/v1"></script>\n', '')
 s = s.replace('youtube-client.js', 'local-preview-client.js').replace('youtube-startup.js', 'local-preview-startup.js')
-# Fetch and preload must use the same versioned URL, or the browser downloads the
-# reflection file twice. Version this before hashing the geo script's own URL.
+# There is no remote SDK wait in this target. Let geo.js start the one lighting
+# request directly: WebKit does not reuse this fetch preload in the browser QA.
+s = replace(s, '  <link rel="preload" href="./runtime/room-env.dat" as="fetch" crossorigin="anonymous">\n', '')
+# Version the runtime fetch too, before hashing the geo script's own URL.
 geo_path = out / 'runtime/youtube-geo.js'
 environment_hash = hashlib.sha256((out / 'runtime/room-env.dat').read_bytes()).hexdigest()[:12]
 geo_path.write_text(replace(geo_path.read_text(), "fetch('./runtime/room-env.dat',",

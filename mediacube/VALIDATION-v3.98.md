@@ -4,7 +4,7 @@ The reflection asset shrinks from 582,123 to 318,208 bytes (45.34%). The ZIP shr
 
 All 6,291,456 original lighting bytes are restored exactly, with SHA256 `cd7b1d0c6440b77f0ece61d5aedf6b270a5e5e9906740303c819212cdaa2be57`. The real browser decoder also compares all 3,145,728 half-float values against v3.97. Five rendered seeded customer PNGs are byte-identical, including coily hair/older skin, advanced hair loss, diffuse thinning and active areata patches. `game.js` and `customers.js` themselves are byte-identical to v3.97. The full 30,000 strands, eight segments, skin/beard shading, resolution, MSAA, controls, save schemas, SDK order and monetization remain unchanged.
 
-The standalone Sites target also fixes mismatched lighting URLs: its versioned preload and unversioned runtime fetch previously generated two browser requests. They now share one content-hashed URL, verified by a request-count regression. The production YouTube target already uses one matching URL. This does not change the production archive hash above.
+The standalone Sites target also removes its duplicate lighting download. It originally used different preload/fetch URLs. Matching those URLs fixed Chromium and Firefox, but WebKit QA still made two identical requests. The standalone target now omits the extra fetch preload and starts one content-hashed lighting request directly; it has no remote SDK wait to overlap. A request-count regression checks this in each browser. The production YouTube target keeps its existing matching-URL preload to overlap the mandatory SDK download. This does not change the production archive hash above.
 
 ## What this does to load time
 
@@ -32,3 +32,5 @@ Reproduce the audit with Playwright and an extracted v3.97 archive:
 ```sh
 BASELINE_DIR=/absolute/path/to/v397 RELEASE_DIR=source/build-youtube node qa/startup-audit.cjs
 ```
+
+The smaller standalone build is published to the existing private phone-test Site, with its audience preserved: https://haircut-studio-v387.lat23445.chatgpt.site . Site source commit `68814d405493f03bbc25316ac173b0140301b9af`; deployment `appgdep_6ad14686f6388191ba1c00e5c087353c` succeeded. Physical-phone timing remains unmeasured.
