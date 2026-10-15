@@ -348,7 +348,7 @@ async function launch(){return({chromium,firefox,webkit}[engine]).launch({headle
 async function standalonePreview(){
  await test('Standalone preview boots with YouTube blocked, restores progress and retains full detail',async()=>{
   const localSaved=JSON.stringify({version:1,slots:{'skin-fade-studio-meta-v1':{v:1,cuts:7}}});
-  const f=await fixture({localPreview:true,localSaved,touch:true,mobile:true,dpr:2}),p=f.page;
+  const f=await fixture({localPreview:true,localSaved,touch:true,mobile:engine!=='firefox',dpr:2}),p=f.page;
   try{
    assert.equal(await p.evaluate(()=>typeof globalThis.ytgame),'undefined');
    assert.equal(await p.evaluate(()=>HSC.meta.data.cuts),7);
@@ -362,7 +362,7 @@ async function standalonePreview(){
   }finally{await f.close();}
  });
  await test('Standalone preview boots when browser storage is unavailable',async()=>{
-  const f=await fixture({localPreview:true,deniedStorage:true,touch:true,mobile:true,dpr:2});
+  const f=await fixture({localPreview:true,deniedStorage:true,touch:true,mobile:engine!=='firefox',dpr:2});
   try{assert.equal(await f.page.locator('.boot-error').count(),0);assert.equal(await f.page.evaluate(()=>HSC.detail.shaderLow),false);assert.deepEqual(f.errors,[]);}finally{await f.close();}
  });
 }
