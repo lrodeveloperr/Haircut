@@ -1,17 +1,18 @@
 # ASMR Barber: Fade Master — source
 
-Everything needed to rebuild the packages in this repository.
+Buildable source with reliability corrections after the historical v3.82 packages. Existing ZIPs are retained unchanged.
 
 ## Build
 
 Needs `bash`, `python3`, `node` and `zip`.
 
 ```sh
-bash source/release.sh v3.82
+bash source/buildall.sh
 ```
 
-This writes the Playables ZIP to the repository root, the Android full-detail ZIP to `android/` and the single-file
-playable (for trying the game without a server) to `source/dist/`.
+This builds the corrected runtime in `source/build/` without preparing an upload ZIP. When a new release
+is requested, `bash source/release.sh <new-version>` builds and packages both targets plus the single-file
+playable. Use a new version so the historical release remains immutable.
 
 Building only the game, without packaging: `bash source/buildall.sh` (Playables, one light detail level) or
 `TARGET=full bash source/buildall.sh` (Android, detail levels Auto / Low / High). The result is in `source/build/`.
