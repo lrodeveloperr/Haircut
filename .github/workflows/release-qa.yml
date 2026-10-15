@@ -10,7 +10,7 @@ env:
   RELEASE_DIR: release
 jobs:
   contracts:
-    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[ad-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[ad-only]') && !contains(github.event.head_commit.message, '[input-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -44,13 +44,13 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.58.2
           npx playwright install --with-deps ${{ matrix.browser }}
       - name: Run exact archive browser audit
-        env: {BROWSER: '${{ matrix.browser }}', HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1', AD_ONLY: "${{ contains(github.event.head_commit.message, '[ad-only]') && '1' || '0' }}"}
+        env: {BROWSER: '${{ matrix.browser }}', HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1', AD_ONLY: "${{ contains(github.event.head_commit.message, '[ad-only]') && '1' || '0' }}", INPUT_ONLY: "${{ contains(github.event.head_commit.message, '[input-only]') && '1' || '0' }}"}
         run: xvfb-run -a node qa/browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with: {name: '${{ matrix.browser }}', path: qa-results, retention-days: 14}
   soak:
-    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[ad-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[ad-only]') && !contains(github.event.head_commit.message, '[input-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
