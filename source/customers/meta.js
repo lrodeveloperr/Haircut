@@ -182,8 +182,7 @@
   // loaded before the game controller starts, so the first customer already follows the level
   HSC.metaInit = async function (client) {
     M.client = client;
-    let d = null;
-    try { d = client && client.loadProgress ? await client.loadProgress(KEY, null) : null; } catch (e) {}
+    const d = client && client.loadProgress ? await client.loadProgress(KEY, null) : null;
     M.data = sanitize(d);
     // a streak survives only if the last haircut was today or yesterday
     if (M.data.lastDay !== dayKey() && M.data.lastDay !== yesterday()) M.data.streak = 0;

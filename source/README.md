@@ -20,7 +20,7 @@ Building only the game, without packaging: `bash source/buildall.sh` (Playables,
 
 - `src/` — the original game (minified Three.js / Preact bundle `runtime/game.js`, `index.html`, `styles.css`,
   images, Playgama Bridge configuration).
-- `patch.py` … `patch13.py` — exact string replacements applied in order to the minified game (each one asserts its
+- `patch.py` … `patch14.py` — exact string replacements applied in order to the minified game (each one asserts its
   target appears exactly once, so a mismatch stops the build). The docstring at the top of each says what it does.
 - `customers/` — readable code concatenated into `build/runtime/customers.js` and loaded before the game, in this
   order: `detail-playables` (or `detail` for Android), `people`, `glsl`, `faces`, `render`, `state`, `meta`,
@@ -40,3 +40,21 @@ Building only the game, without packaging: `bash source/buildall.sh` (Playables,
 
 Saved progress uses the storage keys `skin-fade-studio-session-v2`, `skin-fade-studio-meta-v1` and
 `skin-fade-studio-rewards-v4`; keep them so players keep their progress.
+
+## Reliability corrections after v3.82
+
+The source now protects each saved-data key until it has loaded successfully. Operational read failures
+stop startup and show Retry; Retry reloads the page and SDK without erasing progress. Unsupported newer
+session, metadata and wardrobe versions show a compatible-version message and cannot be overwritten.
+`storage.js` and `boot.js` contain the readable implementations inserted by `patch14.py`. Corrupt values
+still recover safely. Extreme negative rotations normalize correctly. Builds copy the referenced Three.js
+and Preact MIT texts from `src/licenses/`; their upstream sources are linked in the notices.
+
+Existing control sizes, including tiny embeds, are preserved. The v3.82 release ZIPs above are historical
+and have not been regenerated with these corrections. Run `bash source/buildall.sh` to test the corrected
+runtime. Packaging and external upload remain separate actions.
+
+Regression checks: `RELEASE_DIR=source/build node qa/contracts.cjs` from the repository root. Browser checks
+need Playwright 1.58.2 and its browsers: `BROWSER=chromium RELEASE_DIR=source/build node qa/browser.cjs`
+(also `firefox` and `webkit`). `.github/workflows/reliability-qa.yml` runs these plus the existing source,
+layout and sustained checks on the correction branch.
