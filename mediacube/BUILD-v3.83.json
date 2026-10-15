@@ -1,0 +1,55 @@
+{
+  "version": "v3.83",
+  "target": "MediaCube / direct YouTube Playables",
+  "archive": "releases/asmr-barber-fade-master-v3.83-mediacube-youtube.zip",
+  "zipBytes": 400658,
+  "expandedBytes": 1060349,
+  "sha256": "0f184396c2f7f3241c3048812405a5e403aaf30ea804d31e35cbfbd115f023f6",
+  "integrationCommit": "b6d88e78645c96f061127419d8c35c277a2fbeef",
+  "browserValidationCommit": "747784fd4121d33f16cf3152c25ce29fb5a178ce",
+  "validation": {
+    "existingContracts": "35/35 PASS",
+    "youtubeContracts": "26/26 PASS",
+    "chromium": "15/15 PASS",
+    "firefox": "14/14 PASS",
+    "webkit": "14/14 PASS",
+    "layouts": "27 viewports x 4 states PASS",
+    "sustainedRun": "PASS"
+  },
+  "evidence": {
+    "contractsLayoutsSoak": "https://github.com/lrodeveloperr/Haircut/actions/runs/38676008356",
+    "browsers": "https://github.com/lrodeveloperr/Haircut/actions/runs/38676415111"
+  },
+  "hostedStatus": "Not uploaded; McPlay pre-flight and hosted certification pending",
+  "runtimeFiles": {
+    "THIRD-PARTY-NOTICES.md": "1b1a2219ef48d4f1f94057b8506bd7d47600da38d4f5852b6af7bdbb4a567f4c",
+    "assets/backdrop-landscape.webp": "79f936e9a5c2e6219e5f0237e1092c5ba9813aa3f7adb86bbd57b341b2348a8e",
+    "assets/backdrop-portrait.webp": "479540511e5889356fbfaa097336d6889794ade3bfe653456f7edfa65e710ab8",
+    "index.html": "4ab183a046fb06ef2bba9b8ac483fbc5d735174e3111f80a3b298ed6e77fca80",
+    "licenses/preact-MIT.txt": "1fe6958409c8c257a70c587a18b6f7f412b179b456630790d30b2ec9a8e4b7d4",
+    "licenses/three-MIT.txt": "bfe119ea4fd413f5f7ca3fcd63adb0c4a073ed39daa2fe7d3e6b769e21272601",
+    "runtime/customers.js": "5f3167da4ea63af4caba7d4f8495710b5ec579400f564c8c4d7cd4e61f326238",
+    "runtime/game.js": "6382cc0956dc136605246d3f8461b4ae463910908c9ac9e4fc22e57f7c243864",
+    "runtime/youtube-client.js": "e8b9da16d2ee0482240563fdd8a7c46d1bfc6d0d6470889e3395de16df8caaa1",
+    "runtime/youtube-loader.js": "d9f6e64fe97fc09cb7f16aca18757b88d39d834bc1f15360ab4423e5edc9c0b6",
+    "styles.css": "9d408e85fdd6b30e4c7bb6863ea44178be2ffdae361298e9bb4b6b8063aeae4f"
+  },
+  "sustainedRun": {
+    "transitions": 76,
+    "elapsedMs": 602536,
+    "before": {
+      "canvases": 1,
+      "huds": 1,
+      "callbacks": 3,
+      "job": 1,
+      "heap": 39448778
+    },
+    "after": {
+      "canvases": 1,
+      "huds": 1,
+      "callbacks": 3,
+      "job": 77,
+      "heap": 42283301
+    }
+  }
+}

@@ -9,6 +9,8 @@ This target uses the direct official YouTube Playables SDK at `https://www.youtu
 It does not load Playgama Bridge, Playgama configuration, a mock SDK, external analytics or remote game assets.
 The existing Playgama and full-detail Android builds remain separate.
 
+See [validation results](VALIDATION-v3.83.md) and [exact build identity](BUILD-v3.83.json).
+
 ## Rebuild
 
 ```sh
