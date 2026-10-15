@@ -1,0 +1,40 @@
+{
+  "version": "v3.93",
+  "target": "MediaCube / direct YouTube Playables",
+  "archive": "releases/asmr-barber-fade-master-v3.93-mediacube-youtube.zip",
+  "sha256": "d894cab3c1bd8b4ca6bbcef10a327756a417c76bca4022db3e7b6b71c850f1ad",
+  "zipBytes": 409848,
+  "expandedBytes": 1084858,
+  "files": {
+    "THIRD-PARTY-NOTICES.md": 604,
+    "assets/backdrop-landscape.webp": 23832,
+    "assets/backdrop-portrait.webp": 20566,
+    "index.html": 1059,
+    "licenses/preact-MIT.txt": 1087,
+    "licenses/three-MIT.txt": 1081,
+    "runtime/customers.js": 226880,
+    "runtime/game.js": 767408,
+    "runtime/youtube-client.js": 14509,
+    "runtime/youtube-geo.js": 2680,
+    "runtime/youtube-loader.js": 3368,
+    "runtime/youtube-poster.js": 3824,
+    "runtime/youtube-startup.js": 417,
+    "styles.css": 17543
+  },
+  "baseCommit": "3fad5c4",
+  "changes": "Startup models (head, gown, hair roots, strands, beard surface) are kept in IndexedDB after the first load; hair-root sampling no longer allocates per sample (bit-identical); the loading screen shows the barbershop backdrop, or a snapshot of the returning player's scene, and fades into the game. Rendered frames are identical to v3.92.",
+  "validation": {
+    "renderedFrameVsV392": "identical (sha256 of canvas PNG, same save, computed and cached models)",
+    "hairRootsVsV392": "bit-identical",
+    "directSdkContracts": "40/40 PASS",
+    "domainAndLegacyContracts": "35/35 PASS",
+    "graphicsContracts": "5/5 PASS",
+    "chromiumStartup": "10/10 PASS",
+    "loadAt4xCpu": {
+      "v3.92": "12.2 s",
+      "v3.93 first open": "11.9 s",
+      "v3.93 return visit": "9.8-10.3 s"
+    }
+  },
+  "hostedStatus": "Not uploaded to McPlay; not run on a physical phone."
+}

@@ -7,7 +7,17 @@
   } catch (_) { /* The regular startup recovery screen handles SDK failures. */ }
   globalThis.HSC = globalThis.HSC || {};
   HSC.startupTiming = {sdkReady: performance.now()};
-  HSC.dismissLoading = () => loading?.remove();
+  HSC.poster?.show(loading);
+  // The loading screen leaves the document's identity at once (readiness is reported after this)
+  // and fades out over the live game.
+  HSC.dismissLoading = () => {
+    if (!loading || !loading.isConnected || loading.id !== 'yt-loading') return;
+    loading.removeAttribute('id');
+    loading.setAttribute('aria-hidden', 'true');
+    if (!loading.classList.contains('has-poster') || matchMedia('(prefers-reduced-motion: reduce)').matches) { loading.remove(); return; }
+    loading.classList.add('yt-leaving');
+    setTimeout(() => loading.remove(), 300);
+  };
   HSC.graphicsError = code => Object.assign(new Error('Game graphics could not initialize'), {code});
   // A short code on the recovery screen identifies the failure on a phone without a console.
   HSC.bootCode = error => {

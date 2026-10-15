@@ -39,9 +39,18 @@
       st.coarse = Pt.userData.coarse;
       st.coarseBase = Float32Array.from(st.coarse.pos);
       Pt.setAttribute('hsBase', new T.It(st.base, 3));
-      const ci = HSC.canonIds(st.base);
-      st.canon = ci.canon; st.canonCount = ci.count;
-      st.nBase = HSC.areaNormals(st.base, Pt.index.array, st.canon, st.canonCount);
+      // Built from the un-morphed base head with fixed seeds: identical on every load, so a device
+      // cache (HSC.geo, YouTube target only) may supply the stored result instead of recomputing it.
+      const baseModel = () => {
+        const ci = HSC.canonIds(st.base);
+        const nBase = HSC.areaNormals(st.base, Pt.index.array, ci.canon, ci.count);
+        const surface = HSC.buildBeardSurface(st.base, Pt.index.array);
+        const roots = HSC.sampleBeardRoots(st.base, Pt.index.array, surface, 14000, 0xbea7d);
+        return { canon: ci.canon, canonCount: ci.count, nBase, surface, roots };
+      };
+      const model = HSC.geo ? HSC.geo.use('beard', baseModel) : baseModel();
+      st.canon = model.canon; st.canonCount = model.canonCount;
+      st.nBase = model.nBase;
       // scalp mask per vertex, to keep morphs off the scalp
       st.scalp = new Float32Array(P.length / 3);
       for (let v = 0; v < st.scalp.length; v++) st.scalp[v] = c.Na(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]);
@@ -57,8 +66,8 @@
       HSC.U.uBeard.value = tex;
 
       // beard surface + strands
-      st.surface = HSC.buildBeardSurface(st.base, Pt.index.array);
-      st.roots = HSC.sampleBeardRoots(st.base, Pt.index.array, st.surface, 14000, 0xbea7d);
+      st.surface = model.surface;
+      st.roots = model.roots;
       st.beardCells = HSC.beardCellPositions(st.surface, st.base);
       HSC.beardSurface = st.beardCells;
       st.beardMesh = makeBeardMesh(c, st.roots);

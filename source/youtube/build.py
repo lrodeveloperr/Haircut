@@ -27,7 +27,7 @@ s = replace(s, 'return{renderFirstPlayableFrame(){n.render()}', 'return{flushPro
 s = replace(s, 'ae&&(l=j.adSession)', 't.lastInterstitialRequestAccepted&&(l=j.adSession)')
 s = replace(s, 'game = Pu({root, client, savedSession: session, savedAudio: audio});', 'await client.whenResumed();\n    game = Pu({root, client, savedSession: session, savedAudio: true});')
 s = replace(s, 'client.bindGame({root, setPaused: game.setPaused, setAudioEnabled: game.setPlatformAudio});', 'client.bindGame({root, setPaused: game.setPaused, setAudioEnabled: game.setPlatformAudio, flush: game.flushProgress});')
-s = replace(s, '    await client.gameReady();', '    HSC.dismissLoading();\n    await client.gameReady();')
+s = replace(s, '    await client.gameReady();', '    HSC.dismissLoading();\n    await client.gameReady();\n    HSC.geo.saveLater();\n    HSC.poster?.start(game, client);')
 s = replace(s, '    game.renderFirstPlayableFrame();', '    await game.renderFirstPlayableFrame();')
 s = replace(s, 'async function hC() {', 'async function hC() {\n  HSC.startupTiming.geometryReady=performance.now();')
 s = replace(s, '    if (HSC.wardrobeInit)', '    HSC.startupTiming.rendererReady=performance.now();\n    if (HSC.wardrobeInit)')
@@ -161,6 +161,46 @@ assert guarded != polling and 'catch(error)' in guarded
 s = replace(s, polling, guarded.replace('setTimeout(oe,10)', 'HSC.lifecycle.timeout(oe,10)'))
 game_path.write_text(s)
 
+# Hair-root sampling without per-sample array allocation: the same arithmetic in the same order, so
+# the output is bit-identical (checked by qa/youtube-models.cjs); only temporary arrays are removed.
+s = game_path.read_text()
+old_rw_head = 'for(let i=0;i<t.length;i+=3){let a=[t[i],t[i+1],t[i+2]],n=a.map(h=>[e[h*3],e[h*3+1],e[h*3+2]]);if(!n.some(h=>Na(...h)>.01))continue;K||q.push(...n[0],...n[1],...n[2]);let o=n[1].map((h,d)=>h-n[0][d]),s=n[2].map((h,d)=>h-n[0][d]),l=Math.hypot(o[1]*s[2]-o[2]*s[1],o[2]*s[0]-o[0]*s[2],o[0]*s[1]-o[1]*s[0])*.5*24*24,c=Math.max(2,Math.min(12,Math.ceil(Math.max(Math.hypot(...o),Math.hypot(...s),Math.hypot(o[0]-s[0],o[1]-s[1],o[2]-s[2]))/.028))),u=(c+1)*(c+2)/2;for(let h=0;h<=c;h++)for(let d=0;d<=c-h;d++){let g=[0,1,2].map(w=>n[0][w]*(1-(h+d)/c)+n[1][w]*h/c+n[2][w]*d/c);if(Na(...g)<.05)continue;let m=Tl(...g),A=Math.min(63,Math.floor(m.v*64))*128+Math.min(127,Math.floor(m.u*128)),f=l/u,p=r.weights[A];for(let w=0;w<3;w++)r.positions[A*3+w]=(r.positions[A*3+w]*p+g[w]*f)/(p+f);r.weights[A]+=f}}'
+new_rw_head = ('for(let i=0;i<t.length;i+=3){const i0=t[i]*3,i1=t[i+1]*3,i2=t[i+2]*3,'
+    'x0=e[i0],y0=e[i0+1],z0=e[i0+2],x1=e[i1],y1=e[i1+1],z1=e[i1+2],x2=e[i2],y2=e[i2+1],z2=e[i2+2];'
+    'if(!(Na(x0,y0,z0)>.01||Na(x1,y1,z1)>.01||Na(x2,y2,z2)>.01))continue;K||q.push(x0,y0,z0,x1,y1,z1,x2,y2,z2);'
+    'const o0=x1-x0,o1=y1-y0,o2=z1-z0,s0=x2-x0,s1=y2-y0,s2=z2-z0,'
+    'l=Math.hypot(o1*s2-o2*s1,o2*s0-o0*s2,o0*s1-o1*s0)*.5*24*24,'
+    'c=Math.max(2,Math.min(12,Math.ceil(Math.max(Math.hypot(o0,o1,o2),Math.hypot(s0,s1,s2),Math.hypot(o0-s0,o1-s1,o2-s2))/.028))),u=(c+1)*(c+2)/2;'
+    'for(let h=0;h<=c;h++)for(let d=0;d<=c-h;d++){'
+    'const gx=x0*(1-(h+d)/c)+x1*h/c+x2*d/c,gy=y0*(1-(h+d)/c)+y1*h/c+y2*d/c,gz=z0*(1-(h+d)/c)+z1*h/c+z2*d/c;'
+    'if(Na(gx,gy,gz)<.05)continue;let m=Tl(gx,gy,gz),A=Math.min(63,Math.floor(m.v*64))*128+Math.min(127,Math.floor(m.u*128)),f=l/u,p=r.weights[A];'
+    'r.positions[A*3]=(r.positions[A*3]*p+gx*f)/(p+f);r.positions[A*3+1]=(r.positions[A*3+1]*p+gy*f)/(p+f);r.positions[A*3+2]=(r.positions[A*3+2]*p+gz*f)/(p+f);'
+    'r.weights[A]+=f}}')
+s = replace(s, old_rw_head, new_rw_head)
+game_path.write_text(s)
+
+# Fixed startup models come from the device cache (youtube/geo.js) when present. Each computes
+# from fixed data with fixed seeds, so a stored copy is identical to a fresh computation.
+s = game_path.read_text()
+s = replace(s, 'e=hs_smooth(c,.15,3)', 'e=HSC.geo.use("head",()=>hs_smooth(c,.15,3))')
+s = replace(s, 'Qu=rw(Pt.attributes.position.array,Pt.index.array,Pt.userData.coarse)', 'Qu=HSC.geo.use("roots",()=>rw(Pt.attributes.position.array,Pt.index.array,Pt.userData.coarse))')
+s = replace(s, 'n=e.index.array,o=[],s=[],l=0,c=41873,', 'n=e.index.array;let{h,d,g}=HSC.geo.use("strands",()=>{let o=[],s=[],l=0,c=41873,')
+s = replace(s, 'g.set([u(),u(),u()],S*3)}let m=new af', 'g.set([u(),u(),u()],S*3)}return{h,d,g}});let m=new af')
+s = replace(s, 'function uw(e,{color:t="#2f4f6a",stripColor:r="#f3efe6"}={}){', '''function uw(e,opts={}){
+  const{color:t="#2f4f6a",stripColor:r="#f3efe6"}=opts;let built=null;
+  const m=HSC.geo.use("gown",()=>{built=uwBuild(e,opts);const[J,O]=built.children,a=J.geometry,b=O.geometry;
+    return{vp:a.attributes.position.array,vu:a.attributes.uv.array,vn:a.attributes.normal.array,vi:a.index.array,hp:b.attributes.position.array,hn:b.attributes.normal.array,hi:b.index.array}});
+  if(built)return built;
+  const V=new Tt;V.setAttribute("position",new It(m.vp,3)),V.setAttribute("uv",new It(m.vu,2)),V.setIndex(new It(m.vi,1)),V.setAttribute("normal",new It(m.vn,3));
+  const J=new Ze(V,new Xn({color:t,roughness:.82,metalness:0,sheen:.6,sheenRoughness:.6,sheenColor:new Ye("#a9c0d2"),side:$t}));
+  const He=new Tt;He.setAttribute("position",new It(m.hp,3)),He.setIndex(new It(m.hi,1)),He.setAttribute("normal",new It(m.hn,3));
+  const O=new Ze(He,new Br({color:r,roughness:.92,metalness:0,side:$t})),ce=new oi;return ce.add(J,O),ce.name="robe",ce}
+function uwBuild(e,{color:t="#2f4f6a",stripColor:r="#f3efe6"}={}){''')
+# Both gown materials are rebuilt verbatim above; fail the build if the original ever changes.
+assert 'let $=new Xn({color:t,roughness:.82,metalness:0,sheen:.6,sheenRoughness:.6,sheenColor:new Ye("#a9c0d2"),side:$t})' in s
+assert 'let O=new Ze(He,new Br({color:r,roughness:.92,metalness:0,side:$t})),ce=new oi;return ce.add(J,O),ce.name="robe",ce}' in s
+game_path.write_text(s)
+
 customer_path = out / 'runtime/customers.js'
 s = customer_path.read_text()
 start = s.index('  function oneTab(client) {')
@@ -178,18 +218,25 @@ s = replace(s, "  const sfx = { ctx: null, out: null, noise: null };", """  cons
     sfx.out.gain.value = enabled ? 0.55 * (view()?.volume ?? 1) : 0;
     (enabled ? sfx.ctx.resume() : sfx.ctx.suspend()).catch(() => {});
   };""")
-customer_path.write_text('HSC.youtubeModulesReady=(HSC.whenYouTubeResumed?HSC.whenYouTubeResumed():Promise.resolve()).then(()=>{\n' + s + '\n});\nHSC.youtubeModulesReady.catch(()=>{});\n')
+customer_path.write_text('HSC.youtubeModulesReady=(HSC.whenYouTubeResumed?HSC.whenYouTubeResumed():Promise.resolve()).then(()=>HSC.geo.ready).then(()=>{\n' + s + '\n});\nHSC.youtubeModulesReady.catch(()=>{});\n')
 game_path.write_text('HSC.youtubeModulesReady.then(()=>HSC.whenYouTubeResumed?.()).then(()=>{\nHSC.startupTiming.engineStart=performance.now();\n' + game_path.read_text() + '\n}).catch(HSC.bootstrapError);\n')
-for name in ['client.js', 'loader.js', 'startup.js']:
+for name in ['client.js', 'loader.js', 'startup.js', 'geo.js', 'poster.js']:
     shutil.copy2(root / 'youtube' / name, out / 'runtime' / ('youtube-' + name))
 
 s = (out / 'index.html').read_text()
 s = replace(s, '  <script src="https://bridge.playgama.com/v2/stable/playgama-bridge.js"></script>', '''  <div id="yt-loading" role="status" aria-label="Loading game"><span aria-hidden="true">✂</span><span>Loading…</span></div>
   <script src="https://www.youtube.com/game_api/v1"></script>
+  <script src="./runtime/youtube-poster.js"></script>
   <script src="./runtime/youtube-loader.js"></script>
+  <script src="./runtime/youtube-geo.js"></script>
   <script src="./runtime/youtube-client.js"></script>
   <script src="./runtime/youtube-startup.js"></script>''')
 (out / 'index.html').write_text(s)
+# The model cache is keyed by the exact runtime, so a new build never reads an older build's models.
+import hashlib
+digest = hashlib.sha256((out / 'runtime/game.js').read_bytes() + (out / 'runtime/customers.js').read_bytes()).hexdigest()[:16]
+geo = out / 'runtime/youtube-geo.js'
+geo.write_text(f'globalThis.HSC=globalThis.HSC||{{}};HSC.geoBuild="{digest}";\n' + geo.read_text())
 with (out / 'styles.css').open('a') as f:
-    f.write('\n#yt-loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#f5e7d7;color:#493326;font-size:18px;z-index:9999}#yt-loading [aria-hidden]{font-size:64px}html.yt-paused *{animation-play-state:paused!important}\n')
+    f.write('\n#yt-loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#f5e7d7;color:#493326;font-size:18px;z-index:9999}#yt-loading [aria-hidden]{font-size:64px}#yt-loading.has-poster{justify-content:flex-end;padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));background:#2b1e17 url("assets/backdrop-portrait.webp") center/cover no-repeat;transition:opacity .25s ease}@media (orientation:landscape){#yt-loading.has-poster{background-image:url("assets/backdrop-landscape.webp")}}#yt-loading .yt-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:-1}#yt-loading.has-poster>span{position:relative}#yt-loading.has-poster>span[aria-hidden]{display:none}#yt-loading.has-poster>span:last-child{padding:6px 16px;border-radius:999px;background:rgb(43 30 23 / .72);color:#fff6e6;font-size:15px}#yt-loading.yt-leaving{opacity:0;pointer-events:none}html.yt-paused *{animation-play-state:paused!important}\n')
 print('youtube-build-ok')
