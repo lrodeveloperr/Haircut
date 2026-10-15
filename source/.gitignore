@@ -1,4 +1,5 @@
 build/
+build-youtube/
 dist/
 tests/scale/*.png
 *.png
