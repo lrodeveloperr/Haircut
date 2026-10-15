@@ -111,8 +111,8 @@ jobs:
           mkdir -p /tmp/youtube-release
           unzip -q /tmp/mediacube.zip -d /tmp/youtube-release
           npm install --no-save --package-lock=false playwright@1.58.2
-          npx playwright install --with-deps chromium
-      - env: {BROWSER: chromium, LAYOUT: '1', LAYOUT_GROUP: '${{ matrix.group }}', RELEASE_DIR: /tmp/youtube-release, QA_OUTPUT: 'qa/results/youtube-layout-${{ matrix.group }}', HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1'}
+          npx playwright install --with-deps firefox
+      - env: {BROWSER: firefox, LAYOUT: '1', LAYOUT_GROUP: '${{ matrix.group }}', RELEASE_DIR: /tmp/youtube-release, QA_OUTPUT: 'qa/results/youtube-layout-${{ matrix.group }}', HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1'}
         run: xvfb-run -a node qa/youtube-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()

@@ -43,7 +43,7 @@ async function stroke(p){
  const size=p.viewportSize(),pt=point||{x:size.width*.47,y:size.height*.33};
  await p.mouse.move(pt.x,pt.y);await p.mouse.down();await p.mouse.move(pt.x+30,pt.y+80,{steps:10});await p.mouse.up();await p.waitForTimeout(300);
 }
-async function finish(p){await p.getByRole('button',{name:'Finish haircut',exact:true}).click();await p.locator('#hsc-hub.show').waitFor({state:'visible',timeout:45000});}
+async function finish(p){await p.getByRole('button',{name:'Finish haircut',exact:true}).click();try{await p.locator('#hsc-hub.show').waitFor({state:'visible',timeout:45000});}catch(e){const debug=await p.evaluate(()=>({status:skinFadeStudio.getState().status,view:((v)=>({paused:v.paused,userPaused:v.userPaused,revealComplete:v.revealComplete,busy:v.busy}))(skinFadeStudio.getView()),detail:{level:HSC.detail.level,frameMs:HSC.detail.lastFrameMs},frames:__frames})).catch(()=>null);e.message+='\nReveal diagnostics: '+JSON.stringify(debug);throw e;}}
 async function next(p){await p.locator('.training-continue').click();await p.locator('#hsc-hub.show').waitFor({state:'hidden',timeout:45000});await p.getByRole('button',{name:'Finish haircut',exact:true}).waitFor({state:'visible',timeout:45000});}
 async function reward(p,mode){await p.evaluate(mode=>__yt.rewardMode=mode,mode);await p.locator('.hsc-vbtn').click();await p.waitForTimeout(700);}
 async function standard(){
