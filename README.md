@@ -1,19 +1,21 @@
-# ASMR Haircut Studio
+# ASMR Barber: Fade Master
 
-Finalized Playgama package for YouTube Playables: **v3.81**.
+Finalized Playgama package for YouTube Playables: **v3.82**.
 
-[Download the Playgama ZIP](haircut-studio-v3.81-playgama.zip)
+[Download the Playgama ZIP](asmr-barber-fade-master-v3.82-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.81-playgama.zip`
-- Size: 397,411 bytes
-- SHA-256: `c4eedfbef5ff9c91afa5a95caa12a1c70aa97657997c9450fcb6dac5af000cba`
+- File: `asmr-barber-fade-master-v3.82-playgama.zip`
+- Size: 397,431 bytes
+- SHA-256: `bb72694a03d935a16600929dbcdb3713a23084575fa820dc9ed21cfafa1f2701`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.82: The game is named **ASMR Barber: Fade Master** (page title, screen-reader label, packages). Saved
+  progress keeps its storage keys, so players keep their progress.
 - v3.81: Real-life customers, engineered for variety. The variety director's decks now hold their cards in
   real-life proportions: hair texture and colour per heritage (East Asian hair 90% straight, Black hair coily
   or tightly curly 3b-3c, White hair mostly brown with blond and red as in UK figures), hair loss per age group

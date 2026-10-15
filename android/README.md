@@ -1,11 +1,11 @@
-# ASMR Haircut Studio: full-detail build (for the Android app)
+# ASMR Barber: Fade Master: full-detail build (for the Android app)
 
 This folder holds the heavier build that is **not** used for YouTube Playables. Use it as the starting
 point for the Android app. The Playables package is in the repository root.
 
-- File: `haircut-studio-v3.81-full-detail.zip`
-- Size: 398,599 bytes
-- SHA-256: `ad3663d4d3ab7a4197880d3536435a9d5038bbdb2b7cb5c3d26a42f187d50c58`
+- File: `asmr-barber-fade-master-v3.82-full-detail.zip`
+- Size: 398,619 bytes
+- SHA-256: `ca138d97b1f9b6b8ae5ad2f7400b3a4154c6a2ca91a0441763ffde2c507639a1`
 
 ## What it has over the Playables build
 
@@ -18,6 +18,6 @@ point for the Android app. The Playables package is in the repository root.
   clippings.
 - Low detail matches the Playables build.
 
-The game content is otherwise the same as Playables v3.81 (customers, age-based walk-in styles, guard 0,
+The game content is otherwise the same as Playables v3.82 (customers, age-based walk-in styles, guard 0,
 beards, trimming, clippings, wardrobe with daily picks, levels, streak). It is still packaged for Playgama/YouTube (Playgama Bridge). For the Android app it will
 need wrapping (for example a WebView or Trusted Web Activity) and its own store, ads and save setup.
