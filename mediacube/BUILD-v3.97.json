@@ -1,0 +1,62 @@
+{
+  "version": "v3.97",
+  "status": "hardware retest candidate",
+  "baseCommit": "986dede76fe3615d77f92d479e754e672a80c6d9",
+  "archive": "releases/asmr-barber-fade-master-v3.97-mediacube-youtube.zip",
+  "sha256": "33f95fd7e4063d6d5f52ebbbcd61a8d7b38b159abb32fc61443fdcf5f637c7fa",
+  "zipBytes": 983866,
+  "expandedBytes": 1677468,
+  "files": {
+    "THIRD-PARTY-NOTICES.md": 604,
+    "assets/backdrop-landscape.webp": 23832,
+    "assets/backdrop-portrait.webp": 20566,
+    "index.html": 1147,
+    "licenses/preact-MIT.txt": 1087,
+    "licenses/three-MIT.txt": 1081,
+    "runtime/customers.js": 229037,
+    "runtime/game.js": 770043,
+    "runtime/room-env.dat": 582123,
+    "runtime/youtube-client.js": 14754,
+    "runtime/youtube-geo.js": 7622,
+    "runtime/youtube-loader.js": 4010,
+    "runtime/youtube-poster.js": 3602,
+    "runtime/youtube-startup.js": 417,
+    "styles.css": 17543
+  },
+  "reportedFailures": {
+    "phone": "GFX_SHADER, scalp strand program eeaaca12, ANGLE Adreno 660 OpenGL ES 3.2; no compiler/link log returned",
+    "pc": "SDK could not load in Sites"
+  },
+  "changes": [
+    "Remove unused skin/beard helper functions from hair vertex stages and all unused shared code from hair fragment stages",
+    "Remove unused strand varying, and use constant-index areata calls in the original multiplication order",
+    "Generate an explicit standalone Sites target with identical engine, customers and assets, no external SDK request and the existing local save key",
+    "Prevent denied preview storage reads from later overwriting unread disk progress",
+    "Show actual graphics status, missing driver log and runtime build ID; remove misleading connection advice",
+    "Initialize areataPatch output and return once, avoiding the Windows HLSL early-return warning"
+  ],
+  "preserved": "Rules, UI, controls, audio, ads in the production target, save schemas, 30000 scalp strands, eight segments, full skin/beard effects, antialiasing and resolution policy",
+  "validation": {
+    "domainAndLegacy": "35/35 PASS",
+    "directSdk": "41/41 PASS",
+    "graphicsPolicy": "5/5 PASS",
+    "renderedParity": "5/5 byte-identical customer PNGs against v3.95, including three active scalp/beard patches",
+    "standalone": "2/2 PASS with blocked SDK and denied storage",
+    "startup": "v3.97 Windows and cross-browser checks pending; v3.96 passed local startup/mobile cases",
+    "mobile": "v3.96 8/8; same startup code in v3.97, one initialized shader helper adjustment",
+    "reflection": "decoded bytes identical to v3.94/v3.95",
+    "shaderDiagnostics": "2/2 PASS locally: silent-link failure and all shader variants"
+  },
+  "shaderSourceBytes": {
+    "scalpVertex": {
+      "v395": 12116,
+      "v396": 9694,
+      "v397": 9715
+    },
+    "scalpFragment": {
+      "v395": 14083,
+      "v396": 7428
+    }
+  },
+  "limits": "The screenshot proves the failing program, not the hidden driver cause. Shader simplification is a compatibility correction requiring a new Adreno 660 hardware test. Desktop/software-GPU tests cannot establish that the phone is fixed. Sites adapter removes the PC SDK dependency. Not uploaded to McPlay."
+}

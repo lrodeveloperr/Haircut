@@ -2,7 +2,7 @@
 
 ## File to upload
 
-Current hardware retest candidate: `releases/asmr-barber-fade-master-v3.96-mediacube-youtube.zip`.
+Current hardware retest candidate: `releases/asmr-barber-fade-master-v3.97-mediacube-youtube.zip`.
 Confirm the reported Adreno 660 phone starts before replacing the bundle in McPlay.
 This is a WebGL/HTML5 runtime archive with `index.html` at the root, not a source ZIP or Android package.
 
@@ -10,7 +10,7 @@ This target uses the direct official YouTube Playables SDK at `https://www.youtu
 It does not load Playgama Bridge, Playgama configuration, a mock SDK, external analytics or remote game assets.
 The existing Playgama and full-detail Android builds remain separate.
 
-See [validation results](VALIDATION-v3.96.md) and [exact build identity](BUILD-v3.96.json).
+See [validation results](VALIDATION-v3.97.md) and [exact build identity](BUILD-v3.97.json).
 
 ## Rebuild
 
@@ -18,7 +18,7 @@ See [validation results](VALIDATION-v3.96.md) and [exact build identity](BUILD-v
 bash source/build-youtube.sh
 # Produces source/build-youtube/, without an upload archive.
 
-bash source/release-youtube.sh v3.96
+bash source/release-youtube.sh v3.97
 # Creates the immutable release ZIP; refuses to overwrite an existing release.
 ```
 

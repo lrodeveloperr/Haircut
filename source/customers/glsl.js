@@ -74,8 +74,9 @@ uniform vec4 uBaldA, uBaldB, uBrowA;
 uniform vec4 uAreata[3];
 // alopecia areata: round, smooth patches (scalp or beard) with a slightly irregular edge
 float areataPatch(vec3 p, vec4 a, float i){
-  if (a.w > .001) return smoothstep(a.w * .72, a.w * 1.08, distance(p, a.xyz) + (n3(p * 7.0 + i) - .5) * a.w * .35);
-  return 1.0;
+  float keep = 1.0;
+  if (a.w > .001) keep = smoothstep(a.w * .72, a.w * 1.08, distance(p, a.xyz) + (n3(p * 7.0 + i) - .5) * a.w * .35);
+  return keep;
 }
 float areataKeep(vec3 p){
   float k = 1.0;
