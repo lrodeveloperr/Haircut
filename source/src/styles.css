@@ -1,0 +1,165 @@
+/* ASMR Barber: Fade Master — "Salon Ruler" HUD (Option 4), Candy 3D button style. Textless; icons and numbers only. */
+:root{color-scheme:light;--ink:#2a1d15;--muted:#5a4a3c;--line:#2a1d15;--panel:#fff6e6;--accent:#ff8a3d;--accent-ink:#2a1d15;--track:#f1e4cc;--clip:#ffb627;--finish:#5ccf72;--pause:#ffd23f;--edge:0 5px 0 #2a1d15;--edge-down:0 1px 0 #2a1d15;--outline:3px solid #2a1d15;--shadow:var(--edge);background:#eef2ee;touch-action:none;font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+/* Release scanner hint mirrors the rule above: overflow: hidden. */
+/* Barbershop backdrop: pre-blurred (soft focus) so the haircut stays the sharpest thing on screen; cover-scaled for any aspect ratio */
+.game-root{position:fixed;inset:0;overflow:hidden;background:#2b1e17 url("assets/backdrop-portrait.webp") center/cover no-repeat;user-select:none}
+@media (orientation:landscape){.game-root{background-image:url("assets/backdrop-landscape.webp")}}
+#scene{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.game-root.paused #scene{filter:brightness(.8) saturate(.8)}
+#hud{position:absolute;inset:0;pointer-events:none}
+
+/* ---------- layout: portrait (top card / play / bottom bar) ---------- */
+.ui{position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"top" "play" "bar";gap:10px;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));color:var(--ink)}
+.top{grid-area:top;min-width:0;justify-self:start;align-self:start}
+.play-area{grid-area:play;position:relative;min-width:0;min-height:0;pointer-events:none}
+.bar{grid-area:bar;min-width:0;display:flex;justify-content:center}
+.ui button{pointer-events:auto;font:inherit;cursor:pointer;border:0;padding:0;touch-action:manipulation;flex-shrink:0;color:inherit;background:none}
+.ui button:focus-visible{outline:3px solid #f0a23c;outline-offset:2px}
+.ui button:disabled{opacity:.45;cursor:wait}
+@media (hover:hover){.ui button:not(:disabled):hover{filter:brightness(.96)}}
+.ui button:not(:disabled):active{transform:scale(.96)}
+/* candy buttons sink into their edge when pressed */
+.ui .ctl:not(:disabled):active,.ui .continue:not(:disabled):active,.ui .training-continue:not(:disabled):active,.ui .retry:not(:disabled):active,.ui .resume:not(:disabled):active,.ui .help:not(:disabled):active{transform:translateY(4px);box-shadow:var(--edge-down)}
+
+/* ---------- match card ---------- */
+/* compact top-left chip: reference picture + live match % */
+.match-card{display:inline-flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:20px;background:var(--panel);border:var(--outline);box-shadow:var(--edge)}
+.reference{width:56px;height:56px;border-radius:13px;overflow:hidden;background:#dfe6e0;border:2.5px solid var(--ink)!important}
+.reference img{width:100%;height:100%;object-fit:cover;display:block}
+.match{min-width:3.2ch;font-size:24px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;text-align:right}
+
+/* ---------- guard arc: four round stops (1–4) fanned around the clipper button, bottom right ---------- */
+.guard-arc{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:calc(max(12px,env(safe-area-inset-bottom)) + 5px);width:197px;height:197px;pointer-events:none;z-index:1}
+.guard-arc .track{position:absolute;left:0;top:0;overflow:visible}
+.ui .guard-arc .rung{pointer-events:auto;position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;display:grid;place-items:center;background:var(--panel)!important;border:var(--outline)!important;box-shadow:0 3px 0 var(--ink);font-size:19px;font-weight:800;color:var(--ink);touch-action:none;transition:transform .12s}
+.ui .guard-arc .rung[aria-checked=true]{width:52px;height:52px;margin:-26px 0 0 -26px;background:var(--clip)!important;box-shadow:0 4px 0 var(--ink);font-size:24px}
+.guard-arc[data-disabled="1"]{opacity:.6}
+
+/* ---------- bottom bar (Candy 3D: separate chunky buttons, no slab) ---------- */
+.controls{pointer-events:auto;width:min(100%,560px);height:76px;padding:0 2px 5px;display:flex;align-items:center;justify-content:center;gap:12px}
+.ctl{display:flex;align-items:center;justify-content:center;border:var(--outline)!important;background:var(--panel)!important;color:var(--ink);box-shadow:var(--edge);transition:transform .08s,box-shadow .08s}
+.ctl svg{stroke-width:2.8}
+.ctl.round{width:48px;height:48px;border-radius:50%}
+.ctl.pill{flex:1;height:58px;border-radius:29px}
+.ctl.pill[aria-pressed=true]{color:var(--ink)}
+.ctl.primary{flex:1.35;height:64px;border-radius:32px}
+.ctl.primary[aria-pressed=true]{background:var(--clip)!important;color:var(--ink)}
+.ctl.finish{background:var(--finish)!important;color:var(--ink);flex:0 1 240px;height:64px;border-radius:32px}
+.ctl.finish svg{stroke-width:3.4}
+
+/* ---------- top row: match chip ---------- */
+.top{justify-self:stretch;display:flex;align-items:center;justify-content:flex-start;gap:10px}
+.top .match-card{justify-self:start}
+.audio-toggle{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--panel)!important;border:var(--outline)!important;box-shadow:0 3px 0 var(--ink);color:var(--ink)}
+.audio-toggle[aria-pressed=false]{background:#e4d7bf!important;color:#65584c}
+.ui .audio-toggle:not(:disabled):active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+
+/* ---------- first-run tutorial (wordless: hand + dashed trail) ---------- */
+.tutorial{position:absolute;z-index:4;pointer-events:none;width:0;height:0}
+.tut-path{position:absolute;overflow:visible}
+.tut-trail{fill:none;stroke:#fff6e6;stroke-width:4;stroke-linecap:round;stroke-dasharray:2 9;filter:drop-shadow(0 1px 1px #2a1d1599)}
+.tut-hand{position:absolute;left:-10px;top:-6px;filter:drop-shadow(0 3px 0 #2a1d15)}
+.tut-tool{position:absolute;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--pause);color:var(--ink);border:2.5px solid var(--ink);box-shadow:0 3px 0 var(--ink)}
+.tut-cut .tut-path{left:-22px;top:-4px;width:44px;height:100px}
+.tut-cut .tut-tool{left:-62px;top:-16px}
+.tut-cut .tut-hand{animation:tut-down 1.6s ease-in-out infinite}
+.tut-spin .tut-path{left:-8px;top:-30px;width:140px;height:40px}
+.tut-spin .tut-tool{left:46px;top:-74px}
+.tut-spin .tut-hand{animation:tut-across 1.6s ease-in-out infinite}
+.ui:has(.tut-guard) .guard-arc .rung{animation:tut-pulse 1s ease-in-out infinite}
+@keyframes tut-down{0%,12%{transform:translateY(0);opacity:0}20%{opacity:1}80%{transform:translateY(86px);opacity:1}100%{transform:translateY(86px);opacity:0}}
+@keyframes tut-across{0%,12%{transform:translateX(0);opacity:0}20%{opacity:1}80%{transform:translateX(118px);opacity:1}100%{transform:translateX(118px);opacity:0}}
+@keyframes tut-pulse{0%,100%{box-shadow:var(--edge),0 0 0 0 #ffd23f00}50%{box-shadow:var(--edge),0 0 0 8px #ffd23fcc}}
+
+/* ---------- reveal ---------- */
+.reveal-wait{height:76px;display:grid;place-items:center;color:var(--ink)}
+.results{pointer-events:auto;width:min(100%,560px);min-height:124px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:7px;padding:8px;border-radius:22px;background:var(--panel);border:var(--outline);box-shadow:var(--edge)}
+.comparison{display:flex;gap:4px;align-items:center;color:var(--muted)}
+.comparison img{width:48px;height:48px;object-fit:cover;border-radius:11px;border:2px solid var(--ink);background:#dfe6e0}
+.result-actions{display:flex;flex-direction:row;gap:6px;align-items:center;justify-self:end}
+.continue{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;border:var(--outline)!important;box-shadow:var(--edge)}
+.ui .continue{background:var(--clip)!important;color:var(--ink)}
+.training-reveal{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:3}
+.training-continue{width:86px;height:86px;border-radius:50%;display:grid;place-items:center;background:var(--clip)!important;color:var(--ink);border:var(--outline)!important;box-shadow:var(--edge);pointer-events:auto}
+.retry{position:relative;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;border:var(--outline)!important;box-shadow:var(--edge);background:#58c8f5!important;color:var(--ink)}
+.retry-icon{display:block;transform:translate(.5px,-.5px)}
+.video-badge{position:absolute;right:-4px;bottom:-3px;width:17px;height:17px;border:2px solid var(--ink);border-radius:50%;display:grid;place-items:center;background:var(--panel);color:var(--ink);box-shadow:0 2px 0 var(--ink)}
+
+/* Verified rewarded retry: translucent live-angle target over the customer, with an active-time countdown. */
+.guide-overlay{grid-area:play;position:relative;align-self:stretch;justify-self:center;width:min(100%,calc(200vh - 220px));height:100%;max-width:100%;pointer-events:none;z-index:2;overflow:hidden;border-radius:28px}
+.guide-overlay img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:.24;mix-blend-mode:multiply;filter:saturate(.7) contrast(1.15)}
+.guide-timer{position:absolute;left:10px;bottom:10px;width:50px;height:50px;display:grid;place-items:center;border-radius:50%;border:3px solid var(--ink);background:conic-gradient(var(--finish) calc(var(--guide-progress)*1turn),var(--panel) 0);box-shadow:0 3px 0 var(--ink);font-size:17px;font-weight:900;font-variant-numeric:tabular-nums}
+
+.save-error{position:absolute;left:50%;transform:translateX(-50%);top:max(96px,calc(env(safe-area-inset-top) + 92px));color:#8a5a12;font-size:18px}
+
+/* ---------- landscape: side panel (results) ---------- */
+@media (orientation:landscape){
+ .ui[data-status=reveal]{grid-template-columns:minmax(220px,300px) minmax(0,1fr);grid-template-areas:"top play" "bar play"}
+ .reference{width:72px;height:72px}
+ .top{display:flex}
+
+ .bar{align-items:flex-end}
+ .controls{height:auto;flex-wrap:wrap;padding:0 2px 5px;gap:12px}
+ .ctl.pill{flex:1 1 100%}
+ .ctl.primary{order:-1;flex:1 1 100%}
+ .ctl.finish{order:3;flex:1 1 100%}
+ .results{grid-template-columns:1fr;justify-items:center}
+ .guide-overlay{width:auto;aspect-ratio:2/1}
+}
+@media (orientation:landscape) and (max-height:430px){
+ .ui{gap:8px;padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+ .reference{width:60px;height:60px}
+ .controls{padding:0 2px 5px;gap:10px}
+ .ctl.pill{height:50px}
+ .ctl.primary{height:52px}
+ .training-continue{width:64px;height:64px}
+ .training-continue>svg{width:34px;height:34px}
+}
+/* ---------- portrait: Finish top right; clipper + guard arc bottom right ---------- */
+@media (orientation:portrait){
+ .ui,.ui[data-status=reveal]{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "play" "bar"}
+ .ui[data-status=cutting] .bar{grid-area:auto;position:absolute;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));display:block}
+ .ui[data-status=cutting] .controls{width:auto;height:auto;padding:0 0 5px}
+ .ui[data-status=cutting] .ctl.finish{flex:none;width:104px;height:66px;border-radius:33px}
+}
+@media (max-width:379px) and (orientation:portrait){.reference{width:48px;height:48px}.match{font-size:21px}.ui[data-status=cutting] .ctl.finish{width:92px;height:60px}}
+@media (max-width:430px) and (orientation:portrait){.results{gap:5px;padding:7px}.comparison{gap:2px}.comparison img{width:42px;height:42px}.result-actions{gap:4px}.retry,.continue{width:46px;height:46px}.video-badge{width:16px;height:16px;right:-3px;bottom:-2px}.retry>svg{width:24px;height:24px}.continue>svg{width:26px;height:26px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* ---------- landscape while cutting: Finish top right; clipper + guard arc bottom right ---------- */
+@media (orientation:landscape){
+ .ui[data-status=cutting]{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"top" "play" "bar"}
+ .ui[data-status=cutting] .bar{grid-area:auto;position:absolute;top:max(8px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));display:block}
+ .ui[data-status=cutting] .controls{width:auto;height:auto;padding:0 0 5px;flex-wrap:nowrap}
+ .ui[data-status=cutting] .ctl.finish{flex:none;order:0}
+}
+/* HUD rows make the play region wider than the viewport ratio; cap the cutting field itself at 2:1. */
+@media (orientation:landscape){
+ .ui[data-status=cutting] .play-area,.ui[data-status=reveal] .play-area{justify-self:center;width:auto;height:100%;max-width:100%;aspect-ratio:2/1}
+}
+/* ---------- Finish: green rosette seal with a tick (top right) ---------- */
+.ui .ctl.finish.seal,.ui[data-status=cutting] .ctl.finish.seal{position:relative;width:76px;height:76px;border-radius:50%;background:transparent!important;border:0!important;box-shadow:none;color:var(--ink)}
+.ctl.finish.seal .seal-shape{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 4px 0 #2a1d15)}
+.ctl.finish.seal .seal-shape polygon{fill:var(--finish);stroke:var(--ink);stroke-width:1.1;stroke-linejoin:round}
+.ctl.finish.seal svg:not(.seal-shape){position:relative;stroke-width:3.6}
+.ui .ctl.finish.seal:not(:disabled):active{transform:translateY(3px);box-shadow:none}
+.ui .ctl.finish.seal:not(:disabled):active .seal-shape{filter:drop-shadow(0 1px 0 #2a1d15)}
+/* tutorial step "guard": a curved double arrow sweeping along the guard arc */
+.tut-arc{position:absolute;left:0;top:0;overflow:visible;transform-origin:158px 158px;animation:tut-sweep 1.4s ease-in-out infinite}
+@keyframes tut-sweep{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+/* ---------- clipper on/off (bottom right, centre of the guard arc) ---------- */
+.ui .clip-toggle{pointer-events:auto;position:absolute;right:max(12px,env(safe-area-inset-right));bottom:calc(max(12px,env(safe-area-inset-bottom)) + 5px);width:78px;height:78px;border-radius:50%;display:grid;place-items:center;background:var(--panel)!important;border:var(--outline)!important;box-shadow:var(--edge);color:var(--ink);z-index:1;transition:background .12s}
+.ui .clip-toggle.on{background:var(--clip)!important}
+.clip-toggle .led{position:absolute;top:9px;right:13px;width:12px;height:12px;border-radius:50%;background:#cdbb9b;border:2px solid var(--ink);box-sizing:border-box}
+.clip-toggle.on .led{background:#5ccf72;box-shadow:0 0 0 3px #5ccf7255}
+.ui .clip-toggle:not(:disabled):active{transform:translateY(4px);box-shadow:var(--edge-down)}
+/* tutorial step "clip": tap on the clipper button */
+.tut-clip .tut-hand{animation:tut-tap-clip 1s ease-in-out infinite}
+@keyframes tut-tap-clip{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.ui:has(.tut-clip) .clip-toggle{animation:tut-pulse 1s ease-in-out infinite}
+
+/* v3.10 interaction: the clipper is a 3D tool on the scalp; the system pointer remains available. */
+.game-root #scene{cursor:grab}
+.game-root #scene:active{cursor:grabbing}
+/* The free-style training result is only a floating Next button; the Finish seal already supplied confirmation. */
