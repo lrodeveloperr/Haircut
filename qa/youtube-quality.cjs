@@ -1,0 +1,19 @@
+// Exercise the graphics policy embedded in the actual upload runtime.
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const root=path.resolve(process.env.RELEASE_DIR||'source/build-youtube');
+const source=fs.readFileSync(path.join(root,'runtime/customers.js'),'utf8');
+const end=source.indexOf('})(globalThis.HSC || (globalThis.HSC = {}));')+'})(globalThis.HSC || (globalThis.HSC = {}));'.length;
+const results=[];
+function fixture(dpr=3){const context=vm.createContext({devicePixelRatio:dpr,innerWidth:390,innerHeight:844,navigator:{deviceMemory:2,hardwareConcurrency:2},HSC:{}});vm.runInContext(source.slice(0,end),context);return context.HSC.detail;}
+function test(name,fn){try{fn();results.push({name,status:'PASS'});}catch(e){results.push({name,status:'FAIL',error:e.stack});}console.log(JSON.stringify(results.at(-1)));}
+function sample(d,state,ms,count){for(let i=0;i<count;i++){const next=d.sample(ms,state.strands,state.pixel,2);if(next)Object.assign(state,next);}return state;}
+function warm(d,state){sample(d,state,25,60);}
+test('A phone with low hardware hints still starts with full geometry, shading and MSAA',()=>{const d=fixture();assert.equal(d.level,'high');assert.equal(d.maxStrands,30000);assert.equal(d.segments,8);assert.equal(d.beardSegments,8);assert.equal(d.beardMax,1);assert.equal(d.shaderLow,false);assert.equal(d.antialias,true);assert.equal(d.pixelRatio(390,844),2);});
+test('Drawing-buffer budget holds from tiny phones through 4K/ultrawide at different DPRs',()=>{for(const dpr of [1,2,3,4]){const d=fixture(dpr);for(const [w,h]of [[225,400],[390,844],[844,390],[1024,1366],[2560,1440],[3440,1440],[3840,2160]]){const r=d.pixelRatio(w,h);assert(Math.floor(w*r)*Math.floor(h*r)<=d.maxPixels);assert(r<=Math.min(2,dpr));assert(d.pixelFloor(w,h)<=r);}}});
+test('Startup warm-up and a long compilation/pause gap cannot immediately reduce fidelity',()=>{const d=fixture(),s={strands:30000,pixel:2};sample(d,s,40,37);assert.equal(s.pixel,2);d.sample(3000,s.strands,s.pixel,2);sample(d,s,40,37);assert.equal(s.pixel,2);assert.equal(s.strands,30000);});
+test('A single poor window is insufficient; sustained poor pacing lowers resolution before hair',()=>{const d=fixture(),s={strands:30000,pixel:2};warm(d,s);sample(d,s,40,25);assert.equal(s.pixel,2);sample(d,s,40,25);assert.equal(s.pixel,1.75);assert.equal(s.strands,30000);});
+test('Normal 30Hz pacing does not cause quality degradation',()=>{const d=fixture(),s={strands:30000,pixel:2};sample(d,s,1000/30,900);assert.equal(s.pixel,2);assert.equal(s.strands,30000);});
+test('Sustained overload stays within deliberate resolution and hair floors, preserving geometry/shaders/beard',()=>{const d=fixture(),s={strands:30000,pixel:2};sample(d,s,40,1000);assert.equal(s.pixel,1.5);assert.equal(s.strands,24000);assert.equal(d.level,'high');assert.equal(d.shaderLow,false);assert.equal(d.segments,8);assert.equal(d.beardMax,1);});
+test('Healthy rendering gradually restores all hair and resolution after an overload',()=>{const d=fixture(),s={strands:30000,pixel:2};sample(d,s,40,500);sample(d,s,16,1400);assert.equal(s.strands,30000);assert.equal(s.pixel,2);});
+test('Resume resets the sampling history while preserving the current visual budget',()=>{const d=fixture(),s={strands:30000,pixel:2};warm(d,s);sample(d,s,40,25);d.resetHistory();sample(d,s,40,62);assert.equal(s.pixel,2);assert.equal(s.strands,30000);});
+const out=path.resolve(process.env.QA_OUTPUT||'qa/results/youtube-quality');fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'contracts.json'),JSON.stringify(results,null,2));const failed=results.filter(x=>x.status==='FAIL');console.log('YOUTUBE QUALITY',results.length-failed.length+'/'+results.length);process.exitCode=failed.length?1:0;

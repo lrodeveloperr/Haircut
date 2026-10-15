@@ -1,7 +1,11 @@
 set -e
 cd "$(dirname "$0")"
-# TARGET=playables (default): one light detail level. TARGET=full: auto / low / high (Android app).
-if [ "${TARGET:-playables}" = full ]; then DETAIL=detail; else DETAIL=detail-playables; fi
+# Keep publisher-specific graphics policy separate from the Android and legacy Playgama targets.
+case "${TARGET:-playables}" in
+  full) DETAIL=detail ;;
+  youtube) DETAIL=detail-youtube ;;
+  *) DETAIL=detail-playables ;;
+esac
 mkdir -p build/runtime
 cp -r src/assets src/THIRD-PARTY-NOTICES.md src/styles.css build/
 cp -r src/licenses build/

@@ -2,14 +2,14 @@
 
 ## File to upload
 
-Use `releases/asmr-barber-fade-master-v3.84-mediacube-youtube.zip` in McPlay's **Replace game bundle** field.
+Use `releases/asmr-barber-fade-master-v3.85-mediacube-youtube.zip` in McPlay's **Replace game bundle** field.
 This is a WebGL/HTML5 runtime archive with `index.html` at the root, not a source ZIP or Android package.
 
 This target uses the direct official YouTube Playables SDK at `https://www.youtube.com/game_api/v1`.
 It does not load Playgama Bridge, Playgama configuration, a mock SDK, external analytics or remote game assets.
 The existing Playgama and full-detail Android builds remain separate.
 
-See [validation results](VALIDATION-v3.84.md) and [exact build identity](BUILD-v3.84.json).
+See [validation results](VALIDATION-v3.85.md) and [exact build identity](BUILD-v3.85.json).
 
 ## Rebuild
 
@@ -17,7 +17,7 @@ See [validation results](VALIDATION-v3.84.md) and [exact build identity](BUILD-v
 bash source/build-youtube.sh
 # Produces source/build-youtube/, without an upload archive.
 
-bash source/release-youtube.sh v3.84
+bash source/release-youtube.sh v3.85
 # Creates the immutable release ZIP; refuses to overwrite an existing release.
 ```
 
@@ -28,6 +28,17 @@ plus McPlay's 15,000,000-byte per-file advisory budget.
 
 The official SDK is loaded first. A visible loading state sends `firstFrameReady`; `gameReady` is sent only
 after the saved game, wardrobe and controller are initialized and the loading state has been removed.
+
+## Graphics
+
+v3.85 restores full visual detail on phones and desktops: 30,000 scalp strands, eight-segment hair
+and beards, full beard density, full skin shading, antialiasing and up to 2x rendering resolution.
+It does not force low graphics from CPU, memory or GPU-name heuristics. Startup/host-resume warm-up
+and sustained frame measurements drive reversible scaling: resolution first (normally no lower than
+1.5x), then scalp count (no lower than 24,000). Full shaders, strand geometry and beard density stay
+active. Native DPR and a 4,000,000-pixel drawing-buffer cap apply to every viewport, including resize.
+Normal 30 Hz pacing does not trigger degradation. This is a visual-fidelity/performance policy;
+actual mobile performance still needs checking on the target phone.
 
 ## Saves and platform lifecycle
 

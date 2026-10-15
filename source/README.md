@@ -15,7 +15,8 @@ is requested, `bash source/release.sh <new-version>` builds and packages both ta
 playable. Use a new version so the historical release remains immutable.
 
 Building only the game, without packaging: `bash source/buildall.sh` (Playables, one light detail level) or
-`TARGET=full bash source/buildall.sh` (Android, detail levels Auto / Low / High). The result is in `source/build/`.
+`TARGET=full bash source/buildall.sh` (Android, detail levels Auto / Low / High). The result is in `source/build/`. The direct YouTube target uses `bash source/build-youtube.sh`,
+which selects its own full-fidelity adaptive graphics policy and outputs `source/build-youtube/`.
 
 ## How it is put together
 
@@ -24,7 +25,7 @@ Building only the game, without packaging: `bash source/buildall.sh` (Playables,
 - `patch.py` … `patch14.py` — exact string replacements applied in order to the minified game (each one asserts its
   target appears exactly once, so a mismatch stops the build). The docstring at the top of each says what it does.
 - `customers/` — readable code concatenated into `build/runtime/customers.js` and loaded before the game, in this
-  order: `detail-playables` (or `detail` for Android), `people`, `glsl`, `faces`, `render`, `state`, `meta`,
+  order: `detail-playables` (or `detail` for Android / `detail-youtube` for direct YouTube), `people`, `glsl`, `faces`, `render`, `state`, `meta`,
   `catalog`, `patterns`, `wardrobe`, `hub`, `clippings`.
   - `people.js` customer generator (heritage, age, skin, hair, hair loss, beard, eyes, face shape)
   - `meta.js` progress, hidden levels, streak, daily VIP, next-customer queue and the variety director

@@ -8,9 +8,10 @@ const results=[];let browser;
 async function test(name,fn){try{const evidence=await fn();results.push({name,status:'PASS',evidence});}catch(e){results.push({name,status:'FAIL',error:e.stack});}console.log(JSON.stringify(results.at(-1)));fs.writeFileSync(path.join(out,'browser.json'),JSON.stringify({engine,archiveSha256:process.env.ARCHIVE_SHA,results},null,2));}
 const csp="default-src 'none'; script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://www.youtube.com/game_api/v1 https://www.youtube.com/game_api/v1/; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: data:; base-uri 'self'; worker-src 'self' blob:";
 async function fixture(options={}){
+ const started=performance.now();
  let raw=Object.hasOwn(options,'saved')?options.saved:'',readFail=!!options.readFail,writeFail=false;
  const calls=[],errors=[],requests=[];
- const ctx=await browser.newContext({viewport:options.viewport||{width:390,height:844},reducedMotion:'reduce',hasTouch:!!options.touch});
+ const ctx=await browser.newContext({viewport:options.viewport||{width:390,height:844},deviceScaleFactor:options.dpr||1,reducedMotion:'reduce',hasTouch:!!options.touch});
  const page=await ctx.newPage();page.setDefaultTimeout(10000);
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('request',r=>requests.push(r.url()));
  await ctx.exposeBinding('readCloud',async()=>{calls.push(['load']);if(readFail)throw Error('Injected cloud read failure');return raw;});
@@ -19,7 +20,8 @@ async function fixture(options={}){
    const raf=window.requestAnimationFrame;window.__frames={requested:0,executed:0};
    window.requestAnimationFrame=fn=>{__frames.requested++;return raf.call(window,t=>{__frames.executed++;fn(t);});};
  });
- await ctx.route('http://release.test/**',async route=>{const pathname=new URL(route.request().url()).pathname;const file=path.join(root,pathname==='/'?'index.html':pathname);if(!file.startsWith(root+path.sep)||!fs.existsSync(file))return route.fulfill({status:404,body:'not found'});await route.fulfill({path:file,headers:{'Content-Security-Policy':csp},contentType:({'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp'})[path.extname(file)]||'text/plain'});});
+ const releaseRoot=path.resolve(options.releaseRoot||root);
+ await ctx.route('http://release.test/**',async route=>{const pathname=new URL(route.request().url()).pathname;const file=path.join(releaseRoot,pathname==='/'?'index.html':pathname);if(!file.startsWith(releaseRoot+path.sep)||!fs.existsSync(file))return route.fulfill({status:404,body:'not found'});await route.fulfill({path:file,headers:{'Content-Security-Policy':csp},contentType:({'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp'})[path.extname(file)]||'text/plain'});});
  if(!options.realSdk)await ctx.route('https://www.youtube.com/game_api/v1',route=>options.missing?route.abort():route.fulfill({contentType:'application/javascript',body:`
    window.__yt={messages:[],ads:[],callbacks:{},rewardMode:'${options.rewardMode||'earned'}',paused:false,audio:${options.audio!==false}};
    const sub=k=>fn=>{__yt.callbacks[k]=fn;${options.initialPause?"if(k==='pause'){__yt.paused=true;fn();}":''}return()=>delete __yt.callbacks[k];};
@@ -31,7 +33,7 @@ async function fixture(options={}){
    };` }));
  await page.goto('http://release.test/',{waitUntil:'load'});
  if(!options.blocked&&!options.missing&&!options.readFail&&!options.initialPause)await page.waitForFunction(()=>!!window.skinFadeStudio,null,{timeout:45000});
- return {ctx,page,calls,errors,requests,raw:()=>raw,readFail(value){readFail=value;},writeFail(value){writeFail=value;},close:()=>ctx.close()};
+ return {ctx,page,calls,errors,requests,startupMs:Math.round(performance.now()-started),raw:()=>raw,readFail(value){readFail=value;},writeFail(value){writeFail=value;},close:()=>ctx.close()};
 }
 const state=p=>p.evaluate(()=>JSON.parse(JSON.stringify(skinFadeStudio.getState())));
 async function stroke(p){
@@ -97,8 +99,29 @@ async function soak(){
    const after=await metrics();assert.equal(after.canvases,before.canvases);assert.equal(after.huds,before.huds);assert.equal(after.callbacks,before.callbacks);assert.deepEqual(f.errors,[]);return {transitions,elapsedMs:Date.now()-start,before,after};
  });await f.close();
 }
+async function quality(){
+ const baseline=path.resolve(process.env.BASELINE_DIR);
+ for(const [width,height,dpr]of [[390,844,2],[360,640,3],[768,1024,2]]){
+  await test(`Full-detail phone/tablet render ${width}x${height} DPR ${dpr}`,async()=>{
+   const f=await fixture({viewport:{width,height},dpr,touch:true}),p=f.page;
+   try{
+    await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);
+    const saved=f.raw(),before=await state(p);
+    const metrics=await p.evaluate(()=>{const c=document.getElementById('scene'),b=HSC.debugState.beardMesh;return{level:HSC.detail.level,shaderLow:HSC.detail.shaderLow,segments:HSC.detail.segments,beardSegments:b.geometry.attributes.position.count/2-1,beardCount:b.geometry.instanceCount,beardRoots:HSC.debugState.roots.count,antialias:c.getContext('webgl2').getContextAttributes().antialias,width:c.width,height:c.height,cssWidth:c.clientWidth,cssHeight:c.clientHeight};});
+    assert.equal(metrics.level,'high');assert.equal(metrics.shaderLow,false);assert.equal(metrics.segments,8);assert.equal(metrics.beardSegments,8);assert.equal(metrics.beardCount,metrics.beardRoots);assert.equal(metrics.antialias,true);assert(metrics.width*metrics.height<=4000000);assert(metrics.width/metrics.cssWidth>=1.49);
+    await p.evaluate(()=>__yt.callbacks.pause());await p.screenshot({path:path.join(out,`${width}x${height}-high.png`)});
+    const g=await fixture({viewport:{width,height},dpr,touch:true,saved,releaseRoot:baseline});
+    try{assert.deepEqual((await state(g.page)).look,before.look);await g.page.evaluate(()=>__yt.callbacks.pause());await g.page.screenshot({path:path.join(out,`${width}x${height}-v3.84.png`)});assert.deepEqual(g.errors,[]);}finally{await g.close();}
+    await p.evaluate(()=>{__yt.callbacks.resume();HSC.setDetail(0.5);});assert.equal(await p.evaluate(()=>HSC.debugState.beardMesh.geometry.instanceCount),metrics.beardRoots);
+    await p.setViewportSize({width:3840,height:2160});await p.waitForTimeout(500);
+    const resized=await p.locator('#scene').evaluate(c=>({width:c.width,height:c.height}));assert(resized.width*resized.height<=4000000);assert.deepEqual((await state(p)).hair,before.hair);assert.deepEqual(f.errors,[]);
+    return {startupMs:f.startupMs,metrics,resized,zipSha:process.env.ARCHIVE_SHA};
+   }finally{await f.close();}
+  });
+ }
+}
 (async()=>{
  browser=await({chromium,firefox,webkit}[engine]).launch({headless:process.env.HEADED!=='1',...(engine==='chromium'?{args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']}:{}) ,...(engine==='firefox'?{firefoxUserPrefs:{'webgl.force-enabled':true,'webgl.disabled':false,'gfx.webrender.software':true}}:{})});
- if(process.env.LAYOUT==='1')await layouts();else if(process.env.SOAK==='1')await soak();else await standard();
+ if(process.env.QUALITY==='1')await quality();else if(process.env.LAYOUT==='1')await layouts();else if(process.env.SOAK==='1')await soak();else await standard();
  await browser.close();const failed=results.filter(x=>x.status==='FAIL');console.log('YOUTUBE BROWSER',engine,results.length-failed.length+'/'+results.length);process.exitCode=failed.length?1:0;
 })().catch(async e=>{console.error(e);fs.writeFileSync(path.join(out,'fatal.txt'),e.stack);await browser?.close();process.exitCode=2;});

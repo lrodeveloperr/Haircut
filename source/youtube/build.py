@@ -1,4 +1,4 @@
-"""Create the direct-YouTube target from the corrected, light-detail game build."""
+"""Create the direct-YouTube target with full-fidelity, measured adaptive graphics."""
 from pathlib import Path
 import shutil
 
@@ -30,6 +30,14 @@ s = replace(s, 'client.bindGame({root, setPaused: game.setPaused, setAudioEnable
 s = replace(s, '    await client.gameReady();', '    HSC.dismissLoading();\n    await client.gameReady();')
 s = replace(s, "    globalThis.addEventListener('pagehide', () => { unmount(); game.destroy(); client.destroy(); }, {once: true});", '')
 s = replace(s, 'function showBootError(error) {', 'function showBootError(error) {\n  HSC.dismissLoading();')
+# Full-fidelity geometry and shading remain enabled. Adapt from sustained scene frame times,
+# not device labels; keep the drawing buffer bounded on every resize, including large desktops.
+start = s.index('function he(ue){Pe&&(Ue=Ue*.93+')
+end = s.index('function _(ue=!0)', start)
+s = replace(s, s[start:end], 'function he(ue){if(Pe){let quality=HSC.detail.sample(ue-Pe,te,$,J);if(quality){He(quality.strands);$=quality.pixel}}Pe=ue}')
+s = replace(s, 'resetTiming(){Pe=0}', 'resetTiming(){Pe=0;HSC.detail.resetHistory()}')
+s = replace(s, 'let ye=Math.max(1,e.clientWidth),Ie=Math.max(1,e.clientHeight),B=Math.floor(ye*$),E=Math.floor(Ie*$);',
+    'let ye=Math.max(1,e.clientWidth),Ie=Math.max(1,e.clientHeight);J=HSC.detail.pixelRatio(ye,Ie);$=Math.min(J,Math.max(HSC.detail.pixelFloor(ye,Ie),$));let B=Math.floor(ye*$),E=Math.floor(Ie*$);')
 game_path.write_text(s)
 
 customer_path = out / 'runtime/customers.js'
@@ -40,6 +48,8 @@ s = s[:start] + '  function oneTab(client) { /* YouTube owns foreground, pause a
 s = s.replace('setInterval(', 'HSC.lifecycle.interval(').replace('clearTimeout(', 'HSC.lifecycle.clear(').replace('setTimeout(', 'HSC.lifecycle.timeout(')
 # Prevent resize handlers and delayed wardrobe/reveal UI work from running during host pause.
 s = replace(s, "const place = () => { HSC.applyScale(); this.place();", "const place = () => { if (HSC.executionPaused) return; HSC.applyScale(); this.place();")
+# Beard density is independent of adaptive scalp count; facial hair is part of the core visual.
+s = replace(s, 'const k = Math.max(0.3, Math.min(1, f)) * HSC.detail.beardMax;', 'const k = HSC.detail.beardMax;')
 s = replace(s, "  const sfx = { ctx: null, out: null, noise: null };", """  const sfx = { ctx: null, out: null, noise: null };
   HSC.setRevealAudio = enabled => {
     if (!sfx.ctx || !sfx.out) return;
