@@ -1,0 +1,5 @@
+build/
+dist/
+tests/scale/*.png
+*.png
+designs-data.txt

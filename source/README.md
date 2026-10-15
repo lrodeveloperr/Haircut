@@ -1,0 +1,42 @@
+# ASMR Barber: Fade Master — source
+
+Everything needed to rebuild the packages in this repository.
+
+## Build
+
+Needs `bash`, `python3`, `node` and `zip`.
+
+```sh
+bash source/release.sh v3.82
+```
+
+This writes the Playables ZIP to the repository root, the Android full-detail ZIP to `android/` and the single-file
+playable (for trying the game without a server) to `source/dist/`.
+
+Building only the game, without packaging: `bash source/buildall.sh` (Playables, one light detail level) or
+`TARGET=full bash source/buildall.sh` (Android, detail levels Auto / Low / High). The result is in `source/build/`.
+
+## How it is put together
+
+- `src/` — the original game (minified Three.js / Preact bundle `runtime/game.js`, `index.html`, `styles.css`,
+  images, Playgama Bridge configuration).
+- `patch.py` … `patch13.py` — exact string replacements applied in order to the minified game (each one asserts its
+  target appears exactly once, so a mismatch stops the build). The docstring at the top of each says what it does.
+- `customers/` — readable code concatenated into `build/runtime/customers.js` and loaded before the game, in this
+  order: `detail-playables` (or `detail` for Android), `people`, `glsl`, `faces`, `render`, `state`, `meta`,
+  `catalog`, `patterns`, `wardrobe`, `hub`, `clippings`.
+  - `people.js` customer generator (heritage, age, skin, hair, hair loss, beard, eyes, face shape)
+  - `meta.js` progress, hidden levels, streak, daily VIP, next-customer queue and the variety director
+  - `state.js` walk-in haircut styles and the saved customer / beard
+  - `catalog.js`, `patterns.js`, `wardrobe.js` the 1,000 clipper and 600 robe designs, the wardrobe and daily picks
+  - `hub.js` completion screen (next customer, replay), UI scale, tutorial layout
+  - `clippings.js` falling hair and the brush-off at the reveal
+- `buildall.sh` builds `build/`; `release.sh` builds and packages; `mkplay.py` makes the single-file playable.
+- `tools/gen-designs.js` generated the frozen design list in `customers/catalog.js` (run once; kept for reference).
+- `tests/` Playwright checks used during development. Serve the build first, then run them from `source/`:
+  `npx http-server build -p 8124 -s &` then e.g. `node tests/audit.js` (3,000-customer realism audit),
+  `node tests/replaytest.js`, `node tests/pagetest.js`, `node tests/scale/fast.js` (all screens, 4 states, into
+  `tests/scale/`), `node tests/singletest.js dist/<name>-play.html`.
+
+Saved progress uses the storage keys `skin-fade-studio-session-v2`, `skin-fade-studio-meta-v1` and
+`skin-fade-studio-rewards-v4`; keep them so players keep their progress.

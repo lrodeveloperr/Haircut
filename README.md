@@ -12,6 +12,9 @@ The archive includes `index.html` at its root and the Playgama Bridge configurat
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
+The complete source, with a one-command build that reproduces these packages byte for byte, is in
+[`source/`](source/README.md) (`bash source/release.sh v3.82`).
+
 ## Changes
 
 - v3.82: The game is named **ASMR Barber: Fade Master** (page title, screen-reader label, packages). Saved
