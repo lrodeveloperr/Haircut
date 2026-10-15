@@ -4,15 +4,15 @@ const engine=process.env.BROWSER||'chromium',soak=process.env.SOAK==='1';
 const root=path.resolve(process.env.RELEASE_DIR||'release'),out=path.resolve(process.env.QA_OUTPUT||`qa-results/${engine}${soak?'-soak':''}`);
 fs.mkdirSync(out,{recursive:true});
 const results=[],details={engine,soak,archiveSha256:process.env.ARCHIVE_SHA},resources=[];
-async function test(id,name,fn){try{let evidence=await fn();results.push({id,name,status:'PASS',evidence:evidence??''})}catch(e){results.push({id,name,status:'FAIL',evidence:e.message})}console.log(JSON.stringify(results.at(-1)));fs.writeFileSync(path.join(out,'browser.json'),JSON.stringify({details,results,resources},null,2));}
+async function test(id,name,fn){try{let evidence=await fn();results.push({id,name,status:'PASS',evidence:evidence??''})}catch(e){results.push({id,name,status:'FAIL',evidence:e.message.split('\n+ actual - expected')[0].slice(0,2000)})}console.log(JSON.stringify(results.at(-1)));fs.writeFileSync(path.join(out,'browser.json'),JSON.stringify({details,results,resources},null,2));}
 let browser;
-async function launch(){browser=await({chromium,firefox,webkit}[engine]).launch({headless:true,...(engine==='chromium'?{args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']}:{})});details.version=browser.version();}
+async function launch(){browser=await({chromium,firefox,webkit}[engine]).launch({headless:process.env.HEADED!=='1',...(engine==='chromium'?{args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']}:{}) ,...(engine==='firefox'?{firefoxUserPrefs:{'webgl.force-enabled':true,'webgl.disabled':false,'gfx.webrender.software':true}}:{})});details.version=browser.version();}
 async function fixture(options={}){
  const data=new Map(Object.entries(options.saved||{})),errors=[],requests=[],calls=[];
  let readError=!!options.readError,writeError=false;
  const ctx=await browser.newContext({viewport:options.viewport||{width:390,height:844},hasTouch:true,reducedMotion:options.reduced?'reduce':'no-preference'});
  const page=await ctx.newPage();
- page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push(r.url()));
+ page.setDefaultTimeout(7000);page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});page.on('request',r=>requests.push(r.url()));
  await page.exposeBinding('qaRead',async(_,keys)=>{if(readError)throw Error('Injected storage read failure');return keys.map(k=>{let v=data.get(k);if(v==null)return null;if(options.parse!==false&&typeof v==='string'){try{return JSON.parse(v)}catch{}}return v})});
  await page.exposeBinding('qaWrite',async(_,keys,values)=>{calls.push(['save-start',keys[0]]);if(writeError)throw Error('Injected write failure');if(options.saveDelay)await new Promise(r=>setTimeout(r,options.saveDelay));keys.forEach((k,i)=>data.set(k,values[i]));calls.push(['save-ack',keys[0]])});
  await page.addInitScript(opts=>{
@@ -28,7 +28,7 @@ async function fixture(options={}){
  await page.route('http://release.test/**',async route=>{let p=new URL(route.request().url()).pathname;if(p==='/')p='/index.html';const file=path.join(root,p);if(!file.startsWith(root+path.sep)||!fs.existsSync(file)){return route.fulfill({status:404,body:'not found'})}const contentType=({'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.webp':'image/webp','.md':'text/plain'})[path.extname(file)]||'application/octet-stream';await route.fulfill({path:file,contentType})});
  if(!options.real)await page.route('https://bridge.playgama.com/**',route=>options.missing?route.abort():route.fulfill({body:'/* Strict QA adapter installed before packaged runtime */',contentType:'application/javascript'}));
  const started=Date.now();await page.goto('http://release.test/',{waitUntil:'load'});
- if(!options.missing&&!options.initFail&&!options.readError){await page.waitForFunction(()=>!!window.skinFadeStudio,{timeout:30000});details.startupMs??=Date.now()-started;}
+ if(!options.missing&&!options.initFail&&!options.readError){try{await page.waitForFunction(()=>!!window.skinFadeStudio,{timeout:30000});details.startupMs??=Date.now()-started;}catch(e){await page.screenshot({path:path.join(out,'startup-blocked.png')});throw Error('Startup did not reach playable state: '+JSON.stringify({errors,requests,bootError:await page.locator('html').getAttribute('data-boot-error')}))}}
  return{ctx,page,data,errors,requests,calls,setWriteError(v){writeError=v},setReadError(v){readError=v},async close(){await ctx.close()}};
 }
 const state=page=>page.evaluate(()=>JSON.parse(JSON.stringify(window.skinFadeStudio.getState())));
@@ -84,6 +84,8 @@ async function sample(page){return page.evaluate(()=>({heap:performance.memory?.
   await test('W16','SDK initialization failure has visible recovery and never readies',async()=>{await p.waitForFunction(()=>document.documentElement.dataset.bootError==='true');assert.equal(await p.evaluate(()=>window.__qa.messages.length),0);assert.equal(await p.getByRole('button',{name:/retry|reload|try again/i}).count()>0,true,'SDK failure leaves a blank game without a retry control')});await f.close();
   f=await fixture({missing:true});p=f.page;
   await test('W17','Production origin never silently switches to preview mocks when SDK is missing',async()=>{await p.waitForFunction(()=>document.documentElement.dataset.bootError==='true');assert.equal(await p.evaluate(()=>!!window.skinFadeStudio),false)});await f.close();
+  f=await fixture({parse:false,ads:false});p=f.page;
+  await test('WTOUCH','Native touch cuts scalp and pointer cancellation ends the gesture',async()=>{await p.mouse.move(150,310);await p.mouse.down();await p.mouse.move(260,330,{steps:8});await p.mouse.up();await p.getByRole('radio',{name:/^Guard 2,/}).tap();await p.getByRole('radio',{name:/^Guard 1,/}).tap();await p.getByRole('button',{name:'Clipper off: drag to turn the customer',exact:true}).tap();const hint=await p.locator('.tutorial.tut-cut').evaluate(e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y}});const before=await state(p);await p.touchscreen.tap(hint.x,hint.y+72);assert((await state(p)).cutStrokeCount>before.cutStrokeCount,'native touch produced no cut');await p.mouse.move(hint.x,hint.y+20);await p.mouse.down();await p.locator('canvas').dispatchEvent('pointercancel',{pointerId:1,pointerType:'mouse'});const cancelled=await state(p);await p.mouse.move(hint.x+80,hint.y+80,{steps:8});await p.mouse.up();assert.deepEqual((await state(p)).hair,cancelled.hair)});await f.close();
   f=await fixture({platform:'youtube',language:'ar',parse:false,reduced:true});p=f.page;
   await test('W18','YouTube respects host controls; host locale reaches the page',async()=>{assert.equal(await p.getByRole('button',{name:/game sound/}).count(),0);assert.equal(await p.locator('html').getAttribute('lang'),'ar');await p.evaluate(()=>window.__qa.platform.emit('audio_state_changed',false));assert.equal((await view(p)).audio,false);await p.screenshot({path:path.join(out,'youtube-ar.png')})});
   await test('W19','Reduced-motion preference suppresses tutorial CSS animation',async()=>{assert.equal(await p.locator('.tut-hand').evaluate(e=>getComputedStyle(e).animationName),'none')});await f.close();
