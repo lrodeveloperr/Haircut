@@ -107,7 +107,10 @@ async function layouts(){
    await p.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-play.png`)});
    await p.locator('#hsc-hud .hsc-rw').click();await p.locator('.hsc-tab').first().click();await p.waitForTimeout(250);await p.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-clipper.png`)});
    await p.locator('.hsc-tab').last().click();await p.waitForTimeout(150);await p.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-gown.png`)});
-   const card=await p.locator('.hsc-vbtn').boundingBox();assert(card&&card.x>=-1&&card.y>=-1&&card.x+card.width<=width+1&&card.y+card.height<=height+1,JSON.stringify({viewport:{width,height},card,uiScale:await p.evaluate(()=>HSC.S),scroll:await p.locator('.hsc-sheet').evaluate(e=>({top:e.scrollTop,height:e.clientHeight,total:e.scrollHeight}))}));
+   // The wardrobe replaces its pick button on its one-second refresh. Query and measure in one
+   // browser task so a detached Playwright element handle cannot produce a spurious null box.
+   const card=await p.evaluate(()=>{const e=document.querySelector('#hsc-panel.open .hsc-vbtn');if(!e)return null;const r=e.getBoundingClientRect(),sheet=document.querySelector('.hsc-sheet');return{x:r.x,y:r.y,width:r.width,height:r.height,connected:e.isConnected,visible:e.getClientRects().length>0&&getComputedStyle(e).visibility==='visible',uiScale:HSC.S,scroll:{top:sheet.scrollTop,height:sheet.clientHeight,total:sheet.scrollHeight}};});
+   assert(card&&card.connected&&card.visible&&card.width>0&&card.height>0&&card.x>=-1&&card.y>=-1&&card.x+card.width<=width+1&&card.y+card.height<=height+1,JSON.stringify({viewport:{width,height},card}));
    await p.keyboard.press('Escape');await p.waitForTimeout(500);await finish(p);await p.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-completion.png`)});await next(p);await p.waitForTimeout(500);
    assert.deepEqual(f.errors,[]);
    }finally{await f.close();}
