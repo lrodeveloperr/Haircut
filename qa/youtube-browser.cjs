@@ -20,14 +20,15 @@ async function fixture(options={}){
    const raf=window.requestAnimationFrame;window.__frames={requested:0,executed:0};
    window.requestAnimationFrame=fn=>{__frames.requested++;return raf.call(window,t=>{__frames.executed++;fn(t);});};
  });
- if(options.pauseAtCompile||options.loseAtCompile)await ctx.addInitScript(({lose})=>{
+ if(options.pauseAtCompile||options.loseAtCompile)await ctx.addInitScript(({lose,restore})=>{
   const P=WebGL2RenderingContext.prototype,compile=P.compileShader;let fired=false;
-  P.compileShader=function(...args){const result=compile.apply(this,args);if(!fired&&globalThis.HSC?.startupTiming?.materialsReady){fired=true;queueMicrotask(()=>{window.__startupInterrupted=true;if(lose)this.getExtension('WEBGL_lose_context').loseContext();else __yt.callbacks.pause();});}return result;};
- },{lose:!!options.loseAtCompile});
- if(options.pauseAtFence||options.loseAtFence||options.disposeAtFence)await ctx.addInitScript(({lose,dispose})=>{
+  P.compileShader=function(...args){const result=compile.apply(this,args);if(!fired&&globalThis.HSC?.startupTiming?.materialsReady){fired=true;queueMicrotask(()=>{window.__startupInterrupted=true;if(lose){const ext=this.getExtension('WEBGL_lose_context');ext.loseContext();if(restore)setTimeout(()=>ext.restoreContext(),restore);}else __yt.callbacks.pause();});}return result;};
+ },{lose:!!options.loseAtCompile,restore:options.restoreAfter||0});
+ if(options.pauseAtFence||options.loseAtFence||options.disposeAtFence)await ctx.addInitScript(({lose,dispose,restore})=>{
   const P=WebGL2RenderingContext.prototype,fence=P.fenceSync;let fired=false;
-  P.fenceSync=function(...args){const result=fence.apply(this,args);if(!fired){fired=true;queueMicrotask(()=>{window.__startupInterrupted=true;if(lose)this.getExtension('WEBGL_lose_context').loseContext();else if(dispose)HSC.view.destroy();else __yt.callbacks.pause();});}return result;};
- },{lose:!!options.loseAtFence,dispose:!!options.disposeAtFence});
+  P.fenceSync=function(...args){const result=fence.apply(this,args);if(!fired){fired=true;queueMicrotask(()=>{window.__startupInterrupted=true;if(lose){const ext=this.getExtension('WEBGL_lose_context');ext.loseContext();if(restore)setTimeout(()=>ext.restoreContext(),restore);}else if(dispose)HSC.view.destroy();else __yt.callbacks.pause();});}return result;};
+ },{lose:!!options.loseAtFence,dispose:!!options.disposeAtFence,restore:options.restoreAfter||0});
+ if(options.fenceNeverSignals)await ctx.addInitScript(()=>{WebGL2RenderingContext.prototype.clientWaitSync=function(){return this.TIMEOUT_EXPIRED};});
  if(process.env.PROFILE_STARTUP==='1')await ctx.addInitScript(()=>{
   window.__glProfile=[];const shaders=new WeakMap(),programs=new WeakMap();let sequence=0;
   for(const name of ['shaderSource','attachShader','linkProgram','getProgramInfoLog']){
@@ -51,7 +52,7 @@ async function fixture(options={}){
      ads:{requestRewardedAd:async id=>{__yt.ads.push({kind:'rewarded',id});await new Promise(r=>setTimeout(r,100));if(__yt.rewardMode==='error')throw Error('no fill');return __yt.rewardMode==='earned';},requestInterstitialAd:async()=>{__yt.ads.push({kind:'interstitial'});await new Promise(r=>setTimeout(r,100));}}
    };` }));
  await page.goto('http://release.test/',{waitUntil:'load'});
- if(!options.blocked&&!options.missing&&!options.readFail&&!options.initialPause)await page.waitForFunction(()=>!!window.skinFadeStudio,null,{timeout:45000});
+ if(!options.blocked&&!options.missing&&!options.readFail&&!options.initialPause)await page.waitForFunction(()=>!!window.skinFadeStudio,null,{timeout:options.fenceNeverSignals?90000:45000});
  return {ctx,page,calls,errors,requests,startupMs:Math.round(performance.now()-started),raw:()=>raw,readFail(value){readFail=value;},writeFail(value){writeFail=value;},close:()=>ctx.close()};
 }
 const state=p=>p.evaluate(()=>JSON.parse(JSON.stringify(skinFadeStudio.getState())));
@@ -177,9 +178,19 @@ async function startup(){
    assert.equal((await state(p)).cameraYawDeg,-55);assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),1);assert.deepEqual(f.errors,[]);
   }finally{await f.close();}
  });
- if(engine==='chromium')for(const stage of ['Compile','Fence'])await test(`Context loss during ${stage.toLowerCase()} reaches Retry without hanging or reporting readiness`,async()=>{
+ if(engine==='chromium')for(const stage of ['Compile','Fence'])await test(`Context loss during ${stage.toLowerCase()} recovers at full detail once the browser restores it`,async()=>{
+  const f=await fixture({blocked:true,[`loseAt${stage}`]:true,restoreAfter:500}),p=f.page;
+  try{await p.waitForFunction(()=>!!window.skinFadeStudio,null,{timeout:60000});assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),1);assert.equal(await p.evaluate(()=>HSC.startupTiming.contextRestores),1);assert.equal(await p.evaluate(()=>HSC.detail.safe),false);assert.equal(await p.locator('.boot-error').count(),0);}
+  finally{await f.close();}
+ });
+ if(engine==='chromium')for(const stage of ['Compile','Fence'])await test(`Unrestored context loss during ${stage.toLowerCase()} retries once with lighter graphics, then shows Retry with a code`,async()=>{
   const f=await fixture({blocked:true,[`loseAt${stage}`]:true}),p=f.page;
-  try{await p.getByRole('button',{name:'Retry',exact:true}).waitFor({state:'visible'});assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),0);assert.equal(await p.locator('body').evaluate(b=>b.inert),false);assert(f.errors.some(e=>/graphics|WebGL/.test(e)));}
+  try{await p.getByRole('button',{name:'Retry',exact:true}).waitFor({state:'visible',timeout:90000});assert.equal(await p.evaluate(()=>HSC.detail.safe),true);assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),0);assert.equal(await p.locator('body').evaluate(b=>b.inert),false);assert.equal(await p.locator('.boot-error-code').textContent(),'Code: GFX_LOST');assert(f.errors.some(e=>/graphics|WebGL/.test(e)));}
+  finally{await f.close();}
+ });
+ if(engine==='chromium')await test('A GPU fence that never signals continues to a playable game',async()=>{
+  const f=await fixture({fenceNeverSignals:true}),p=f.page;
+  try{assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),1);assert.equal(await p.evaluate(()=>HSC.detail.safe),false);}
   finally{await f.close();}
  });
  await test('Renderer disposal cancels a pending GPU fence and reaches recovery',async()=>{

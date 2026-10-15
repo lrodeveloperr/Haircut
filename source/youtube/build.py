@@ -32,7 +32,8 @@ s = replace(s, '    game.renderFirstPlayableFrame();', '    await game.renderFir
 s = replace(s, 'async function hC() {', 'async function hC() {\n  HSC.startupTiming.geometryReady=performance.now();')
 s = replace(s, '    if (HSC.wardrobeInit)', '    HSC.startupTiming.rendererReady=performance.now();\n    if (HSC.wardrobeInit)')
 s = replace(s, "    globalThis.addEventListener('pagehide', () => { unmount(); game.destroy(); client.destroy(); }, {once: true});", '')
-s = replace(s, 'function showBootError(error) {', 'function showBootError(error) {\n  HSC.dismissLoading();')
+s = replace(s, 'function showBootError(error) {\n  console.error(error);', 'function showBootError(error) {\n  console.error(error);\n  if (HSC.recoverGraphics(error)) return;\n  HSC.dismissLoading();')
+s = replace(s, '  panel.append(title, message, retry);', '  panel.append(title, message, retry, HSC.bootErrorCode(error));')
 # Full-fidelity geometry and shading remain enabled. Adapt from sustained scene frame times,
 # not device labels; keep the drawing buffer bounded on every resize, including large desktops.
 start = s.index('function he(ue){Pe&&(Ue=Ue*.93+')
@@ -56,17 +57,36 @@ s = replace(s, '(f||s.status==="reveal"&&!x||j%66<20||HSC.clippingsActive&&HSC.c
 s = replace(s, 'renderFirstPlayableFrame(){n.render()}',
     '''async renderFirstPlayableFrame(){
   HSC.startupTiming.materialsReady=performance.now();
-  await t.whenResumed();
-  await n.prepareFirstFrame();await t.whenResumed();
-  HSC.startupTiming.shadersReady=performance.now();n.beginFirstFrame();
-  do {
-    await t.whenResumed();
-    lastSize=[a.clientWidth,a.clientHeight,globalThis.devicePixelRatio||1].join();
-    n.render(!1);needsRender=false;HSC.startupTiming.firstDraw=performance.now();
-    await n.waitForFirstFrame();HSC.startupTiming.gpuReady=performance.now();HSC.dismissLoading();
-    await t.afterPaint();await t.afterPaint();
-    if(startupLost)throw Error('Game graphics could not initialize');
-  }while(lastSize!==[a.clientWidth,a.clientHeight,globalThis.devicePixelRatio||1].join());
+  HSC.startupTiming.graphics=HSC.detail.safe?'safe':'full';
+  // Mobile browsers may drop the context while a full-detail scene starts. Wait for the
+  // browser to restore it and start again, rather than treating the interruption as fatal.
+  for(let attempt=0;;attempt++){
+    try{
+      await t.whenResumed();
+      await n.prepareFirstFrame();await t.whenResumed();
+      HSC.startupTiming.shadersReady=performance.now();n.beginFirstFrame();
+      do {
+        await t.whenResumed();
+        lastSize=[a.clientWidth,a.clientHeight,globalThis.devicePixelRatio||1].join();
+        n.render(!1);needsRender=false;HSC.startupTiming.firstDraw=performance.now();
+        await n.waitForFirstFrame();HSC.startupTiming.gpuReady=performance.now();HSC.dismissLoading();
+        await t.afterPaint();await t.afterPaint();
+        if(startupLost||n.isContextLost())throw HSC.graphicsError('GFX_LOST');
+      }while(lastSize!==[a.clientWidth,a.clientHeight,globalThis.devicePixelRatio||1].join());
+      break;
+    }catch(error){
+      if(!(startupLost||n.isContextLost())||attempt>=2)throw error;
+      HSC.startupTiming.contextRestores=attempt+1;
+      await new Promise((resolve,reject)=>{
+        if(!n.isContextLost()){resolve();return}
+        let timer=0;
+        const done=()=>{HSC.lifecycle.clear(timer);resolve()};
+        a.addEventListener("webglcontextrestored",done,{once:true});
+        timer=HSC.lifecycle.timeout(()=>{a.removeEventListener("webglcontextrestored",done);reject(HSC.graphicsError('GFX_LOST'))},8000);
+      });
+      startupLost=false;
+    }
+  }
   t.finishStartup();initialBoot=false;needsRender=false;
   HSC.startupTiming.firstPlayable=performance.now();
 }''')
@@ -89,31 +109,32 @@ s = replace(s, 'render:_,setYaw(ue)', '''async prepareFirstFrame(){
   // Interleaving these synchronous queries with draws serializes earlier GPU work.
   for(const program of t.info.programs){
     program.getUniforms();program.getAttributes();
-    if(program.diagnostics?.runnable===false)throw Error('Game graphics could not initialize');
+    if(program.diagnostics?.runnable===false)throw HSC.graphicsError('GFX_SHADER');
   }
 },async waitForFirstFrame(){
   const gl=t.getContext(),sync=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);
-  if(!sync)throw Error('Game graphics could not initialize');
+  if(!sync)throw HSC.graphicsError('GFX_LOST');
   gl.flush();
   try{
     await new Promise((resolve,reject)=>{
-      let poll=0,remaining=7500,settled=false;
+      // About ten seconds. The fence only times readiness, so a slow GPU continues instead of failing.
+      let poll=0,remaining=1250,settled=false;
       const settle=error=>{
         if(settled)return;settled=true;HSC.lifecycle.clear(poll);firstFrameCancel=null;
         error?reject(error):resolve();
       };
       firstFrameCancel=()=>settle(Error('Game graphics initialization was cancelled'));
       const check=()=>{
-        if(gl.isContextLost()){settle(Error('Game graphics could not initialize'));return}
+        if(gl.isContextLost()){settle(HSC.graphicsError('GFX_LOST'));return}
         const result=gl.clientWaitSync(sync,0,0);
         if(result===gl.ALREADY_SIGNALED||result===gl.CONDITION_SATISFIED)settle();
-        else if(result===gl.WAIT_FAILED||--remaining===0)settle(Error('Game graphics could not initialize'));
+        else if(result===gl.WAIT_FAILED||--remaining===0)settle();
         else poll=HSC.lifecycle.timeout(check,8);
       };
       check();
     });
   }finally{gl.deleteSync(sync)}
-},beginFirstFrame(){firstFramePending=false},render:_,setYaw(ue)''')
+},isContextLost(){return t.getContext().isContextLost()},beginFirstFrame(){firstFramePending=false},render:_,setYaw(ue)''')
 s = replace(s, 'destroy(){var ue;e.removeEventListener("webglcontextlost",ae)',
     'destroy(){firstFrameCancel?.();var ue;e.removeEventListener("webglcontextlost",ae)')
 # Three's asynchronous completion polling obeys the same host-owned execution scheduler.

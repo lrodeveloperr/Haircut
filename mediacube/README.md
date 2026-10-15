@@ -2,14 +2,14 @@
 
 ## File to upload
 
-Use `releases/asmr-barber-fade-master-v3.88-mediacube-youtube.zip` in McPlay's **Replace game bundle** field.
+Use `releases/asmr-barber-fade-master-v3.89-mediacube-youtube.zip` in McPlay's **Replace game bundle** field.
 This is a WebGL/HTML5 runtime archive with `index.html` at the root, not a source ZIP or Android package.
 
 This target uses the direct official YouTube Playables SDK at `https://www.youtube.com/game_api/v1`.
 It does not load Playgama Bridge, Playgama configuration, a mock SDK, external analytics or remote game assets.
 The existing Playgama and full-detail Android builds remain separate.
 
-See [validation results](VALIDATION-v3.88.md) and [exact build identity](BUILD-v3.88.json).
+See [validation results](VALIDATION-v3.89.md) and [exact build identity](BUILD-v3.89.json).
 
 ## Rebuild
 
@@ -17,7 +17,7 @@ See [validation results](VALIDATION-v3.88.md) and [exact build identity](BUILD-v
 bash source/build-youtube.sh
 # Produces source/build-youtube/, without an upload archive.
 
-bash source/release-youtube.sh v3.88
+bash source/release-youtube.sh v3.89
 # Creates the immutable release ZIP; refuses to overwrite an existing release.
 ```
 
@@ -28,6 +28,12 @@ plus McPlay's 15,000,000-byte per-file advisory budget.
 
 The official SDK is loaded first. A visible loading state sends `firstFrameReady`; `gameReady` is sent only
 after the saved game, wardrobe and controller are initialized and the loading state has been removed.
+
+## Startup recovery (v3.89)
+
+Full detail is always tried first. A slow GPU fence continues after about ten seconds, and a context
+the browser drops while loading is waited for and restarted. Only when full detail cannot start does
+that tab reload once without MSAA at 1.5x. The recovery screen shows a short code identifying the failure.
 
 ## Startup and score reporting (v3.87)
 

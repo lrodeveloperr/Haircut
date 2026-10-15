@@ -9,6 +9,10 @@
     clipMax: 4000, clipRate: 1, pixelMax: 2, pixelMin: 1.5,
     maxPixels: 4000000, antialias: true, shaderLow: false,
   };
+  // Set only after full detail failed to start in this tab (HSC.recoverGraphics). Geometry,
+  // shaders and beards stay full; only MSAA and resolution drop, to the adaptive floor.
+  try { D.safe = globalThis.sessionStorage?.getItem('asmr-barber-graphics-safe') === '1'; } catch (_) { D.safe = false; }
+  if (D.safe) { D.antialias = false; D.pixelMax = D.pixelMin; }
   const dimension = value => Math.max(1, Number(value) || 1);
   D.pixelRatio = (width = globalThis.innerWidth, height = globalThis.innerHeight) => {
     const native = Math.max(1, Math.min(D.pixelMax, Number(globalThis.devicePixelRatio) || 1));

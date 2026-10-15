@@ -4,3 +4,4 @@
 .boot-error p{max-width:32em;margin:0;font-size:16px;line-height:1.4}
 .boot-error button{min-width:100px;min-height:44px;padding:10px 22px;border:2px solid #fff6e6;border-radius:24px;background:#ffb627;color:#2b1e17;font:700 18px system-ui,sans-serif;cursor:pointer}
 .boot-error button:focus-visible{outline:3px solid #fff6e6;outline-offset:4px}
+.boot-error .boot-error-code{font-size:13px;opacity:.7}
