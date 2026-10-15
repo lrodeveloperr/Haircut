@@ -52,7 +52,9 @@ timeouts; the isolated final native regression passes. The independent HTTP harn
 QA input now selects real raycast targets and awaits the actual save promise. Navigation/reveal
 checks allow software-renderer headroom; the production game's animation is unchanged.
 
-CI on the new revision is pending. Hosted YouTube/MCPlay validation, real rewarded/interstitial ads,
+GitHub CI passed contracts/packaging, Windows ANGLE shaders, startup interruption and mobile recovery
+on source commit `807faf4764cd29477d58e91b3dca49ab6ff1d4c4`: https://github.com/lrodeveloperr/Haircut/actions/runs/38819299368.
+These jobs used the exact release ZIP. Hosted YouTube/MCPlay validation, real rewarded/interstitial ads,
 and physical Android/iOS startup/audio checks remain necessary. This candidate is not certified
 and has not been uploaded to MCPlay. See `STARTUP-v3.100.json` and `BUILD-v3.100.json`.
 

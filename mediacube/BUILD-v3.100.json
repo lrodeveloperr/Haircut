@@ -1,6 +1,6 @@
 {
   "version": "v3.100",
-  "status": "Locally verified candidate. Actual hosted YouTube/MCPlay and physical-device checks pending.",
+  "status": "CI-verified candidate. Actual hosted YouTube/MCPlay and physical-device checks pending.",
   "archive": "releases/asmr-barber-fade-master-v3.100-mediacube-youtube.zip",
   "archiveSha256": "bda36b1466d373566224f98cb6e41ad4c74d65187147824c9afbcdb1cbcf42b3",
   "zipBytes": 726448,
@@ -30,7 +30,17 @@
     "freshSaveBytes": 2292,
     "nativeCutSaveBytes": 2614,
     "nativeBrowserRegression": "Final isolated cutting/save/reload PASS. Earlier parallel software-GPU run had coordinate, navigation and reveal timeout failures; QA now uses raycast-selected input, explicit checkpoint acknowledgement and software-renderer timeout headroom.",
-    "CI": "pending",
+    "CI": {
+      "status": "PASS",
+      "sourceCommit": "807faf4764cd29477d58e91b3dca49ab6ff1d4c4",
+      "run": "https://github.com/lrodeveloperr/Haircut/actions/runs/38819299368",
+      "jobs": {
+        "contracts": "PASS",
+        "windows-shaders": "PASS",
+        "startup including mobile recovery": "PASS"
+      },
+      "scope": "Selected affected release jobs; exact upload archive. No hosted certification."
+    },
     "nativeFinishRewardedReplay": "PASS, same customer/job/queue and reset hair, no errors"
   },
   "loadingEstimate": {
