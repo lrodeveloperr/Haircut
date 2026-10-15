@@ -1,19 +1,25 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.79**.
+Finalized Playgama package for YouTube Playables: **v3.80**.
 
-[Download the Playgama ZIP](haircut-studio-v3.79-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.80-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.79-playgama.zip`
-- Size: 394,156 bytes
-- SHA-256: `43fe35ad5b04312d7d4eeb78ebed7d89a5a49e04e64e4aa4aaa25f1505269207`
+- File: `haircut-studio-v3.80-playgama.zip`
+- Size: 395,608 bytes
+- SHA-256: `305226d6935bcae94163867ce0df5d7bc67d5b84162db0a2887bd7a28dcb7135`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.80: Engineered customer variety. New walk-in haircuts join the 16 mm-top styles: short crops (9 / 12 mm tops),
+  buzz cuts (6-12 mm all over), high-and-tight (3 mm sides) and shaved heads (3 mm regrowth). A variety director
+  deals every customer's heritage, age, hair loss, beard and haircut from shuffled decks (saved with progress):
+  each deck is used up before it refills and the same card never comes twice in a row, so a few customers cover
+  every kind and nothing repeats back to back. Customers with heavy hair loss get crops, buzzes or shaved heads.
+  Hair loss now appears from level 2 (very advanced loss from level 4), and walk-in VIPs never come close together.
 - v3.79: The robe is brushed clean at the reveal again. The sweep now takes every clipping (those still falling or
   sliding when the haircut ends, not only the ones at rest), and swept pieces fall past the robe and out of sight
   instead of landing on it again, so the completion screen always shows a clean robe.
