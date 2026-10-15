@@ -104,7 +104,7 @@ jobs:
         if: always()
         with: {name: youtube-graphics, path: qa/results, retention-days: 14}
   startup:
-    if: "!contains(github.event.head_commit.message, '[browser-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[graphics-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -128,7 +128,7 @@ jobs:
         if: always()
         with: {name: youtube-startup, path: qa/results, retention-days: 14}
   windows-shaders:
-    if: "!contains(github.event.head_commit.message, '[browser-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[graphics-only]')"
     runs-on: windows-latest
     timeout-minutes: 15
     defaults:

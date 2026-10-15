@@ -171,7 +171,8 @@ async function quality(){
    try{
     // Check native interaction at phone pixel densities before comparing the saved customer.
     await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);
-    const saved=f.raw(),before=await state(p);
+    // Compare rendering with the same decoded session; the older reference protects v2 saves.
+    const saved=await p.evaluate(async encoded=>{const slots={};for(const key of Object.keys(JSON.parse(encoded).slots))slots[key]=await HSC.wardrobe.client.loadProgress(key,null);return JSON.stringify({version:1,slots});},f.raw()),before=await state(p);
     const metrics=await p.evaluate(()=>{const c=document.getElementById('scene'),b=HSC.debugState.beardMesh;return{level:HSC.detail.level,shaderLow:HSC.detail.shaderLow,segments:HSC.detail.segments,beardSegments:b.geometry.attributes.position.count/2-1,beardCount:b.geometry.instanceCount,beardRoots:HSC.debugState.roots.count,antialias:c.getContext('webgl2').getContextAttributes().antialias,width:c.width,height:c.height,cssWidth:c.clientWidth,cssHeight:c.clientHeight};});
     assert.equal(metrics.level,'high');assert.equal(metrics.shaderLow,false);assert.equal(metrics.segments,8);assert.equal(metrics.beardSegments,8);assert.equal(metrics.beardCount,metrics.beardRoots);assert.equal(metrics.antialias,true);assert(metrics.width*metrics.height<=4000000);assert(metrics.width/metrics.cssWidth>=Math.min(dpr,2)-0.01);
     await p.evaluate(()=>__yt.callbacks.pause());await p.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-high.png`)});
