@@ -39,13 +39,13 @@
     };
     const keep = src => { try { localStorage.setItem(KEY, JSON.stringify({w: innerWidth, h: innerHeight, src})); } catch (_) {} };
     // The drawing buffer is only readable in the task that drew it, so draw, then read.
-    function capture(now) {
+    function capture() {
       try {
+        if (pointer || HSC.executionPaused || document.hidden || HSC.view.isContextLost()) return;
         const sig = signature();
         if (sig === last) return;
         last = sig;
         render(false);
-        if (now) { keep(canvas.toDataURL('image/webp', 0.8)); return; }
         canvas.toBlob(blob => {
           if (!blob) return;
           const reader = new FileReader();
@@ -56,20 +56,15 @@
     }
     // Quiet moments only: never while a finger is down or during a host pause.
     const soon = delay => {
-      clearTimeout(timer);
-      timer = setTimeout(() => { if (!pointer && !HSC.executionPaused) capture(false); }, delay);
+      HSC.lifecycle.clear(timer);
+      timer = HSC.lifecycle.timeout(() => { if (!pointer && !HSC.executionPaused) capture(); }, delay);
     };
-    addEventListener('pointerdown', () => { pointer = true; clearTimeout(timer); }, true);
+    addEventListener('pointerdown', () => { pointer = true; HSC.lifecycle.clear(timer); }, true);
     addEventListener('pointerup', () => { pointer = false; soon(2500); }, true);
     addEventListener('pointercancel', () => { pointer = false; soon(2500); }, true);
-    // Leaving: the page or the host is about to stop drawing, so read synchronously.
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') capture(true); });
-    addEventListener('pagehide', () => capture(true));
-    if (client && client.onStateChange) {
-      let paused = false;
-      client.onStateChange(next => { if (next.executionPaused && !paused) capture(true); paused = next.executionPaused; });
-    }
-    soon(1500);
+    // Keep the last quiet snapshot on exit. A GPU readback and synchronous image encoding in a
+    // pause/pagehide callback competes with the host's final-save window, especially on phones.
+    soon(5000);
   }
   HSC.poster = {show, start};
 })(globalThis.HSC || (globalThis.HSC = {}));

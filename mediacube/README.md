@@ -2,14 +2,14 @@
 
 ## File to upload
 
-Use `releases/asmr-barber-fade-master-v3.94-mediacube-youtube.zip` in McPlay's **Replace game bundle** field.
+Use `releases/asmr-barber-fade-master-v3.95-mediacube-youtube.zip` in McPlay's **Replace game bundle** field.
 This is a WebGL/HTML5 runtime archive with `index.html` at the root, not a source ZIP or Android package.
 
 This target uses the direct official YouTube Playables SDK at `https://www.youtube.com/game_api/v1`.
 It does not load Playgama Bridge, Playgama configuration, a mock SDK, external analytics or remote game assets.
 The existing Playgama and full-detail Android builds remain separate.
 
-See [validation results](VALIDATION-v3.94.md) and [exact build identity](BUILD-v3.94.json).
+See [validation results](VALIDATION-v3.95.md) and [exact build identity](BUILD-v3.95.json).
 
 ## Rebuild
 
@@ -17,7 +17,7 @@ See [validation results](VALIDATION-v3.94.md) and [exact build identity](BUILD-v
 bash source/build-youtube.sh
 # Produces source/build-youtube/, without an upload archive.
 
-bash source/release-youtube.sh v3.94
+bash source/release-youtube.sh v3.95
 # Creates the immutable release ZIP; refuses to overwrite an existing release.
 ```
 
@@ -36,15 +36,32 @@ GPU fence continues after about ten seconds, and a context the browser drops whi
 for and restarted. If full detail still cannot start, the recovery screen shows a short code
 identifying the failure.
 
+## Startup and mobile reliability (v3.95)
+
+Reflection lighting uses lossless byte-plane packing: 582,123 bytes instead of 896,932, reconstructing
+all 6,291,456 original half-float bytes. The preload begins while the official SDK loads. A valid
+device-cached lighting copy can win the race against the bundle on repeat visits. Geometry builds
+while the lighting downloads, and optional IndexedDB model reads have a 100 ms budget. Invalid
+derived model entries are rebuilt and repaired; none of these caches contain player saves.
+
+Context restoration rebuilds the reflection render target before the next frame. During a loss in
+play, input stays paused until the original full-detail scene has rendered again. Snapshot capture
+uses quiet, asynchronous work instead of synchronous readback/encoding in a host pause or pagehide
+callback. The v3.94 controls, gameplay, UI, monetization and full-detail policy are preserved.
+
+See [v3.95 validation](VALIDATION-v3.95.md) for exact release bytes and the scope of desktop/mobile
+emulation evidence. Physical-device and real YouTube-app checks remain a separate required check.
+
 ## Startup and score reporting (v3.87)
 
 The official SDK still loads first. Language and a single protected cloud read now start before
 procedural geometry, and run concurrently. Initial host pauses defer module execution and host reads.
-The saved wardrobe is applied before the first customer draw. Visible materials and the current clipper
+The saved wardrobe is applied before the first customer draw. Visible first-frame materials
 are compiled in advance; shader reflection/diagnostics are resolved before any customer draw.
+The hidden clipper is warmed immediately after readiness, as in v3.94.
 Startup input stays paused until a nonblocking GPU fence confirms the final scene has finished drawing
 and the page has crossed two host-aware paint frames. Fence polling pauses with the host, cancels on
-renderer teardown and reaches Retry on context loss or a stalled driver.
+renderer teardown and reaches recovery on context loss. The slow-fence policy above is retained.
 Duplicate initial resize draws are skipped. Shader compilation failure or context loss during boot
 reaches Retry while preserving progress. `HSC.startupTiming` exposes local stage timestamps for a
 hosted pre-flight diagnosis; no external analytics or extra network resource is introduced.

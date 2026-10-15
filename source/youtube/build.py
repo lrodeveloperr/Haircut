@@ -1,4 +1,4 @@
-"""Create the direct-YouTube target with full-fidelity, measured adaptive graphics."""
+"""Create the direct-YouTube target; preserve the full-detail game on every device."""
 from pathlib import Path
 import shutil
 
@@ -25,8 +25,9 @@ s = replace(s, 'w=requestAnimationFrame(ve)}t.setUserAudioEnabled(m),J(),te(),w=
     'w=c?0:requestAnimationFrame(ve)}t.setUserAudioEnabled(m),J(),te(),w=requestAnimationFrame(ve);function ge(){c=u||h;cancelAnimationFrame(w);w=0;S=performance.now();n.resetTiming();if(c){Ae();$(!0).catch(()=>{})}else{ce();w=requestAnimationFrame(ve)}te();Z()}')
 s = replace(s, 'return{renderFirstPlayableFrame(){n.render()}', 'return{flushProgress:()=>$(!0),renderFirstPlayableFrame(){n.render()}')
 s = replace(s, 'ae&&(l=j.adSession)', 't.lastInterstitialRequestAccepted&&(l=j.adSession)')
-s = replace(s, 'game = Pu({root, client, savedSession: session, savedAudio: audio});', 'await client.whenResumed();\n    game = Pu({root, client, savedSession: session, savedAudio: true});')
+s = replace(s, 'game = Pu({root, client, savedSession: session, savedAudio: audio});', 'await HSC.geo.environmentReady;\n    await client.whenResumed();\n    game = Pu({root, client, savedSession: session, savedAudio: true});')
 s = replace(s, 'client.bindGame({root, setPaused: game.setPaused, setAudioEnabled: game.setPlatformAudio});', 'client.bindGame({root, setPaused: game.setPaused, setAudioEnabled: game.setPlatformAudio, flush: game.flushProgress});')
+s = replace(s, '    unmount = Ad({root, game});', '    unmount = Ad({root, game});\n    HSC.failGame = error => { unmount(); game.destroy(); client.destroy(); showBootError(error); };')
 s = replace(s, '    await client.gameReady();', '    HSC.dismissLoading();\n    await client.gameReady();\n    HSC.geo.saveLater();\n    HSC.view.warmClipper?.();\n    HSC.poster?.start(game, client);')
 s = replace(s, '    game.renderFirstPlayableFrame();', '    await game.renderFirstPlayableFrame();')
 s = replace(s, 'async function hC() {', 'async function hC() {\n  HSC.startupTiming.geometryReady=performance.now();')
@@ -34,8 +35,7 @@ s = replace(s, '    if (HSC.wardrobeInit)', '    HSC.startupTiming.rendererReady
 s = replace(s, "    globalThis.addEventListener('pagehide', () => { unmount(); game.destroy(); client.destroy(); }, {once: true});", '')
 s = replace(s, 'function showBootError(error) {', 'function showBootError(error) {\n  HSC.dismissLoading();')
 s = replace(s, '  panel.append(title, message, retry);', '  panel.append(title, message, retry, HSC.bootErrorCode(error));')
-# Full-fidelity geometry and shading remain enabled. Adapt from sustained scene frame times,
-# not device labels; keep the drawing buffer bounded on every resize, including large desktops.
+# Full-fidelity geometry and shading remain enabled. Keep the drawing buffer bounded on resize.
 start = s.index('function he(ue){Pe&&(Ue=Ue*.93+')
 end = s.index('function _(ue=!0)', start)
 s = replace(s, s[start:end], 'function he(ue){if(Pe){let quality=HSC.detail.sample(ue-Pe,te,$,J);if(quality){He(quality.strands);$=quality.pixel}}Pe=ue}')
@@ -89,13 +89,32 @@ s = replace(s, 'renderFirstPlayableFrame(){n.render()}',
   t.finishStartup();initialBoot=false;needsRender=false;
   HSC.startupTiming.firstPlayable=performance.now();
 }''')
-s = replace(s, 'globalThis.addEventListener("resize",ce);let L=', 'globalThis.addEventListener("resize",ce);let restore=()=>ce(true),lost=()=>{if(initialBoot)startupLost=true};a.addEventListener("webglcontextrestored",restore);a.addEventListener("webglcontextlost",lost);let L=')
-s = replace(s, 'globalThis.removeEventListener("resize",ce),', 'globalThis.removeEventListener("resize",ce),a.removeEventListener("webglcontextrestored",restore),a.removeEventListener("webglcontextlost",lost),')
+s = replace(s, 'globalThis.addEventListener("resize",ce);let L=', '''globalThis.addEventListener("resize",ce);
+let recoveryTimer=0,recovering=false;
+const lost=()=>{
+  if(initialBoot){startupLost=true;return}
+  t.setPauseReason("graphics",true);
+  HSC.lifecycle.clear(recoveryTimer);
+  recoveryTimer=HSC.lifecycle.timeout(()=>HSC.failGame(HSC.graphicsError("GFX_LOST")),8000);
+};
+const restore=()=>{
+  if(initialBoot){ce(true);return}
+  if(recovering)return;
+  recovering=true;HSC.lifecycle.clear(recoveryTimer);
+  (async()=>{
+    await t.whenResumed();await n.prepareFirstFrame();await t.whenResumed();
+    n.render(false);await n.waitForFirstFrame();await t.whenResumed();
+    if(n.isContextLost())throw HSC.graphicsError("GFX_LOST");
+    needsRender=false;t.setPauseReason("graphics",false);
+  })().catch(error=>HSC.failGame(error)).finally(()=>recovering=false);
+};
+a.addEventListener("webglcontextrestored",restore);a.addEventListener("webglcontextlost",lost);let L=''')
+s = replace(s, 'globalThis.removeEventListener("resize",ce),', 'HSC.lifecycle.clear(recoveryTimer),globalThis.removeEventListener("resize",ce),a.removeEventListener("webglcontextrestored",restore),a.removeEventListener("webglcontextlost",lost),')
 # Hold all customer draws until final saved materials are installed and their shaders are ready.
 # The startup pause reason separately blocks keyboard/pointer actions and the controller RAF.
-s = replace(s, 'function _(ue=!0){if(k)return;', 'let firstFramePending=true,firstFrameCancel=null;function _(ue=!0){if(k||firstFramePending)return;')
+s = replace(s, 'function _(ue=!0){if(k)return;', 'let firstFramePending=true,firstFrameCancel=null;function _(ue=!0){if(k||firstFramePending)return;restoreEnvironment();')
 s = replace(s, 'render:_,setYaw(ue)', '''async prepareFirstFrame(){
-  P();L();X();z();
+  restoreEnvironment();P();L();X();z();
   const visible=Zt.clone(false);
   // Only what the first frame draws. The hidden clipper compiles right after (warmClipper).
   visible.traverse=visit=>Zt.traverseVisible(visit);
@@ -198,12 +217,14 @@ assert 'let $=new Xn({color:t,roughness:.82,metalness:0,sheen:.6,sheenRoughness:
 assert 'let O=new Ze(He,new Br({color:r,roughness:.92,metalness:0,side:$t})),ce=new oi;return ce.add(J,O),ce.name="robe",ce}' in s
 game_path.write_text(s)
 
-# Reflection lighting: when the shipped PMREM texture loaded (youtube/geo.js), copy it into a render
-# target made exactly as PMREMGenerator makes its own, so the game holds the same kind of texture as
-# when it generates it; then release the copy source. Otherwise generate it exactly as before.
+# Reflection lighting keeps a CPU copy for context restoration. A render target's contents are lost
+# with the context: merely drawing it again silently leaves every reflection texel at zero.
 s = game_path.read_text()
 s = replace(s, 'let r=new nl(t);Zt.environment=r.fromScene(new nw,.04).texture,Zt.environmentIntensity=.4,r.dispose();',
-    'const shipped=HSC.geo.environment;HSC.geo.environment=null;if(shipped){const target=gh(768,1024,{magFilter:or,minFilter:or,generateMipmaps:!1,type:Pa,format:lr,colorSpace:Ji,depthBuffer:!1}),source=new uu(shipped,768,1024,lr,Pa);source.needsUpdate=!0;t.initRenderTarget(target);t.copyTextureToTexture(source,target.texture);source.dispose();Zt.environment=target.texture}else{let r=new nl(t);Zt.environment=r.fromScene(new nw,.04).texture,r.dispose()}Zt.environmentIntensity=.4;')
+    (root / 'youtube' / 'environment.js').read_text())
+s = replace(s, 'let ae=ue=>{ue.preventDefault(),k=!0},fe=()=>{k=!1,V=!0,Pe=0};',
+    'let ae=ue=>{ue.preventDefault();k=true;environmentDirty=true},fe=()=>{k=!1,V=!0,Pe=0};')
+s = replace(s, 'destroy(){firstFrameCancel?.();var ue;', 'destroy(){firstFrameCancel?.();environmentTarget?.dispose();var ue;')
 game_path.write_text(s)
 
 customer_path = out / 'runtime/customers.js'
@@ -229,6 +250,7 @@ for name in ['client.js', 'loader.js', 'startup.js', 'geo.js', 'poster.js']:
     shutil.copy2(root / 'youtube' / name, out / 'runtime' / ('youtube-' + name))
 
 s = (out / 'index.html').read_text()
+s = replace(s, '  <link rel="stylesheet" href="./styles.css">', '  <link rel="stylesheet" href="./styles.css">\n  <link rel="preload" href="./runtime/room-env.dat" as="fetch" crossorigin="anonymous">')
 s = replace(s, '  <script src="https://bridge.playgama.com/v2/stable/playgama-bridge.js"></script>', '''  <div id="yt-loading" role="status" aria-label="Loading game"><span aria-hidden="true">✂</span><span>Loading…</span></div>
   <script src="https://www.youtube.com/game_api/v1"></script>
   <script src="./runtime/youtube-poster.js"></script>
@@ -242,7 +264,8 @@ shutil.copy2(root / 'youtube' / 'env' / 'room-env.dat', out / 'runtime' / 'room-
 import hashlib
 digest = hashlib.sha256((out / 'runtime/game.js').read_bytes() + (out / 'runtime/customers.js').read_bytes()).hexdigest()[:16]
 geo = out / 'runtime/youtube-geo.js'
-geo.write_text(f'globalThis.HSC=globalThis.HSC||{{}};HSC.geoBuild="{digest}";\n' + geo.read_text())
+env_digest = hashlib.sha256((out / 'runtime/room-env.dat').read_bytes()).hexdigest()[:16]
+geo.write_text(f'globalThis.HSC=globalThis.HSC||{{}};HSC.geoBuild="{digest}";HSC.environmentBuild="{env_digest}";\n' + geo.read_text())
 with (out / 'styles.css').open('a') as f:
     f.write('\n#yt-loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#f5e7d7;color:#493326;font-size:18px;z-index:9999}#yt-loading [aria-hidden]{font-size:64px}#yt-loading.has-poster{justify-content:flex-end;padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));background:#2b1e17 url("assets/backdrop-portrait.webp") center/cover no-repeat;transition:opacity .25s ease}@media (orientation:landscape){#yt-loading.has-poster{background-image:url("assets/backdrop-landscape.webp")}}#yt-loading .yt-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:-1}#yt-loading.has-poster>span{position:relative}#yt-loading.has-poster>span[aria-hidden]{display:none}#yt-loading.has-poster>span:last-child{padding:6px 16px;border-radius:999px;background:rgb(43 30 23 / .72);color:#fff6e6;font-size:15px}#yt-loading.yt-leaving{opacity:0;pointer-events:none}html.yt-paused *{animation-play-state:paused!important}\n')
 print('youtube-build-ok')

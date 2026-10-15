@@ -1,0 +1,44 @@
+{
+  "version": "v3.95",
+  "target": "MediaCube / direct YouTube Playables",
+  "baseCommit": "e7bfdaee7b94aaa2aeef225d89d5ab59fb3742ee",
+  "archive": "releases/asmr-barber-fade-master-v3.95-mediacube-youtube.zip",
+  "sha256": "bfaef32697d16cbc2c2b1777aebb5cf987ee3534f08c9ecd3b238544596ad9b6",
+  "zipBytes": 982863,
+  "expandedBytes": 1674355,
+  "files": {
+    "THIRD-PARTY-NOTICES.md": 604,
+    "assets/backdrop-landscape.webp": 23832,
+    "assets/backdrop-portrait.webp": 20566,
+    "index.html": 1147,
+    "licenses/preact-MIT.txt": 1087,
+    "licenses/three-MIT.txt": 1081,
+    "runtime/customers.js": 227222,
+    "runtime/game.js": 769632,
+    "runtime/room-env.dat": 582123,
+    "runtime/youtube-client.js": 14509,
+    "runtime/youtube-geo.js": 7622,
+    "runtime/youtube-loader.js": 3368,
+    "runtime/youtube-poster.js": 3602,
+    "runtime/youtube-startup.js": 417,
+    "styles.css": 17543
+  },
+  "changes": [
+    "Lossless half-float byte packing and preload of unchanged reflection lighting",
+    "100 ms optional model-cache budget, per-entry integrity checks and automatic repair",
+    "Geometry builds while lighting loads; valid device lighting cache races the bundle",
+    "Full reflection render-target reconstruction after context loss, with input paused through recovery",
+    "Avoid synchronous poster GPU readback/image encoding in host pause and pagehide callbacks"
+  ],
+  "preserved": "v3.94 game rules, controls, UI, ads, player-save schemas, 30000 scalp strands, eight-segment scalp/beard geometry, full shaders, beard density, antialiasing and resolution policy",
+  "validation": {
+    "domainAndLegacy": "35/35 PASS",
+    "directSdk": "40/40 PASS",
+    "graphicsPolicy": "5/5 PASS",
+    "chromiumStartup": "10/10 PASS, candidate runtime identical except optional cache retention/pruning",
+    "mobileStartup": "8/8 PASS on candidate; final archive rerun in progress",
+    "renderedCustomerParity": "4/4 seeded v3.94 PNGs byte-identical",
+    "reflectionByteParity": "cd7b1d0c6440b77f0ece61d5aedf6b270a5e5e9906740303c819212cdaa2be57"
+  },
+  "hostedStatus": "Not uploaded to McPlay. Physical iPhone/Android and YouTube-app validation pending; desktop emulation does not establish hardware support."
+}

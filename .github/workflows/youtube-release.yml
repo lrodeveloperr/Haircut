@@ -39,6 +39,7 @@ jobs:
           unzip -q /tmp/mediacube.zip -d /tmp/youtube-release
           RELEASE_DIR=/tmp/youtube-release node qa/youtube-contracts.cjs
           RELEASE_DIR=/tmp/youtube-release node qa/youtube-quality.cjs
+          RELEASE_DIR=/tmp/youtube-release python3 qa/youtube-assets.py
           sha256sum /tmp/mediacube.zip
       - uses: actions/upload-artifact@v4
         if: always()
@@ -85,11 +86,14 @@ jobs:
           python3 source/youtube/package.py /tmp/mediacube.zip
           mkdir -p /tmp/youtube-release /tmp/youtube-baseline
           unzip -q /tmp/mediacube.zip -d /tmp/youtube-release
-          unzip -q releases/asmr-barber-fade-master-v3.85-mediacube-youtube.zip -d /tmp/youtube-baseline
+          unzip -q releases/asmr-barber-fade-master-v3.94-mediacube-youtube.zip -d /tmp/youtube-baseline
           npm install --no-save --package-lock=false playwright@1.58.2
           npx playwright install --with-deps chromium
       - name: Compare the same customer at phone and tablet pixel densities
         env: {BROWSER: chromium, QUALITY: '1', BASELINE_DIR: /tmp/youtube-baseline, RELEASE_DIR: /tmp/youtube-release, QA_OUTPUT: qa/results/youtube-graphics, HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1'}
+        run: xvfb-run -a node qa/youtube-browser.cjs
+      - name: Require exact rendered customer pixels against v3.94
+        env: {BROWSER: chromium, PARITY: '1', BASELINE_DIR: /tmp/youtube-baseline, RELEASE_DIR: /tmp/youtube-release, QA_OUTPUT: qa/results/youtube-parity, HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1'}
         run: xvfb-run -a node qa/youtube-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
@@ -102,11 +106,14 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - run: |
-          python3 -m zipfile -e releases/asmr-barber-fade-master-v3.94-mediacube-youtube.zip qa/release-under-test
+          python3 -m zipfile -e releases/asmr-barber-fade-master-v3.95-mediacube-youtube.zip qa/release-under-test
           npm install --no-save --package-lock=false playwright@1.58.2
           npx playwright install --with-deps chromium
       - name: Verify startup, interrupted compilation and portable shaders
         env: {BROWSER: chromium, STARTUP: '1', RELEASE_DIR: qa/release-under-test, QA_OUTPUT: qa/results/youtube-startup, HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1'}
+        run: xvfb-run -a node qa/youtube-browser.cjs
+      - name: Verify mobile storage, zero viewport and lossless graphics recovery
+        env: {BROWSER: chromium, MOBILE_STARTUP: '1', RELEASE_DIR: qa/release-under-test, QA_OUTPUT: qa/results/youtube-mobile-startup, HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1'}
         run: xvfb-run -a node qa/youtube-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
@@ -122,7 +129,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - run: |
-          python -m zipfile -e releases/asmr-barber-fade-master-v3.94-mediacube-youtube.zip qa/release-under-test
+          python -m zipfile -e releases/asmr-barber-fade-master-v3.95-mediacube-youtube.zip qa/release-under-test
           npm install --no-save --package-lock=false playwright@1.58.2
           npx playwright install chromium
       - name: Verify shaders on the affected ANGLE Direct3D11 backend

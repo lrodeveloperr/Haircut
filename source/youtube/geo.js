@@ -1,72 +1,142 @@
-/* Device cache for the startup models. The base head, gown, hair roots, strands and beard surface are
- * computed from fixed data with fixed seeds, so every load produces identical arrays. The first load
- * computes and stores them; later loads read the same arrays back instead of recomputing them.
- * The cache is optional: any storage failure falls back to computing, exactly as before. */
+/* Disposable acceleration data. Player saves are owned by youtube-client.js. */
 (function (HSC) {
   'use strict';
-  const DB = 'asmr-barber-models', STORE = 'models', WAIT_MS = 4000;
-  const build = HSC.geoBuild || 'dev';
-  let cached = null, pending = new Map(), db = null;
-  const open = () => new Promise(resolve => {
+  const DB = 'asmr-barber-models', STORE = 'models', CACHE_WAIT_MS = 100, ENV_WAIT_MS = 4000;
+  const build = 'models-v2:' + (HSC.geoBuild || 'dev');
+  const envKey = 'lighting:' + (HSC.environmentBuild || 'dev');
+  let cached = null, pending = new Map(), db = null, saveTimer = 0, environmentBytes = null;
+  const timing = (key, value) => { if (HSC.startupTiming) HSC.startupTiming[key] = value; };
+  function limit(promise, ms) {
+    return new Promise(resolve => {
+      const timer = setTimeout(() => resolve(null), ms);
+      promise.then(value => { clearTimeout(timer); resolve(value); }, () => { clearTimeout(timer); resolve(null); });
+    });
+  }
+  const database = new Promise(resolve => {
     try {
       const request = indexedDB.open(DB, 1);
       request.onupgradeneeded = () => request.result.createObjectStore(STORE);
-      request.onsuccess = () => { db = request.result; resolve(db); };
+      request.onsuccess = () => {
+        db = request.result;
+        db.onversionchange = () => { db.close(); db = null; };
+        resolve(db);
+      };
       request.onerror = request.onblocked = () => resolve(null);
     } catch (_) { resolve(null); }
   });
-  const read = database => new Promise(resolve => {
-    if (!database) { resolve(null); return; }
+  const read = key => database.then(connection => new Promise(resolve => {
+    if (!connection) { resolve(null); return; }
     try {
-      const request = database.transaction(STORE, 'readonly').objectStore(STORE).get(build);
-      request.onsuccess = () => resolve(request.result && typeof request.result === 'object' ? request.result : null);
+      const request = connection.transaction(STORE, 'readonly').objectStore(STORE).get(key);
+      request.onsuccess = () => resolve(request.result || null);
       request.onerror = () => resolve(null);
     } catch (_) { resolve(null); }
-  });
-  // The reflection lighting (three.js PMREM of RoomEnvironment, 768x1024 half-float RGBA) is shipped
-  // precomputed in runtime/room-env.dat (gzip; youtube/make-env.cjs). Generating it on a phone compiles
-  // five shader programs and runs every blur pass. Any failure falls back to generating it as before.
-  const ENV_BYTES = 768 * 1024 * 4 * 2;
-  const environment = (async () => {
-    try {
-      const response = await fetch('./runtime/room-env.dat');
-      if (!response.ok) return null;
-      let bytes = new Uint8Array(await response.arrayBuffer());
-      // A host may already have removed the gzip layer; accept either form.
-      if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
-        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-        bytes = new Uint8Array(await new Response(stream).arrayBuffer());
-      }
-      return bytes.byteLength === ENV_BYTES ? new Uint16Array(bytes.buffer, bytes.byteOffset, ENV_BYTES / 2) : null;
-    } catch (_) { return null; }
+  }));
+  const remove = key => { try { db?.transaction(STORE, 'readwrite').objectStore(STORE).delete(key); } catch (_) {} };
+
+  // Non-security checksum of every array byte, shape and scalar. A damaged derived entry is rebuilt.
+  function fingerprint(value) {
+    let hash = 2166136261;
+    const byte = n => { hash = Math.imul(hash ^ n, 16777619); };
+    const text = s => { for (let i = 0; i < s.length; i++) { byte(s.charCodeAt(i) & 255); byte(s.charCodeAt(i) >>> 8); } byte(255); };
+    function visit(v) {
+      if (ArrayBuffer.isView(v) && !(v instanceof DataView)) {
+        text(v.constructor.name + ':' + v.length);
+        const bytes = new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
+        for (let i = 0; i < bytes.length; i++) byte(bytes[i]);
+      } else if (Array.isArray(v)) { text('array:' + v.length); for (const item of v) visit(item); }
+      else if (v && Object.getPrototypeOf(v) === Object.prototype) {
+        const keys = Object.keys(v).sort(); text('object:' + keys.length);
+        for (const key of keys) { text(key); visit(v[key]); }
+      } else if (typeof v === 'number' && Number.isFinite(v)) text('number:' + v);
+      else throw Error('Invalid derived model');
+    }
+    visit(value);
+    return hash >>> 0;
+  }
+  const ENV_BYTES = 768 * 1024 * 4 * 2, MAGIC = 'HSENV001';
+  async function decodeEnvironment(input) {
+    let bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+    if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+      bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+    if (bytes.byteLength === ENV_BYTES + MAGIC.length &&
+        MAGIC.split('').every((c, i) => bytes[i] === c.charCodeAt(0))) {
+      // Restore the original half-float bytes exactly; no quantization or change to the lighting.
+      const raw = new Uint8Array(ENV_BYTES), half = ENV_BYTES / 2;
+      for (let i = 0; i < half; i++) { raw[i * 2] = bytes[8 + i]; raw[i * 2 + 1] = bytes[8 + half + i]; }
+      bytes = raw;
+    }
+    if (bytes.byteLength !== ENV_BYTES) throw Error('Invalid reflection lighting');
+    if (bytes.byteOffset % 2) bytes = bytes.slice();
+    return new Uint16Array(bytes.buffer, bytes.byteOffset, ENV_BYTES / 2);
+  }
+  const controller = new AbortController();
+  // The optional device copy races the bundle. Missing/invalid cache cannot win or block the asset.
+  const network = (async () => {
+    const response = await fetch('./runtime/room-env.dat', {signal: controller.signal});
+    if (!response.ok) throw Error('Reflection lighting unavailable');
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return {value: await decodeEnvironment(bytes), bytes, source: 'bundle'};
   })();
-  // Started before the game scripts evaluate; never delays startup by more than WAIT_MS.
-  const limit = promise => Promise.race([promise, new Promise(resolve => setTimeout(() => resolve(null), WAIT_MS))]);
+  const stored = limit(read(envKey), CACHE_WAIT_MS).then(async bytes => {
+    if (!bytes) throw Error('No cached reflection lighting');
+    try { return {value: await decodeEnvironment(bytes), source: 'device'}; }
+    catch (error) { remove(envKey); throw error; }
+  });
+  const firstValid = new Promise(resolve => {
+    let failed = 0;
+    for (const source of [network, stored]) source.then(resolve, () => { if (++failed === 2) resolve(null); });
+  });
   HSC.geo = {
-    ready: Promise.all([limit(open().then(read)), limit(environment)]).then(([value, env]) => {
-      cached = value;
-      HSC.geo.environment = env;
-      if (HSC.startupTiming) { HSC.startupTiming.modelCache = value ? 'hit' : 'miss'; HSC.startupTiming.environment = env ? 'shipped' : 'generated'; }
+    // Geometry starts after a short model-read budget, while reflection lighting still downloads.
+    ready: limit(read(build), CACHE_WAIT_MS).then(value => {
+      cached = value?.version === 2 && value.models && typeof value.models === 'object' ? value.models : null;
+      timing('modelCache', cached ? 'hit' : 'miss');
+    }),
+    environmentReady: limit(firstValid, ENV_WAIT_MS).then(result => {
+      controller.abort();
+      HSC.geo.environment = result?.value || null;
+      environmentBytes = result?.bytes || null;
+      timing('environment', result ? 'shipped' : 'generated');
+      timing('environmentSource', result?.source || 'generated');
+      timing('environmentReady', performance.now());
     }),
     environment: null,
-    // Returns the stored result for key, or computes it and keeps a copy to store after startup.
     use(key, compute) {
-      if (cached && cached[key] !== undefined) return cached[key];
+      const entry = cached?.[key];
+      if (entry) {
+        try { if (Number.isInteger(entry.hash) && fingerprint(entry.value) === entry.hash) return entry.value; } catch (_) {}
+        timing('modelCacheInvalid', (HSC.startupTiming?.modelCacheInvalid || 0) + 1);
+      }
       const value = compute();
-      try { pending.set(key, structuredClone(value)); } catch (_) {}
+      // These pristine copies are saved later; the game morphs its live arrays after construction.
+      try { if (db) pending.set(key, structuredClone(value)); } catch (_) {}
       return value;
     },
-    // Called once the game is playable, so writing never competes with startup.
     saveLater() {
-      // Only a full set computed by this load is written; handed-out cached arrays may be mutated.
-      if (cached || !pending.size || !db) return;
-      setTimeout(() => {
+      if (saveTimer || (!pending.size && !environmentBytes)) return;
+      saveTimer = HSC.lifecycle.timeout(() => {
+        saveTimer = 0;
+        if (!db || HSC.executionPaused) return;
         try {
-          const record = Object.fromEntries(pending);
-          const store = db.transaction(STORE, 'readwrite').objectStore(STORE);
-          store.clear();
-          store.put(record, build);
-          pending = new Map();
+          const models = {};
+          for (const [key, value] of pending) models[key] = {value, hash: fingerprint(value)};
+          const transaction = db.transaction(STORE, 'readwrite'), store = transaction.objectStore(STORE);
+          if (Object.keys(models).length) {
+            const request = store.get(build);
+            request.onsuccess = () => {
+              const previous = request.result;
+              store.put({version: 2, models: {...(previous?.version === 2 ? previous.models : {}), ...models}}, build);
+            };
+          }
+          if (environmentBytes) store.put(environmentBytes, envKey);
+          // Retain only this build's derived models and lighting. This database contains no saves.
+          const keys = store.getAllKeys();
+          keys.onsuccess = () => { for (const key of keys.result) if (key !== build && key !== envKey) store.delete(key); };
+          transaction.oncomplete = () => { pending.clear(); environmentBytes = null; timing('deviceCacheSaved', performance.now()); };
+          transaction.onerror = transaction.onabort = () => {};
         } catch (_) {}
       }, 2000);
     },

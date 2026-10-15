@@ -11,7 +11,7 @@ async function fixture(options={}){
  const started=performance.now();
  let raw=Object.hasOwn(options,'saved')?options.saved:'',readFail=!!options.readFail,writeFail=false;
  const calls=[],errors=[],requests=[];
- const ctx=await browser.newContext({viewport:options.viewport||{width:390,height:844},deviceScaleFactor:options.dpr||1,reducedMotion:'reduce',hasTouch:!!options.touch});
+ const ctx=await browser.newContext({viewport:options.viewport||{width:390,height:844},deviceScaleFactor:options.dpr||1,reducedMotion:'reduce',hasTouch:!!options.touch,isMobile:!!options.mobile});
  const page=await ctx.newPage();page.setDefaultTimeout(30000);
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'||/THREE\.WebGLProgram/.test(m.text()))errors.push(m.text());});page.on('request',r=>requests.push(r.url()));
  await ctx.exposeBinding('readCloud',async()=>{calls.push(['load']);if(options.loadDelay)await new Promise(r=>setTimeout(r,options.loadDelay));if(readFail)throw Error('Injected cloud read failure');return raw;});
@@ -20,6 +20,16 @@ async function fixture(options={}){
    const raf=window.requestAnimationFrame;window.__frames={requested:0,executed:0};
    window.requestAnimationFrame=fn=>{__frames.requested++;return raf.call(window,t=>{__frames.executed++;fn(t);});};
  });
+ if(options.zeroViewport)await ctx.addInitScript(()=>{
+  window.__viewportDescriptors=Object.fromEntries(['innerWidth','innerHeight'].map(key=>[key,Object.getOwnPropertyDescriptor(window,key)]));
+  for(const key of ['innerWidth','innerHeight'])Object.defineProperty(window,key,{configurable:true,get:()=>0});
+  addEventListener('DOMContentLoaded',()=>{const style=document.createElement('style');style.id='zero-viewport';style.textContent='#game,#scene{width:0!important;height:0!important}';document.head.append(style);});
+ });
+ if(options.deniedStorage)await ctx.addInitScript(()=>{
+  Object.defineProperty(window,'indexedDB',{get(){throw new DOMException('Denied','SecurityError')}});
+  Object.defineProperty(window,'localStorage',{get(){throw new DOMException('Denied','SecurityError')}});
+ });
+ if(options.stalledCache)await ctx.addInitScript(()=>Object.defineProperty(window,'indexedDB',{value:{open:()=>({})}}));
  if(options.pauseAtCompile||options.loseAtCompile)await ctx.addInitScript(({lose,restore})=>{
   const P=WebGL2RenderingContext.prototype,compile=P.compileShader;let fired=false;
   P.compileShader=function(...args){const result=compile.apply(this,args);if(!fired&&globalThis.HSC?.startupTiming?.materialsReady){fired=true;queueMicrotask(()=>{window.__startupInterrupted=true;if(lose){const ext=this.getExtension('WEBGL_lose_context');ext.loseContext();if(restore)setTimeout(()=>ext.restoreContext(),restore);}else __yt.callbacks.pause();});}return result;};
@@ -40,7 +50,20 @@ async function fixture(options={}){
   }
  });
  const releaseRoot=path.resolve(options.releaseRoot||root);
- await ctx.route('http://release.test/**',async route=>{const pathname=new URL(route.request().url()).pathname;const file=path.join(releaseRoot,pathname==='/'?'index.html':pathname);if(!file.startsWith(releaseRoot+path.sep)||!fs.existsSync(file))return route.fulfill({status:404,body:'not found'});await route.fulfill({path:file,headers:{'Content-Security-Policy':csp},contentType:({'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp'})[path.extname(file)]||'text/plain'});});
+ await ctx.route('http://release.test/**',async route=>{
+  const pathname=new URL(route.request().url()).pathname,file=path.join(releaseRoot,pathname==='/'?'index.html':pathname);
+  if(!file.startsWith(releaseRoot+path.sep)||!fs.existsSync(file))return route.fulfill({status:404,body:'not found'});
+  if(pathname==='/runtime/room-env.dat'&&options.envDelay)await new Promise(r=>setTimeout(r,options.envDelay));
+  if(pathname==='/runtime/room-env.dat'&&options.missingEnv)return route.fulfill({status:404,body:'missing'});
+  if(options.inspectEnvironment&&pathname==='/runtime/game.js'){
+   // Observation only: expose the actual renderer-owned target, including replacement after restore.
+   const body=fs.readFileSync(file,'utf8').replace('Zt.environment = environmentTarget.texture;',
+    'globalThis.__testEnvironment={target:environmentTarget,renderer:t};Zt.environment = environmentTarget.texture;');
+   assert.notEqual(body,fs.readFileSync(file,'utf8'));
+   return route.fulfill({body,contentType:'application/javascript',headers:{'Content-Security-Policy':csp}});
+  }
+  await route.fulfill({path:file,headers:{'Content-Security-Policy':csp},contentType:({'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp','.dat':'application/octet-stream'})[path.extname(file)]||'text/plain'});
+ });
  if(!options.realSdk)await ctx.route('https://www.youtube.com/game_api/v1',route=>options.missing?route.abort():route.fulfill({contentType:'application/javascript',body:`
    window.__yt={messages:[],ads:[],scores:[],timings:{},callbacks:{},rewardMode:'${options.rewardMode||'earned'}',paused:false,audio:${options.audio!==false}};
    const sub=k=>fn=>{__yt.callbacks[k]=fn;${options.initialPause?"if(k==='pause'){__yt.paused=true;fn();}":''}return()=>delete __yt.callbacks[k];};
@@ -210,6 +233,92 @@ async function startup(){
   }finally{await f.close();}
  });
 }
+
+async function mobileStartup(){
+ await test('Model construction overlaps a slow lighting download',async()=>{
+  const f=await fixture({envDelay:1500,dpr:2,touch:true,mobile:true});
+  try{const t=await f.page.evaluate(()=>HSC.startupTiming);assert(t.geometryReady<t.environmentReady,JSON.stringify(t));assert.equal(t.environment,'shipped');assert.deepEqual(f.errors,[]);return t;}finally{await f.close();}
+ });
+ await test('An optional IndexedDB request that never completes cannot hold startup for four seconds',async()=>{
+  const f=await fixture({stalledCache:true,dpr:2,touch:true,mobile:true});
+  try{const t=await f.page.evaluate(()=>HSC.startupTiming);assert(t.engineStart-t.sdkReady<1500,JSON.stringify(t));assert.equal(t.modelCache,'miss');assert.deepEqual(f.errors,[]);return t;}finally{await f.close();}
+ });
+ await test('A zero-sized Android preloading viewport boots and reflows without changing the saved customer',async()=>{
+  const f=await fixture({zeroViewport:true,touch:true,mobile:true,dpr:2});
+  try{const before=await state(f.page);await f.page.evaluate(()=>{for(const[key,descriptor]of Object.entries(__viewportDescriptors))Object.defineProperty(window,key,descriptor);document.getElementById('zero-viewport').remove();dispatchEvent(new Event('resize'));});await f.page.waitForTimeout(300);const after=await state(f.page);assert.deepEqual(after.hair,before.hair);assert.deepEqual(after.look,before.look);const size=await f.page.locator('#scene').evaluate(c=>[c.width,c.height]);assert.deepEqual(size,[780,1688]);assert.deepEqual(f.errors,[]);return size;}finally{await f.close();}
+ });
+ await test('A phone preview with denied localStorage and IndexedDB starts at full detail',async()=>{
+  const f=await fixture({deniedStorage:true,hosted:false,touch:true,mobile:true,dpr:2});
+  try{assert.equal(await f.page.evaluate(()=>HSC.detail.maxStrands),30000);assert.deepEqual(f.errors,[]);}finally{await f.close();}
+ });
+ await test('Native touch rotation and cancellation leave the phone controls usable',async()=>{
+  const f=await fixture({touch:true,mobile:true,dpr:2}),p=f.page;
+  try{
+   const cdp=await f.ctx.newCDPSession(p),before=await state(p);
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:170,y:320,id:1}]});
+   for(let i=1;i<=5;i++)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:170+i*18,y:320,id:1}]});
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+   assert.notEqual((await state(p)).cameraYawDeg,before.cameraYawDeg);
+   await p.getByRole('radio',{name:/^Guard 2,/}).tap();
+   await p.getByRole('button',{name:'Clipper off: drag to turn the customer',exact:true}).tap();
+   assert.equal((await state(p)).selectedGuard,2);assert.equal((await state(p)).interactionMode,'cut');
+   await p.getByRole('button',{name:'Clipper on: drag on the hair to cut',exact:true}).tap();
+   assert.equal((await state(p)).interactionMode,'rotate');assert.deepEqual(f.errors,[]);
+  }finally{await f.close();}
+ });
+ await test('A corrupt derived head cache rebuilds, preserves player progress and repairs its cache',async()=>{
+  const f=await fixture({touch:true,mobile:true,dpr:2}),p=f.page;
+  try{
+   await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);const before=await state(p);
+   await p.waitForFunction(()=>HSC.startupTiming.deviceCacheSaved,null,{timeout:30000});
+   await p.evaluate(async()=>{
+    const db=await new Promise((r,j)=>{const q=indexedDB.open('asmr-barber-models',1);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)});
+    await new Promise((r,j)=>{const tx=db.transaction('models','readwrite'),store=tx.objectStore('models'),key='models-v2:'+HSC.geoBuild,q=store.get(key);q.onsuccess=()=>{const v=q.result;v.models.head.value.pos[0]=NaN;store.put(v,key)};tx.oncomplete=r;tx.onerror=()=>j(tx.error)});db.close();
+   });
+   await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);const after=await state(p);assert.deepEqual(after.hair,before.hair);assert.deepEqual(after.look,before.look);assert.equal(after.selectedGuard,2);assert.equal(await p.evaluate(()=>HSC.startupTiming.modelCacheInvalid),1);assert.equal(await p.locator('.boot-error').count(),0);
+   await p.waitForFunction(()=>HSC.startupTiming.deviceCacheSaved,null,{timeout:30000});
+   await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);assert.equal(await p.evaluate(()=>HSC.startupTiming.modelCache),'hit');assert.equal(await p.evaluate(()=>HSC.startupTiming.modelCacheInvalid||0),0);assert.deepEqual(f.errors,[]);
+  }finally{await f.close();}
+ });
+ await test('Reflection texels and the full-detail customer survive context loss during play',async()=>{
+  const f=await fixture({touch:true,mobile:true,dpr:2,inspectEnvironment:true}),p=f.page;
+  async function pixels(){return p.evaluate(()=>{const{target,renderer}=__testEnvironment,b=new Uint16Array(target.width*target.height*4);renderer.readRenderTargetPixels(target,0,0,target.width,target.height,b);let sum=0,nonzero=0;for(let i=0;i<b.length;i++){sum+=b[i];nonzero+=b[i]!==0}return{sum,nonzero}})}
+  try{
+   const before=await pixels(),stateBefore=await state(p);assert(before.nonzero>1000000);
+   await p.evaluate(()=>{const c=document.getElementById('scene'),g=c.getContext('webgl2'),ext=g.getExtension('WEBGL_lose_context');ext.loseContext();setTimeout(()=>ext.restoreContext(),300)});
+   await p.waitForFunction(()=>HSC.startupTiming.environmentRestores===1&&!skinFadeStudio.getView().paused,null,{timeout:60000});
+   assert.deepEqual(await pixels(),before);assert.deepEqual((await state(p)).hair,stateBefore.hair);assert.deepEqual((await state(p)).look,stateBefore.look);assert.equal(await p.evaluate(()=>HSC.detail.maxStrands),30000);assert.deepEqual(f.errors,[]);return before;
+  }finally{await f.close();}
+ });
+ await test('Warm startup can use device-cached lighting when the network copy is slow',async()=>{
+  const options={touch:true,mobile:true,dpr:2},f=await fixture(options),p=f.page;
+  try{
+   await p.waitForFunction(()=>HSC.startupTiming.deviceCacheSaved,null,{timeout:30000});options.envDelay=2500;
+   await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);
+   const t=await p.evaluate(()=>HSC.startupTiming);assert.equal(t.environmentSource,'device');assert.equal(t.modelCache,'hit');assert.deepEqual(f.errors,[]);return t;
+  }finally{await f.close();}
+ });
+}
+async function parity(){
+ const crypto=require('node:crypto'),baseline=path.resolve(process.env.BASELINE_DIR);
+ const f=await fixture({touch:true,mobile:true,dpr:2}),p=f.page;
+ try{
+  await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);const saved=f.raw(),g=await fixture({saved,releaseRoot:baseline,touch:true,mobile:true,dpr:2});
+  try{
+   const variants=[{}, {heritage:1,texture:'coily',beard:'full',age:'old'}, {norwood:'6',beard:'goatee'}, {baldType:'diffuse',beard:'boxed'}],evidence=[];
+   for(let i=0;i<variants.length;i++){
+    const images=[];
+    for(const page of [g.page,p]){
+     const data=await page.evaluate(({seed,opts})=>{const person=HSC.makePerson(seed,opts);HSC.view.setPerson(person);HSC.view.setBeard(HSC.beardStartFor(person));HSC.view.render(false);return document.getElementById('scene').toDataURL('image/png').split(',')[1]},{seed:6200+i,opts:variants[i]});
+     images.push(Buffer.from(data,'base64'));
+    }
+    const hashes=images.map(b=>crypto.createHash('sha256').update(b).digest('hex'));assert.equal(hashes[1],hashes[0],`Changed rendered customer ${i}`);evidence.push({variant:variants[i],sha256:hashes[0]});
+    if(i===0){fs.writeFileSync(path.join(out,'v394-customer.png'),images[0]);fs.writeFileSync(path.join(out,'v395-customer.png'),images[1]);}
+   }
+   assert.deepEqual(f.errors,[]);assert.deepEqual(g.errors,[]);return evidence;
+  }finally{await g.close();}
+ }finally{await f.close();}
+}
 async function launch(){return({chromium,firefox,webkit}[engine]).launch({headless:process.env.HEADED!=='1',...(engine==='chromium'?{...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE}:{}),args:['--no-sandbox',process.env.ANGLE_D3D11==='1'?'--use-angle=d3d11':'--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']}:{}) ,...(engine==='firefox'?{firefoxUserPrefs:{'webgl.force-enabled':true,'webgl.disabled':false,'gfx.webrender.software':true}}:{})});}
 async function benchmark(){
  const builds=[['baseline',process.env.BASELINE_DIR],['candidate',root]],samples={baseline:[],candidate:[]};
@@ -227,6 +336,6 @@ async function benchmark(){
 }
 (async()=>{
  browser=await launch();
- if(process.env.BENCHMARK==='1')await benchmark();else if(process.env.STARTUP==='1')await startup();else if(process.env.QUALITY==='1')await quality();else if(process.env.LAYOUT==='1')await layouts();else if(process.env.SOAK==='1')await soak();else await standard();
+ if(process.env.PARITY==='1')await test('All rendered pixels match v3.94 for seeded customer variants',parity);else if(process.env.MOBILE_STARTUP==='1')await mobileStartup();else if(process.env.BENCHMARK==='1')await benchmark();else if(process.env.STARTUP==='1')await startup();else if(process.env.QUALITY==='1')await quality();else if(process.env.LAYOUT==='1')await layouts();else if(process.env.SOAK==='1')await soak();else await standard();
  await browser.close();const failed=results.filter(x=>x.status==='FAIL');console.log('YOUTUBE BROWSER',engine,results.length-failed.length+'/'+results.length);process.exitCode=failed.length?1:0;
 })().catch(async e=>{console.error(e);fs.writeFileSync(path.join(out,'fatal.txt'),e.stack);await browser?.close();process.exitCode=2;});

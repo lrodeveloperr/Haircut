@@ -11,10 +11,10 @@ const target = path.resolve(__dirname, 'env', 'room-env.dat');
   fs.cpSync(built, root, {recursive: true});
   fs.rmSync(path.join(root, 'runtime', 'room-env.dat'));
   const game = path.join(root, 'runtime', 'game.js');
-  const generate = 'let r=new nl(t);Zt.environment=r.fromScene(new nw,.04).texture,r.dispose()';
+  const generate = 'try { environmentTarget = generator.fromScene(new nw, .04); }';
   const source = fs.readFileSync(game, 'utf8');
   if (source.split(generate).length !== 2) throw Error('The generating statement changed; update this script');
-  fs.writeFileSync(game, source.replace(generate, 'let r=new nl(t);globalThis.__envTarget=r.fromScene(new nw,.04);globalThis.__renderer=t;Zt.environment=__envTarget.texture,r.dispose()'));
+  fs.writeFileSync(game, source.replace(generate, 'try { environmentTarget = generator.fromScene(new nw, .04);globalThis.__envTarget=environmentTarget;globalThis.__renderer=t; }'));
   const browser = await chromium.launch();
   const page = await browser.newPage({viewport: {width: 390, height: 844}});
   await page.route('http://env.test/**', route => {
@@ -34,6 +34,11 @@ const target = path.resolve(__dirname, 'env', 'room-env.dat');
   });
   await browser.close();
   fs.rmSync(root, {recursive: true});
-  fs.writeFileSync(target, zlib.gzipSync(Buffer.from(data), {level: 9}));
+  // Group the low and high bytes of the half floats. Undoing this shuffle is exact and gzip
+  // compresses the smoother high-byte plane much better than interleaved half floats.
+  const raw = Buffer.from(data), half = raw.length / 2, packed = Buffer.alloc(raw.length + 8);
+  packed.write('HSENV001');
+  for (let i = 0; i < half; i++) { packed[8 + i] = raw[i * 2]; packed[8 + half + i] = raw[i * 2 + 1]; }
+  fs.writeFileSync(target, zlib.gzipSync(packed, {level: 9}));
   console.log('wrote', path.relative(process.cwd(), target), fs.statSync(target).size, 'bytes');
 })().catch(error => { console.error(error); process.exitCode = 1; });

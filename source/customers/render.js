@@ -126,8 +126,9 @@
         nx += N[v] * w; ny += N[v + 1] * w; nz += N[v + 2] * w;
       }
       const l = Math.hypot(nx, ny, nz) || 1;
-      st.aRoot.set([x, y, z], i * 3);
-      st.aNormal.set([nx / l, ny / l, nz / l], i * 3);
+      const at = i * 3;
+      st.aRoot[at] = x; st.aRoot[at + 1] = y; st.aRoot[at + 2] = z;
+      st.aNormal[at] = nx / l; st.aNormal[at + 1] = ny / l; st.aNormal[at + 2] = nz / l;
     }
     if (st.beardMesh) {
       st.beardMesh.geometry.attributes.aRoot.needsUpdate = true;
