@@ -32,7 +32,7 @@ s = replace(s, '    game.renderFirstPlayableFrame();', '    await game.renderFir
 s = replace(s, 'async function hC() {', 'async function hC() {\n  HSC.startupTiming.geometryReady=performance.now();')
 s = replace(s, '    if (HSC.wardrobeInit)', '    HSC.startupTiming.rendererReady=performance.now();\n    if (HSC.wardrobeInit)')
 s = replace(s, "    globalThis.addEventListener('pagehide', () => { unmount(); game.destroy(); client.destroy(); }, {once: true});", '')
-s = replace(s, 'function showBootError(error) {\n  console.error(error);', 'function showBootError(error) {\n  console.error(error);\n  if (HSC.recoverGraphics(error)) return;\n  HSC.dismissLoading();')
+s = replace(s, 'function showBootError(error) {', 'function showBootError(error) {\n  HSC.dismissLoading();')
 s = replace(s, '  panel.append(title, message, retry);', '  panel.append(title, message, retry, HSC.bootErrorCode(error));')
 # Full-fidelity geometry and shading remain enabled. Adapt from sustained scene frame times,
 # not device labels; keep the drawing buffer bounded on every resize, including large desktops.
@@ -57,7 +57,6 @@ s = replace(s, '(f||s.status==="reveal"&&!x||j%66<20||HSC.clippingsActive&&HSC.c
 s = replace(s, 'renderFirstPlayableFrame(){n.render()}',
     '''async renderFirstPlayableFrame(){
   HSC.startupTiming.materialsReady=performance.now();
-  HSC.startupTiming.graphics=HSC.detail.safe?'safe':'full';
   // Mobile browsers may drop the context while a full-detail scene starts. Wait for the
   // browser to restore it and start again, rather than treating the interruption as fatal.
   for(let attempt=0;;attempt++){

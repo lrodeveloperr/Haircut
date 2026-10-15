@@ -18,15 +18,6 @@
     if (/Saved progress|Progress/.test(message)) return 'SAVE';
     return 'BOOT';
   };
-  // Full detail is always tried first. Only when it cannot start does this tab reload once with
-  // lighter settings (see detail-youtube.js); the next session tries full detail again.
-  HSC.recoverGraphics = error => {
-    if (!/^GFX/.test(HSC.bootCode(error)) || HSC.detail?.safe) return false;
-    try { sessionStorage.setItem('asmr-barber-graphics-safe', '1'); } catch (_) { return false; }
-    HSC.youtubeClientPromise?.then(client => client.destroy()).catch(() => {});
-    location.reload();
-    return true;
-  };
   HSC.bootErrorCode = error => {
     const code = document.createElement('p');
     code.className = 'boot-error-code';
@@ -35,9 +26,8 @@
   };
   // Covers a module-evaluation failure before the ordinary engine recovery handler exists.
   HSC.bootstrapError = error => {
-    console.error(error);
-    if (HSC.recoverGraphics(error)) return;
     HSC.dismissLoading();
+    console.error(error);
     document.documentElement.dataset.bootError = 'true';
     const panel = document.createElement('section');
     panel.className = 'boot-error';

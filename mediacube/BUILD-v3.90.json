@@ -1,0 +1,32 @@
+{
+  "version": "v3.90",
+  "target": "MediaCube / direct YouTube Playables",
+  "archive": "releases/asmr-barber-fade-master-v3.90-mediacube-youtube.zip",
+  "sha256": "b01f46cef3313e903abeb9f46f1ff1034b034d4c5c941504de67e1ad9596f2f0",
+  "zipBytes": 405424,
+  "expandedBytes": 1074045,
+  "files": {
+    "THIRD-PARTY-NOTICES.md": 604,
+    "assets/backdrop-landscape.webp": 23832,
+    "assets/backdrop-portrait.webp": 20566,
+    "index.html": 954,
+    "licenses/preact-MIT.txt": 1087,
+    "licenses/three-MIT.txt": 1081,
+    "runtime/customers.js": 227453,
+    "runtime/game.js": 764890,
+    "runtime/youtube-client.js": 14509,
+    "runtime/youtube-loader.js": 2212,
+    "runtime/youtube-startup.js": 417,
+    "styles.css": 16440
+  },
+  "baseCommit": "4aa0704",
+  "changes": "v3.89 without the lighter-graphics fallback: full detail is the only startup mode. A slow GPU fence continues and a context dropped while loading is restarted; if full detail cannot start, Retry shows an error code.",
+  "validation": {
+    "directSdkContracts": "40/40 PASS",
+    "domainAndLegacyContracts": "35/35 PASS",
+    "graphicsContracts": "8/8 PASS",
+    "chromiumStartup": "10/10 PASS",
+    "chromiumStandardLocal": "14/17; the same 3 reveal-animation timeouts occur on unchanged v3.87 on this software GPU"
+  },
+  "hostedStatus": "Not uploaded to McPlay; not run on a physical phone."
+}

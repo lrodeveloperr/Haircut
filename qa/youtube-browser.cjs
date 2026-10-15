@@ -180,17 +180,17 @@ async function startup(){
  });
  if(engine==='chromium')for(const stage of ['Compile','Fence'])await test(`Context loss during ${stage.toLowerCase()} recovers at full detail once the browser restores it`,async()=>{
   const f=await fixture({blocked:true,[`loseAt${stage}`]:true,restoreAfter:500}),p=f.page;
-  try{await p.waitForFunction(()=>!!window.skinFadeStudio,null,{timeout:60000});assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),1);assert.equal(await p.evaluate(()=>HSC.startupTiming.contextRestores),1);assert.equal(await p.evaluate(()=>HSC.detail.safe),false);assert.equal(await p.locator('.boot-error').count(),0);}
+  try{await p.waitForFunction(()=>!!window.skinFadeStudio,null,{timeout:60000});assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),1);assert.equal(await p.evaluate(()=>HSC.startupTiming.contextRestores),1);assert.equal(await p.evaluate(()=>HSC.detail.antialias&&HSC.detail.pixelMax===2),true);assert.equal(await p.locator('.boot-error').count(),0);}
   finally{await f.close();}
  });
- if(engine==='chromium')for(const stage of ['Compile','Fence'])await test(`Unrestored context loss during ${stage.toLowerCase()} retries once with lighter graphics, then shows Retry with a code`,async()=>{
+ if(engine==='chromium')for(const stage of ['Compile','Fence'])await test(`Unrestored context loss during ${stage.toLowerCase()} shows Retry with a code and never lowers graphics`,async()=>{
   const f=await fixture({blocked:true,[`loseAt${stage}`]:true}),p=f.page;
-  try{await p.getByRole('button',{name:'Retry',exact:true}).waitFor({state:'visible',timeout:90000});assert.equal(await p.evaluate(()=>HSC.detail.safe),true);assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),0);assert.equal(await p.locator('body').evaluate(b=>b.inert),false);assert.equal(await p.locator('.boot-error-code').textContent(),'Code: GFX_LOST');assert(f.errors.some(e=>/graphics|WebGL/.test(e)));}
+  try{await p.getByRole('button',{name:'Retry',exact:true}).waitFor({state:'visible',timeout:90000});assert.equal(await p.evaluate(()=>HSC.detail.antialias&&HSC.detail.pixelMax===2),true);assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),0);assert.equal(await p.locator('body').evaluate(b=>b.inert),false);assert.equal(await p.locator('.boot-error-code').textContent(),'Code: GFX_LOST');assert(f.errors.some(e=>/graphics|WebGL/.test(e)));}
   finally{await f.close();}
  });
  if(engine==='chromium')await test('A GPU fence that never signals continues to a playable game',async()=>{
   const f=await fixture({fenceNeverSignals:true}),p=f.page;
-  try{assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),1);assert.equal(await p.evaluate(()=>HSC.detail.safe),false);}
+  try{assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),1);assert.equal(await p.evaluate(()=>HSC.detail.antialias&&HSC.detail.pixelMax===2),true);}
   finally{await f.close();}
  });
  await test('Renderer disposal cancels a pending GPU fence and reaches recovery',async()=>{
