@@ -9,10 +9,11 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: youtube-${{ github.ref }}
+  group: youtube-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[browser-only]') && 'browsers' || contains(github.event.head_commit.message, '[layout-only]') && 'layouts' || contains(github.event.head_commit.message, '[soak-only]') && 'soak' || 'full' }}
   cancel-in-progress: true
 jobs:
   contracts:
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[soak-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -40,6 +41,7 @@ jobs:
             qa/results
           retention-days: 14
   browsers:
+    if: "!contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[soak-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 18
     strategy:
@@ -63,6 +65,7 @@ jobs:
         if: always()
         with: {name: 'youtube-${{ matrix.browser }}', path: qa/results, retention-days: 14}
   layouts:
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[soak-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -85,6 +88,7 @@ jobs:
         if: always()
         with: {name: 'youtube-layout-${{ matrix.group }}', path: qa/results, retention-days: 14}
   soak:
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[layout-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
