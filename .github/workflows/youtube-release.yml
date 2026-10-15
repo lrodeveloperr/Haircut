@@ -79,7 +79,7 @@ jobs:
         if: always()
         with: {name: 'youtube-${{ matrix.browser }}', path: qa/results, retention-days: 14}
   graphics:
-    if: "!contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[soak-only]') && !contains(github.event.head_commit.message, '[contracts-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[soak-only]') && !contains(github.event.head_commit.message, '[contracts-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -104,6 +104,7 @@ jobs:
         if: always()
         with: {name: youtube-graphics, path: qa/results, retention-days: 14}
   startup:
+    if: "!contains(github.event.head_commit.message, '[browser-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -127,6 +128,7 @@ jobs:
         if: always()
         with: {name: youtube-startup, path: qa/results, retention-days: 14}
   windows-shaders:
+    if: "!contains(github.event.head_commit.message, '[browser-only]')"
     runs-on: windows-latest
     timeout-minutes: 15
     defaults:

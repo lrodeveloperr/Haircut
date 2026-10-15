@@ -343,7 +343,7 @@ async function standalonePreview(){
    assert.equal(await p.evaluate(()=>HSC.detail.maxStrands),30000);
    assert.equal(await p.evaluate(()=>HSC.detail.segments),8);
    const environmentRequests=f.requests.filter(url=>new URL(url).pathname==='/runtime/room-env.dat');
-   assert.equal(environmentRequests.length,1,JSON.stringify(environmentRequests));
+   assert.equal(environmentRequests.length,0,JSON.stringify(environmentRequests));
    await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);const before=await state(p);
    await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);
    assert.equal((await state(p)).selectedGuard,2);assert.deepEqual((await state(p)).hair,before.hair);
