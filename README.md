@@ -2,7 +2,7 @@
 
 ## MediaCube / YouTube Playables
 
-Upload [`asmr-barber-fade-master-v3.93-mediacube-youtube.zip`](releases/asmr-barber-fade-master-v3.93-mediacube-youtube.zip)
+Upload [`asmr-barber-fade-master-v3.94-mediacube-youtube.zip`](releases/asmr-barber-fade-master-v3.94-mediacube-youtube.zip)
 to McPlay's **Replace game bundle** field. This direct-YouTube build includes the reliability corrections,
 official SDK integration, protected cloud saves, host lifecycle handling and complete license files.
 See [`mediacube/README.md`](mediacube/README.md) for build commands, ad behavior and validation scope.

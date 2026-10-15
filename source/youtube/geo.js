@@ -4,7 +4,7 @@
  * The cache is optional: any storage failure falls back to computing, exactly as before. */
 (function (HSC) {
   'use strict';
-  const DB = 'asmr-barber-models', STORE = 'models', WAIT_MS = 1500;
+  const DB = 'asmr-barber-models', STORE = 'models', WAIT_MS = 4000;
   const build = HSC.geoBuild || 'dev';
   let cached = null, pending = new Map(), db = null;
   const open = () => new Promise(resolve => {
@@ -23,10 +23,32 @@
       request.onerror = () => resolve(null);
     } catch (_) { resolve(null); }
   });
+  // The reflection lighting (three.js PMREM of RoomEnvironment, 768x1024 half-float RGBA) is shipped
+  // precomputed in runtime/room-env.dat (gzip; youtube/make-env.cjs). Generating it on a phone compiles
+  // five shader programs and runs every blur pass. Any failure falls back to generating it as before.
+  const ENV_BYTES = 768 * 1024 * 4 * 2;
+  const environment = (async () => {
+    try {
+      const response = await fetch('./runtime/room-env.dat');
+      if (!response.ok) return null;
+      let bytes = new Uint8Array(await response.arrayBuffer());
+      // A host may already have removed the gzip layer; accept either form.
+      if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+        bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+      }
+      return bytes.byteLength === ENV_BYTES ? new Uint16Array(bytes.buffer, bytes.byteOffset, ENV_BYTES / 2) : null;
+    } catch (_) { return null; }
+  })();
   // Started before the game scripts evaluate; never delays startup by more than WAIT_MS.
+  const limit = promise => Promise.race([promise, new Promise(resolve => setTimeout(() => resolve(null), WAIT_MS))]);
   HSC.geo = {
-    ready: Promise.race([open().then(read), new Promise(resolve => setTimeout(() => resolve(null), WAIT_MS))])
-      .then(value => { cached = value; if (HSC.startupTiming) HSC.startupTiming.modelCache = value ? 'hit' : 'miss'; }),
+    ready: Promise.all([limit(open().then(read)), limit(environment)]).then(([value, env]) => {
+      cached = value;
+      HSC.geo.environment = env;
+      if (HSC.startupTiming) { HSC.startupTiming.modelCache = value ? 'hit' : 'miss'; HSC.startupTiming.environment = env ? 'shipped' : 'generated'; }
+    }),
+    environment: null,
     // Returns the stored result for key, or computes it and keeps a copy to store after startup.
     use(key, compute) {
       if (cached && cached[key] !== undefined) return cached[key];

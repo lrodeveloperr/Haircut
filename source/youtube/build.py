@@ -27,7 +27,7 @@ s = replace(s, 'return{renderFirstPlayableFrame(){n.render()}', 'return{flushPro
 s = replace(s, 'ae&&(l=j.adSession)', 't.lastInterstitialRequestAccepted&&(l=j.adSession)')
 s = replace(s, 'game = Pu({root, client, savedSession: session, savedAudio: audio});', 'await client.whenResumed();\n    game = Pu({root, client, savedSession: session, savedAudio: true});')
 s = replace(s, 'client.bindGame({root, setPaused: game.setPaused, setAudioEnabled: game.setPlatformAudio});', 'client.bindGame({root, setPaused: game.setPaused, setAudioEnabled: game.setPlatformAudio, flush: game.flushProgress});')
-s = replace(s, '    await client.gameReady();', '    HSC.dismissLoading();\n    await client.gameReady();\n    HSC.geo.saveLater();\n    HSC.poster?.start(game, client);')
+s = replace(s, '    await client.gameReady();', '    HSC.dismissLoading();\n    await client.gameReady();\n    HSC.geo.saveLater();\n    HSC.view.warmClipper?.();\n    HSC.poster?.start(game, client);')
 s = replace(s, '    game.renderFirstPlayableFrame();', '    await game.renderFirstPlayableFrame();')
 s = replace(s, 'async function hC() {', 'async function hC() {\n  HSC.startupTiming.geometryReady=performance.now();')
 s = replace(s, '    if (HSC.wardrobeInit)', '    HSC.startupTiming.rendererReady=performance.now();\n    if (HSC.wardrobeInit)')
@@ -97,11 +97,8 @@ s = replace(s, 'function _(ue=!0){if(k)return;', 'let firstFramePending=true,fir
 s = replace(s, 'render:_,setYaw(ue)', '''async prepareFirstFrame(){
   P();L();X();z();
   const visible=Zt.clone(false);
-  visible.traverse=visit=>{
-    Zt.traverseVisible(visit);
-    // The clipper is needed by the first gesture; compile its current guard without drawing it.
-    for(const child of i.children)child.traverseVisible(visit);
-  };
+  // Only what the first frame draws. The hidden clipper compiles right after (warmClipper).
+  visible.traverse=visit=>Zt.traverseVisible(visit);
   await t.compileAsync(visible,ze,Zt);
   await HSC.whenYouTubeResumed();
   // Keep diagnostics enabled, but resolve reflection/log queries before any full customer draw.
@@ -147,7 +144,7 @@ s = replace(s, 'render:_,setYaw(ue)', '''async prepareFirstFrame(){
       check();
     });
   }finally{gl.deleteSync(sync)}
-},isContextLost(){return t.getContext().isContextLost()},beginFirstFrame(){firstFramePending=false},render:_,setYaw(ue)''')
+},warmClipper(){const hidden=Zt.clone(false);hidden.traverse=visit=>{for(const child of i.children)child.traverseVisible(visit)};return t.compileAsync(hidden,ze,Zt).catch(()=>{})},isContextLost(){return t.getContext().isContextLost()},beginFirstFrame(){firstFramePending=false},render:_,setYaw(ue)''')
 s = replace(s, 'destroy(){var ue;e.removeEventListener("webglcontextlost",ae)',
     'destroy(){firstFrameCancel?.();var ue;e.removeEventListener("webglcontextlost",ae)')
 # Three's asynchronous completion polling obeys the same host-owned execution scheduler.
@@ -201,6 +198,14 @@ assert 'let $=new Xn({color:t,roughness:.82,metalness:0,sheen:.6,sheenRoughness:
 assert 'let O=new Ze(He,new Br({color:r,roughness:.92,metalness:0,side:$t})),ce=new oi;return ce.add(J,O),ce.name="robe",ce}' in s
 game_path.write_text(s)
 
+# Reflection lighting: when the shipped PMREM texture loaded (youtube/geo.js), copy it into a render
+# target made exactly as PMREMGenerator makes its own, so the game holds the same kind of texture as
+# when it generates it; then release the copy source. Otherwise generate it exactly as before.
+s = game_path.read_text()
+s = replace(s, 'let r=new nl(t);Zt.environment=r.fromScene(new nw,.04).texture,Zt.environmentIntensity=.4,r.dispose();',
+    'const shipped=HSC.geo.environment;HSC.geo.environment=null;if(shipped){const target=gh(768,1024,{magFilter:or,minFilter:or,generateMipmaps:!1,type:Pa,format:lr,colorSpace:Ji,depthBuffer:!1}),source=new uu(shipped,768,1024,lr,Pa);source.needsUpdate=!0;t.initRenderTarget(target);t.copyTextureToTexture(source,target.texture);source.dispose();Zt.environment=target.texture}else{let r=new nl(t);Zt.environment=r.fromScene(new nw,.04).texture,r.dispose()}Zt.environmentIntensity=.4;')
+game_path.write_text(s)
+
 customer_path = out / 'runtime/customers.js'
 s = customer_path.read_text()
 start = s.index('  function oneTab(client) {')
@@ -232,6 +237,7 @@ s = replace(s, '  <script src="https://bridge.playgama.com/v2/stable/playgama-br
   <script src="./runtime/youtube-client.js"></script>
   <script src="./runtime/youtube-startup.js"></script>''')
 (out / 'index.html').write_text(s)
+shutil.copy2(root / 'youtube' / 'env' / 'room-env.dat', out / 'runtime' / 'room-env.dat')
 # The model cache is keyed by the exact runtime, so a new build never reads an older build's models.
 import hashlib
 digest = hashlib.sha256((out / 'runtime/game.js').read_bytes() + (out / 'runtime/customers.js').read_bytes()).hexdigest()[:16]

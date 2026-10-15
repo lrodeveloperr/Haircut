@@ -1,0 +1,38 @@
+{
+  "version": "v3.94",
+  "target": "MediaCube / direct YouTube Playables",
+  "archive": "releases/asmr-barber-fade-master-v3.94-mediacube-youtube.zip",
+  "sha256": "f6a3f5939ad8cabe503ee52746f6b03c57c4a518319ea63d85ba285aaab3be84",
+  "zipBytes": 1265247,
+  "expandedBytes": 1983793,
+  "files": {
+    "THIRD-PARTY-NOTICES.md": 604,
+    "assets/backdrop-landscape.webp": 23832,
+    "assets/backdrop-portrait.webp": 20566,
+    "index.html": 1059,
+    "licenses/preact-MIT.txt": 1087,
+    "licenses/three-MIT.txt": 1081,
+    "runtime/customers.js": 227134,
+    "runtime/game.js": 767913,
+    "runtime/room-env.dat": 896932,
+    "runtime/youtube-client.js": 14509,
+    "runtime/youtube-geo.js": 3924,
+    "runtime/youtube-loader.js": 3368,
+    "runtime/youtube-poster.js": 3824,
+    "runtime/youtube-startup.js": 417,
+    "styles.css": 17543
+  },
+  "baseCommit": "f81b02f",
+  "changes": "Reflection lighting ships precomputed (runtime/room-env.dat, made by youtube/make-env.cjs), removing five shader programs and the blur passes from startup; the hidden clipper compiles right after the first frame; new cream replay button. Rendered frames identical to v3.93.",
+  "validation": {
+    "renderedFrameVsV393": "identical (same save; computed and cached models)",
+    "shaderProgramsBeforeFirstFrame": "7 (v3.93: 14)",
+    "directSdkContracts": "40/40 PASS",
+    "domainAndLegacyContracts": "35/35 PASS",
+    "graphicsContracts": "5/5 PASS",
+    "chromiumStartup": "10/10 PASS",
+    "chromiumStandardLocal": "14/17, same 3 completion-animation timeouts as v3.92 on this software GPU",
+    "replayIconCentring": "within 0.1 px at 390x844 and 320x568"
+  },
+  "hostedStatus": "Not uploaded to McPlay; not run on a physical phone."
+}

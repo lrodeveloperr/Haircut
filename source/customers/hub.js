@@ -104,7 +104,7 @@
 
   // ---------------- UI ----------------
   const ICON = {
-    replay: '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.8A7 7 0 1 1 6.64 8.3"/><path d="M12.6 2.6L8.2 5.8l4.4 3.2z" fill="currentColor" stroke-width="1.6"/></svg>',
+    replay: '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="translate(0 1.5)"><path d="M12 5A7 7 0 1 1 5 12"/><path d="M8.4 5L12.6 1.9V8.1Z" fill="currentColor" stroke-width="1.6"/></g></svg>',
     play: '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>',
     tick: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     star: '<svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="#ffc83d" stroke="#2a1d15" stroke-width="2" stroke-linejoin="round"/></svg>',
@@ -131,16 +131,19 @@
 @keyframes hsc-spin{to{transform:rotate(360deg)}}
 .hsc-flag{position:absolute;left:-8px;top:-10px}
 .hsc-crown{position:absolute;left:50%;top:-20px;transform:translateX(-50%) rotate(-6deg)}
-/* replay this customer: a video, so the video blue with the video icon as a subscript */
-.hsc-replay{position:absolute;width:76px;height:76px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;background:#58c8f5;color:${INK};border:3px solid ${INK};box-shadow:0 4px 0 ${INK};cursor:pointer;animation:hsc-rbreathe 1.3s ease-in-out infinite}
-.hsc-replay .hsc-ad{position:absolute;right:-10px;bottom:-8px;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff6e6;border:2.5px solid ${INK}}
+/* replay this customer: the cream of the next row with an ink outline; the video badge in the next
+   button's yellow marks that it plays a video. The arrow is centred in its own box. */
+.hsc-replay{position:absolute;width:76px;height:76px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;background:#fff6e6;color:${INK};border:3px solid ${INK};box-shadow:0 4px 0 ${INK};cursor:pointer;animation:hsc-rbreathe 1.3s ease-in-out infinite}
+.hsc-replay>svg{display:block;width:44%;height:44%;flex:none}
+.hsc-replay .hsc-ad{position:absolute;right:-8px;bottom:-6px;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#ffb627;color:${INK};border:2.5px solid ${INK}}
+.hsc-replay .hsc-ad svg{display:block}
 .hsc-replay:disabled{animation:none;opacity:.6;cursor:default}
 .hsc-replay:not(:disabled):active{transform:translateY(3px);box-shadow:0 1px 0 ${INK}}
 @keyframes hsc-rbreathe{50%{transform:scale(1.05)}}
 .hsc-replay[hidden]{display:none}
 /* in the top-left corner: the same size as the other top-row buttons */
 .hsc-replay.top{border-width:3px;box-shadow:0 3px 0 ${INK};animation:none}
-.hsc-replay.top>svg{width:24px;height:24px}
+.hsc-replay.top>svg{width:50%;height:50%}
 .hsc-replay.top .hsc-ad{width:24px;height:24px;right:-8px;bottom:-7px;border-width:2px}
 .hsc-replay.top .hsc-ad svg{width:16px;height:16px}
 @media (prefers-reduced-motion:reduce){.hsc-replay{animation:none}}
@@ -164,7 +167,7 @@ body.hsc-reveal .ui .top{visibility:hidden}
     hub.innerHTML = `
       <div class="hsc-next hsc-hit" aria-hidden="true"><img alt=""></div>
       <span class="hsc-hint" aria-hidden="true">${ICON.chev}</span>
-      <button class="hsc-replay hsc-hit" type="button" aria-label="Watch a video to cut this customer again">${ICON.replay}<span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(26) : ''}</span></button>
+      <button class="hsc-replay hsc-hit" type="button" aria-label="Watch a video to cut this customer again">${ICON.replay}<span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(22) : ''}</span></button>
 `;
     document.body.appendChild(hub);
     st.el = {
