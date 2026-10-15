@@ -1,3 +1,5 @@
+> Superseded candidate: upload v3.87 from the current README. This archive remains immutable.
+
 # v3.86 startup and shader correction validation
 
 The runtime preserves v3.85 graphics settings, generated customers, controls, haircut mechanics,
@@ -18,8 +20,10 @@ truthful readiness and reporting an already-persisted haircut count.
 
 ## Remaining verification for this candidate
 
-Cross-browser CI, Windows/ANGLE-D3D11 warning reproduction coverage, visual comparison against the
-same v3.85 customer, cold-start benchmark and sustained-run CI are pending. The JSON build identity
+The complete [v3.86 CI run](https://github.com/lrodeveloperr/Haircut/actions/runs/38749967234) passed:
+50 browser checks across Chromium/Firefox/WebKit, 27 viewports in four states, Windows/ANGLE D3D11,
+three full-detail captures, startup interruption checks and 96 transitions over 602,613 ms.
+The final v3.87 archive adds GPU-completion readiness/cancellation and score-schema validation. The JSON build identity
 contains the exact ZIP SHA and sizes. No hosted McPlay or physical-device pass is claimed.
 
 The earlier audit measured 4.69 seconds fetching the official SDK on this workspace's proxy network.

@@ -25,10 +25,21 @@
     "directSdkContracts": "38/38 PASS",
     "graphicsContracts": "8/8 PASS",
     "localStartup": "7/7 PASS, including compile/fence pause, compile/fence loss and fence disposal",
-    "crossBrowserCI": "pending final archive",
-    "windowsD3D11": "pending final archive",
-    "visualParity": "pending",
-    "coldStartupBenchmark": "pending"
+    "crossBrowserCI": "50/50 PASS: Chromium18/18 (including live official SDK), Firefox16/16, WebKit16/16",
+    "windowsD3D11": "7/7 PASS on actual ANGLE D3D11, no shader diagnostics",
+    "visualParity": "Same saved customer at three sizes; customer crop mean absolute RGB difference <0.000002 of 255",
+    "coldStartupBenchmark": "Five cold runs per build: frame-checkpoint median 7515.1 ->4293.5ms; candidate gameReady 3872.7\u20135116.2ms, median4105.3ms, controlled software GPU. See STARTUP-v3.87.json",
+    "localFullDetailRender": "3/3 PASS at 390x844 DPR2, 360x640 DPR3 and 768x1024 DPR2",
+    "ciStartup": "7/7 PASS",
+    "ciGraphics": "3/3 PASS; software-renderer timings are diagnostic, not a phone budget pass",
+    "layouts": "27/27 PASS in four states with atomic current-button bounds/visibility measurement; game archive unchanged",
+    "soak": "91 customer transitions over602102ms, no errors and unchanged canvas/HUD/host-callback counts",
+    "independentReview": "No remaining material issue; exactZIP identity independently verified"
   },
-  "hostedStatus": "Updated archive not uploaded to McPlay; actual hosted cold-start time and physical-phone performance remain unmeasured."
+  "hostedStatus": "Updated archive not uploaded to McPlay; actual hosted cold-start time and physical-phone performance remain unmeasured.",
+  "sourceCommit": "a7d1dc4fcfa107925c893a81b759c622171b5806",
+  "ciRun": "https://github.com/lrodeveloperr/Haircut/actions/runs/38751810758",
+  "qaCommit": "92135a372a1e3cb9701ec3fa4e22ecf3b2f93f8d",
+  "layoutAndStartupCiRun": "https://github.com/lrodeveloperr/Haircut/actions/runs/38752919978",
+  "initialLayoutObservation": "Initial full run had2 intermittent bounds assertions. The unchangedZIP passed27/27 diagnostic rerun; QA now measures the fresh visible button and its rectangle in one browser task to avoid a possible detach race during existing wardrobe refresh. Strict bounds were retained."
 }

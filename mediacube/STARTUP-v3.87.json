@@ -1,0 +1,240 @@
+{
+  "environment": {
+    "browser": "chromium",
+    "viewport": [
+      390,
+      844
+    ],
+    "dpr": 2,
+    "host": "controlled SDK fixture, no live platform/network latency",
+    "cold": "fresh browser process per sample",
+    "browserVersion": "Chrome for Testing headless shell 151.0.7922.34",
+    "gpu": "ANGLE Vulkan SwiftShader software GPU",
+    "physicalPhone": false,
+    "network": "SDK fixture served locally by Playwright; no real host/CDN latency",
+    "measurement": "Navigation-relative SDK gameReady timestamp, followed by two animation-frame checkpoint; fresh browser process for every sample. GPU/OS-level caches are not explicitly purged."
+  },
+  "samples": {
+    "baseline": [
+      {
+        "reportedReady": 2083,
+        "frameCheckpoint": 7172.600000000093,
+        "timing": null
+      },
+      {
+        "reportedReady": 2100.399999999907,
+        "frameCheckpoint": 7515.100000000093,
+        "timing": null
+      },
+      {
+        "reportedReady": 2150.899999999907,
+        "frameCheckpoint": 7582.899999999907,
+        "timing": null
+      },
+      {
+        "reportedReady": 2019.3999999999069,
+        "frameCheckpoint": 7237.5,
+        "timing": null
+      },
+      {
+        "reportedReady": 2517.8000000002794,
+        "frameCheckpoint": 7586.800000000279,
+        "timing": null
+      }
+    ],
+    "candidate": [
+      {
+        "reportedReady": 3919.100000000093,
+        "frameCheckpoint": 4075.399999999907,
+        "timing": {
+          "sdkReady": 23.199999999720603,
+          "requestsStarted": 23.600000000093132,
+          "saveRequest": 23.899999999906868,
+          "localeRequest": 24,
+          "localeLoaded": 24,
+          "engineStart": 57.10000000009313,
+          "geometryReady": 601.7999999998137,
+          "savesLoaded": 605.8999999999069,
+          "rendererReady": 853.7999999998137,
+          "materialsReady": 857.2999999998137,
+          "shadersReady": 1108.2999999998137,
+          "firstDraw": 1632.2999999998137,
+          "gpuReady": 3885.100000000093,
+          "firstPlayable": 3908.7999999998137,
+          "gameReady": 3919.100000000093
+        }
+      },
+      {
+        "reportedReady": 4430.399999999907,
+        "frameCheckpoint": 4569.299999999814,
+        "timing": {
+          "sdkReady": 20.59999999962747,
+          "requestsStarted": 21.09999999962747,
+          "saveRequest": 21.59999999962747,
+          "localeRequest": 21.799999999813735,
+          "localeLoaded": 21.799999999813735,
+          "savesLoaded": 33.1999999997206,
+          "engineStart": 60.59999999962747,
+          "geometryReady": 673.5999999996275,
+          "rendererReady": 829,
+          "materialsReady": 831.5999999996275,
+          "shadersReady": 1295.8999999999069,
+          "firstDraw": 1782.2999999998137,
+          "gpuReady": 4401.899999999907,
+          "firstPlayable": 4419.5999999996275,
+          "gameReady": 4430.399999999907
+        }
+      },
+      {
+        "reportedReady": 5116.200000000186,
+        "frameCheckpoint": 5260.899999999907,
+        "timing": {
+          "sdkReady": 29.700000000186265,
+          "requestsStarted": 30.5,
+          "saveRequest": 31,
+          "localeRequest": 31,
+          "localeLoaded": 31.100000000093132,
+          "savesLoaded": 51,
+          "engineStart": 82.39999999990687,
+          "geometryReady": 788.8999999999069,
+          "rendererReady": 1108.5,
+          "materialsReady": 1111.5,
+          "shadersReady": 2605.899999999907,
+          "firstDraw": 2628.7000000001863,
+          "gpuReady": 5086.399999999907,
+          "firstPlayable": 5111,
+          "gameReady": 5116.200000000186
+        }
+      },
+      {
+        "reportedReady": 4105.299999999814,
+        "frameCheckpoint": 4293.5,
+        "timing": {
+          "sdkReady": 22,
+          "requestsStarted": 22.5,
+          "saveRequest": 22.899999999906868,
+          "localeRequest": 23.100000000093132,
+          "localeLoaded": 23.100000000093132,
+          "savesLoaded": 37.799999999813735,
+          "engineStart": 64,
+          "geometryReady": 650.2000000001863,
+          "rendererReady": 802,
+          "materialsReady": 805,
+          "shadersReady": 1243,
+          "firstDraw": 1712.2000000001863,
+          "gpuReady": 4068.7999999998137,
+          "firstPlayable": 4093.5,
+          "gameReady": 4105.299999999814
+        }
+      },
+      {
+        "reportedReady": 3872.6999999997206,
+        "frameCheckpoint": 4025.5,
+        "timing": {
+          "sdkReady": 18.399999999906868,
+          "requestsStarted": 18.600000000093132,
+          "saveRequest": 19,
+          "localeRequest": 19.100000000093132,
+          "localeLoaded": 19.100000000093132,
+          "engineStart": 52.89999999990687,
+          "geometryReady": 613.7999999998137,
+          "savesLoaded": 618.1999999997206,
+          "rendererReady": 840.3999999999069,
+          "materialsReady": 843,
+          "shadersReady": 1075.3999999999069,
+          "firstDraw": 1677.7999999998137,
+          "gpuReady": 3834.100000000093,
+          "firstPlayable": 3859.399999999907,
+          "gameReady": 3872.6999999997206
+        }
+      }
+    ]
+  },
+  "archiveSha256": "5a81896c021bc512b5e42d67c3afac6f7533047bfddc6ff18fe5e8ff649f6865",
+  "sourceCommit": "a7d1dc4fcfa107925c893a81b759c622171b5806",
+  "baseline": "v3.85",
+  "summary": {
+    "baseline": {
+      "reportedReady": {
+        "medianMs": 2100.399999999907,
+        "minMs": 2019.3999999999069,
+        "maxMs": 2517.8000000002794
+      },
+      "frameCheckpoint": {
+        "medianMs": 7515.100000000093,
+        "minMs": 7172.600000000093,
+        "maxMs": 7586.800000000279
+      }
+    },
+    "candidate": {
+      "reportedReady": {
+        "medianMs": 4105.299999999814,
+        "minMs": 3872.6999999997206,
+        "maxMs": 5116.200000000186
+      },
+      "frameCheckpoint": {
+        "medianMs": 4293.5,
+        "minMs": 4025.5,
+        "maxMs": 5260.899999999907
+      }
+    },
+    "checkpointMedianReductionPercent": 42.868358371812135
+  },
+  "visualComparison": [
+    {
+      "viewport": "390x844",
+      "pixels": [
+        780,
+        1688
+      ],
+      "customerCrop": [
+        93,
+        303,
+        686,
+        1282
+      ],
+      "meanAbsDifferenceRGB": [
+        1.7225134226858462e-06,
+        0.0,
+        1.7225134226858462e-06
+      ]
+    },
+    {
+      "viewport": "360x640",
+      "pixels": [
+        1080,
+        1920
+      ],
+      "customerCrop": [
+        129,
+        345,
+        950,
+        1459
+      ],
+      "meanAbsDifferenceRGB": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "viewport": "768x1024",
+      "pixels": [
+        1536,
+        2048
+      ],
+      "customerCrop": [
+        184,
+        368,
+        1351,
+        1556
+      ],
+      "meanAbsDifferenceRGB": [
+        1.442589274637261e-06,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "limits": "Controlled software-GPU evidence only. Not an assertion of McPlay/YouTube cold-start time or a guarantee of sub-five-second startup on physical phones."
+}

@@ -45,7 +45,9 @@ hosted pre-flight diagnosis; no external analytics or extra network resource is 
 The game sends the existing completed-haircuts count through `engagement.sendScore({value})` only after
 that exact progress snapshot is acknowledged by cloud saving. Restored positive progress is synchronized
 after readiness. Empty accounts send no artificial zero, and failed/pending score requests never block
-saving, readiness or gameplay. The haircut rules, progression, UI and graphics policy are unchanged.
+saving, readiness or gameplay. To exercise McPlay's integer-score check on a fresh save, complete a
+haircut with **Finish haircut** and let cloud saving acknowledge it; opening the game alone deliberately
+sends no dummy score. The haircut rules, progression, UI and graphics policy are unchanged.
 
 ## Graphics
 
