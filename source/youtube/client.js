@@ -7,7 +7,27 @@
     ['skin-fade-studio-rewards-v4', ['v', 4]],
   ]);
   const previewKey = 'asmr-barber-youtube-save-v1';
+  // Off-platform preview only. Sandboxed frames and strict privacy modes can deny localStorage;
+  // the preview then keeps progress for this page load instead of failing to start.
+  let previewMemory = null;
+  const previewStore = {
+    get() { try { return globalThis.localStorage.getItem(previewKey); } catch (_) { return previewMemory; } },
+    set(data) { try { globalThis.localStorage.setItem(previewKey, data); } catch (_) { previewMemory = data; } },
+  };
   const clone = value => JSON.parse(JSON.stringify(value));
+  // v3.82 saved through Playgama Bridge: a flat {key: JSON string} object with no envelope.
+  // Only objects whose every key is one of the game's own are migrated; anything else stays protected.
+  const legacyBridgeSave = value => value && typeof value === 'object' && !Array.isArray(value) &&
+    !Object.hasOwn(value, 'version') && Object.keys(value).every(key => key.startsWith('skin-fade-studio-'));
+  function migrateBridgeSave(value) {
+    const slots = {};
+    for (const [key, item] of Object.entries(value)) {
+      if (typeof item !== 'string') { slots[key] = item; continue; }
+      try { slots[key] = JSON.parse(item); }
+      catch (_) { throw new Error('Saved progress could not be decoded'); }
+    }
+    return {version: 1, slots};
+  }
   const tooNew = () => Object.assign(new Error('Progress needs a newer game version'), {code: 'SAVE_TOO_NEW'});
 
   // Only game-owned UI work uses this scheduler. SDK callbacks remain responsive while paused.
@@ -118,7 +138,7 @@
       loadPromise = (async () => {
         await whenResumed();
         if (HSC.startupTiming) HSC.startupTiming.saveRequest = performance.now();
-        const raw = hosted ? await sdk.game.loadData() : globalThis.localStorage.getItem(previewKey);
+        const raw = hosted ? await sdk.game.loadData() : previewStore.get();
         await whenResumed();
         let parsed = raw;
         if (typeof raw === 'string') {
@@ -131,6 +151,7 @@
           (typeof parsed === 'string' && parsed.trim() === '') ||
           (typeof parsed === 'object' && Object.keys(parsed).length === 0);
         if (empty) parsed = {version: 1, slots: {}};
+        else if (legacyBridgeSave(parsed)) parsed = migrateBridgeSave(parsed);
         else {
           // Preserve unknown nonempty and future saves; never silently reset player data.
           if (parsed?.version > 1) throw tooNew();
@@ -184,7 +205,7 @@
         const cuts = savedCuts(envelope);
         if (new TextEncoder().encode(data).byteLength >= 3 * 1024 * 1024) throw new Error('Cloud save exceeds size limit');
         if (hosted) await sdk.game.saveData(data);
-        else globalThis.localStorage.setItem(previewKey, data);
+        else previewStore.set(data);
         acknowledgedCuts = cuts;
         reportScore();
       });

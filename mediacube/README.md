@@ -2,14 +2,14 @@
 
 ## File to upload
 
-Use `releases/asmr-barber-fade-master-v3.87-mediacube-youtube.zip` in McPlay's **Replace game bundle** field.
+Use `releases/asmr-barber-fade-master-v3.88-mediacube-youtube.zip` in McPlay's **Replace game bundle** field.
 This is a WebGL/HTML5 runtime archive with `index.html` at the root, not a source ZIP or Android package.
 
 This target uses the direct official YouTube Playables SDK at `https://www.youtube.com/game_api/v1`.
 It does not load Playgama Bridge, Playgama configuration, a mock SDK, external analytics or remote game assets.
 The existing Playgama and full-detail Android builds remain separate.
 
-See [validation results](VALIDATION-v3.87.md) and [exact build identity](BUILD-v3.87.json).
+See [validation results](VALIDATION-v3.88.md) and [exact build identity](BUILD-v3.88.json).
 
 ## Rebuild
 
@@ -17,7 +17,7 @@ See [validation results](VALIDATION-v3.87.md) and [exact build identity](BUILD-v
 bash source/build-youtube.sh
 # Produces source/build-youtube/, without an upload archive.
 
-bash source/release-youtube.sh v3.87
+bash source/release-youtube.sh v3.88
 # Creates the immutable release ZIP; refuses to overwrite an existing release.
 ```
 

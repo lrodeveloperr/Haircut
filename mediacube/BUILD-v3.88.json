@@ -1,0 +1,31 @@
+{
+  "version": "v3.88",
+  "target": "MediaCube / direct YouTube Playables",
+  "archive": "releases/asmr-barber-fade-master-v3.88-mediacube-youtube.zip",
+  "sha256": "d213442658f4f6b508f12d1ef052604df73150349a9e839e5f30f5bbfbc8173d",
+  "zipBytes": 404777,
+  "expandedBytes": 1072282,
+  "files": {
+    "THIRD-PARTY-NOTICES.md": 604,
+    "assets/backdrop-landscape.webp": 23832,
+    "assets/backdrop-portrait.webp": 20566,
+    "index.html": 954,
+    "licenses/preact-MIT.txt": 1087,
+    "licenses/three-MIT.txt": 1081,
+    "runtime/customers.js": 227453,
+    "runtime/game.js": 763936,
+    "runtime/youtube-client.js": 14509,
+    "runtime/youtube-loader.js": 1459,
+    "runtime/youtube-startup.js": 417,
+    "styles.css": 16384
+  },
+  "baseCommit": "8a030ca",
+  "changes": "Migrates v3.82 Playgama Bridge cloud saves instead of failing startup; off-platform preview starts when localStorage is denied. Graphics, gameplay and UI unchanged from v3.87.",
+  "validation": {
+    "directSdkContracts": "40/40 PASS",
+    "domainAndLegacyContracts": "35/35 PASS",
+    "graphicsContracts": "8/8 PASS",
+    "chromiumBrowserLocal": "Same 3 reveal-animation timeouts as unchanged v3.87 on this software GPU; no new failures"
+  },
+  "hostedStatus": "Not uploaded to McPlay; not run on a physical phone."
+}
