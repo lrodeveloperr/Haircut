@@ -1,0 +1,161 @@
+{
+  "version": "v3.85",
+  "target": "MediaCube / direct YouTube Playables",
+  "archive": "releases/asmr-barber-fade-master-v3.85-mediacube-youtube.zip",
+  "sha256": "c11e2599763ac8dbef2ba8db70a597c1e8fccdb735d23d1ba7cfa87c76f1f068",
+  "zipBytes": 401398,
+  "expandedBytes": 1062644,
+  "fileCount": 11,
+  "integrationCommit": "5f6920fe04223309e4aa8c20ea96465536d0a091",
+  "graphics": {
+    "initialScalpStrands": 30000,
+    "minimumScalpStrands": 24000,
+    "hairAndBeardSegments": 8,
+    "beardDensity": "full, independent of scalp adaptation",
+    "shaders": "full",
+    "antialias": true,
+    "maxDPR": 2,
+    "adaptiveDPRFloor": 1.5,
+    "maxDrawingBufferPixels": 4000000,
+    "adaptation": "sustained frame measurements only; no hardware-name or core-count heuristics",
+    "idleRendering": "Draw on scene changes; continuous rendering while cutting, rotating, revealing or clippings remain active"
+  },
+  "runtimeFiles": {
+    "THIRD-PARTY-NOTICES.md": "1b1a2219ef48d4f1f94057b8506bd7d47600da38d4f5852b6af7bdbb4a567f4c",
+    "assets/backdrop-landscape.webp": "79f936e9a5c2e6219e5f0237e1092c5ba9813aa3f7adb86bbd57b341b2348a8e",
+    "assets/backdrop-portrait.webp": "479540511e5889356fbfaa097336d6889794ade3bfe653456f7edfa65e710ab8",
+    "index.html": "77b59b6c73162f1413f465c9dbf0092b050813b674ca291faf8db3f41f5ac78e",
+    "licenses/preact-MIT.txt": "1fe6958409c8c257a70c587a18b6f7f412b179b456630790d30b2ec9a8e4b7d4",
+    "licenses/three-MIT.txt": "bfe119ea4fd413f5f7ca3fcd63adb0c4a073ed39daa2fe7d3e6b769e21272601",
+    "runtime/customers.js": "5795f0ae2c5e374bb46e7ad0cc707776ecdaef3b634f76bae212f273b53a65f2",
+    "runtime/game.js": "6ca0b7809f97404b092b4ed64d9880a940f044cd15c16b173a6b21a0a28a6276",
+    "runtime/youtube-client.js": "f674e829088c3e7358c55cbf8439a1f12177a992485a7e3bea01e9d4065508f3",
+    "runtime/youtube-loader.js": "d9f6e64fe97fc09cb7f16aca18757b88d39d834bc1f15360ab4423e5edc9c0b6",
+    "styles.css": "e79e617ba1466f83185f173c8805d83ea52ba0eb11d102388e949cf5834a816b"
+  },
+  "validation": {
+    "youtubeContracts": "28/28 PASS against extracted archive",
+    "qualityPolicy": "8/8 PASS against extracted archive",
+    "independentReview": "No blocking findings; correct runtime in ZIP",
+    "layouts": "27 viewports x four states PASS in Firefox/Mesa",
+    "soak": "PASS,50 customer transitions in1305398ms (21m45s), stable canvas/HUD/SDK callback counts and no page/console errors",
+    "graphics": "3/3 PASS, native phone/tablet controls, actual MSAA/full beard, save continuity and 4K resize",
+    "existingContracts": "35/35 PASS",
+    "firefox": "16/16 PASS",
+    "webkit": "16/16 PASS",
+    "visualReview": "Builder and independent reviewer pass on matched phone screenshots",
+    "chromium": "18/18 PASS",
+    "representativeVisualReview": "PASS: 225x400 play,390x844 completion,768x1024 wardrobe,1440x900 play; phone/tablet DPR2/3 comparisons"
+  },
+  "hostedStatus": "v3.85 not uploaded to McPlay; physical phone performance not measured",
+  "evidence": {
+    "runtimeCI": "https://github.com/lrodeveloperr/Haircut/actions/runs/38684281100",
+    "capturesCI": "https://github.com/lrodeveloperr/Haircut/actions/runs/38684560076",
+    "phoneComparison": "mediacube/graphics-v3.85-phone-comparison.webp",
+    "layoutsCI": "https://github.com/lrodeveloperr/Haircut/actions/runs/38685418471",
+    "sustainedCI": "https://github.com/lrodeveloperr/Haircut/actions/runs/38684281100"
+  },
+  "captureHarnessCommit": "3b4ba59bec9c02c7ca60ca92ad0456694543a5ab",
+  "graphicsCases": [
+    {
+      "name": "Full-detail phone/tablet render 390x844 DPR 2",
+      "status": "PASS",
+      "evidence": {
+        "startupMs": 2354,
+        "metrics": {
+          "level": "high",
+          "shaderLow": false,
+          "segments": 8,
+          "beardSegments": 8,
+          "beardCount": 14000,
+          "beardRoots": 14000,
+          "antialias": true,
+          "width": 780,
+          "height": 1688,
+          "cssWidth": 390,
+          "cssHeight": 844
+        },
+        "resized": {
+          "width": 2666,
+          "height": 1500
+        }
+      }
+    },
+    {
+      "name": "Full-detail phone/tablet render 360x640 DPR 3",
+      "status": "PASS",
+      "evidence": {
+        "startupMs": 10069,
+        "metrics": {
+          "level": "high",
+          "shaderLow": false,
+          "segments": 8,
+          "beardSegments": 8,
+          "beardCount": 14000,
+          "beardRoots": 14000,
+          "antialias": true,
+          "width": 720,
+          "height": 1280,
+          "cssWidth": 360,
+          "cssHeight": 640
+        },
+        "resized": {
+          "width": 2666,
+          "height": 1500
+        }
+      }
+    },
+    {
+      "name": "Full-detail phone/tablet render 768x1024 DPR 2",
+      "status": "PASS",
+      "evidence": {
+        "startupMs": 9644,
+        "metrics": {
+          "level": "high",
+          "shaderLow": false,
+          "segments": 8,
+          "beardSegments": 8,
+          "beardCount": 14000,
+          "beardRoots": 14000,
+          "antialias": true,
+          "width": 1536,
+          "height": 2048,
+          "cssWidth": 768,
+          "cssHeight": 1024
+        },
+        "resized": {
+          "width": 2666,
+          "height": 1500
+        }
+      }
+    }
+  ],
+  "layoutHarnessCommit": "d9b9a423ae128a79b35e55f346c3046d2fd1332e",
+  "knownLimitations": [
+    "Chromium/SwiftShader large-viewport reveal exceeded the45-second software-renderer layout timeout;27-viewport layout evidence uses Firefox/Mesa with unchanged completion assertions.",
+    "Physical-phone FPS,thermal/battery behavior and liveMcPlay certification not measured."
+  ],
+  "sustainedRun": {
+    "transitions": 50,
+    "elapsedMs": 1305398,
+    "before": {
+      "canvases": 1,
+      "huds": 1,
+      "callbacks": 3,
+      "job": 1,
+      "heap": 20000162
+    },
+    "after": {
+      "canvases": 1,
+      "huds": 1,
+      "callbacks": 3,
+      "job": 51,
+      "heap": 22639659
+    }
+  },
+  "additionalCI": {
+    "run": "https://github.com/lrodeveloperr/Haircut/actions/runs/38686376104",
+    "purpose": "Firefox/Mesa fallback started while primary Chromium run was still reported in progress; no further result required after primary passed",
+    "statusAtHandoff": "in progress"
+  }
+}
