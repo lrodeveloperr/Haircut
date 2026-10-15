@@ -1,0 +1,33 @@
+{
+  "version": "v3.91",
+  "target": "MediaCube / direct YouTube Playables",
+  "archive": "releases/asmr-barber-fade-master-v3.91-mediacube-youtube.zip",
+  "sha256": "926f4b8259eef735db9b89df0edd9ab284f7a2da8ba31f9c345b55610b5a763d",
+  "zipBytes": 405040,
+  "expandedBytes": 1072933,
+  "files": {
+    "THIRD-PARTY-NOTICES.md": 604,
+    "assets/backdrop-landscape.webp": 23832,
+    "assets/backdrop-portrait.webp": 20566,
+    "index.html": 954,
+    "licenses/preact-MIT.txt": 1087,
+    "licenses/three-MIT.txt": 1081,
+    "runtime/customers.js": 226341,
+    "runtime/game.js": 764890,
+    "runtime/youtube-client.js": 14509,
+    "runtime/youtube-loader.js": 2212,
+    "runtime/youtube-startup.js": 417,
+    "styles.css": 16440
+  },
+  "baseCommit": "3397e2b",
+  "changes": "No graphics downgrade at any time: the in-play adaptive scaling is removed. 30,000 strands, MSAA and full resolution for the whole session. Startup recovery and error codes as in v3.90.",
+  "validation": {
+    "directSdkContracts": "40/40 PASS",
+    "domainAndLegacyContracts": "35/35 PASS",
+    "graphicsContracts": "5/5 PASS",
+    "chromiumGraphics": "3/3 PASS",
+    "chromiumStartup": "10/10 PASS",
+    "chromiumStandardLocal": "12/17 and 9/17 on two runs; software-GPU timeouts (see VALIDATION-v3.91.md)"
+  },
+  "hostedStatus": "Not uploaded to McPlay; not run on a physical phone."
+}
