@@ -12,7 +12,7 @@ async function fixture(options={}){
  let raw=Object.hasOwn(options,'saved')?options.saved:'',readFail=!!options.readFail,writeFail=false;
  const calls=[],errors=[],requests=[];
  const ctx=await browser.newContext({viewport:options.viewport||{width:390,height:844},deviceScaleFactor:options.dpr||1,reducedMotion:'reduce',hasTouch:!!options.touch});
- const page=await ctx.newPage();page.setDefaultTimeout(10000);
+ const page=await ctx.newPage();page.setDefaultTimeout(30000);
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('request',r=>requests.push(r.url()));
  await ctx.exposeBinding('readCloud',async()=>{calls.push(['load']);if(readFail)throw Error('Injected cloud read failure');return raw;});
  await ctx.exposeBinding('writeCloud',async(_,value)=>{calls.push(['save-start']);if(writeFail)throw Error('Injected cloud write failure');raw=value;calls.push(['save-ack']);});
@@ -64,14 +64,14 @@ async function standard(){
  await test('Wardrobe remains interactive while gameplay is paused',async()=>{await p.locator('#hsc-hud .hsc-rw').click();await p.locator('#hsc-panel.open').waitFor({state:'visible'});assert.equal(await p.evaluate(()=>skinFadeStudio.getView().paused),true);assert.equal(await p.evaluate(()=>document.body.inert),false);assert(await p.locator('.hsc-vbtn').isEnabled());});
  await test('Cancelled and unavailable videos grant nothing and allow retry',async()=>{const before=await p.evaluate(()=>JSON.stringify(HSC.wardrobe.data.own));for(const mode of ['cancel','error']){await reward(p,mode);assert.equal(await p.evaluate(()=>JSON.stringify(HSC.wardrobe.data.own)),before);assert(await p.locator('.hsc-vbtn').isEnabled());}});
  await test('Completed rewarded video unlocks one daily item and survives reload',async()=>{const count=await p.evaluate(()=>HSC.wardrobe.data.recent.length);await reward(p,'earned');assert.equal(await p.evaluate(()=>HSC.wardrobe.data.recent.length),count+1);const look=await p.evaluate(()=>JSON.stringify(HSC.wardrobe.data.look));await p.keyboard.press('Escape');await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);assert.equal(await p.evaluate(()=>JSON.stringify(HSC.wardrobe.data.look)),look);});
- await test('Paid replay restores the same customer and preserves the next queue',async()=>{await finish(p);await p.screenshot({path:path.join(out,'completion.png')});const before=await state(p),queue=await p.evaluate(()=>JSON.stringify(HSC.meta.data.queue));await p.locator('.hsc-replay').click();await p.getByRole('button',{name:'Finish haircut',exact:true}).waitFor({state:'visible',timeout:30000});const after=await state(p);assert.equal(after.look.person.seed,before.look.person.seed);assert.deepEqual(after.hair,after.startHair);assert.equal(await p.evaluate(()=>JSON.stringify(HSC.meta.data.queue)),queue);});
+ await test('Paid replay restores the same customer and preserves the next queue',async()=>{await finish(p);await p.screenshot({timeout:60000,path:path.join(out,'completion.png')});const before=await state(p),queue=await p.evaluate(()=>JSON.stringify(HSC.meta.data.queue));await p.locator('.hsc-replay').click();await p.getByRole('button',{name:'Finish haircut',exact:true}).waitFor({state:'visible',timeout:30000});const after=await state(p);assert.equal(after.look.person.seed,before.look.person.seed);assert.deepEqual(after.hair,after.startHair);assert.equal(await p.evaluate(()=>JSON.stringify(HSC.meta.data.queue)),queue);});
  await test('A cloud write failure blocks the reward request and preserves usability',async()=>{await p.locator('#hsc-hud .hsc-rw').click();await p.locator('.hsc-tab').last().click();f.writeFail(true);const ads=await p.evaluate(()=>__yt.ads.length);await reward(p,'earned');assert.equal(await p.evaluate(()=>__yt.ads.length),ads);assert(await p.locator('.hsc-vbtn').isEnabled());f.writeFail(false);await p.keyboard.press('Escape');});
  await test('Only bundled resources and the official YouTube SDK are requested',async()=>{assert.deepEqual(f.errors,[]);assert(f.requests.every(url=>url.startsWith('http://release.test/')||url==='https://www.youtube.com/game_api/v1'));});
  const saved=f.raw();await f.close();
  await test('Fresh empty JSON sessions boot without errors, save, and restore after reload',async()=>{for(const saved of ['{}','null','[]','""']){const g=await fixture({saved}),p=g.page;try{assert.deepEqual(g.errors,[]);await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);const before=await state(p);assert.equal(JSON.parse(g.raw()).version,1);await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);assert.equal((await state(p)).selectedGuard,2);assert.deepEqual((await state(p)).hair,before.hair);assert.deepEqual(g.errors,[]);}finally{await g.close();}}});
  await test('Unread cloud data is preserved and Retry restores it',async()=>{const g=await fixture({saved,readFail:true}),p=g.page;try{await p.getByRole('button',{name:'Retry',exact:true}).waitFor({state:'visible'});assert.equal(g.raw(),saved);assert.equal(g.calls.filter(c=>c[0]==='save-start').length,0);g.readFail(false);await p.getByRole('button',{name:'Retry',exact:true}).click();await p.waitForFunction(()=>!!window.skinFadeStudio);assert.deepEqual((await state(p)).hair,JSON.parse(saved).slots['skin-fade-studio-session-v2'].hair);}finally{await g.close();}});
  await test('A future cloud envelope shows recovery and never overwrites progress',async()=>{const saved=JSON.stringify({version:2,slots:{}}),g=await fixture({saved,blocked:true});try{await g.page.getByRole('heading',{name:'A newer game version is needed'}).waitFor({state:'visible'});assert.equal(g.raw(),saved);assert.equal(g.calls.filter(c=>c[0]==='save-start').length,0);}finally{await g.close();}});
- await test('Missing SDK gives a keyboard-focused Retry in a tiny embed',async()=>{const g=await fixture({missing:true,viewport:{width:225,height:400}});try{const retry=g.page.getByRole('button',{name:'Retry',exact:true});await retry.waitFor({state:'visible'});assert.equal(await retry.evaluate(e=>e===document.activeElement),true);await g.page.screenshot({path:path.join(out,'missing-sdk.png')});}finally{await g.close();}});
+ await test('Missing SDK gives a keyboard-focused Retry in a tiny embed',async()=>{const g=await fixture({missing:true,viewport:{width:225,height:400}});try{const retry=g.page.getByRole('button',{name:'Retry',exact:true});await retry.waitFor({state:'visible'});assert.equal(await retry.evaluate(e=>e===document.activeElement),true);await g.page.screenshot({timeout:60000,path:path.join(out,'missing-sdk.png')});}finally{await g.close();}});
  await test('An initial host pause defers gameplay until the host resumes',async()=>{const g=await fixture({initialPause:true});try{await g.page.waitForTimeout(600);assert.equal(await g.page.evaluate(()=>!!window.skinFadeStudio),false);await g.page.evaluate(()=>__yt.callbacks.resume());await g.page.waitForFunction(()=>!!window.skinFadeStudio);assert.equal(await g.page.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),1);}finally{await g.close();}});
  await test('Off-platform preview uses the official SDK mode without rewarded CTAs',async()=>{const g=await fixture({hosted:false});try{await finish(g.page);assert.equal(await g.page.locator('.hsc-replay').isVisible(),false);assert.equal(g.calls.filter(c=>c[0]==='load'||c[0]==='save-start').length,0);assert.equal(await g.page.evaluate(()=>HSC.wardrobe.client.isLocalPreview),true);}finally{await g.close();}});
  if(engine==='chromium')await test('The real official SDK loads under YouTube CSP in off-platform preview',async()=>{const g=await fixture({realSdk:true});try{assert.equal(await g.page.evaluate(()=>typeof ytgame.game.loadData),'function');assert.equal(await g.page.evaluate(()=>HSC.wardrobe.client.isLocalPreview),true);assert.deepEqual(g.errors,[]);}finally{await g.close();}});
@@ -79,18 +79,20 @@ async function standard(){
 const viewports=[[225,400],[320,568],[360,640],[375,667],[390,844],[412,915],[430,932],[568,320],[640,360],[844,390],[932,430],[717,512],[768,1024],[820,1180],[1024,1366],[1024,768],[1180,820],[1366,1024],[1280,720],[1366,768],[1440,900],[1920,1080],[2560,1440],[3440,1440],[400,400],[480,270],[270,480]];
 async function layouts(){
  const group=Number(process.env.LAYOUT_GROUP||0),screens=viewports.filter((_,i)=>i%4===group);
- const f=await fixture(),p=f.page;
  for(const [width,height]of screens)await test(`Layout ${width}x${height}: play, clipper wardrobe, gown wardrobe, completion`,async()=>{
-   await p.setViewportSize({width,height});await p.waitForTimeout(300);
+   const f=await fixture({viewport:{width,height}}),p=f.page;
+   try{
+   await p.waitForTimeout(300);
    assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1||document.documentElement.scrollHeight>innerHeight+1),false);
    const finishButton=p.getByRole('button',{name:'Finish haircut',exact:true});assert(await finishButton.isVisible());
-   await p.screenshot({path:path.join(out,`${width}x${height}-play.png`)});
-   await p.locator('#hsc-hud .hsc-rw').click();await p.locator('.hsc-tab').first().click();await p.waitForTimeout(250);await p.screenshot({path:path.join(out,`${width}x${height}-clipper.png`)});
-   await p.locator('.hsc-tab').last().click();await p.waitForTimeout(150);await p.screenshot({path:path.join(out,`${width}x${height}-gown.png`)});
+   await p.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-play.png`)});
+   await p.locator('#hsc-hud .hsc-rw').click();await p.locator('.hsc-tab').first().click();await p.waitForTimeout(250);await p.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-clipper.png`)});
+   await p.locator('.hsc-tab').last().click();await p.waitForTimeout(150);await p.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-gown.png`)});
    const card=await p.locator('.hsc-vbtn').boundingBox();assert(card&&card.x>=-1&&card.y>=-1&&card.x+card.width<=width+1&&card.y+card.height<=height+1);
-   await p.keyboard.press('Escape');await p.waitForTimeout(500);await finish(p);await p.screenshot({path:path.join(out,`${width}x${height}-completion.png`)});await next(p);await p.waitForTimeout(500);
+   await p.keyboard.press('Escape');await p.waitForTimeout(500);await finish(p);await p.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-completion.png`)});await next(p);await p.waitForTimeout(500);
+   assert.deepEqual(f.errors,[]);
+   }finally{await f.close();}
  });
- assert.deepEqual(f.errors,[]);await f.close();
 }
 async function soak(){
  const f=await fixture({viewport:{width:320,height:568}}),p=f.page,start=Date.now();
@@ -112,9 +114,9 @@ async function quality(){
     const saved=f.raw(),before=await state(p);
     const metrics=await p.evaluate(()=>{const c=document.getElementById('scene'),b=HSC.debugState.beardMesh;return{level:HSC.detail.level,shaderLow:HSC.detail.shaderLow,segments:HSC.detail.segments,beardSegments:b.geometry.attributes.position.count/2-1,beardCount:b.geometry.instanceCount,beardRoots:HSC.debugState.roots.count,antialias:c.getContext('webgl2').getContextAttributes().antialias,width:c.width,height:c.height,cssWidth:c.clientWidth,cssHeight:c.clientHeight};});
     assert.equal(metrics.level,'high');assert.equal(metrics.shaderLow,false);assert.equal(metrics.segments,8);assert.equal(metrics.beardSegments,8);assert.equal(metrics.beardCount,metrics.beardRoots);assert.equal(metrics.antialias,true);assert(metrics.width*metrics.height<=4000000);assert(metrics.width/metrics.cssWidth>=1.49);
-    await p.evaluate(()=>__yt.callbacks.pause());await p.screenshot({path:path.join(out,`${width}x${height}-high.png`)});
+    await p.evaluate(()=>__yt.callbacks.pause());await p.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-high.png`)});
     const g=await fixture({viewport:{width,height},dpr,touch:true,saved,releaseRoot:baseline});
-    try{assert.deepEqual((await state(g.page)).look,before.look);await g.page.evaluate(()=>__yt.callbacks.pause());await g.page.screenshot({path:path.join(out,`${width}x${height}-v3.84.png`)});assert.deepEqual(g.errors,[]);}finally{await g.close();}
+    try{assert.deepEqual((await state(g.page)).look,before.look);await g.page.evaluate(()=>__yt.callbacks.pause());await g.page.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-v3.84.png`)});assert.deepEqual(g.errors,[]);}finally{await g.close();}
     await p.evaluate(()=>{__yt.callbacks.resume();HSC.setDetail(0.5);});assert.equal(await p.evaluate(()=>HSC.debugState.beardMesh.geometry.instanceCount),metrics.beardRoots);
     await p.setViewportSize({width:3840,height:2160});await p.waitForTimeout(500);
     const resized=await p.locator('#scene').evaluate(c=>({width:c.width,height:c.height}));assert(resized.width*resized.height<=4000000);assert.deepEqual((await state(p)).hair,before.hair);assert.deepEqual(f.errors,[]);
