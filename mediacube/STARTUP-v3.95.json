@@ -1,0 +1,294 @@
+{
+  "environment": {
+    "browser": "chromium",
+    "viewport": [
+      390,
+      844
+    ],
+    "dpr": 2,
+    "host": "controlled SDK fixture, no live platform/network latency",
+    "cold": "fresh browser process per sample",
+    "browserVersion": "Chrome for Testing headless shell 151.0.7922.34",
+    "gpu": "ANGLE Vulkan SwiftShader software GPU",
+    "physicalPhone": false,
+    "network": "Locally served files and controlled SDK fixture; no real host/CDN latency",
+    "isolation": "No other local game/browser test running during this five-pair benchmark. GPU/OS caches are not explicitly purged."
+  },
+  "samples": {
+    "baseline": [
+      {
+        "reportedReady": 3544.2000000029802,
+        "frameCheckpoint": 3696.900000002235,
+        "timing": {
+          "sdkReady": 24.700000002980232,
+          "requestsStarted": 26.400000002235174,
+          "saveRequest": 26.700000002980232,
+          "localeRequest": 26.800000000745058,
+          "localeLoaded": 26.800000000745058,
+          "savesLoaded": 55.600000001490116,
+          "modelCache": "miss",
+          "environment": "shipped",
+          "engineStart": 106.20000000298023,
+          "geometryReady": 679.8000000007451,
+          "rendererReady": 762,
+          "materialsReady": 767.8000000007451,
+          "shadersReady": 1070,
+          "firstDraw": 1520,
+          "gpuReady": 3508.5,
+          "firstPlayable": 3533,
+          "gameReady": 3544.300000000745
+        }
+      },
+      {
+        "reportedReady": 3528.699999999255,
+        "frameCheckpoint": 3668.599999997765,
+        "timing": {
+          "sdkReady": 24.5,
+          "requestsStarted": 25.699999999254942,
+          "saveRequest": 26.099999997764826,
+          "localeRequest": 26.199999999254942,
+          "localeLoaded": 26.199999999254942,
+          "savesLoaded": 59.30000000074506,
+          "modelCache": "miss",
+          "environment": "shipped",
+          "engineStart": 110.5,
+          "geometryReady": 717.6999999992549,
+          "rendererReady": 807.8999999985099,
+          "materialsReady": 810.8999999985099,
+          "shadersReady": 1085,
+          "firstDraw": 1518.699999999255,
+          "gpuReady": 3498.599999997765,
+          "firstPlayable": 3518.699999999255,
+          "gameReady": 3528.699999999255
+        }
+      },
+      {
+        "reportedReady": 3484.10000000149,
+        "frameCheckpoint": 3645.199999999255,
+        "timing": {
+          "sdkReady": 26.400000002235174,
+          "requestsStarted": 30.900000002235174,
+          "saveRequest": 31.300000000745058,
+          "localeRequest": 31.5,
+          "localeLoaded": 31.5,
+          "savesLoaded": 55.400000002235174,
+          "modelCache": "miss",
+          "environment": "shipped",
+          "engineStart": 112.40000000223517,
+          "geometryReady": 695.1000000014901,
+          "rendererReady": 778.6000000014901,
+          "materialsReady": 782,
+          "shadersReady": 1061.1000000014901,
+          "firstDraw": 1446.300000000745,
+          "gpuReady": 3440.199999999255,
+          "firstPlayable": 3472.199999999255,
+          "gameReady": 3484.10000000149
+        }
+      },
+      {
+        "reportedReady": 3448.400000002235,
+        "frameCheckpoint": 3593.5,
+        "timing": {
+          "sdkReady": 25.800000000745058,
+          "requestsStarted": 27.600000001490116,
+          "saveRequest": 28,
+          "localeRequest": 28.100000001490116,
+          "localeLoaded": 28.199999999254942,
+          "savesLoaded": 44.600000001490116,
+          "modelCache": "miss",
+          "environment": "shipped",
+          "engineStart": 111,
+          "geometryReady": 674.5,
+          "rendererReady": 755.6999999992549,
+          "materialsReady": 759.3000000007451,
+          "shadersReady": 1056,
+          "firstDraw": 1450.9000000022352,
+          "gpuReady": 3415.800000000745,
+          "firstPlayable": 3436.699999999255,
+          "gameReady": 3448.400000002235
+        }
+      },
+      {
+        "reportedReady": 3377.60000000149,
+        "frameCheckpoint": 3537.300000000745,
+        "timing": {
+          "sdkReady": 23.300000000745058,
+          "requestsStarted": 24.699999999254942,
+          "saveRequest": 24.900000002235174,
+          "localeRequest": 25,
+          "localeLoaded": 25.100000001490116,
+          "savesLoaded": 50.400000002235174,
+          "modelCache": "miss",
+          "environment": "shipped",
+          "engineStart": 100.10000000149012,
+          "geometryReady": 646.3000000007451,
+          "rendererReady": 727.3000000007451,
+          "materialsReady": 730.4000000022352,
+          "shadersReady": 1020.5,
+          "firstDraw": 1380.6000000014901,
+          "gpuReady": 3343.199999999255,
+          "firstPlayable": 3366.60000000149,
+          "gameReady": 3377.60000000149
+        }
+      }
+    ],
+    "candidate": [
+      {
+        "reportedReady": 3455,
+        "frameCheckpoint": 3594.300000000745,
+        "timing": {
+          "sdkReady": 25.800000000745058,
+          "requestsStarted": 30.900000002235174,
+          "saveRequest": 31.199999999254942,
+          "localeRequest": 31.199999999254942,
+          "localeLoaded": 31.199999999254942,
+          "modelCache": "miss",
+          "environment": "shipped",
+          "environmentSource": "bundle",
+          "environmentReady": 86.60000000149012,
+          "engineStart": 105.60000000149012,
+          "geometryReady": 631.3000000007451,
+          "savesLoaded": 636.6000000014901,
+          "rendererReady": 799.6999999992549,
+          "materialsReady": 804.1000000014901,
+          "shadersReady": 1034,
+          "firstDraw": 1556.699999999255,
+          "gpuReady": 3419.900000002235,
+          "firstPlayable": 3444.5,
+          "gameReady": 3455
+        }
+      },
+      {
+        "reportedReady": 3378.10000000149,
+        "frameCheckpoint": 3550.699999999255,
+        "timing": {
+          "sdkReady": 24,
+          "requestsStarted": 27.5,
+          "saveRequest": 27.699999999254942,
+          "localeRequest": 27.800000000745058,
+          "localeLoaded": 27.800000000745058,
+          "environment": "shipped",
+          "environmentSource": "bundle",
+          "environmentReady": 68.10000000149012,
+          "savesLoaded": 68.39999999850988,
+          "modelCache": "miss",
+          "engineStart": 91.39999999850988,
+          "geometryReady": 655.8000000007451,
+          "rendererReady": 743.3000000007451,
+          "materialsReady": 746.5,
+          "shadersReady": 1018.6999999992549,
+          "firstDraw": 1400.199999999255,
+          "gpuReady": 3350.89999999851,
+          "firstPlayable": 3367.300000000745,
+          "gameReady": 3378.10000000149
+        }
+      },
+      {
+        "reportedReady": 3220.10000000149,
+        "frameCheckpoint": 3414.89999999851,
+        "timing": {
+          "sdkReady": 28,
+          "requestsStarted": 29.699999999254942,
+          "saveRequest": 30.100000001490116,
+          "localeRequest": 30.300000000745058,
+          "localeLoaded": 30.300000000745058,
+          "modelCache": "miss",
+          "savesLoaded": 64.10000000149012,
+          "engineStart": 86,
+          "geometryReady": 602.3999999985099,
+          "environment": "shipped",
+          "environmentSource": "bundle",
+          "environmentReady": 621.6999999992549,
+          "rendererReady": 760.8999999985099,
+          "materialsReady": 764.6999999992549,
+          "shadersReady": 995.5,
+          "firstDraw": 1417.1000000014901,
+          "gpuReady": 3190.10000000149,
+          "firstPlayable": 3215,
+          "gameReady": 3220.10000000149
+        }
+      },
+      {
+        "reportedReady": 3278.5,
+        "frameCheckpoint": 3417.699999999255,
+        "timing": {
+          "sdkReady": 26.300000000745058,
+          "requestsStarted": 28.300000000745058,
+          "saveRequest": 28.600000001490116,
+          "localeRequest": 28.699999999254942,
+          "localeLoaded": 28.699999999254942,
+          "environment": "shipped",
+          "environmentSource": "bundle",
+          "environmentReady": 67.80000000074506,
+          "savesLoaded": 68.80000000074506,
+          "modelCache": "miss",
+          "engineStart": 94.19999999925494,
+          "geometryReady": 666.1999999992549,
+          "rendererReady": 753.6999999992549,
+          "materialsReady": 756.8999999985099,
+          "shadersReady": 1019.6999999992549,
+          "firstDraw": 1440.300000000745,
+          "gpuReady": 3241.199999999255,
+          "firstPlayable": 3267.800000000745,
+          "gameReady": 3278.5
+        }
+      },
+      {
+        "reportedReady": 3953.300000000745,
+        "frameCheckpoint": 4111.900000002235,
+        "timing": {
+          "sdkReady": 21.600000001490116,
+          "requestsStarted": 26.400000002235174,
+          "saveRequest": 26.900000002235174,
+          "localeRequest": 27,
+          "localeLoaded": 27,
+          "modelCache": "miss",
+          "savesLoaded": 63.30000000074506,
+          "engineStart": 80.90000000223517,
+          "geometryReady": 686.6000000014901,
+          "environment": "shipped",
+          "environmentSource": "bundle",
+          "environmentReady": 707.2000000029802,
+          "rendererReady": 860.8000000007451,
+          "materialsReady": 864.1000000014901,
+          "shadersReady": 1094.800000000745,
+          "firstDraw": 1583.9000000022352,
+          "gpuReady": 3920.300000000745,
+          "firstPlayable": 3939.900000002235,
+          "gameReady": 3953.300000000745
+        }
+      }
+    ]
+  },
+  "archiveSha256": "bfaef32697d16cbc2c2b1777aebb5cf987ee3534f08c9ecd3b238544596ad9b6",
+  "sourceCommit": "f71f0a4bbabb8f6bc393094738abb7e83e56b2ed",
+  "baseline": "v3.94",
+  "candidate": "v3.95",
+  "summary": {
+    "baseline": {
+      "reportedReady": {
+        "medianMs": 3484.1,
+        "minMs": 3377.6,
+        "maxMs": 3544.2
+      },
+      "frameCheckpoint": {
+        "medianMs": 3645.2,
+        "minMs": 3537.3,
+        "maxMs": 3696.9
+      }
+    },
+    "candidate": {
+      "reportedReady": {
+        "medianMs": 3378.1,
+        "minMs": 3220.1,
+        "maxMs": 3953.3
+      },
+      "frameCheckpoint": {
+        "medianMs": 3550.7,
+        "minMs": 3414.9,
+        "maxMs": 4111.9
+      }
+    }
+  },
+  "limits": "Desktop software GPU observations only. Not evidence of sub-five-second hosted or physical-phone performance."
+}

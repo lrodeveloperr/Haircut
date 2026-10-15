@@ -16,7 +16,7 @@ playable. Use a new version so the historical release remains immutable.
 
 Building only the game, without packaging: `bash source/buildall.sh` (Playables, one light detail level) or
 `TARGET=full bash source/buildall.sh` (Android, detail levels Auto / Low / High). The result is in `source/build/`. The direct YouTube target uses `bash source/build-youtube.sh`,
-which selects its own full-fidelity adaptive graphics policy and outputs `source/build-youtube/`.
+which selects its own fixed full-detail graphics policy and outputs `source/build-youtube/`.
 
 ## How it is put together
 

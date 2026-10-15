@@ -35,10 +35,28 @@
     "domainAndLegacy": "35/35 PASS",
     "directSdk": "40/40 PASS",
     "graphicsPolicy": "5/5 PASS",
-    "chromiumStartup": "10/10 PASS, candidate runtime identical except optional cache retention/pruning",
-    "mobileStartup": "8/8 PASS on candidate; final archive rerun in progress",
+    "chromiumStartup": "10/10 PASS on the release in GitHub CI",
+    "mobileStartup": "8/8 PASS on the final archive locally and in GitHub CI",
     "renderedCustomerParity": "4/4 seeded v3.94 PNGs byte-identical",
-    "reflectionByteParity": "cd7b1d0c6440b77f0ece61d5aedf6b270a5e5e9906740303c819212cdaa2be57"
+    "reflectionByteParity": "cd7b1d0c6440b77f0ece61d5aedf6b270a5e5e9906740303c819212cdaa2be57",
+    "chromiumStandardCI": "18/18 PASS",
+    "firefoxStandardCI": "16/16 PASS",
+    "webkitStandardCI": "16/16 PASS",
+    "windowsD3D11Startup": "10/10 PASS",
+    "layouts": "27/27 PASS across four states",
+    "graphicsCI": "3/3 quality cases and exact pixel parity PASS",
+    "repeatedContextImageParity": "3/3 consecutive context resets restore a byte-identical customer PNG, locally",
+    "sustainedPlayCI": {
+      "status": "PASS",
+      "transitions": 160,
+      "elapsedMs": 600452,
+      "consoleErrors": 0,
+      "trackedResourceGrowth": false
+    }
   },
-  "hostedStatus": "Not uploaded to McPlay. Physical iPhone/Android and YouTube-app validation pending; desktop emulation does not establish hardware support."
+  "hostedStatus": "Not uploaded to McPlay. Physical iPhone/Android and YouTube-app validation pending; desktop emulation does not establish hardware support.",
+  "testedRuntimeCommit": "f71f0a4bbabb8f6bc393094738abb7e83e56b2ed",
+  "ciRun": "https://github.com/lrodeveloperr/Haircut/actions/runs/38801049005",
+  "localSoftwareGpuLimit": "Headless Chromium standard suite 14/17, with the same three software-GPU completion-animation timeouts recorded for v3.94. Headed GitHub Chromium passes all 18 cases.",
+  "ciStatus": "12/12 jobs passed"
 }
