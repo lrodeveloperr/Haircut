@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: youtube-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[browser-only]') && 'browsers' || contains(github.event.head_commit.message, '[layout-only]') && 'layouts' || contains(github.event.head_commit.message, '[soak-only]') && 'soak' || contains(github.event.head_commit.message, '[save-only]') && 'saves' || 'full' }}
+  group: youtube-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[browser-only]') && 'browsers' || contains(github.event.head_commit.message, '[layout-only]') && 'layouts' || contains(github.event.head_commit.message, '[soak-only]') && 'soak' || contains(github.event.head_commit.message, '[save-only]') && 'saves' || contains(github.event.head_commit.message, '[contracts-only]') && 'contracts' || 'full' }}
   cancel-in-progress: true
 jobs:
   contracts:
@@ -25,9 +25,16 @@ jobs:
           bash source/build-youtube.sh
           node qa/contracts.cjs
           python3 source/youtube/package.py /tmp/mediacube.zip
-          RELEASE_ZIP=$(rg --files releases | rg '^releases/asmr-barber-fade-master-v[0-9]+(\.[0-9]+){1,2}-mediacube-youtube\.zip$' | sort -V | tail -n 1)
-          test -n "$RELEASE_ZIP"
-          cmp "$RELEASE_ZIP" /tmp/mediacube.zip
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          releases = [(tuple(map(int, m[1].split('.'))), p)
+                      for p in Path('releases').glob('*-mediacube-youtube.zip')
+                      if (m := re.fullmatch(r'asmr-barber-fade-master-v([0-9]+(?:\.[0-9]+){1,2})-mediacube-youtube\.zip', p.name))]
+          latest = max(releases, key=lambda item: item[0])[1]
+          assert latest.read_bytes() == Path('/tmp/mediacube.zip').read_bytes(), f'{latest} differs from rebuilt ZIP'
+          print(f'Verified reproducible archive: {latest}')
+          PY
           mkdir -p /tmp/youtube-release
           unzip -q /tmp/mediacube.zip -d /tmp/youtube-release
           RELEASE_DIR=/tmp/youtube-release node qa/youtube-contracts.cjs
@@ -41,7 +48,7 @@ jobs:
             qa/results
           retention-days: 14
   browsers:
-    if: "!contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[soak-only]')"
+    if: "!contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[soak-only]') && !contains(github.event.head_commit.message, '[contracts-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 18
     strategy:
@@ -65,7 +72,7 @@ jobs:
         if: always()
         with: {name: 'youtube-${{ matrix.browser }}', path: qa/results, retention-days: 14}
   layouts:
-    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[soak-only]') && !contains(github.event.head_commit.message, '[save-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[soak-only]') && !contains(github.event.head_commit.message, '[save-only]') && !contains(github.event.head_commit.message, '[contracts-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -88,7 +95,7 @@ jobs:
         if: always()
         with: {name: 'youtube-layout-${{ matrix.group }}', path: qa/results, retention-days: 14}
   soak:
-    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[save-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[save-only]') && !contains(github.event.head_commit.message, '[contracts-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
