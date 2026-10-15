@@ -9,11 +9,11 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: youtube-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[browser-only]') && 'browsers' || contains(github.event.head_commit.message, '[layout-only]') && 'layouts' || contains(github.event.head_commit.message, '[soak-only]') && 'soak' || contains(github.event.head_commit.message, '[save-only]') && 'saves' || contains(github.event.head_commit.message, '[contracts-only]') && 'contracts' || 'full' }}
+  group: youtube-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[browser-only]') && 'browsers' || contains(github.event.head_commit.message, '[layout-only]') && 'layouts' || contains(github.event.head_commit.message, '[soak-only]') && 'soak' || contains(github.event.head_commit.message, '[save-only]') && 'saves' || contains(github.event.head_commit.message, '[contracts-only]') && 'contracts' || contains(github.event.head_commit.message, '[graphics-only]') && 'graphics' || 'full' }}
   cancel-in-progress: true
 jobs:
   contracts:
-    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[soak-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[soak-only]') && !contains(github.event.head_commit.message, '[graphics-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -49,7 +49,7 @@ jobs:
             qa/results
           retention-days: 14
   browsers:
-    if: "!contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[soak-only]') && !contains(github.event.head_commit.message, '[contracts-only]')"
+    if: "!contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[soak-only]') && !contains(github.event.head_commit.message, '[contracts-only]') && !contains(github.event.head_commit.message, '[graphics-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 18
     strategy:
@@ -95,7 +95,7 @@ jobs:
         if: always()
         with: {name: youtube-graphics, path: qa/results, retention-days: 14}
   layouts:
-    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[soak-only]') && !contains(github.event.head_commit.message, '[save-only]') && !contains(github.event.head_commit.message, '[contracts-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[soak-only]') && !contains(github.event.head_commit.message, '[save-only]') && !contains(github.event.head_commit.message, '[contracts-only]') && !contains(github.event.head_commit.message, '[graphics-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -118,7 +118,7 @@ jobs:
         if: always()
         with: {name: 'youtube-layout-${{ matrix.group }}', path: qa/results, retention-days: 14}
   soak:
-    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[save-only]') && !contains(github.event.head_commit.message, '[contracts-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[save-only]') && !contains(github.event.head_commit.message, '[contracts-only]') && !contains(github.event.head_commit.message, '[graphics-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

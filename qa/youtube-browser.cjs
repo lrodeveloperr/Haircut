@@ -105,7 +105,8 @@ async function quality(){
   await test(`Full-detail phone/tablet render ${width}x${height} DPR ${dpr}`,async()=>{
    const f=await fixture({viewport:{width,height},dpr,touch:true}),p=f.page;
    try{
-    await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);
+    // Save the actual current customer; native input is exercised in the integration suites.
+    await p.evaluate(()=>HSC.wardrobe.client.flushProgress());
     const saved=f.raw(),before=await state(p);
     const metrics=await p.evaluate(()=>{const c=document.getElementById('scene'),b=HSC.debugState.beardMesh;return{level:HSC.detail.level,shaderLow:HSC.detail.shaderLow,segments:HSC.detail.segments,beardSegments:b.geometry.attributes.position.count/2-1,beardCount:b.geometry.instanceCount,beardRoots:HSC.debugState.roots.count,antialias:c.getContext('webgl2').getContextAttributes().antialias,width:c.width,height:c.height,cssWidth:c.clientWidth,cssHeight:c.clientHeight};});
     assert.equal(metrics.level,'high');assert.equal(metrics.shaderLow,false);assert.equal(metrics.segments,8);assert.equal(metrics.beardSegments,8);assert.equal(metrics.beardCount,metrics.beardRoots);assert.equal(metrics.antialias,true);assert(metrics.width*metrics.height<=4000000);assert(metrics.width/metrics.cssWidth>=1.49);
