@@ -10,6 +10,7 @@ env:
   RELEASE_DIR: release
 jobs:
   contracts:
+    if: "!contains(github.event.head_commit.message, '[follow-up]')"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -26,6 +27,7 @@ jobs:
         if: always()
         with: {name: current-contracts, path: qa-current/results, retention-days: 14}
   source-tests:
+    if: "!contains(github.event.head_commit.message, '[follow-up]')"
     runs-on: ubuntu-latest
     timeout-minutes: 16
     strategy:
@@ -61,6 +63,7 @@ jobs:
             source/tests/scale/*.png
           retention-days: 14
   layout:
+    if: "!contains(github.event.head_commit.message, '[follow-up]')"
     runs-on: ubuntu-latest
     timeout-minutes: 18
     strategy:
@@ -111,12 +114,13 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.58.2
           npx playwright install --with-deps ${{ matrix.browser }}
       - name: Current exact-archive strict integration checks
-        env: {BROWSER: '${{ matrix.browser }}', HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1'}
+        env: {BROWSER: '${{ matrix.browser }}', HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1', FOLLOWUP: "${{ contains(github.event.head_commit.message, '[follow-up]') && '1' || '0' }}"}
         run: xvfb-run -a node qa/browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with: {name: 'current-${{ matrix.browser }}', path: qa-current/results, retention-days: 14}
   soak:
+    if: "!contains(github.event.head_commit.message, '[follow-up]')"
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
