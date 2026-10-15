@@ -1,0 +1,51 @@
+{
+  "version": "v3.84",
+  "target": "MediaCube / direct YouTube Playables",
+  "archive": "releases/asmr-barber-fade-master-v3.84-mediacube-youtube.zip",
+  "zipBytes": 400846,
+  "expandedBytes": 1060972,
+  "fileCount": 11,
+  "sha256": "94305e43433372d371b5a277733f67d18a6dffa972225424ff20c56c2dc021ce",
+  "integrationCommit": "9e6ff31ba9748187f18e772f6dbd7e8b761580fa",
+  "largestFile": {
+    "path": "runtime/game.js",
+    "bytes": 760329,
+    "compressedBytes": 271619
+  },
+  "sizeAudit": {
+    "mcplayReported15MBAdvisory": "PASS for every entry",
+    "studio5MBZipAndExpanded": "PASS",
+    "youtube512KiBPerFileShould": "runtime/game.js exceeds this separate advisory; no blocking 30MiB violation"
+  },
+  "runtimeFiles": {
+    "THIRD-PARTY-NOTICES.md": "1b1a2219ef48d4f1f94057b8506bd7d47600da38d4f5852b6af7bdbb4a567f4c",
+    "assets/backdrop-landscape.webp": "79f936e9a5c2e6219e5f0237e1092c5ba9813aa3f7adb86bbd57b341b2348a8e",
+    "assets/backdrop-portrait.webp": "479540511e5889356fbfaa097336d6889794ade3bfe653456f7edfa65e710ab8",
+    "index.html": "77b59b6c73162f1413f465c9dbf0092b050813b674ca291faf8db3f41f5ac78e",
+    "licenses/preact-MIT.txt": "1fe6958409c8c257a70c587a18b6f7f412b179b456630790d30b2ec9a8e4b7d4",
+    "licenses/three-MIT.txt": "bfe119ea4fd413f5f7ca3fcd63adb0c4a073ed39daa2fe7d3e6b769e21272601",
+    "runtime/customers.js": "5f3167da4ea63af4caba7d4f8495710b5ec579400f564c8c4d7cd4e61f326238",
+    "runtime/game.js": "6382cc0956dc136605246d3f8461b4ae463910908c9ac9e4fc22e57f7c243864",
+    "runtime/youtube-client.js": "f674e829088c3e7358c55cbf8439a1f12177a992485a7e3bea01e9d4065508f3",
+    "runtime/youtube-loader.js": "d9f6e64fe97fc09cb7f16aca18757b88d39d834bc1f15360ab4423e5edc9c0b6",
+    "styles.css": "e79e617ba1466f83185f173c8805d83ea52ba0eb11d102388e949cf5834a816b"
+  },
+  "validation": {
+    "existingContracts": "35/35 PASS",
+    "youtubeContracts": "28/28 PASS",
+    "chromium": "16/16 PASS",
+    "firefox": "15/15 PASS",
+    "webkit": "15/15 PASS",
+    "independentReview": "No blocking issues found; loading clarification applied",
+    "layoutsAndSoak": "Not rerun for v3.84; prior v3.83 evidence remains documented separately",
+    "reproducibleArchive": "PASS, committed ZIP identical to CI rebuild",
+    "realOfficialSDK": "PASS, Chromium under CSP in off-platform mode"
+  },
+  "evidence": {
+    "current": "https://github.com/lrodeveloperr/Haircut/actions/runs/38680739898",
+    "priorLayoutsAndSoak": "https://github.com/lrodeveloperr/Haircut/actions/runs/38676008356",
+    "contracts": "https://github.com/lrodeveloperr/Haircut/actions/runs/38680883297"
+  },
+  "hostedStatus": "Replacement ZIP not yet uploaded; fresh McPlay pre-flight pending",
+  "ciPortabilityCommit": "4ce7138a0c88ef773d87299898fb85cecdfe9b5f"
+}
