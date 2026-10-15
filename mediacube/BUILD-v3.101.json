@@ -1,6 +1,6 @@
 {
   "version": "v3.101",
-  "status": "Local checks passed; exact release CI pending. McPlay/YouTube and physical-device checks pending.",
+  "status": "CI-verified candidate. Actual McPlay/YouTube host and physical-device checks pending.",
   "archive": "releases/asmr-barber-fade-master-v3.101-mediacube-youtube.zip",
   "archiveSha256": "3a482e55e6317ad34260938daa65642c8b68367447f02fbfbaaf907e582558e0",
   "zipBytes": 410921,
@@ -25,5 +25,40 @@
     "geoRegression": "3/3 PASS",
     "archiveReferences": "PASS"
   },
-  "limits": "No new physical-device or live-host timing is claimed. SDK delivery remains a required external dependency."
+  "limits": "No new physical-device or live-host timing is claimed. SDK delivery remains a required external dependency.",
+  "CI": {
+    "archiveUnchangedAcrossRuns": true,
+    "contractsPackagingStartupWindows": {
+      "sourceCommit": "1930e68c99d2ae1786a19a80edaecd228a2e02eb",
+      "run": "https://github.com/lrodeveloperr/Haircut/actions/runs/38823038886",
+      "passedJobs": [
+        "contracts",
+        "startup",
+        "windows-shaders"
+      ],
+      "startup": "11/11 PASS",
+      "mobileRecovery": "7/7 PASS",
+      "windowsShaders": "11/11 PASS"
+    },
+    "browsersAndStandalone": {
+      "sourceCommit": "c332760b28ee1b5cc64f7f5fa0ec86a6dbcdf9c9",
+      "run": "https://github.com/lrodeveloperr/Haircut/actions/runs/38823371897",
+      "chromium": "18/18 and standalone 2/2 PASS",
+      "firefox": "16/16 and standalone 2/2 PASS",
+      "webkit": "16/16 and standalone 2/2 PASS"
+    },
+    "graphics": {
+      "sourceCommit": "80cbe74cfd8168225a5fb3eeae5048333aecd2a9",
+      "run": "https://github.com/lrodeveloperr/Haircut/actions/runs/38823528554",
+      "phoneTablet": "3/3 PASS",
+      "seededVariantPixelParity": "5/5 exact SHA-256 matches"
+    },
+    "scope": "Initial run exposed two outdated QA assumptions: a removed lighting request and packed data passed into an older reference build. QA-only rechecks passed; upload archive unchanged. Layout/soak not repeated for unchanged game/customer/style bundles."
+  },
+  "site": {
+    "url": "https://haircut-studio-v387.lat23445.chatgpt.site",
+    "deployment": "appgdep_6ad161f6b04c8191a5fd0830ee4b292f",
+    "sourceCommit": "7b410d68303d892776edd26a5305c91e704076ec",
+    "allRuntimeFilesMatchArchive": true
+  }
 }
