@@ -117,6 +117,7 @@ jobs:
         env: {BROWSER: chromium, STARTUP: '1', RELEASE_DIR: qa/release-under-test, QA_OUTPUT: qa/results/youtube-startup, HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1'}
         run: |
           RELEASE_DIR=qa/release-under-test python3 qa/youtube-assets.py
+          node qa/youtube-geo.cjs
           xvfb-run -a node qa/youtube-browser.cjs
       - name: Verify mobile storage, zero viewport and lossless graphics recovery
         env: {BROWSER: chromium, MOBILE_STARTUP: '1', RELEASE_DIR: qa/release-under-test, QA_OUTPUT: qa/results/youtube-mobile-startup, HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1'}
