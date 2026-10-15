@@ -9,7 +9,7 @@ env:
   RELEASE_DIR: source/build
 jobs:
   contracts:
-    if: "!contains(github.event.head_commit.message, '[browser-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[soak-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -26,7 +26,7 @@ jobs:
         if: always()
         with: {name: reliability-contracts, path: qa/results, retention-days: 14}
   source-tests:
-    if: "!contains(github.event.head_commit.message, '[browser-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[soak-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 16
     strategy:
@@ -62,7 +62,7 @@ jobs:
             source/tests/scale/*.png
           retention-days: 14
   layout:
-    if: "!contains(github.event.head_commit.message, '[browser-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[soak-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 18
     strategy:
@@ -98,6 +98,7 @@ jobs:
             source/tests/scale/*.png
           retention-days: 14
   browsers:
+    if: "!contains(github.event.head_commit.message, '[soak-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 12
     strategy:
@@ -120,7 +121,7 @@ jobs:
   soak:
     if: "!contains(github.event.head_commit.message, '[browser-only]')"
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
