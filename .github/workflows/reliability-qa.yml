@@ -9,6 +9,7 @@ env:
   RELEASE_DIR: source/build
 jobs:
   contracts:
+    if: "!contains(github.event.head_commit.message, '[browser-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -25,6 +26,7 @@ jobs:
         if: always()
         with: {name: reliability-contracts, path: qa/results, retention-days: 14}
   source-tests:
+    if: "!contains(github.event.head_commit.message, '[browser-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 16
     strategy:
@@ -60,6 +62,7 @@ jobs:
             source/tests/scale/*.png
           retention-days: 14
   layout:
+    if: "!contains(github.event.head_commit.message, '[browser-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 18
     strategy:
@@ -115,6 +118,7 @@ jobs:
         if: always()
         with: {name: 'reliability-${{ matrix.browser }}', path: qa/results, retention-days: 14}
   soak:
+    if: "!contains(github.event.head_commit.message, '[browser-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
