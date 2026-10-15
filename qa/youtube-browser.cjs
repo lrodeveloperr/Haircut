@@ -8,11 +8,11 @@ const results=[];let browser;
 async function test(name,fn){try{const evidence=await fn();results.push({name,status:'PASS',evidence});}catch(e){results.push({name,status:'FAIL',error:e.stack});}console.log(JSON.stringify(results.at(-1)));fs.writeFileSync(path.join(out,'browser.json'),JSON.stringify({engine,archiveSha256:process.env.ARCHIVE_SHA,results},null,2));}
 const csp="default-src 'none'; script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://www.youtube.com/game_api/v1 https://www.youtube.com/game_api/v1/; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: data:; base-uri 'self'; worker-src 'self' blob:";
 async function fixture(options={}){
- let raw=options.saved||'',readFail=!!options.readFail,writeFail=false;
+ let raw=Object.hasOwn(options,'saved')?options.saved:'',readFail=!!options.readFail,writeFail=false;
  const calls=[],errors=[],requests=[];
  const ctx=await browser.newContext({viewport:options.viewport||{width:390,height:844},reducedMotion:'reduce',hasTouch:!!options.touch});
  const page=await ctx.newPage();page.setDefaultTimeout(10000);
- page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push(r.url()));
+ page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('request',r=>requests.push(r.url()));
  await ctx.exposeBinding('readCloud',async()=>{calls.push(['load']);if(readFail)throw Error('Injected cloud read failure');return raw;});
  await ctx.exposeBinding('writeCloud',async(_,value)=>{calls.push(['save-start']);if(writeFail)throw Error('Injected cloud write failure');raw=value;calls.push(['save-ack']);});
  await ctx.addInitScript(()=>{
@@ -25,7 +25,7 @@ async function fixture(options={}){
    const sub=k=>fn=>{__yt.callbacks[k]=fn;${options.initialPause?"if(k==='pause'){__yt.paused=true;fn();}":''}return()=>delete __yt.callbacks[k];};
    window.ytgame={IN_PLAYABLES_ENV:${options.hosted!==false},SDK_VERSION:'strict-test-fixture',
      system:{getLanguage:async()=> 'fr-CA',isAudioEnabled:()=>__yt.audio,onPause:sub('pause'),onResume:sub('resume'),onAudioEnabledChange:sub('audio')},
-     game:{loadData:()=>readCloud(),saveData:v=>writeCloud(v),firstFrameReady(){__yt.messages.push({name:'firstFrameReady',loading:!!document.getElementById('yt-loading')});},gameReady(){__yt.messages.push({name:'gameReady',loading:!!document.getElementById('yt-loading'),hud:!!document.getElementById('hud')});}},
+     game:{loadData:()=>readCloud(),saveData:v=>writeCloud(v),firstFrameReady(){__yt.messages.push({name:'firstFrameReady',loading:!!document.getElementById('yt-loading'),loadingText:document.getElementById('yt-loading')?.textContent});},gameReady(){__yt.messages.push({name:'gameReady',loading:!!document.getElementById('yt-loading'),hud:!!document.getElementById('hud')});}},
      health:{logWarning(){}},
      ads:{requestRewardedAd:async id=>{__yt.ads.push({kind:'rewarded',id});await new Promise(r=>setTimeout(r,100));if(__yt.rewardMode==='error')throw Error('no fill');return __yt.rewardMode==='earned';},requestInterstitialAd:async()=>{__yt.ads.push({kind:'interstitial'});await new Promise(r=>setTimeout(r,100));}}
    };` }));
@@ -46,7 +46,7 @@ async function next(p){await p.locator('.training-continue').click();await p.loc
 async function reward(p,mode){await p.evaluate(mode=>__yt.rewardMode=mode,mode);await p.locator('.hsc-vbtn').click();await p.waitForTimeout(700);}
 async function standard(){
  let f=await fixture(),p=f.page;
- await test('Ready signals use a real loading screen and occur once in order',async()=>{const m=await p.evaluate(()=>__yt.messages);assert.deepEqual(m.map(x=>x.name),['firstFrameReady','gameReady']);assert.equal(m[0].loading,true);assert.equal(m[1].loading,false);assert.equal(m[1].hud,true);assert.equal(await p.locator('.audio-toggle').count(),0);assert.equal(await p.locator('html').getAttribute('lang'),'fr-CA');});
+ await test('Ready signals use a real loading screen and occur once in order',async()=>{const m=await p.evaluate(()=>__yt.messages);assert.deepEqual(m.map(x=>x.name),['firstFrameReady','gameReady']);assert.equal(m[0].loading,true);assert.match(m[0].loadingText,/Loading/);assert.equal(m[1].loading,false);assert.equal(m[1].hud,true);assert.equal(await p.locator('.audio-toggle').count(),0);assert.equal(await p.locator('html').getAttribute('lang'),'fr-CA');});
  await test('Native cutting, cloud save and reload restore the exact haircut',async()=>{await stroke(p);const before=await state(p);assert(before.cutStrokeCount>0);await p.waitForTimeout(700);assert(f.raw().length>0);await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);const after=await state(p);assert.deepEqual(after.hair,before.hair);assert.equal(after.selectedGuard,before.selectedGuard);});
  await test('Host pause stops input, rendering, animation scheduling and UI timers; mute survives resume',async()=>{
    await p.evaluate(()=>{__yt.callbacks.pause();});await p.waitForTimeout(500);
@@ -64,6 +64,7 @@ async function standard(){
  await test('A cloud write failure blocks the reward request and preserves usability',async()=>{await p.locator('#hsc-hud .hsc-rw').click();await p.locator('.hsc-tab').last().click();f.writeFail(true);const ads=await p.evaluate(()=>__yt.ads.length);await reward(p,'earned');assert.equal(await p.evaluate(()=>__yt.ads.length),ads);assert(await p.locator('.hsc-vbtn').isEnabled());f.writeFail(false);await p.keyboard.press('Escape');});
  await test('Only bundled resources and the official YouTube SDK are requested',async()=>{assert.deepEqual(f.errors,[]);assert(f.requests.every(url=>url.startsWith('http://release.test/')||url==='https://www.youtube.com/game_api/v1'));});
  const saved=f.raw();await f.close();
+ await test('Fresh empty JSON sessions boot without errors, save, and restore after reload',async()=>{for(const saved of ['{}','null','[]','""']){const g=await fixture({saved}),p=g.page;try{assert.deepEqual(g.errors,[]);await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);const before=await state(p);assert.equal(JSON.parse(g.raw()).version,1);await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);assert.equal((await state(p)).selectedGuard,2);assert.deepEqual((await state(p)).hair,before.hair);assert.deepEqual(g.errors,[]);}finally{await g.close();}}});
  await test('Unread cloud data is preserved and Retry restores it',async()=>{const g=await fixture({saved,readFail:true}),p=g.page;try{await p.getByRole('button',{name:'Retry',exact:true}).waitFor({state:'visible'});assert.equal(g.raw(),saved);assert.equal(g.calls.filter(c=>c[0]==='save-start').length,0);g.readFail(false);await p.getByRole('button',{name:'Retry',exact:true}).click();await p.waitForFunction(()=>!!window.skinFadeStudio);assert.deepEqual((await state(p)).hair,JSON.parse(saved).slots['skin-fade-studio-session-v2'].hair);}finally{await g.close();}});
  await test('A future cloud envelope shows recovery and never overwrites progress',async()=>{const saved=JSON.stringify({version:2,slots:{}}),g=await fixture({saved,blocked:true});try{await g.page.getByRole('heading',{name:'A newer game version is needed'}).waitFor({state:'visible'});assert.equal(g.raw(),saved);assert.equal(g.calls.filter(c=>c[0]==='save-start').length,0);}finally{await g.close();}});
  await test('Missing SDK gives a keyboard-focused Retry in a tiny embed',async()=>{const g=await fixture({missing:true,viewport:{width:225,height:400}});try{const retry=g.page.getByRole('button',{name:'Retry',exact:true});await retry.waitFor({state:'visible'});assert.equal(await retry.evaluate(e=>e===document.activeElement),true);await g.page.screenshot({path:path.join(out,'missing-sdk.png')});}finally{await g.close();}});

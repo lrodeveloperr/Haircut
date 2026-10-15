@@ -93,11 +93,19 @@
       if (loadPromise) return loadPromise;
       loadPromise = (async () => {
         const raw = hosted ? await sdk.game.loadData() : globalThis.localStorage.getItem(previewKey);
-        let parsed;
-        if (!raw) parsed = {version: 1, slots: {}};
+        let parsed = raw;
+        if (typeof raw === 'string') {
+          // The SDK owns the transport, not our save schema. A new account/test host may
+          // return empty JSON rather than the empty string used by the first fixture.
+          try { parsed = raw.trim() === '' ? null : JSON.parse(raw); }
+          catch (_) { throw new Error('Saved progress could not be decoded'); }
+        }
+        const empty = parsed == null || parsed === '' || parsed === false || parsed === 0 ||
+          (typeof parsed === 'string' && parsed.trim() === '') ||
+          (typeof parsed === 'object' && Object.keys(parsed).length === 0);
+        if (empty) parsed = {version: 1, slots: {}};
         else {
-          // An invalid envelope is not known-safe empty data. Preserve it and show Retry.
-          try { parsed = JSON.parse(raw); } catch (_) { throw new Error('Saved progress could not be decoded'); }
+          // Preserve unknown nonempty and future saves; never silently reset player data.
           if (parsed?.version > 1) throw tooNew();
           if (parsed?.version !== 1 || !parsed.slots || typeof parsed.slots !== 'object' || Array.isArray(parsed.slots))
             throw new Error('Saved progress has an unsupported format');

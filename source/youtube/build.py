@@ -52,11 +52,11 @@ for name in ['client.js', 'loader.js']:
     shutil.copy2(root / 'youtube' / name, out / 'runtime' / ('youtube-' + name))
 
 s = (out / 'index.html').read_text()
-s = replace(s, '  <script src="https://bridge.playgama.com/v2/stable/playgama-bridge.js"></script>', '''  <div id="yt-loading" role="status" aria-label="Loading game"><span aria-hidden="true">✂</span></div>
+s = replace(s, '  <script src="https://bridge.playgama.com/v2/stable/playgama-bridge.js"></script>', '''  <div id="yt-loading" role="status" aria-label="Loading game"><span aria-hidden="true">✂</span><span>Loading…</span></div>
   <script src="https://www.youtube.com/game_api/v1"></script>
   <script src="./runtime/youtube-loader.js"></script>
   <script src="./runtime/youtube-client.js"></script>''')
 (out / 'index.html').write_text(s)
 with (out / 'styles.css').open('a') as f:
-    f.write('\n#yt-loading{position:fixed;inset:0;display:grid;place-items:center;background:#f5e7d7;color:#493326;font-size:64px;z-index:9999}html.yt-paused *{animation-play-state:paused!important}\n')
+    f.write('\n#yt-loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#f5e7d7;color:#493326;font-size:18px;z-index:9999}#yt-loading [aria-hidden]{font-size:64px}html.yt-paused *{animation-play-state:paused!important}\n')
 print('youtube-build-ok')

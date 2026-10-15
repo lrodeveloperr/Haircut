@@ -2,14 +2,14 @@
 
 ## File to upload
 
-Use `releases/asmr-barber-fade-master-v3.83-mediacube-youtube.zip` in McPlay's **Replace game bundle** field.
+Use `releases/asmr-barber-fade-master-v3.84-mediacube-youtube.zip` in McPlay's **Replace game bundle** field.
 This is a WebGL/HTML5 runtime archive with `index.html` at the root, not a source ZIP or Android package.
 
 This target uses the direct official YouTube Playables SDK at `https://www.youtube.com/game_api/v1`.
 It does not load Playgama Bridge, Playgama configuration, a mock SDK, external analytics or remote game assets.
 The existing Playgama and full-detail Android builds remain separate.
 
-See [validation results](VALIDATION-v3.83.md) and [exact build identity](BUILD-v3.83.json).
+See [validation results](VALIDATION-v3.84.md) and [exact build identity](BUILD-v3.84.json).
 
 ## Rebuild
 
@@ -17,13 +17,14 @@ See [validation results](VALIDATION-v3.83.md) and [exact build identity](BUILD-v
 bash source/build-youtube.sh
 # Produces source/build-youtube/, without an upload archive.
 
-bash source/release-youtube.sh v3.83
+bash source/release-youtube.sh v3.84
 # Creates the immutable release ZIP; refuses to overwrite an existing release.
 ```
 
 For a new release, use a new version. Both scripts require Bash, Python 3 and Node.js; no game dependencies
 need downloading. The deterministic packager uses Python's standard library. It includes the license files
-and enforces the studio's 5,000,000-byte limits for both the ZIP and its expanded contents.
+and enforces the studio's 5,000,000-byte limits for both the ZIP and its expanded contents,
+plus McPlay's 15,000,000-byte per-file advisory budget.
 
 The official SDK is loaded first. A visible loading state sends `firstFrameReady`; `gameReady` is sent only
 after the saved game, wardrobe and controller are initialized and the loading state has been removed.
@@ -32,7 +33,9 @@ after the saved game, wardrobe and controller are initialized and the loading st
 
 YouTube stores one versioned JSON envelope through `loadData` / `saveData`. Its slots retain the existing
 session v19, metadata v1 and wardrobe v4 schemas. Parallel changes merge into serialized, acknowledged
-cloud writes. Unread, invalid-envelope and unsupported newer saves cannot be overwritten. Retry reloads
+cloud writes. Empty SDK results (including empty JSON objects, arrays and null) start a new game and
+write the canonical envelope on the first save. Unread, nonempty invalid-envelope and unsupported
+newer saves cannot be overwritten. Retry reloads
 the SDK and game without deleting saved data.
 
 The host owns pause/resume and mute. A host pause cancels the gameplay frame loop, suspends game-owned UI

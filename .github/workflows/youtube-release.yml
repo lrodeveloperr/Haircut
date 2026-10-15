@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: youtube-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[browser-only]') && 'browsers' || contains(github.event.head_commit.message, '[layout-only]') && 'layouts' || contains(github.event.head_commit.message, '[soak-only]') && 'soak' || 'full' }}
+  group: youtube-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[browser-only]') && 'browsers' || contains(github.event.head_commit.message, '[layout-only]') && 'layouts' || contains(github.event.head_commit.message, '[soak-only]') && 'soak' || contains(github.event.head_commit.message, '[save-only]') && 'saves' || 'full' }}
   cancel-in-progress: true
 jobs:
   contracts:
@@ -25,9 +25,9 @@ jobs:
           bash source/build-youtube.sh
           node qa/contracts.cjs
           python3 source/youtube/package.py /tmp/mediacube.zip
-          if [ -f releases/asmr-barber-fade-master-v3.83-mediacube-youtube.zip ]; then
-            cmp releases/asmr-barber-fade-master-v3.83-mediacube-youtube.zip /tmp/mediacube.zip
-          fi
+          RELEASE_ZIP=$(rg --files releases | rg '^releases/asmr-barber-fade-master-v[0-9]+(\.[0-9]+){1,2}-mediacube-youtube\.zip$' | sort -V | tail -n 1)
+          test -n "$RELEASE_ZIP"
+          cmp "$RELEASE_ZIP" /tmp/mediacube.zip
           mkdir -p /tmp/youtube-release
           unzip -q /tmp/mediacube.zip -d /tmp/youtube-release
           RELEASE_DIR=/tmp/youtube-release node qa/youtube-contracts.cjs
@@ -65,7 +65,7 @@ jobs:
         if: always()
         with: {name: 'youtube-${{ matrix.browser }}', path: qa/results, retention-days: 14}
   layouts:
-    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[soak-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[soak-only]') && !contains(github.event.head_commit.message, '[save-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -88,7 +88,7 @@ jobs:
         if: always()
         with: {name: 'youtube-layout-${{ matrix.group }}', path: qa/results, retention-days: 14}
   soak:
-    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[layout-only]')"
+    if: "!contains(github.event.head_commit.message, '[browser-only]') && !contains(github.event.head_commit.message, '[layout-only]') && !contains(github.event.head_commit.message, '[save-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
