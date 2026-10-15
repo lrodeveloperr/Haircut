@@ -47,7 +47,7 @@
     const safeText = value => String(value ?? '')
       .replace(/(?:https?:\/\/|blob:|data:)[^\s"'<>]+/g, '[resource]')
       .replace(/[\r\n\t]+/g, ' ').slice(0, 200);
-    lines.push('Diagnostic: sdk-v3.100-d1');
+    lines.push('Diagnostic: sdk-v3.101-d1');
     if (reached.length) lines.push('Stage: ' + reached[reached.length - 1]);
     lines.push('Error: ' + safeText(error?.name || 'Error') + ': ' + safeText(error?.message || error));
     const frame = String(error?.stack || '').match(/\/(runtime\/[A-Za-z0-9._-]+\.js)(?:\?[^\s)]*?)?:(\d+):(\d+)/);

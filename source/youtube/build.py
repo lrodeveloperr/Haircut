@@ -259,7 +259,6 @@ for name in ['client.js', 'loader.js', 'startup.js', 'geo.js', 'poster.js']:
     shutil.copy2(root / 'youtube' / name, out / 'runtime' / ('youtube-' + name))
 
 s = (out / 'index.html').read_text()
-s = replace(s, '  <link rel="stylesheet" href="./styles.css">', '  <link rel="stylesheet" href="./styles.css">\n  <link rel="preload" href="./runtime/room-env.dat" as="fetch" crossorigin="anonymous">')
 s = replace(s, '  <script src="https://bridge.playgama.com/v2/stable/playgama-bridge.js"></script>', '''  <div id="yt-loading" role="status" aria-label="Loading game"><span aria-hidden="true">✂</span><span>Loading…</span></div>
   <script src="https://www.youtube.com/game_api/v1"></script>
   <script src="./runtime/youtube-poster.js"></script>
@@ -268,13 +267,11 @@ s = replace(s, '  <script src="https://bridge.playgama.com/v2/stable/playgama-br
   <script src="./runtime/youtube-client.js"></script>
   <script src="./runtime/youtube-startup.js"></script>''')
 (out / 'index.html').write_text(s)
-shutil.copy2(root / 'youtube' / 'env' / 'room-env.dat', out / 'runtime' / 'room-env.dat')
-# The model cache is keyed by the exact runtime, so a new build never reads an older build's models.
+# Keep the runtime fingerprint in diagnostics; all models use the original builders.
 import hashlib
 digest = hashlib.sha256((out / 'runtime/game.js').read_bytes() + (out / 'runtime/customers.js').read_bytes()).hexdigest()[:16]
 geo = out / 'runtime/youtube-geo.js'
-env_digest = hashlib.sha256((out / 'runtime/room-env.dat').read_bytes()).hexdigest()[:16]
-geo.write_text(f'globalThis.HSC=globalThis.HSC||{{}};HSC.geoBuild="{digest}";HSC.environmentBuild="{env_digest}";\n' + geo.read_text())
+geo.write_text(f'globalThis.HSC=globalThis.HSC||{{}};HSC.geoBuild="{digest}";HSC.environmentBuild="generated";\n' + geo.read_text())
 with (out / 'styles.css').open('a') as f:
     f.write('\n#yt-loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#f5e7d7;color:#493326;font-size:18px;z-index:9999}#yt-loading [aria-hidden]{font-size:64px}#yt-loading.has-poster{justify-content:flex-end;padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));background:#2b1e17 url("assets/backdrop-portrait.webp") center/cover no-repeat;transition:opacity .25s ease}@media (orientation:landscape){#yt-loading.has-poster{background-image:url("assets/backdrop-landscape.webp")}}#yt-loading .yt-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:-1}#yt-loading.has-poster>span{position:relative}#yt-loading.has-poster>span[aria-hidden]{display:none}#yt-loading.has-poster>span:last-child{padding:6px 16px;border-radius:999px;background:rgb(43 30 23 / .72);color:#fff6e6;font-size:15px}#yt-loading.yt-leaving{opacity:0;pointer-events:none}html.yt-paused *{animation-play-state:paused!important}\n')
 version_asset_urls(out)

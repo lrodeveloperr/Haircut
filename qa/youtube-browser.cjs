@@ -262,13 +262,9 @@ async function startup(){
 }
 
 async function mobileStartup(){
- await test('Model construction overlaps a slow lighting download',async()=>{
-  const f=await fixture({envDelay:1500,dpr:2,touch:true,mobile:true});
-  try{const t=await f.page.evaluate(()=>HSC.startupTiming);assert(t.geometryReady<t.environmentReady,JSON.stringify(t));assert.equal(t.environment,'shipped');assert.deepEqual(f.errors,[]);return t;}finally{await f.close();}
- });
- await test('An optional IndexedDB request that never completes cannot hold startup for four seconds',async()=>{
-  const f=await fixture({stalledCache:true,dpr:2,touch:true,mobile:true});
-  try{const t=await f.page.evaluate(()=>HSC.startupTiming);assert(t.engineStart-t.sdkReady<1500,JSON.stringify(t));assert.equal(t.modelCache,'miss');assert.deepEqual(f.errors,[]);return t;}finally{await f.close();}
+ await test('Cold startup makes no optional lighting download even with a stalled model database',async()=>{
+  const f=await fixture({envDelay:10000,stalledCache:true,dpr:2,touch:true,mobile:true});
+  try{assert.equal(f.requests.filter(url=>url.includes('room-env.dat')).length,0);assert.equal(await f.page.evaluate(()=>HSC.startupTiming.environmentSource),'generated');assert.equal(await f.page.evaluate(()=>HSC.detail.maxStrands),30000);assert.deepEqual(f.errors,[]);}finally{await f.close();}
  });
  await test('A zero-sized Android preloading viewport boots and reflows without changing the saved customer',async()=>{
   const f=await fixture({zeroViewport:true,touch:true,mobile:true,dpr:2});
@@ -293,24 +289,9 @@ async function mobileStartup(){
    assert.equal((await state(p)).interactionMode,'rotate');assert.deepEqual(f.errors,[]);
   }finally{await f.close();}
  });
- await test('A corrupt derived head cache rebuilds, preserves player progress and repairs its cache',async()=>{
-  const f=await fixture({touch:true,mobile:true,dpr:2}),p=f.page;
-  try{
-   await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.evaluate(()=>HSC.wardrobe.client.flushProgress());const before=await state(p);
-   await p.waitForFunction(()=>HSC.startupTiming.deviceCacheSaved,null,{timeout:30000});
-   const pristine=await p.evaluate(async()=>{
-    const db=await new Promise((r,j)=>{const q=indexedDB.open('asmr-barber-models',1);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)});
-    let pristine;await new Promise((r,j)=>{const tx=db.transaction('models','readwrite'),store=tx.objectStore('models'),key='models-v2:'+HSC.geoBuild,q=store.get(key);q.onsuccess=()=>{const v=q.result;pristine={hash:v.models.head.hash,first:v.models.head.value.pos[0]};v.models.head.value.pos[0]=NaN;store.put(v,key)};tx.oncomplete=r;tx.onerror=()=>j(tx.error)});db.close();return pristine;
-   });
-   await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);const after=await state(p);assert.deepEqual(after.hair,before.hair);assert.deepEqual(after.look,before.look);assert.equal(after.selectedGuard,2);
-   // This optional read has a 400 ms production budget. A busy runner can take the
-   // deliberate cold-build path; either path must repair the actual stored record.
-   const read=await p.evaluate(()=>HSC.startupTiming);assert.equal(read.modelCacheInvalid||0,read.modelCache==='hit'?1:0);assert.equal(await p.locator('.boot-error').count(),0);
-   await p.waitForFunction(()=>HSC.startupTiming.deviceCacheSaved,null,{timeout:30000});
-   const repaired=await p.evaluate(async()=>{const db=await new Promise((r,j)=>{const q=indexedDB.open('asmr-barber-models',1);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)});try{return await new Promise((r,j)=>{const q=db.transaction('models').objectStore('models').get('models-v2:'+HSC.geoBuild);q.onsuccess=()=>r({hash:q.result.models.head.hash,first:q.result.models.head.value.pos[0]});q.onerror=()=>j(q.error)})}finally{db.close()}});
-   assert.deepEqual(repaired,pristine);
-   await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);assert.equal(await p.evaluate(()=>HSC.startupTiming.modelCacheInvalid||0),0);assert.deepEqual((await state(p)).hair,before.hair);assert.deepEqual(f.errors,[]);
-  }finally{await f.close();}
+ await test('Cloud progress restores without opening an optional model database',async()=>{
+  const f=await fixture({stalledCache:true,touch:true,mobile:true,dpr:2}),p=f.page;
+  try{await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.evaluate(()=>HSC.wardrobe.client.flushProgress());const before=await state(p);await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);const after=await state(p);assert.deepEqual(after.hair,before.hair);assert.deepEqual(after.look,before.look);assert.equal(after.selectedGuard,2);assert.deepEqual(f.errors,[]);}finally{await f.close();}
  });
  await test('Reflection texels and the full-detail customer survive context loss during play',async()=>{
   const f=await fixture({touch:true,mobile:true,dpr:2,inspectEnvironment:true}),p=f.page;
@@ -322,13 +303,9 @@ async function mobileStartup(){
    assert.deepEqual(await pixels(),before);assert.deepEqual((await state(p)).hair,stateBefore.hair);assert.deepEqual((await state(p)).look,stateBefore.look);assert.equal(await p.evaluate(()=>HSC.detail.maxStrands),30000);assert.deepEqual(f.errors,[]);return before;
   }finally{await f.close();}
  });
- await test('Warm startup can use device-cached lighting when the network copy is slow',async()=>{
-  const options={touch:true,mobile:true,dpr:2},f=await fixture(options),p=f.page;
-  try{
-   await p.waitForFunction(()=>HSC.startupTiming.deviceCacheSaved,null,{timeout:30000});options.envDelay=2500;
-   await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);
-   const t=await p.evaluate(()=>HSC.startupTiming);assert.equal(t.environmentSource,'device');assert.deepEqual(f.errors,[]);return t;
-  }finally{await f.close();}
+ await test('A paused startup with storage denied waits for SDK resume at full detail',async()=>{
+  const f=await fixture({initialPause:true,deniedStorage:true,hosted:true,touch:true,mobile:true,dpr:2}),p=f.page;
+  try{await p.waitForTimeout(500);assert.equal(await p.evaluate(()=>!!window.skinFadeStudio),false);assert.equal(f.requests.filter(url=>url.includes('room-env.dat')).length,0);await p.evaluate(()=>__yt.callbacks.resume());await p.waitForFunction(()=>!!window.skinFadeStudio);assert.equal(await p.evaluate(()=>HSC.detail.maxStrands),30000);assert.deepEqual(f.errors,[]);}finally{await f.close();}
  });
 }
 async function parity(){

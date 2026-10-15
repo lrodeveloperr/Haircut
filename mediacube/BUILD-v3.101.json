@@ -1,0 +1,29 @@
+{
+  "version": "v3.101",
+  "status": "Local checks passed; exact release CI pending. McPlay/YouTube and physical-device checks pending.",
+  "archive": "releases/asmr-barber-fade-master-v3.101-mediacube-youtube.zip",
+  "archiveSha256": "3a482e55e6317ad34260938daa65642c8b68367447f02fbfbaaf907e582558e0",
+  "zipBytes": 410921,
+  "expandedBytes": 1089471,
+  "baseline": "v3.100",
+  "byteIdenticalToBaseline": {
+    "runtime/game.js": true,
+    "runtime/customers.js": true,
+    "runtime/youtube-client.js": true,
+    "styles.css": true
+  },
+  "changes": [
+    "Remove optional 400ms model-cache reads and four-second downloaded-lighting fallback.",
+    "Use original full-detail procedural reflection lighting, retaining context restoration.",
+    "Remove device snapshot storage/readback; static loading backdrop retained.",
+    "Retain compact cloud saves, SDK lifecycle, shader fixes, content-versioned asset URLs, ads and gameplay."
+  ],
+  "localValidation": {
+    "directSDKContracts": "44/44 PASS",
+    "fixedQuality": "5/5 PASS",
+    "domainLegacyContracts": "35/35 PASS",
+    "geoRegression": "3/3 PASS",
+    "archiveReferences": "PASS"
+  },
+  "limits": "No new physical-device or live-host timing is claimed. SDK delivery remains a required external dependency."
+}
