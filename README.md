@@ -1,19 +1,28 @@
 # ASMR Haircut Studio
 
-Finalized Playgama package for YouTube Playables: **v3.80**.
+Finalized Playgama package for YouTube Playables: **v3.81**.
 
-[Download the Playgama ZIP](haircut-studio-v3.80-playgama.zip)
+[Download the Playgama ZIP](haircut-studio-v3.81-playgama.zip)
 
 The archive includes `index.html` at its root and the Playgama Bridge configuration.
 
-- File: `haircut-studio-v3.80-playgama.zip`
-- Size: 395,608 bytes
-- SHA-256: `305226d6935bcae94163867ce0df5d7bc67d5b84162db0a2887bd7a28dcb7135`
+- File: `haircut-studio-v3.81-playgama.zip`
+- Size: 397,411 bytes
+- SHA-256: `c4eedfbef5ff9c91afa5a95caa12a1c70aa97657997c9450fcb6dac5af000cba`
 
 The full-detail build (same game, heavier graphics) for the future Android app is kept separately in [`android/`](android/README.md).
 
 ## Changes
 
+- v3.81: Real-life customers, engineered for variety. The variety director's decks now hold their cards in
+  real-life proportions: hair texture and colour per heritage (East Asian hair 90% straight, Black hair coily
+  or tightly curly 3b-3c, White hair mostly brown with blond and red as in UK figures), hair loss per age group
+  with each heritage's odds and typical pattern (young men rarely very bald), and facial hair per age group
+  (most older men clean-shaven) with styles in their real odds for age and heritage. Heritage and haircut never
+  repeat back to back, and there are never more than three in a row of bearded, clean-shaven, hair loss or full
+  hair; VIPs wait a customer rather than break that. Older men no longer get a high-and-tight cut. An audit of
+  3,000 customers finds no unrealistic combination (no straight-haired Black or blond East Asian customers, no
+  long top over a bald crown).
 - v3.80: Engineered customer variety. New walk-in haircuts join the 16 mm-top styles: short crops (9 / 12 mm tops),
   buzz cuts (6-12 mm all over), high-and-tight (3 mm sides) and shaved heads (3 mm regrowth). A variety director
   deals every customer's heritage, age, hair loss, beard and haircut from shuffled decks (saved with progress):
