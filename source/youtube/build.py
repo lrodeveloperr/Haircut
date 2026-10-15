@@ -34,6 +34,7 @@ s = replace(s, 'async function hC() {', 'async function hC() {\n  HSC.startupTim
 s = replace(s, '    if (HSC.wardrobeInit)', '    HSC.startupTiming.rendererReady=performance.now();\n    if (HSC.wardrobeInit)')
 s = replace(s, "    globalThis.addEventListener('pagehide', () => { unmount(); game.destroy(); client.destroy(); }, {once: true});", '')
 s = replace(s, 'function showBootError(error) {', 'function showBootError(error) {\n  HSC.dismissLoading();')
+s = replace(s, "  const retry = document.createElement('button');", "  message.textContent = HSC.bootMessage(error);\n  const retry = document.createElement('button');")
 s = replace(s, '  panel.append(title, message, retry);', '  panel.append(title, message, retry, HSC.bootErrorCode(error));')
 # Full-fidelity geometry and shading remain enabled. Keep the drawing buffer bounded on resize.
 start = s.index('function he(ue){Pe&&(Ue=Ue*.93+')
@@ -132,9 +133,11 @@ s = replace(s, 'render:_,setYaw(ue)', '''async prepareFirstFrame(){
       throw Object.assign(HSC.graphicsError('GFX_SHADER'),{detail:[
         // A short fingerprint of the program's cache key identifies the exact variant offline.
         'Shader: '+(program.name||program.type||'custom')+' #'+[...String(program.cacheKey)].reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619)>>>0,2166136261).toString(16),
+        'Status: vertex '+gl.getShaderParameter(program.vertexShader,gl.COMPILE_STATUS)+', fragment '+gl.getShaderParameter(program.fragmentShader,gl.COMPILE_STATUS)+', link '+gl.getProgramParameter(program.program,gl.LINK_STATUS),
         failed.vertexShader.log&&'Vertex: '+lines(failed.vertexShader.log),
         failed.fragmentShader.log&&'Fragment: '+lines(failed.fragmentShader.log),
         failed.programLog&&'Link: '+lines(failed.programLog),
+        !failed.vertexShader.log&&!failed.fragmentShader.log&&!failed.programLog&&'The graphics driver returned no compiler log.',
         'GPU: '+(info?gl.getParameter(info.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER)),
         'Limits: varyings '+gl.getParameter(gl.MAX_VARYING_VECTORS)+', vertex uniforms '+gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS)+', fragment uniforms '+gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS),
       ].filter(Boolean)});

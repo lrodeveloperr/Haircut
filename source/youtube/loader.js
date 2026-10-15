@@ -28,6 +28,14 @@
     if (/Saved progress|Progress/.test(message)) return 'SAVE';
     return 'BOOT';
   };
+  HSC.bootMessage = error => {
+    const code = HSC.bootCode(error);
+    if (code === 'SAVE_TOO_NEW') return 'Your progress is safe. Refresh to try the latest game version.';
+    if (code.startsWith('GFX_')) return 'Your saved progress has been kept. The graphics could not initialize. Please retry.';
+    if (code === 'SDK') return 'Your saved progress has been kept. The YouTube platform service could not load. Please retry.';
+    if (code === 'SAVE') return 'Your saved progress has been kept. Progress could not be read. Please retry.';
+    return 'Your saved progress has been kept. Please retry.';
+  };
   HSC.bootErrorCode = error => {
     const box = document.createElement('div');
     box.className = 'boot-error-info';
@@ -36,7 +44,8 @@
     code.textContent = 'Code: ' + HSC.bootCode(error);
     box.append(code);
     const lines = Array.isArray(error?.detail) ? error.detail.slice() : [];
-    if (globalThis.ytgame) lines.push('Mode: ' + (globalThis.ytgame.IN_PLAYABLES_ENV === true ? 'YouTube' : 'preview'));
+    if (HSC.geoBuild) lines.push('Build: ' + HSC.geoBuild);
+    if (HSC.isLocalPreview || globalThis.ytgame) lines.push('Mode: ' + (globalThis.ytgame?.IN_PLAYABLES_ENV === true ? 'YouTube' : 'preview'));
     const cuts = HSC.meta?.data?.cuts;
     if (Number.isFinite(cuts)) lines.push('Saved haircuts: ' + cuts);
     if (lines.length) {
@@ -58,7 +67,7 @@
     const title = document.createElement('h1');
     title.textContent = 'The game could not load';
     const message = document.createElement('p');
-    message.textContent = 'Your saved progress has been kept. Check your connection and try again.';
+    message.textContent = HSC.bootMessage(error);
     const retry = document.createElement('button');
     retry.type = 'button';
     retry.textContent = 'Retry';

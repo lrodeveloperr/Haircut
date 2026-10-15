@@ -40,16 +40,49 @@
 
   // ---- shared declarations, injected into the game's common shader prelude ----
   HSC.glsl = {};
+  // Keep the same helper bodies, but only send functions used by this vertex stage to
+  // the driver. Mobile linkers otherwise receive the entire skin/beard library too.
+  function vertexPrelude(source, roots) {
+    const functions = [], signature = /\b(?:float|vec[234])\s+(\w+)\s*\([^()]*\)\s*\{/g;
+    let match;
+    while ((match = signature.exec(source))) {
+      let end = signature.lastIndex, depth = 1;
+      while (end < source.length && depth) {
+        const ch = source[end++];
+        if (ch === '{') depth++;
+        else if (ch === '}') depth--;
+      }
+      if (depth) throw new Error('Incomplete shader helper: ' + match[1]);
+      functions.push({ name: match[1], start: match.index, end, body: source.slice(signature.lastIndex, end - 1) });
+      signature.lastIndex = end;
+    }
+    const used = new Set(roots), pending = [...roots];
+    while (pending.length) {
+      const name = pending.pop(), fn = functions.find(fn => fn.name === name);
+      if (!fn) throw new Error('Missing shader helper');
+      for (const called of functions) {
+        if (!used.has(called.name) && new RegExp('\\b' + called.name + '\\s*\\(').test(fn.body)) {
+          used.add(called.name); pending.push(called.name);
+        }
+      }
+    }
+    for (const fn of functions.reverse()) if (!used.has(fn.name)) source = source.slice(0, fn.start) + source.slice(fn.end);
+    return source;
+  }
   HSC.glsl.decls = `
 uniform vec4 uBaldA, uBaldB, uBrowA;
 uniform vec4 uAreata[3];
 // alopecia areata: round, smooth patches (scalp or beard) with a slightly irregular edge
+float areataPatch(vec3 p, vec4 a, float i){
+  if (a.w > .001) return smoothstep(a.w * .72, a.w * 1.08, distance(p, a.xyz) + (n3(p * 7.0 + i) - .5) * a.w * .35);
+  return 1.0;
+}
 float areataKeep(vec3 p){
   float k = 1.0;
-  for (int i = 0; i < 3; i++) {
-    vec4 a = uAreata[i];
-    if (a.w > .001) k *= smoothstep(a.w * .72, a.w * 1.08, distance(p, a.xyz) + (n3(p * 7.0 + float(i)) - .5) * a.w * .35);
-  }
+  // Constant indices avoid a driver-dependent uniform-array loop. Multiply in the same order.
+  k *= areataPatch(p, uAreata[0], 0.0);
+  k *= areataPatch(p, uAreata[1], 1.0);
+  k *= areataPatch(p, uAreata[2], 2.0);
   return k;
 }
 uniform sampler2D uBeard;
@@ -297,12 +330,15 @@ float wrinkles(vec3 P, float age){
   };
 
   // ---- strand shaders (scalp and beard share most of the code) ----
-  const strandFrag = (t, tint, grey) => t + `
+  // No noise, skin, beard or grid functions are called by the strand fragment stage.
+  const strandFrag = (_t, tint, grey) => `
+ uniform vec3 uHairTint;
+ uniform float uDensity;
  uniform vec3 lA,lB,lC,cam;
  uniform vec4 uGreyA, uBeardGrey;
  uniform vec3 uBeardTint;
  uniform float uLift;
- varying vec3 vRoot,vTip,vTangent,vSeed;varying float vAlong,vEdge,vLength,vGrey;
+ varying vec3 vTip,vTangent,vSeed;varying float vAlong,vEdge,vLength,vGrey;
  void main(){
   if(vLength<.0001||vSeed.z>uDensity)discard;
   float edge=abs(vEdge),aa=max(fwidth(edge),.03);if(edge>1.0-aa*.25)discard;
@@ -328,11 +364,11 @@ float wrinkles(vec3 P, float age){
   #include <colorspace_fragment>
  }`;
 
-  HSC.glsl.strandVert = (t) => t + `
+  HSC.glsl.strandVert = (t) => vertexPrelude(t, ['gridValue', 'hairMask']) + `
  attribute vec3 aRoot,aNormal,aSeed;
  uniform vec3 cam;uniform float uWidth;
  uniform vec4 uStyleA,uStyleB,uStyleC,uGreyA,uGreyB;
- varying vec3 vRoot,vTip,vTangent,vSeed;varying float vAlong,vEdge,vLength,vGrey;
+ varying vec3 vTip,vTangent,vSeed;varying float vAlong,vEdge,vLength,vGrey;
  void main(){
   float HANG=uStyleA.x,FWD=uStyleA.y,LIFT=uStyleA.z,TOPLIFT=uStyleA.w,SPREAD=uStyleB.x,SAG=uStyleB.y,WAVE=uStyleB.z,WAVEF=uStyleB.w;
   vec3 n=normalize(aNormal);
@@ -392,17 +428,17 @@ float wrinkles(vec3 P, float age){
   float gBias=dot(uGreyB.xyz,vec3(gTemple,gFront,gCrown))-uGreyB.w;
   float gf=clamp(uGreyA.x*(1.0+gBias*(1.0-uGreyA.x)*1.6),0.0,1.0);
   vGrey=step(fract(aSeed.z*7.31+aSeed.x*3.17),gf);
-  vRoot=aRoot;vTip=p;vTangent=tang;vSeed=aSeed;vAlong=t;vEdge=position.x;vLength=L;
+  vTip=p;vTangent=tang;vSeed=aSeed;vAlong=t;vEdge=position.x;vLength=L;
   gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);
  }`;
   HSC.glsl.strandFrag = (t) => strandFrag(t, 'uHairTint', 'uGreyA.z');
 
-  HSC.glsl.beardVert = (t) => t + `
+  HSC.glsl.beardVert = (t) => vertexPrelude(t, ['beardMM', 'beardZone', 'areataKeep', 'n3']) + `
  attribute vec3 aRoot,aNormal,aSeed,aBase;
  uniform vec3 cam;uniform float uWidth;
  uniform vec4 uBStyleA,uBStyleB,uBeardGrey,uBeardGreyB;
  uniform float uBeardLip;
- varying vec3 vRoot,vTip,vTangent,vSeed;varying float vAlong,vEdge,vLength,vGrey;
+ varying vec3 vTip,vTangent,vSeed;varying float vAlong,vEdge,vLength,vGrey;
  void main(){
   vec3 n=normalize(aNormal);
   vec3 B=aBase;float ax=abs(B.x);
@@ -476,7 +512,7 @@ float wrinkles(vec3 P, float age){
   float bBias=dot(uBeardGreyB.xyz,vec3(bChin,bSides,must))-uBeardGreyB.w;
   float bgf=clamp(uBeardGrey.x*(1.0+bBias*(1.0-uBeardGrey.x)*1.6),0.0,1.0);
   vGrey=step(fract(aSeed.z*7.31+aSeed.x*3.17),bgf);
-  vRoot=aRoot;vTip=p;vTangent=tang;vSeed=aSeed;vAlong=t;vEdge=position.x;vLength=L;
+  vTip=p;vTangent=tang;vSeed=aSeed;vAlong=t;vEdge=position.x;vLength=L;
   gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);
  }`;
   HSC.glsl.beardFrag = (t) => strandFrag(t, 'uHairTint*uBeardTint', 'uBeardGrey.y');

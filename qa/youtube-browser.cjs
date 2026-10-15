@@ -5,7 +5,7 @@ const {chromium,firefox,webkit}=require('playwright');
 const engine=process.env.BROWSER||'chromium',root=path.resolve(process.env.RELEASE_DIR||'source/build-youtube');
 const out=path.resolve(process.env.QA_OUTPUT||`qa/results/youtube-${engine}`);fs.mkdirSync(out,{recursive:true});
 const results=[];let browser;
-async function test(name,fn){try{const evidence=await fn();results.push({name,status:'PASS',evidence});}catch(e){results.push({name,status:'FAIL',error:e.stack});}console.log(JSON.stringify(results.at(-1)));fs.writeFileSync(path.join(out,'browser.json'),JSON.stringify({engine,archiveSha256:process.env.ARCHIVE_SHA,results},null,2));}
+async function test(name,fn){if(process.env.TEST_FILTER&&!name.toLowerCase().includes(process.env.TEST_FILTER.toLowerCase()))return;try{const evidence=await fn();results.push({name,status:'PASS',evidence});}catch(e){results.push({name,status:'FAIL',error:e.stack});}console.log(JSON.stringify(results.at(-1)));fs.writeFileSync(path.join(out,'browser.json'),JSON.stringify({engine,archiveSha256:process.env.ARCHIVE_SHA,results},null,2));}
 const csp="default-src 'none'; script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://www.youtube.com/game_api/v1 https://www.youtube.com/game_api/v1/; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: data:; base-uri 'self'; worker-src 'self' blob:";
 async function fixture(options={}){
  const started=performance.now();
@@ -30,6 +30,18 @@ async function fixture(options={}){
   Object.defineProperty(window,'localStorage',{get(){throw new DOMException('Denied','SecurityError')}});
  });
  if(options.stalledCache)await ctx.addInitScript(()=>Object.defineProperty(window,'indexedDB',{value:{open:()=>({})}}));
+ if(options.localSaved)await ctx.addInitScript(raw=>{
+  if(location.hostname==='release.test'&&!localStorage.getItem('asmr-barber-youtube-save-v1'))localStorage.setItem('asmr-barber-youtube-save-v1',raw);
+ },options.localSaved);
+ if(options.silentShaderFailure)await ctx.addInitScript(()=>{
+  const P=WebGL2RenderingContext.prototype,link=P.linkProgram,param=P.getProgramParameter,log=P.getProgramInfoLog,failed=new WeakSet();
+  P.linkProgram=function(program){
+   if(this.getAttachedShaders(program).some(s=>this.getShaderSource(s).includes('float HANG=')))failed.add(program);
+   return link.call(this,program);
+  };
+  P.getProgramParameter=function(program,key){return key===this.LINK_STATUS&&failed.has(program)?false:param.call(this,program,key);};
+  P.getProgramInfoLog=function(program){return failed.has(program)?'':log.call(this,program);};
+ });
  if(options.pauseAtCompile||options.loseAtCompile)await ctx.addInitScript(({lose,restore})=>{
   const P=WebGL2RenderingContext.prototype,compile=P.compileShader;let fired=false;
   P.compileShader=function(...args){const result=compile.apply(this,args);if(!fired&&globalThis.HSC?.startupTiming?.materialsReady){fired=true;queueMicrotask(()=>{window.__startupInterrupted=true;if(lose){const ext=this.getExtension('WEBGL_lose_context');ext.loseContext();if(restore)setTimeout(()=>ext.restoreContext(),restore);}else __yt.callbacks.pause();});}return result;};
@@ -64,7 +76,7 @@ async function fixture(options={}){
   }
   await route.fulfill({path:file,headers:{'Content-Security-Policy':csp},contentType:({'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp','.dat':'application/octet-stream'})[path.extname(file)]||'text/plain'});
  });
- if(!options.realSdk)await ctx.route('https://www.youtube.com/game_api/v1',route=>options.missing?route.abort():route.fulfill({contentType:'application/javascript',body:`
+ if(!options.realSdk)await ctx.route('https://www.youtube.com/game_api/v1',route=>options.missing||options.localPreview?route.abort():route.fulfill({contentType:'application/javascript',body:`
    window.__yt={messages:[],ads:[],scores:[],timings:{},callbacks:{},rewardMode:'${options.rewardMode||'earned'}',paused:false,audio:${options.audio!==false}};
    const sub=k=>fn=>{__yt.callbacks[k]=fn;${options.initialPause?"if(k==='pause'){__yt.paused=true;fn();}":''}return()=>delete __yt.callbacks[k];};
    window.ytgame={IN_PLAYABLES_ENV:${options.hosted!==false},SDK_VERSION:'strict-test-fixture',
@@ -172,6 +184,19 @@ async function quality(){
  }
 }
 async function startup(){
+ await test('Silent scalp shader link failure reports actual statuses and preserves saves',async()=>{
+  const saved=JSON.stringify({version:1,slots:{'skin-fade-studio-meta-v1':{v:1,cuts:7},other:{kept:true}}}),f=await fixture({saved,blocked:true,silentShaderFailure:true}),p=f.page;
+  try{
+   await p.getByRole('button',{name:'Retry',exact:true}).waitFor({state:'visible'});
+   assert.equal(await p.locator('.boot-error-code').textContent(),'Code: GFX_SHADER');
+   const detail=await p.locator('.boot-error-detail').textContent();
+   assert.match(detail,/Status: vertex true, fragment true, link false/);assert.match(detail,/no compiler log/);assert.match(detail,/Build:/);
+   assert(!/Check your connection/.test(await p.locator('.boot-error').innerText()));
+   assert.equal(await p.evaluate(()=>!!window.skinFadeStudio),false);
+   const progress=JSON.parse(f.raw());assert.equal(progress.slots['skin-fade-studio-meta-v1'].cuts,7);assert.deepEqual(progress.slots.other,{kept:true});
+   assert.equal(await p.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),0);
+  }finally{await f.close();}
+ });
  await test('Startup overlaps host reads, preserves full graphics and reports genuine readiness',async()=>{
   const f=await fixture({languageDelay:500,loadDelay:500,dpr:2}),p=f.page;
   try{
@@ -305,11 +330,11 @@ async function parity(){
  try{
   await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);const saved=f.raw(),g=await fixture({saved,releaseRoot:baseline,touch:true,mobile:true,dpr:2});
   try{
-   const variants=[{}, {heritage:1,texture:'coily',beard:'full',age:'old'}, {norwood:'6',beard:'goatee'}, {baldType:'diffuse',beard:'boxed'}],evidence=[];
+   const variants=[{}, {heritage:1,texture:'coily',beard:'full',age:'old'}, {norwood:'6',beard:'goatee'}, {baldType:'diffuse',beard:'boxed'}, {areata:true,beard:'full'}],evidence=[];
    for(let i=0;i<variants.length;i++){
     const images=[];
     for(const page of [g.page,p]){
-     const data=await page.evaluate(({seed,opts})=>{const person=HSC.makePerson(seed,opts);HSC.view.setPerson(person);HSC.view.setBeard(HSC.beardStartFor(person));HSC.view.render(false);return document.getElementById('scene').toDataURL('image/png').split(',')[1]},{seed:6200+i,opts:variants[i]});
+     const data=await page.evaluate(({seed,opts})=>{const person=HSC.makePerson(seed,opts);if(opts.areata)person.bald.patches=[[0,3.75,-.13,.28],[1.3,3.1,.4,.25],[.7,-.1,1.6,.18]];HSC.view.setPerson(person);HSC.view.setBeard(HSC.beardStartFor(person));HSC.view.render(false);return document.getElementById('scene').toDataURL('image/png').split(',')[1]},{seed:6200+i,opts:variants[i]});
      images.push(Buffer.from(data,'base64'));
     }
     const hashes=images.map(b=>crypto.createHash('sha256').update(b).digest('hex'));assert.equal(hashes[1],hashes[0],`Changed rendered customer ${i}`);evidence.push({variant:variants[i],sha256:hashes[0]});
@@ -320,6 +345,27 @@ async function parity(){
  }finally{await f.close();}
 }
 async function launch(){return({chromium,firefox,webkit}[engine]).launch({headless:process.env.HEADED!=='1',...(engine==='chromium'?{...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE}:{}),args:['--no-sandbox',process.env.ANGLE_D3D11==='1'?'--use-angle=d3d11':'--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']}:{}) ,...(engine==='firefox'?{firefoxUserPrefs:{'webgl.force-enabled':true,'webgl.disabled':false,'gfx.webrender.software':true}}:{})});}
+async function standalonePreview(){
+ await test('Standalone preview boots with YouTube blocked, restores progress and retains full detail',async()=>{
+  const localSaved=JSON.stringify({version:1,slots:{'skin-fade-studio-meta-v1':{v:1,cuts:7}}});
+  const f=await fixture({localPreview:true,localSaved,touch:true,mobile:true,dpr:2}),p=f.page;
+  try{
+   assert.equal(await p.evaluate(()=>typeof globalThis.ytgame),'undefined');
+   assert.equal(await p.evaluate(()=>HSC.meta.data.cuts),7);
+   assert.equal(await p.evaluate(()=>HSC.detail.maxStrands),30000);
+   assert.equal(await p.evaluate(()=>HSC.detail.segments),8);
+   await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);const before=await state(p);
+   await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);
+   assert.equal((await state(p)).selectedGuard,2);assert.deepEqual((await state(p)).hair,before.hair);
+   assert.equal(await p.evaluate(()=>HSC.wardrobe.client.rewardedSupported),false);
+   assert(f.requests.every(url=>url.startsWith('http://release.test/')));assert.deepEqual(f.errors,[]);
+  }finally{await f.close();}
+ });
+ await test('Standalone preview boots when browser storage is unavailable',async()=>{
+  const f=await fixture({localPreview:true,deniedStorage:true,touch:true,mobile:true,dpr:2});
+  try{assert.equal(await f.page.locator('.boot-error').count(),0);assert.equal(await f.page.evaluate(()=>HSC.detail.shaderLow),false);assert.deepEqual(f.errors,[]);}finally{await f.close();}
+ });
+}
 async function benchmark(){
  const builds=[['baseline',process.env.BASELINE_DIR],['candidate',root]],samples={baseline:[],candidate:[]};
  for(let round=0;round<5;round++)for(const [name,releaseRoot]of builds){
@@ -336,6 +382,6 @@ async function benchmark(){
 }
 (async()=>{
  browser=await launch();
- if(process.env.PARITY==='1')await test('All rendered pixels match v3.94 for seeded customer variants',parity);else if(process.env.MOBILE_STARTUP==='1')await mobileStartup();else if(process.env.BENCHMARK==='1')await benchmark();else if(process.env.STARTUP==='1')await startup();else if(process.env.QUALITY==='1')await quality();else if(process.env.LAYOUT==='1')await layouts();else if(process.env.SOAK==='1')await soak();else await standard();
+ if(process.env.STANDALONE_PREVIEW==='1')await standalonePreview();else if(process.env.PARITY==='1')await test('All rendered pixels match baseline for seeded customer variants',parity);else if(process.env.MOBILE_STARTUP==='1')await mobileStartup();else if(process.env.BENCHMARK==='1')await benchmark();else if(process.env.STARTUP==='1')await startup();else if(process.env.QUALITY==='1')await quality();else if(process.env.LAYOUT==='1')await layouts();else if(process.env.SOAK==='1')await soak();else await standard();
  await browser.close();const failed=results.filter(x=>x.status==='FAIL');console.log('YOUTUBE BROWSER',engine,results.length-failed.length+'/'+results.length);process.exitCode=failed.length?1:0;
 })().catch(async e=>{console.error(e);fs.writeFileSync(path.join(out,'fatal.txt'),e.stack);await browser?.close();process.exitCode=2;});

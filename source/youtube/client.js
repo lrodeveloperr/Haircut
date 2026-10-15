@@ -9,10 +9,19 @@
   const previewKey = 'asmr-barber-youtube-save-v1';
   // Off-platform preview only. Sandboxed frames and strict privacy modes can deny localStorage;
   // the preview then keeps progress for this page load instead of failing to start.
-  let previewMemory = null;
+  let previewMemory = null, previewStorageUnavailable = false;
   const previewStore = {
-    get() { try { return globalThis.localStorage.getItem(previewKey); } catch (_) { return previewMemory; } },
-    set(data) { try { globalThis.localStorage.setItem(previewKey, data); } catch (_) { previewMemory = data; } },
+    get() {
+      if (previewStorageUnavailable) return previewMemory;
+      try { return globalThis.localStorage.getItem(previewKey); }
+      catch (_) { previewStorageUnavailable = true; return previewMemory; }
+    },
+    set(data) {
+      previewMemory = data;
+      if (previewStorageUnavailable) return;
+      try { globalThis.localStorage.setItem(previewKey, data); }
+      catch (_) { previewStorageUnavailable = true; }
+    },
   };
   const clone = value => JSON.parse(JSON.stringify(value));
   // v3.82 saved through Playgama Bridge: a flat {key: JSON string} object with no envelope.
