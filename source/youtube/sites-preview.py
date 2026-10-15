@@ -1,9 +1,9 @@
 """Create an explicit standalone Sites target. Never alters production SDK failure behavior."""
 from pathlib import Path
-import hashlib
 import re
 import shutil
 import sys
+from asset_urls import version_asset_urls
 
 src, out = map(lambda value: Path(value).resolve(), sys.argv[1:3])
 assert src != out and (src / 'runtime/youtube-client.js').is_file()
@@ -50,19 +50,10 @@ s = replace(s, '  <script src="https://www.youtube.com/game_api/v1"></script>\n'
 s = s.replace('youtube-client.js', 'local-preview-client.js').replace('youtube-startup.js', 'local-preview-startup.js')
 # There is no remote SDK wait in this target. Let geo.js start the one lighting
 # request directly: WebKit does not reuse this fetch preload in the browser QA.
-s = replace(s, '  <link rel="preload" href="./runtime/room-env.dat" as="fetch" crossorigin="anonymous">\n', '')
-# Version the runtime fetch too, before hashing the geo script's own URL.
-geo_path = out / 'runtime/youtube-geo.js'
-environment_hash = hashlib.sha256((out / 'runtime/room-env.dat').read_bytes()).hexdigest()[:12]
-geo_path.write_text(replace(geo_path.read_text(), "fetch('./runtime/room-env.dat',",
-    "fetch('./runtime/room-env.dat?v=" + environment_hash + "',"))
-# Each immutable asset URL changes with its bytes; a wrapper/browser cache cannot mix releases.
-def version_asset(match):
-    name = match[2].split('?')[0]
-    digest = hashlib.sha256((out / name.removeprefix('./')).read_bytes()).hexdigest()[:12]
-    return match[1] + name + '?v=' + digest + match[3]
-s = re.sub(r'((?:src|href)=")([.]/[^"]+)(")', version_asset, s)
+s, count = re.subn(r'  <link rel="preload" href="\./runtime/room-env\.dat(?:\?[^"]*)?" as="fetch" crossorigin="anonymous">\n', '', s)
+assert count == 1, 'Expected one lighting preload'
 (out / 'index.html').write_text(s)
+version_asset_urls(out)
 assert (out / 'runtime/game.js').read_bytes() == (src / 'runtime/game.js').read_bytes()
 assert (out / 'runtime/customers.js').read_bytes() == (src / 'runtime/customers.js').read_bytes()
 print('Standalone preview: unchanged engine, customers, assets and local save key; no external SDK.')

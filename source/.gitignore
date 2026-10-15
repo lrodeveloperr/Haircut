@@ -4,3 +4,4 @@ dist/
 tests/scale/*.png
 *.png
 designs-data.txt
+__pycache__/

@@ -2,17 +2,18 @@
 
 ## File to upload
 
-Current verified download optimization release: `releases/asmr-barber-fade-master-v3.98-mediacube-youtube.zip`.
-The owner confirmed fast successful phone boot on v3.97. v3.98 preserves the game and customer bundles
-exactly and reduces the release ZIP by 26%. All affected CI jobs pass and the existing private Sites
-phone-test link has been updated. It has not been uploaded to McPlay.
+Current phone-confirmed official SDK release: `releases/asmr-barber-fade-master-v3.99-mediacube-youtube.zip`.
+The owner confirmed successful SDK-enabled phone boot on this exact runtime. All 15 ZIP files
+match the working Sites deployment. Content-versioned startup URLs prevent mixed cached assets;
+the engine, customer module, full graphics and game behavior match v3.98. Final affected CI is pending.
+It has not been uploaded to McPlay.
 This is a WebGL/HTML5 runtime archive with `index.html` at the root, not a source ZIP or Android package.
 
 This target uses the direct official YouTube Playables SDK at `https://www.youtube.com/game_api/v1`.
 It does not load Playgama Bridge, Playgama configuration, a mock SDK, external analytics or remote game assets.
 The existing Playgama and full-detail Android builds remain separate.
 
-See [validation results and load-time evidence](VALIDATION-v3.98.md) and [exact build identity](BUILD-v3.98.json).
+See [phone-confirmed validation](VALIDATION-v3.99.md), [load-time evidence](VALIDATION-v3.98.md) and [exact build identity](BUILD-v3.99.json).
 
 ## Rebuild
 
@@ -20,7 +21,7 @@ See [validation results and load-time evidence](VALIDATION-v3.98.md) and [exact 
 bash source/build-youtube.sh
 # Produces source/build-youtube/, without an upload archive.
 
-bash source/release-youtube.sh v3.98
+bash source/release-youtube.sh v3.99
 # Creates the immutable release ZIP; refuses to overwrite an existing release.
 ```
 

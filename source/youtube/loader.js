@@ -44,6 +44,20 @@
     code.textContent = 'Code: ' + HSC.bootCode(error);
     box.append(code);
     const lines = Array.isArray(error?.detail) ? error.detail.slice() : [];
+    // Temporary device diagnostic: expose the actual exception, never save contents or URLs.
+    const timing = HSC.startupTiming || {};
+    const stages = ['sdkReady', 'requestsStarted', 'localeLoaded', 'savesLoaded', 'engineStart',
+      'geometryReady', 'rendererReady', 'materialsReady', 'shadersReady', 'firstDraw', 'gpuReady', 'firstPlayable', 'gameReady'];
+    const reached = stages.filter(key => Number.isFinite(timing[key]));
+    const safeText = value => String(value ?? '')
+      .replace(/(?:https?:\/\/|blob:|data:)[^\s"'<>]+/g, '[resource]')
+      .replace(/[\r\n\t]+/g, ' ').slice(0, 200);
+    lines.push('Diagnostic: sdk-v3.98-d1');
+    if (reached.length) lines.push('Stage: ' + reached[reached.length - 1]);
+    lines.push('Error: ' + safeText(error?.name || 'Error') + ': ' + safeText(error?.message || error));
+    const frame = String(error?.stack || '').match(/\/(runtime\/[A-Za-z0-9._-]+\.js)(?:\?[^\s)]*?)?:(\d+):(\d+)/);
+    if (frame) lines.push('At: ' + frame[1] + ':' + frame[2] + ':' + frame[3]);
+    if (globalThis.ytgame?.SDK_VERSION) lines.push('SDK: ' + safeText(globalThis.ytgame.SDK_VERSION));
     if (HSC.geoBuild) lines.push('Build: ' + HSC.geoBuild);
     if (HSC.isLocalPreview || globalThis.ytgame) lines.push('Mode: ' + (globalThis.ytgame?.IN_PLAYABLES_ENV === true ? 'YouTube' : 'preview'));
     const cuts = HSC.meta?.data?.cuts;

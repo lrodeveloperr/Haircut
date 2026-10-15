@@ -1,0 +1,28 @@
+{
+  "version": "v3.99",
+  "status": "Working official-SDK build confirmed by the owner on a physical Android phone; final CI pending. Not uploaded to McPlay.",
+  "archive": "releases/asmr-barber-fade-master-v3.99-mediacube-youtube.zip",
+  "archiveSha256": "c9c10d3902490cce520299678aa760482cdd66eddc0d31dc2e20d8ec5f264f8e",
+  "zipBytes": 725449,
+  "expandedBytes": 1415322,
+  "sdk": "https://www.youtube.com/game_api/v1",
+  "change": "Version local startup assets by their exact contents, keep reflection preload/fetch identical, and retain bounded on-device error diagnostics.",
+  "unchanged": "Game, customers, production YouTube client, startup script, styles, audio, saves, ads and decoded graphics are unchanged from v3.98.",
+  "physicalPhoneEvidence": {
+    "reportedAt": "2026-10-15T18:16:11-04:00",
+    "result": "Owner reports It works and supplies a full-game Android screenshot.",
+    "siteSourceCommit": "4ecd4a07abe954ff74c3b8700bdfe8de02144f42",
+    "deploymentId": "appgdep_6ad14fe6e5408191b7195a6080412047",
+    "url": "https://haircut-studio-v387.lat23445.chatgpt.site",
+    "parity": "All 15 extracted ZIP files match this phone-confirmed deployment byte for byte."
+  },
+  "validation": {
+    "sdkContracts": "41/41 PASS locally",
+    "fixedGraphicsPolicy": "5/5 PASS locally",
+    "losslessLighting": "Decoded bytes equal v3.94 exactly",
+    "cacheURLs": "9 local refs correctly hashed; game entry retained; official SDK first; matching lighting URLs; old v3.98 rejected",
+    "diagnostics": "Independent jsdom checks: exception types, bounded text, redacted URLs and script line extraction",
+    "finalCI": "pending"
+  },
+  "limits": "Successful phone boot does not identify the original hidden exception or certify actual McPlay/YouTube ads, cloud saves or host performance. The cache mismatch diagnosis is supported by the successful change, not by a recovered original stack."
+}
