@@ -4,6 +4,8 @@ The reflection asset shrinks from 582,123 to 318,208 bytes (45.34%). The ZIP shr
 
 All 6,291,456 original lighting bytes are restored exactly, with SHA256 `cd7b1d0c6440b77f0ece61d5aedf6b270a5e5e9906740303c819212cdaa2be57`. The real browser decoder also compares all 3,145,728 half-float values against v3.97. Five rendered seeded customer PNGs are byte-identical, including coily hair/older skin, advanced hair loss, diffuse thinning and active areata patches. `game.js` and `customers.js` themselves are byte-identical to v3.97. The full 30,000 strands, eight segments, skin/beard shading, resolution, MSAA, controls, save schemas, SDK order and monetization remain unchanged.
 
+The standalone Sites target also fixes mismatched lighting URLs: its versioned preload and unversioned runtime fetch previously generated two browser requests. They now share one content-hashed URL, verified by a request-count regression. The production YouTube target already uses one matching URL. This does not change the production archive hash above.
+
 ## What this does to load time
 
 Five alternating fresh Chromium-process pairs at 390×844/DPR2 on a desktop SwiftShader software GPU measured median `gameReady` at 3,307.5 ms for v3.97 and 3,298.4 ms for v3.98. This difference is within run-to-run variability: local startup is effectively unchanged. Files came from local route fulfillment with no real network/host delay; OS/GPU caches were not purged. These are not phone, McPlay or YouTube measurements.
@@ -19,7 +21,7 @@ The largest local cost remains the initial full-detail GPU draw; optional models
 
 ## Validation
 
-Local domain/legacy contracts 35/35, direct SDK 41/41, fixed full-graphics policy 5/5, lossless asset verification, browser decoder parity and five rendered variants passed. Affected Chromium/Firefox/WebKit, mobile/context recovery and Windows D3D11 CI are pending. The 30-screen replay review remains applicable because the game/customer/style bytes are unchanged. Exact physical-phone and hosted-platform times remain unmeasured. Nothing has been uploaded to McPlay.
+Local domain/legacy contracts 35/35, direct SDK 41/41, fixed full-graphics policy 5/5, startup 11/11, mobile/cache/context recovery 8/8, lossless asset verification, browser decoder parity and five rendered variants passed. Affected Chromium/Firefox/WebKit, mobile/context recovery and Windows D3D11 CI are pending. The 30-screen replay review remains applicable because the game/customer/style bytes are unchanged. Exact physical-phone and hosted-platform times remain unmeasured. Nothing has been uploaded to McPlay.
 
 - [Exact release identity](BUILD-v3.98.json)
 - [Raw timing samples and decoder comparison](STARTUP-v3.98.json)

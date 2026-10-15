@@ -23,7 +23,11 @@
     "renderedParity": "All five seeded customer PNGs identical to v3.97",
     "browserDecoder": "All 3,145,728 half-float values identical; old packed format remains supported",
     "startupAudit": "Five fresh-process pairs plus controlled SDK/cloud delay probes; local route/network and software GPU only",
-    "affectedCI": "pending"
+    "affectedCI": "pending",
+    "startup": "11/11 PASS locally",
+    "mobile": "8/8 PASS locally including full-detail context restoration and cached lighting",
+    "standalone": "2/2 PASS locally including matching-URL single-fetch regression",
+    "sitesUrlFix": "The standalone generator gives lighting preload and runtime fetch the same content-hashed URL; production archive already uses a single matching URL."
   },
   "unchanged": "Game and customer bundles byte-identical to v3.97; full graphics, controls, mechanics, saves, monetization and SDK ordering unchanged.",
   "limits": "No exact physical-phone or actual McPlay/YouTube timings. Download savings depend on hosting compression, throughput, caching and overlap. No McPlay upload."
