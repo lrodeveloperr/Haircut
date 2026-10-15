@@ -1,0 +1,134 @@
+name: Current v3.82 game audit
+on:
+  push:
+    branches: ['qa/v3.82-release-audit-2026-10-15']
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  ARCHIVE_SHA: bb72694a03d935a16600929dbcdb3713a23084575fa820dc9ed21cfafa1f2701
+  RELEASE_DIR: release
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: |
+          echo "$ARCHIVE_SHA  asmr-barber-fade-master-v3.82-playgama.zip" | sha256sum -c -
+          unzip -q asmr-barber-fade-master-v3.82-playgama.zip -d release
+          bash source/buildall.sh
+          diff -r source/build release
+          node qa/contracts.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: current-contracts, path: qa-current/results, retention-days: 14}
+  source-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    strategy:
+      fail-fast: false
+      matrix:
+        script: [audit, replaytest, pagetest, brush, centre, toprow, singletest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: |
+          npm install --no-save --package-lock=false playwright@1.58.2
+          npx playwright install --with-deps chromium
+          bash source/buildall.sh
+          mkdir -p source/dist
+          cd source
+          python3 mkplay.py dist/qa-play.html
+      - name: Execute existing source test
+        working-directory: source
+        env: {LIBGL_ALWAYS_SOFTWARE: '1'}
+        run: |
+          python3 -m http.server 8124 --directory build > server.log 2>&1 &
+          node tests/${{ matrix.script }}.js dist/qa-play.html > ${{ matrix.script }}.log 2>&1
+          cat ${{ matrix.script }}.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 'current-${{ matrix.script }}'
+          path: |
+            source/*.log
+            source/*.png
+            source/tests/scale/*.json
+            source/tests/scale/*.png
+          retention-days: 14
+  layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        screens:
+          - fold-cover,se1,android-s,iphone-se,iphone-14,pixel-7,pro-max
+          - se1-l,android-s-l,iphone-14-l,pro-max-l,fold-open,ipad,ipad-air
+          - ipad-pro,ipad-l,ipad-air-l,ipad-pro-l,laptop,laptop-m,mac
+          - fhd,qhd,ultrawide,embed-sq,embed-169,embed-916
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: |
+          npm install --no-save --package-lock=false playwright@1.58.2
+          npx playwright install --with-deps chromium
+          bash source/buildall.sh
+      - name: Execute existing four-state layout checks
+        working-directory: source
+        env: {ONLY: '${{ matrix.screens }}', LIBGL_ALWAYS_SOFTWARE: '1'}
+        run: |
+          python3 -m http.server 8124 --directory build > server.log 2>&1 &
+          node tests/scale/scale.js > scale.log 2>&1
+          cat scale.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 'current-scale-${{ strategy.job-index }}'
+          path: |
+            source/scale.log
+            source/tests/scale/*.json
+            source/tests/scale/*.png
+          retention-days: 14
+  browsers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix: {browser: [chromium, firefox, webkit]}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: |
+          echo "$ARCHIVE_SHA  asmr-barber-fade-master-v3.82-playgama.zip" | sha256sum -c -
+          unzip -q asmr-barber-fade-master-v3.82-playgama.zip -d release
+          npm install --no-save --package-lock=false playwright@1.58.2
+          npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Current exact-archive strict integration checks
+        env: {BROWSER: '${{ matrix.browser }}', HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1'}
+        run: xvfb-run -a node qa/browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: 'current-${{ matrix.browser }}', path: qa-current/results, retention-days: 14}
+  soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: |
+          unzip -q asmr-barber-fade-master-v3.82-playgama.zip -d release
+          npm install --no-save --package-lock=false playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - env: {BROWSER: chromium, SOAK: '1', HEADED: '1', LIBGL_ALWAYS_SOFTWARE: '1'}
+        run: xvfb-run -a node qa/browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: current-soak, path: qa-current/results, retention-days: 14}
