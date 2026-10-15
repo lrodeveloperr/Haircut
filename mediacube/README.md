@@ -2,9 +2,10 @@
 
 ## File to upload
 
-Current download optimization candidate: `releases/asmr-barber-fade-master-v3.98-mediacube-youtube.zip`.
+Current verified download optimization release: `releases/asmr-barber-fade-master-v3.98-mediacube-youtube.zip`.
 The owner confirmed fast successful phone boot on v3.97. v3.98 preserves the game and customer bundles
-exactly and reduces the release ZIP by 26%; affected CI is pending. It has not been uploaded to McPlay.
+exactly and reduces the release ZIP by 26%. All affected CI jobs pass and the existing private Sites
+phone-test link has been updated. It has not been uploaded to McPlay.
 This is a WebGL/HTML5 runtime archive with `index.html` at the root, not a source ZIP or Android package.
 
 This target uses the direct official YouTube Playables SDK at `https://www.youtube.com/game_api/v1`.
@@ -30,6 +31,13 @@ plus McPlay's 15,000,000-byte per-file advisory budget.
 
 The official SDK is loaded first. A visible loading state sends `firstFrameReady`; `gameReady` is sent only
 after the saved game, wardrobe and controller are initialized and the loading state has been removed.
+
+## Download optimization (v3.98)
+
+Lossless texel/row byte prediction reduces the reflection asset from 582,123 to 318,208 bytes.
+The archive is 724,822 bytes, with the game/customer bundles and every lighting byte unchanged.
+The standalone Sites target starts one content-hashed lighting request without an extra fetch preload.
+See the linked v3.98 validation for measured local startup, estimates and actual-device limits.
 
 ## Startup recovery (v3.91)
 

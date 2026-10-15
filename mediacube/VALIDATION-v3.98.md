@@ -21,7 +21,7 @@ The largest local cost remains the initial full-detail GPU draw; optional models
 
 ## Validation
 
-Local domain/legacy contracts 35/35, direct SDK 41/41, fixed full-graphics policy 5/5, startup 11/11, mobile/cache/context recovery 8/8, lossless asset verification, browser decoder parity and five rendered variants passed. Affected Chromium/Firefox/WebKit, mobile/context recovery and Windows D3D11 CI are pending. The 30-screen replay review remains applicable because the game/customer/style bytes are unchanged. Exact physical-phone and hosted-platform times remain unmeasured. Nothing has been uploaded to McPlay.
+Local domain/legacy contracts 35/35, direct SDK 41/41, fixed full-graphics policy 5/5, startup 11/11, mobile/cache/context recovery 8/8, lossless asset verification, browser decoder parity and five rendered variants passed. Final CI passed: Chromium 18/18, Firefox 16/16 and WebKit 16/16; standalone 2/2 in each engine; startup 11/11, mobile/context/cache 8/8, Windows D3D11 11/11, deterministic cache contracts 3/3, graphics 3/3 and five image variants identical to v3.94. Domain/legacy 35/35, direct SDK 41/41, full-graphics policy 5/5 and reproducible ZIP verification also pass in CI. The 30-screen replay review remains applicable because the game/customer/style bytes are unchanged. Exact physical-phone and hosted-platform times remain unmeasured. Nothing has been uploaded to McPlay.
 
 - [Exact release identity](BUILD-v3.98.json)
 - [Raw timing samples and decoder comparison](STARTUP-v3.98.json)
@@ -33,4 +33,8 @@ Reproduce the audit with Playwright and an extracted v3.97 archive:
 BASELINE_DIR=/absolute/path/to/v397 RELEASE_DIR=source/build-youtube node qa/startup-audit.cjs
 ```
 
-The smaller standalone build is published to the existing private phone-test Site, with its audience preserved: https://haircut-studio-v387.lat23445.chatgpt.site . Site source commit `68814d405493f03bbc25316ac173b0140301b9af`; deployment `appgdep_6ad14686f6388191ba1c00e5c087353c` succeeded. Physical-phone timing remains unmeasured.
+The smaller standalone build is published to the existing private phone-test Site, with its audience preserved: https://haircut-studio-v387.lat23445.chatgpt.site . Site source commit `0f63d38db8eec0294b0163fac0bee3f75148fcbc`; deployment `appgdep_6ad1488dbf608191b1cb2c9a76cfc1aa` succeeded. Physical-phone timing remains unmeasured.
+
+The first CI run exposed two QA assumptions: WebKit did not reuse the standalone fetch preload, and optional model reads sometimes exceeded their existing 100 ms budget on the shared runner. The standalone preload was removed. Cache QA now checks the repaired IndexedDB hash/first value and unchanged saved hair directly, while deterministic VM contracts separately prove valid-cache adoption, corrupt-cache rejection and missing-cache fallback. The production cache budget and runtime are unchanged; a cache miss must continue with the original model builders.
+
+Final browser/graphics evidence: https://github.com/lrodeveloperr/Haircut/actions/runs/38811352980 (all six affected jobs passed, source `e5311457593b111239dfde0950c3d57de9c6a3bd`). Final contract/cache evidence: https://github.com/lrodeveloperr/Haircut/actions/runs/38811738504 (all three affected jobs passed, source `28f5a7cdb60d7a68b3e8f12a5f34d603921b8fd1`). The latter changes QA only; the production archive is identical in both runs. Layouts and soak were not repeated for unchanged game/customer/style bytes.

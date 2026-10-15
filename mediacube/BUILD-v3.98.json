@@ -1,6 +1,6 @@
 {
   "version": "v3.98",
-  "status": "Local parity and contract checks passed; affected cross-browser CI pending. Not uploaded to McPlay.",
+  "status": "Verified lossless download optimization, published to existing private Sites test destination. Not uploaded to McPlay.",
   "archive": "releases/asmr-barber-fade-master-v3.98-mediacube-youtube.zip",
   "archiveSha256": "b2110be41486f0b8b3ff6ce8e175ecaffecb55c6d9c4a637f150010ac94af3b5",
   "zipBytes": 724822,
@@ -23,12 +23,35 @@
     "renderedParity": "All five seeded customer PNGs identical to v3.97",
     "browserDecoder": "All 3,145,728 half-float values identical; old packed format remains supported",
     "startupAudit": "Five fresh-process pairs plus controlled SDK/cloud delay probes; local route/network and software GPU only",
-    "affectedCI": "pending",
-    "startup": "11/11 PASS locally",
-    "mobile": "8/8 PASS locally including full-detail context restoration and cached lighting",
-    "standalone": "2/2 PASS locally including matching-URL single-fetch regression",
-    "sitesUrlFix": "The standalone generator gives lighting preload and runtime fetch the same content-hashed URL; production archive already uses a single matching URL."
+    "affectedCI": "Browser/graphics run 38811352980: 6/6 affected jobs PASS. Final contracts/startup/cache run 38811738504: 3/3 affected jobs PASS; runtime/ZIP unchanged.",
+    "startup": "11/11 PASS in final Linux CI",
+    "mobile": "8/8 PASS in final CI including repaired-cache record proof, touch and full-detail context restoration",
+    "standalone": "2/2 PASS in each Chromium, Firefox and WebKit CI job; one lighting request without extra preload",
+    "sitesUrlFix": "Standalone uses one content-hashed lighting fetch with no extra preload; production SDK-overlap preload unchanged.",
+    "cacheContracts": "3/3 PASS in final CI: valid reuse, corrupt rebuild and absent fallback",
+    "chromium": "18/18 PASS",
+    "firefox": "16/16 PASS",
+    "webkit": "16/16 PASS",
+    "windowsD3D11": "11/11 PASS",
+    "graphics": "3/3 quality cases and 5/5 image variants identical to v3.94 in CI"
   },
   "unchanged": "Game and customer bundles byte-identical to v3.97; full graphics, controls, mechanics, saves, monetization and SDK ordering unchanged.",
-  "limits": "No exact physical-phone or actual McPlay/YouTube timings. Download savings depend on hosting compression, throughput, caching and overlap. No McPlay upload."
+  "limits": "No exact physical-phone or actual McPlay/YouTube timings. Download savings depend on hosting compression, throughput, caching and overlap. No McPlay upload.",
+  "ciRun": "https://github.com/lrodeveloperr/Haircut/actions/runs/38811738504",
+  "testedRuntimeCommit": "28f5a7cdb60d7a68b3e8f12a5f34d603921b8fd1",
+  "sites": {
+    "status": "published",
+    "url": "https://haircut-studio-v387.lat23445.chatgpt.site",
+    "sourceCommit": "0f63d38db8eec0294b0163fac0bee3f75148fcbc",
+    "deploymentId": "appgdep_6ad1488dbf608191b1cb2c9a76cfc1aa",
+    "versionId": "appgprj_6ad0ed6d210081919f842a130ec3dc3a~appgver_7354df94ccfc8191be507b0172f93783",
+    "audience": "existing owner-private audience retained",
+    "verification": "Local standalone 2/2; WebKit and Firefox standalone 2/2 in CI, including one lighting request without the extra preload. Native deployment succeeded. No physical-phone timing."
+  },
+  "browserTestCommit": "e5311457593b111239dfde0950c3d57de9c6a3bd",
+  "browserCiRun": "https://github.com/lrodeveloperr/Haircut/actions/runs/38811352980",
+  "inheritedChecks": {
+    "layoutsAndReplay": "No CSS/game/customer changes. Retain v3.97 31 replay checks across 30 sizes and previous complete layout matrix.",
+    "soak": "Not repeated for asset compression; game/customer runtime bytes unchanged."
+  }
 }
