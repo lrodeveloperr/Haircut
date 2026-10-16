@@ -1,4 +1,4 @@
-"""Android-only fixed High graphics and direct touch contact, applied after shared patches."""
+"""Android-only fixed High graphics matching Sites, applied after shared patches."""
 from pathlib import Path
 import sys
 
@@ -14,10 +14,8 @@ def adapt(runtime):
             raise ValueError(f"Android graphics expected {count} occurrences, got {actual}: {old[:100]}")
         s = s.replace(old, new)
 
-    # Cut exactly at the reported pointer, in CSS coordinates. Both cutting and the
-    # proximity helper share this point; do not merely move the visible clipper.
-    replace('j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0)', 'j.clientY', 2)
-    replace('touchOffsetPx:72', 'touchOffsetPx:0', 3)
+    # Preserve the shared Sites/YouTube touch mapping. The blade remains above the
+    # finger so the player can see the cutting edge; visual and actual hits agree.
 
     # Remove the renderer's independent adaptive controller as well as using the
     # fixed profile. Sampling slow frames must have no quality-changing side effects.
@@ -25,10 +23,10 @@ def adapt(runtime):
     end = s.index('function _(ue=!0)', start)
     replace(s[start:end], 'function he(ue){if(Pe)HSC.detail.sample(ue-Pe);Pe=ue}')
     replace('resetTiming(){Pe=0}', 'resetTiming(){Pe=0;HSC.detail.resetHistory()}')
-    # Re-evaluate native density on resize/display changes, without any adaptive
-    # floor, DPR cap or pixel-budget downscaling.
+    # Use exactly the Sites/YouTube fixed High pixel budget for these canvas bounds.
+    # Recalculate only for viewport/display changes, never in response to slow frames.
     replace('let ye=Math.max(1,e.clientWidth),Ie=Math.max(1,e.clientHeight),B=Math.floor(ye*$),E=Math.floor(Ie*$);',
-            'let ye=Math.max(1,e.clientWidth),Ie=Math.max(1,e.clientHeight);J=$=HSC.detail.pixelRatio();let B=Math.floor(ye*$),E=Math.floor(Ie*$);')
+            'let ye=Math.max(1,e.clientWidth),Ie=Math.max(1,e.clientHeight);J=$=HSC.detail.pixelRatio(ye,Ie);let B=Math.floor(ye*$),E=Math.floor(Ie*$);')
 
     # Reuse the existing YouTube idle-render policy: static scenes need no GPU
     # redraw. Cutting, rotation, reveal and falling hair still render each frame.
@@ -56,4 +54,4 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         raise SystemExit('usage: python3 android/patch-graphics.py RUNTIME_GAME_JS')
     adapt(sys.argv[1])
-    print('Android fixed High graphics, native resolution and direct touch applied')
+    print('Android fixed Sites High graphics and shared touchscreen mapping applied')

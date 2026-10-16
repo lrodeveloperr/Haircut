@@ -73,7 +73,7 @@ function fakeHost() {
     assert.deepEqual(external, [], 'no network requests besides the replaced bridge');
     passed++;
 
-    // High-only at native density, even with old saved Low and a forced Low URL.
+    // Sites High-only pixel budget, even with old saved Low and a forced Low URL.
     await page.evaluate(() => AndroidHost.storageSet('["skin-fade-studio-detail-v1"]', '["low"]'));
     await page.goto('http://release.test/?detail=low');
     await page.waitForFunction(() => window.skinFadeStudio && window.HSC?.wardrobe?.data);
@@ -82,16 +82,19 @@ function fakeHost() {
       const c = document.querySelector('#scene'), d = HSC.detail;
       return { level: d.level, setting: d.setting, strands: d.minStrands, segments: d.segments,
         beard: d.beardMax, simpleShader: d.shaderLow, width: c.width, height: c.height,
-        expectedWidth: Math.floor(c.clientWidth * devicePixelRatio), expectedHeight: Math.floor(c.clientHeight * devicePixelRatio) };
+        expectedWidth: Math.floor(c.clientWidth * d.pixelRatio(c.clientWidth, c.clientHeight)),
+        expectedHeight: Math.floor(c.clientHeight * d.pixelRatio(c.clientWidth, c.clientHeight)),
+        renderRatio: d.pixelRatio(c.clientWidth, c.clientHeight) };
     });
     let g = await graphics();
     assert.equal(g.level, 'high'); assert.equal(g.setting, 'fixed');
     assert.equal(g.strands, 30000); assert.equal(g.segments, 8); assert.equal(g.beard, 1); assert.equal(g.simpleShader, false);
     assert.equal(g.width, g.expectedWidth); assert.equal(g.height, g.expectedHeight);
+    assert.equal(g.renderRatio, 2, '3x display must use the same fixed High budget as Sites');
     assert.equal(await page.locator('.hsc-detail').count(), 0);
     passed++;
 
-    // Trusted Android-style touch drives the same cutting point, without the old upward bias.
+    // Trusted touch uses the same visible-blade offset as Sites/YouTube.
     const point = await page.evaluate(() => {
       const game = skinFadeStudio, view = HSC.view;
       if (game.getState().interactionMode !== 'cut') game.toggleClipper();
@@ -109,15 +112,16 @@ function fakeHost() {
       window.__touchRays = [];
       const raycast = view.raycast;
       view.raycast = (x, y) => { __touchRays.push({ x, y }); return raycast(x, y); };
-      return p;
+      return { ...p, contactY: p.y + Math.min(72, document.querySelector('#scene').clientHeight * 0.12) };
     });
     const cdp = await ctx.newCDPSession(page);
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: point.x, y: point.y }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: point.x, y: point.contactY }] });
     await page.waitForTimeout(200);
     const rays = await page.evaluate(() => __touchRays);
     assert(rays.length > 0, 'touch must reach the actual raycaster');
-    assert(Math.abs(rays[0].x - point.x) < 1 && Math.abs(rays[0].y - point.y) < 1, 'blade target must match contact');
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: point.x + 10, y: point.y + 10 }] });
+    assert(Math.abs(rays[0].x - point.x) < 1 && Math.abs(rays[0].y - point.y) < 1, 'blade target must match the Sites mapping');
+    assert(rays[0].y < point.contactY - 40, 'finger must not cover the cutting blade');
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: point.x + 10, y: point.contactY + 10 }] });
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     passed++;
 
@@ -202,7 +206,7 @@ function fakeHost() {
     passed++;
 
     assert.deepEqual(errors, []);
-    console.log(`PASS: ${passed} Android bridge cases (fixed High/native DPR, trusted touch, rotation, saves, rewards, back, pause, write failure).`);
+    console.log(`PASS: ${passed} Android bridge cases (fixed Sites High, visible blade/trusted touch, rotation, saves, rewards, back, pause, write failure).`);
   } catch (e) {
     console.error(`FAIL after ${passed} passing cases:`, String(e.message || e).split('\n')[0]);
     process.exitCode = 1;
