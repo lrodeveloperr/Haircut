@@ -88,8 +88,24 @@
       "deletionRequestMechanism": true
     },
     "remainingSetupTasks": [
-      "Store listing required media"
-    ]
+      "Store listing actual gameplay screenshots"
+    ],
+    "media": {
+      "status": "Approved icon and feature graphic uploaded, attached to default en-US and saved as draft",
+      "icon": {
+        "filename": "barber-icon-512x512.png",
+        "width": 512,
+        "height": 512
+      },
+      "featureGraphic": {
+        "filename": "barber-feature-graphic-1024x500.png",
+        "width": 1024,
+        "height": 500
+      },
+      "provenance": "Existing approved MediaCube cover resized/cropped only; no added text",
+      "screenshots": "Pending actual gameplay captures",
+      "video": "Omitted"
+    }
   },
   "differentiators": [
     "Freehand hair cutting",
