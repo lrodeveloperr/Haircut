@@ -74,6 +74,7 @@ jobs:
         env:
           ANDROID_APK_LIFECYCLE_ONLY: ${{ contains(github.event.head_commit.message, '[lifecycle-check]') && '1' || '0' }}
           ANDROID_APK_PRIVACY_FOLLOWUP: ${{ contains(github.event.head_commit.message, '[privacy-follow-up]') && '1' || '0' }}
+          ANDROID_APK_AGE_ONLY: ${{ contains(github.event.head_commit.message, '[age-check]') && '1' || '0' }}
         with:
           api-level: 35
           target: google_apis
@@ -81,7 +82,12 @@ jobs:
           profile: pixel_2
           emulator-options: -no-window -gpu lavapipe -no-snapshot -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: node android/tests/apk.cjs
+          script: |
+            if [ "$ANDROID_APK_AGE_ONLY" = "1" ]; then
+              node android/tests/age-gate.cjs
+            else
+              node android/tests/apk.cjs
+            fi
       - name: Collect emulator host diagnostics
         if: always()
         run: |

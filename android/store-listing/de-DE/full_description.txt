@@ -16,3 +16,5 @@ GESTALTE DEINE AUSRÜSTUNG
 Wähle Designs für deine Maschine und Friseurumhänge in der Garderobe. Die täglichen Extras sind freiwillig: Sieh dir pro Gegenstand zwei Videoanzeigen vollständig an, um ihn freizuschalten.
 
 Beende den Haarschnitt, betrachte das Ergebnis und begrüße den nächsten Kunden. Ein Haarschneide-Simulator für alle, die Fades, feine Details und kreatives Arbeiten mögen.
+
+Die Verfügbarkeit von Anzeigen hängt von Alter und Region ab.

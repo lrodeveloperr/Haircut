@@ -1,0 +1,10 @@
+<resources>
+  <string name="age_title">年齢の区分を選んでください</string>
+  <string name="age_continue">続ける</string>
+  <string-array name="age_bands">
+    <item>13歳未満</item>
+    <item>13～15歳</item>
+    <item>16～17歳</item>
+    <item>18歳以上</item>
+  </string-array>
+</resources>

@@ -1,0 +1,10 @@
+<resources>
+  <string name="age_title">ما فئتك العمرية؟</string>
+  <string name="age_continue">متابعة</string>
+  <string-array name="age_bands">
+    <item>أقل من 13</item>
+    <item>13–15</item>
+    <item>16–17</item>
+    <item>18 أو أكثر</item>
+  </string-array>
+</resources>
