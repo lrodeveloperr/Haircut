@@ -1,6 +1,6 @@
 # Google Play Console setup status
 
-Updated 16 October 2026 UTC (15 October America/Toronto).
+Updated 16 October 2026, America/Toronto.
 
 ## Saved and verified
 
@@ -14,14 +14,14 @@ Updated 16 October 2026 UTC (15 October America/Toronto).
 - **Category Game / Simulation now saved**, with Console's change-saved confirmation.
 - **Store contact saved:** `info@worksbienstudios.com` and `https://worksbienstudios.com`. Phone omitted.
 - **Five tags applied and visible:** Casual, Hairdressers, Lifestyle simulation, Sandbox, Simulation.
-- Dashboard now confirms **7 of 11 setup tasks complete**, including category/contact.
+- Last dashboard check before completing IARC confirmed **7 of 11 setup tasks complete**, including category/contact.
+- **IARC content rating completed and saved on 16 October 2026**, after the owner explicitly approved acceptance of its Terms of Use. Console displays IARC status Completed and current regional ratings: ESRB Everyone, PEGI 3, USK All ages, ACB General, Brazil All ages, South Korea All ages, Taiwan General public, Saudi Arabia 3, IARC Generic 3+, and Russia 3+. The certificate ID currently displays a dash. Dashboard completion count after saving has not been verified.
 - No media, Android binary or release uploaded; nothing submitted for review or published.
 
 ## Remaining
 
-1. Content rating: IARC form prepared with Game selected and studio support email. Terms of Use remains unchecked; action-time confirmation is required to accept the legal agreement. No final rating or questionnaire submission.
-2. Privacy policy, Data safety and advertising ID: final Android wrapper and AdMob bridge still absent from the repository. Answers must match the actual final SDK, permissions and data flows; do not submit a blanket no-data-collected declaration for AdMob.
-3. Store listing: media intentionally omitted. English draft saved. Nine translations (es-419, pt-BR, fr-FR, de-DE, ar, ja-JP, ko-KR, id, hi-IN) remain prepared in this folder but not saved in Console.
+1. Privacy policy, Data safety and advertising ID: final Android wrapper and AdMob bridge still absent from the repository. Answers must match the actual final SDK, permissions and data flows; do not submit a blanket no-data-collected declaration for AdMob.
+2. Store listing: media intentionally omitted. English draft saved. Nine translations (es-419, pt-BR, fr-FR, de-DE, ar, ja-JP, ko-KR, id, hi-IN) remain prepared in this folder but not saved in Console.
 
 The default listing editor still stalls this browser, including direct navigation to the observed editor link and reload recovery. No CAPTCHA or bot-screening message observed. Category/contact dialogs worked using the documented DOM interaction API; browser accessibility snapshots inside these dialogs caused protocol stalls. This is not evidence that the listing text or translations were saved.
 
