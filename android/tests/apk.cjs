@@ -40,7 +40,7 @@ async function cut(label){
     const state=game.getState(),b=view.headScreen();
     for(const y of[.25,.35,.45,.55,.65])for(const x of[.5,.4,.6,.3,.7]){
       const p={x:b.left+(b.right-b.left)*x,y:b.top+(b.bottom-b.top)*y},hit=view.raycast(p.x,p.y);
-      if(hit?.kind==='scalp' && state.hair[Math.min(63,Math.floor(hit.v*64))*128+Math.min(127,Math.floor(hit.u*128))]>1){
+      if(hit && hit.kind!=='beard' && state.hair[Math.min(63,Math.floor(hit.v*64))*128+Math.min(127,Math.floor(hit.u*128))]>1){
         window.__nativeTouches=[];
         window.addEventListener('pointerdown',e=>__nativeTouches.push({x:e.clientX,y:e.clientY,height:e.height,trusted:e.isTrusted}),{once:true,capture:true});
         return {...p,dpr:devicePixelRatio,before:JSON.stringify(state.hair)};

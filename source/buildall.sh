@@ -1,6 +1,7 @@
 set -e
 cd "$(dirname "$0")"
 if [ "${TARGET:-playables}" = full ]; then
+  python3 -c 'import shutil; shutil.rmtree("build", ignore_errors=True)'
   TARGET=youtube bash buildall.sh
   python3 youtube/build.py
   python3 ../android/build-runtime.py

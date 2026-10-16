@@ -61,7 +61,7 @@ function fakeHost() {
         skinFadeStudio.selectGuard(0);const b=HSC.view.headScreen();
         for(const y of[.3,.4,.5,.6])for(const x of[.5,.4,.6]){
           const p={x:b.left+(b.right-b.left)*x,y:b.top+(b.bottom-b.top)*y};
-          if(HSC.view.raycast(p.x,p.y)?.kind==='scalp'){
+          if((()=>{const hit=HSC.view.raycast(p.x,p.y);return hit&&hit.kind!=='beard';})()){
             window.__rays=[];const ray=HSC.view.raycast;
             HSC.view.raycast=(x,y)=>{__rays.push([x,y]);return ray(x,y);};return p;
           }
