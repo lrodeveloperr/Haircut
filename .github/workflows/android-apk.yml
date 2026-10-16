@@ -82,12 +82,7 @@ jobs:
           profile: pixel_2
           emulator-options: -no-window -gpu lavapipe -no-snapshot -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: |
-            if [ "$ANDROID_APK_AGE_ONLY" = "1" ]; then
-              node android/tests/age-gate.cjs
-            else
-              node android/tests/apk.cjs
-            fi
+          script: node android/tests/run-native.cjs
       - name: Collect emulator host diagnostics
         if: always()
         run: |
