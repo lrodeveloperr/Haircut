@@ -15,21 +15,23 @@ Android name: **Barber Simulator: ASMR Haircut**.
 
 ## Build integration
 
-`TARGET=full bash source/buildall.sh` selects `source/customers/detail-android.js` and applies `android/patch-graphics.py` and `android/patch-runtime.py` to the generated Android web runtime. The reward patch sets the existing catalog's requirement to two, updates the accessible reward label and applies the locked Android page title. It reuses the actual wardrobe's saving, ownership, progress and equip logic.
+`TARGET=full bash source/buildall.sh` builds the complete working YouTube/Sites engine, then `android/build-runtime.py` adapts only native services, Android reward/title policy and touch clearance. Shader preparation, first-frame readiness, model construction, camera, resize and context recovery are the same engine code used by the working web build. The generated engine is checked byte-for-byte against that web engine after reversing its two touch-clearance substitutions.
 
+`android/native-transport.js` sends asynchronous requests to the native private-storage worker. Successful save acknowledgements are delivered only after disk commit. Existing flat game-key saves are migrated into the same versioned envelope used by the working web client. Native AdMob earned callbacks remain the only reward source. The reward patch retains two completed videos per daily item and the locked Android title.
 The default Playgama/Playables build and the direct YouTube builder do not call this adaptation. Shared source files and historical release ZIPs retain their existing naming and reward rule.
 
-## Fixed Sites High graphics and touchscreen mapping
+## Fixed Sites High graphics and compact touchscreen mapping
 
 - Android always uses 30,000 scalp strands, eight scalp/beard segments, full beard density, full skin shading and requested MSAA. There is no Auto/Low selector or hardware classification; saved detail preferences and `?detail=low` cannot lower quality.
 - The drawing buffer uses the same fixed High policy as Sites/YouTube: at most 2x pixel density and four million pixels, recomputed for actual canvas bounds on viewport/display changes. This replaces v1.0.1's unrestricted native density, which could unnecessarily multiply GPU work. Hair geometry, shading and antialiasing remain full High; slow frames never lower resolution or detail.
 - Both former automatic quality controllers are disabled. Frame-time samples are diagnostic only and do not change rendering quality.
 - Static scenes redraw on changes rather than continuously. Cutting, rotation, reveal and falling clippings still update each animation frame. This saves idle GPU work without removing detail.
-- Touch uses the shared Sites/YouTube placement: the blade stays above the finger by `min(72 CSS pixels, 12% of canvas height)`, so its cutting edge remains visible. Mouse/pen retain their shared direct mapping. This restores the website's mapping instead of v1.0.1's blade-under-finger adjustment. Clipper placement and hair removal continue to use the same surface hit.
+- Touch now uses 18–28 CSS pixels of blade clearance based on finger contact size, with a 24px fallback. This reduces the old 72px lift while keeping the cutting edge visible. The clearance has no viewport-height multiplier, so a tablet does not enlarge it. Mouse/pen retain direct mapping. Clipper placement and hair removal use the same surface hit.
 - Game saves, reward credits, hair lengths, brush dimensions and camera controls retain their existing rules.
 
-`node android/tests/graphics.cjs` compares the actual Android graphics policy with the Sites/YouTube profile and the touch mapping with shared website code. It exercises portrait/landscape/large buffers, display-density changes, scalp/beard placement and twenty simulated minutes at each tested frame cadence. These are logic checks, not physical-device performance measurements. `node android/tests/bridge.cjs` additionally tests the fixed Sites pixel budget, saved/URL Low rejection, visible blade placement with trusted touch, rotation and context restoration against the real web game and Android bridge in Chromium.
+`node android/tests/graphics.cjs` checks complete engine parity and the fixed High graphics profile, viewport/density changes, scalp/beard aim and twenty simulated minutes at each tested frame cadence. `node android/tests/bridge.cjs` exercises the actual web bundle with an asynchronous native-host fixture, including delayed/failed save acknowledgements, rewards, four phone/tablet layouts and context restoration.
 
+`node android/tests/apk.cjs` installs the compiled APK and connects to its real Android WebView. It sends native ADB swipes in phone/tablet portrait/landscape windows, checks reachable controls and fixed High drawing buffers, backgrounds/resumes the activity, verifies no-fill recovery, and force-stops/relaunches to prove private disk persistence. JSON, logcat and real device screenshots are retained with the APK artifact. Emulator checks verify behavior, not frame rate on a physical phone or tablet.
 ## AdMob boundary
 
 The native Android shell is in `android/native/` (debug APK compiled and checked; see its README and build record). The Android client's `showRewarded` promise must resolve `true` only from a verified earned-reward callback. Ad dismissal, loading, cancellation or an error must not resolve as an earned reward. The test APK does not claim live native AdMob delivery or a signed AAB.

@@ -36,11 +36,13 @@ admobInterstitialId=ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ
 
 ## How it works
 
-- `MainActivity` loads `assets/game/index.html` through `WebViewAssetLoader`. The page's Playgama Bridge URL is
-  answered with `assets/android-bridge.js`; every other outside request is refused, so no Playgama code or web
-  host service ships. Links to other `https` pages open in the browser.
-- `android-bridge.js` gives the game the interface it already uses: saves in the app's private storage
-  (`HostBridge`, each write committed before success is reported), ads through AdMob, no analytics.
+- `MainActivity` loads the complete working Sites renderer from `assets/game/index.html` through
+  `WebViewAssetLoader`. Game assets are bundled and outside page requests are refused. Links to other
+  `https` pages open in the browser.
+- `android/native-transport.js` connects the working web client to private native saves and AdMob.
+  `HostBridge` runs storage on a worker and acknowledges each successful write only after disk commit;
+  JavaScript does not wait synchronously for the disk. Existing flat saves migrate into the web client's
+  versioned envelope. No analytics are sent. See [runtime policy](../RUNTIME.md).
 - `AdsController` waits for Google's consent (UMP) before requesting any ad. The game counts a rewarded video
   only on AdMob's earned-reward callback; a closed, unavailable or failed ad gives no credit. An interstitial
   that is not ready is skipped, never waited for.

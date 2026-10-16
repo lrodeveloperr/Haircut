@@ -1,8 +1,14 @@
 set -e
 cd "$(dirname "$0")"
+if [ "${TARGET:-playables}" = full ]; then
+  python3 -c 'import shutil; shutil.rmtree("build", ignore_errors=True)'
+  TARGET=youtube bash buildall.sh
+  python3 youtube/build.py
+  python3 ../android/build-runtime.py
+  exit
+fi
 # Keep publisher-specific graphics policy separate from the Android and legacy Playgama targets.
 case "${TARGET:-playables}" in
-  full) DETAIL=detail-android ;;
   youtube) DETAIL=detail-youtube ;;
   *) DETAIL=detail-playables ;;
 esac
@@ -40,10 +46,6 @@ c=json.load(open('src/playgama-bridge-config.json'))
 c['advertisement']['rewarded']={'disable':False,'placementFallback':'unlock-item','placements':[{'id':'unlock-item'},{'id':'replay-customer'}]}
 json.dump(c,open('build/playgama-bridge-config.json','w'),separators=(',',':'))
 PY
-if [ "${TARGET:-playables}" = full ]; then
-  python3 ../android/patch-graphics.py build/runtime/game.js
-  python3 ../android/patch-runtime.py build
-fi
 node --check build/runtime/game.js
 node --check build/runtime/customers.js
 echo build-ok
