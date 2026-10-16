@@ -194,6 +194,6 @@ function fakeHost() {
     await buffer();passed++;
     assert.deepEqual(errors,[]);console.log(`PASS: ${passed} working Android runtime browser cases.`);
   }catch(e){console.error(`FAIL after ${passed}:`,e);process.exitCode=1;}finally{
-    if(reviewPage)try{const dir=path.join(root,'qa/results');fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'android-browser-placement-report.json'),JSON.stringify(await reviewPage.evaluate(()=>window.__placementEvidence||[]),null,2));}catch(_){}
+    if(reviewPage)try{const dir=path.join(root,'qa/results');fs.mkdirSync(dir,{recursive:true});const evidence=await reviewPage.evaluate(()=>window.__placementEvidence||[]);if(evidence.length)fs.writeFileSync(path.join(dir,'android-browser-placement-report.json'),JSON.stringify(evidence,null,2));}catch(_){}
     await browser.close();}
 })();
