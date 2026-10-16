@@ -92,8 +92,41 @@
     dbrown: ['#5a3c22', '#3a2412', '#26170b', '#140c06'],
   };
 
-  // morph keys, each in [-1, 1]; see faces.js for what they do
-  const MORPHS = ['noseW', 'noseBridge', 'noseTip', 'lips', 'jaw', 'chin', 'cheek', 'brow'];
+  // morph keys, each in [-1, 1]; see faces.js for what they do. The last five are only set by face masters.
+  const MORPHS_BASE = ['noseW', 'noseBridge', 'noseTip', 'lips', 'jaw', 'chin', 'cheek', 'brow'];
+  const MORPHS = [...MORPHS_BASE, 'faceW', 'faceL', 'lid', 'forehead', 'noseLen'];
+
+  // Face masters (Android): four regional face shapes per class, each a full morph target. A customer gets one
+  // master of their class plus individual variation, which stays smaller than the gaps between masters so the
+  // four read as different people. Kept within [-0.75, 0.75] so nobody is drawn as a caricature. Ids are
+  // internal and never shown to the player. The other targets keep the single class tendency.
+  const USE_MASTERS = false;
+  const MASTERS = {
+    white: [
+      { id: 'northern-european', morph: { faceW: -0.4, faceL: 0.45, noseBridge: 0.6, noseLen: 0.3, noseW: -0.3, lips: -0.3, chin: 0.45, jaw: 0.1, cheek: -0.2, lid: -0.4, forehead: 0.2, brow: 0.3 } },
+      { id: 'mediterranean', morph: { faceW: 0.1, noseBridge: 0.55, noseLen: 0.45, noseW: 0.15, noseTip: 0.25, lips: 0.15, brow: 0.5, lid: -0.3, cheek: 0.1, chin: 0.1, forehead: -0.1 } },
+      { id: 'eastern-european', morph: { faceW: 0.45, faceL: -0.2, cheek: 0.55, jaw: 0.45, noseBridge: 0.1, noseTip: -0.3, noseLen: -0.25, noseW: 0.1, lips: -0.1, lid: 0.15, brow: 0.1, forehead: 0.1 } },
+      { id: 'british-irish', morph: { faceW: -0.15, faceL: 0.2, jaw: -0.25, chin: 0.05, noseBridge: 0.3, noseTip: -0.15, noseW: -0.1, lips: -0.35, cheek: -0.25, forehead: 0.4, brow: 0.2, lid: -0.1 } },
+    ],
+    black: [
+      { id: 'west-african', morph: { noseW: 0.6, noseBridge: -0.3, noseTip: -0.1, lips: 0.6, faceW: 0.25, cheek: 0.3, jaw: 0.25, faceL: -0.1, forehead: 0.35, brow: 0.1 } },
+      { id: 'east-african-horn', morph: { faceW: -0.5, faceL: 0.5, noseW: -0.25, noseBridge: 0.45, noseLen: 0.35, lips: 0.15, chin: 0.25, cheek: 0.35, jaw: -0.2, forehead: 0.2, lid: -0.1 } },
+      { id: 'central-southern-african', morph: { faceW: 0.45, faceL: -0.35, cheek: 0.55, noseW: 0.7, noseBridge: -0.5, noseLen: -0.35, lips: 0.4, jaw: 0.1, forehead: 0.45, brow: -0.1 } },
+      { id: 'african-american-caribbean', morph: { noseW: 0.3, noseBridge: 0.05, lips: 0.3, jaw: 0.4, chin: 0.25, faceL: 0.15, cheek: 0.1, brow: 0.25, forehead: 0 } },
+    ],
+    'east-asian': [
+      { id: 'northeast-asian', morph: { faceW: 0.4, faceL: 0.25, cheek: 0.5, jaw: 0.45, lid: 0.6, noseBridge: -0.35, noseW: 0.1, brow: -0.45, forehead: -0.1, chin: 0 } },
+      { id: 'southern-chinese', morph: { faceW: 0.2, faceL: -0.3, noseW: 0.45, noseBridge: -0.55, noseTip: -0.2, lips: 0.35, lid: 0.3, cheek: 0.25, forehead: 0.25, chin: -0.2, brow: -0.2 } },
+      { id: 'mongolian-central-asian', morph: { faceW: 0.65, faceL: 0.05, cheek: 0.75, jaw: 0.35, lid: 0.75, noseBridge: -0.2, noseLen: -0.1, brow: -0.3, forehead: -0.2, lips: -0.1 } },
+      { id: 'east-asian-mixed', morph: { faceW: -0.1, faceL: 0.3, cheek: 0.15, jaw: -0.15, lid: 0.3, noseBridge: 0, noseLen: 0.2, noseW: 0.05, brow: -0.1, chin: 0.1, lips: 0.05 } },
+    ],
+    'south-asian': [
+      { id: 'north-indian-pakistani', morph: { faceL: 0.4, faceW: -0.2, noseBridge: 0.55, noseLen: 0.45, noseTip: 0.15, brow: 0.4, lid: -0.3, chin: 0.25, jaw: 0.1, lips: 0 } },
+      { id: 'south-indian-sri-lankan', morph: { faceW: 0.1, faceL: -0.1, noseW: 0.45, noseBridge: -0.1, noseTip: -0.1, lips: 0.45, cheek: 0.15, forehead: 0.25, brow: 0.15 } },
+      { id: 'bengali', morph: { faceW: 0.25, faceL: -0.25, cheek: 0.35, noseW: 0.25, noseTip: 0.2, noseLen: -0.15, lips: 0.25, lid: 0.1, chin: -0.15, jaw: -0.1 } },
+      { id: 'himalayan', morph: { faceW: 0.4, cheek: 0.55, lid: 0.55, noseBridge: -0.3, noseW: 0.05, brow: -0.25, jaw: 0.25, faceL: 0.05, forehead: -0.05 } },
+    ],
+  };
 
   // The four customer classes. Skin tone range, hair textures (with their curl sub-types), natural hair and
   // eye colours, beard growth and how common pattern baldness is all follow the class; age then decides
@@ -323,7 +356,17 @@
 
     // face shape: group tendency (subtle) + individual variation (larger)
     const morph = {};
-    for (const k of MORPHS) morph[k] = +clamp(0.55 * (her.morph[k] || 0) + R.gauss(0.42), -1, 1).toFixed(3);
+    let master = null;
+    if (USE_MASTERS && MASTERS[cls]) {
+      // a separate stream, so every other trait of a seed stays the same person
+      const M = rng(seed ^ 0x6d5a7e2);
+      const list = MASTERS[cls], mi = opts.master != null ? opts.master : M.int(0, list.length - 1);
+      master = list[mi].id;
+      for (const k of MORPHS) morph[k] = +clamp((list[mi].morph[k] || 0) + M.gauss(0.22), -1, 1).toFixed(3);
+      for (let i = 0; i < MORPHS_BASE.length; i++) R.gauss(0.42); // keep the main stream in step
+    } else {
+      for (const k of MORPHS_BASE) morph[k] = +clamp(0.55 * (her.morph[k] || 0) + R.gauss(0.42), -1, 1).toFixed(3);
+    }
     if (opts.morph) Object.assign(morph, opts.morph);
 
     const eyes = R.pick(her.eyes);
@@ -346,6 +389,7 @@
       eyes,
       brow,
       morph,
+      ...(master ? { master } : {}),
     };
   }
 
@@ -385,6 +429,6 @@
 
   Object.assign(HSC, {
     rng, clamp, smooth, makePerson, validPerson, skinColour,
-    SKIN_TONES, UNDERTONES, HAIR, HAIR_BY_CLASS, BEARD_BY_AGE, BEARD_CLASS_MULT, BALD_BY_CLASS, HAIR_DARK, EYES, MORPHS, HERITAGE, NORWOOD_SHAPE, BEARD_STYLES, PERSON_VERSION, baldShape,
+    SKIN_TONES, UNDERTONES, HAIR, HAIR_BY_CLASS, BEARD_BY_AGE, BEARD_CLASS_MULT, BALD_BY_CLASS, HAIR_DARK, EYES, MORPHS, MASTERS, HERITAGE, NORWOOD_SHAPE, BEARD_STYLES, PERSON_VERSION, baldShape,
   });
 })(globalThis.HSC || (globalThis.HSC = {}));

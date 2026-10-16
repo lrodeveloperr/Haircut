@@ -116,12 +116,27 @@
     g = G(ax, y, z, [0, -0.72, 1.95], [0.42, 0.32, 0.42]); dz += 0.09 * m.chin * g; dy -= 0.035 * m.chin * g;
     g = G(ax, y, z, [1.15, 1.15, 1.65], [0.38, 0.32, 0.42]); dx += sx * 0.065 * m.cheek * g; dz += 0.03 * m.cheek * g;
     g = G(ax, y, z, [0.6, 2.05, 2.05], [0.5, 0.13, 0.25]); dz += 0.045 * m.brow * g;
+    // master-only controls (absent keys are 0): face width, lower-face length, forehead, nose length
+    if (m.faceW) { g = G(ax, y, z, [0.95, 0.35, 1.3], [0.7, 1.05, 0.95]); dx += x * 0.2 * m.faceW * g; }
+    if (m.faceL) { g = smooth(1.0, -0.6, y) * smooth(-0.3, 0.9, z); dy -= 0.2 * m.faceL * g; }
+    if (m.forehead) { g = G(ax, y, z, [0, 2.6, 1.75], [0.85, 0.38, 0.55]); dz += 0.12 * m.forehead * g; }
+    if (m.noseLen) { g = G(ax, y, z, [0, 0.76, 2.5], [0.28, 0.22, 0.38]); dy -= 0.12 * m.noseLen * g; dz += 0.04 * m.noseLen * g; }
     // age: jowls and under-eye bags
     const a2 = age * age;
     g = G(ax, y, z, [0.95, -0.5, 1.55], [0.35, 0.28, 0.4]); dy -= 0.07 * a2 * g; dx += sx * 0.03 * a2 * g;
     g = G(ax, y, z, [0.62, 1.3, 1.98], [0.22, 0.07, 0.18]); dz += 0.025 * a2 * g;
+    dx *= guard; dy *= guard; dz *= guard;
+    // upper lid (masters only): fuller (+) or more deeply creased (-), moved straight away from or towards the
+    // eyeball's centre so it never passes into the eye. It reaches closer to the eye than the other morphs.
+    if (m.lid && (1 - smooth(0.0, 0.03, scalp)) > 0) {
+      const ex = ax - eyeC[0], ey = y - eyeC[1], ez = z - eyeC[2], r = Math.hypot(ex, ey, ez) || 1;
+      const above = smooth(-0.02, 0.12, ey) * smooth(-0.15, 0.1, ez);
+      const w = m.lid > 0 ? smooth(0.31, 0.37, r) * (1 - smooth(0.5, 0.72, r)) : smooth(0.4, 0.48, r) * (1 - smooth(0.58, 0.78, r));
+      const k = (m.lid > 0 ? 0.065 : 0.05) * m.lid * w * above * (1 - smooth(0.0, 0.03, scalp)) / r;
+      dx += sx * ex * k; dy += ey * k; dz += ez * k;
+    }
     if (!dx && !dy && !dz) return null;
-    return [dx * guard, dy * guard, dz * guard];
+    return [dx, dy, dz];
   }
 
   // ---------------- beard surface (built once on the un-morphed head) ----------------

@@ -11,6 +11,7 @@ const { execFileSync } = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
 const catalog = fs.readFileSync(path.join(root, 'source/customers/catalog.js'), 'utf8');
 const wardrobe = fs.readFileSync(path.join(root, 'source/customers/wardrobe.js'), 'utf8');
+const people = fs.readFileSync(path.join(root, 'source/customers/people.js'), 'utf8');
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'haircut-android-rewards-'));
 let tests = 0;
 
@@ -57,7 +58,7 @@ function harness(code, saved = null) {
 (async () => {
   try {
     fs.mkdirSync(path.join(temp, 'runtime'));
-    const raw = catalog + '\n' + wardrobe;
+    const raw = people + '\n' + catalog + '\n' + wardrobe;
     fs.writeFileSync(path.join(temp, 'runtime/customers.js'), raw);
     fs.copyFileSync(path.join(root, 'source/src/index.html'), path.join(temp, 'index.html'));
     execFileSync('python3', [path.join(root, 'android/patch-runtime.py'), temp]);
@@ -115,6 +116,18 @@ function harness(code, saved = null) {
     assert.equal(concurrent.H.rewards.owns(concurrent.d.key), false);
     tests++;
 
+    // Android face masters: four per class, assigned on a separate stream so every other trait is unchanged
+    const strip = (p) => { const q = JSON.parse(JSON.stringify(p)); delete q.morph; delete q.master; return JSON.stringify(q); };
+    for (const her of h.H.HERITAGE) assert.equal(h.H.MASTERS[her.id].length, 4);
+    for (let seed = 1; seed <= 400; seed++) {
+      const a = h.H.makePerson(seed), b = harness(raw).H.makePerson(seed);
+      assert.ok(h.H.MASTERS[a.heritage].some((m) => m.id === a.master), 'Android customer must have a master face');
+      assert.equal(b.master, undefined, 'other targets must not use face masters');
+      assert.equal(strip(a), strip(b), 'a master must change only the face shape');
+      assert.ok(h.H.validPerson(a) && h.H.validPerson(b));
+    }
+    tests++;
+
     const ordinary = harness(raw);
     assert.equal(ordinary.H.catalog.VIDEOS(ordinary.d), 1, 'shared/Playables policy remains one video');
     await ordinary.ui.take(ordinary.d);
@@ -126,7 +139,7 @@ function harness(code, saved = null) {
     assert.ok(html.includes('aria-label="Barber Simulator: ASMR Haircut"'));
     assert.ok(adapted.includes('" rewarded video" + ((need - done) === 1 ? "" : "s")'));
     tests++;
-    console.log(`PASS: ${tests} Android reward cases (two credits, cancellation/error, reload, cape, duplicate input, legacy isolation, title).`);
+    console.log(`PASS: ${tests} Android cases (two credits, cancellation/error, reload, cape, duplicate input, face masters, legacy isolation, title).`);
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
   }

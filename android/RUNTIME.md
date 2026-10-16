@@ -13,6 +13,12 @@ Android name: **Barber Simulator: ASMR Haircut**.
 - Existing owned items remain owned. Daily offers and unfinished progress retain the existing midnight rotation rules.
 - Replay rewards retain their existing separate policy.
 
+## Face masters (draft, pending approval)
+
+- Each customer class (White, Black, East Asian, South Asian) has four regional face masters in `source/customers/people.js`. Every Android customer gets one master of their class plus smaller individual variation.
+- Five face controls are used only by masters: face width, lower-face length, upper-lid fullness, forehead and nose length (`source/customers/faces.js`).
+- Masters use a separate random stream, so skin, hair, eyes, age and beard for a seed are unchanged; only face shape differs. Saved customers remain valid. Master ids are internal and never shown.
+
 ## Build integration
 
 `TARGET=full bash source/buildall.sh` applies `android/patch-runtime.py` to the generated Android web runtime. The patch sets the existing catalog's requirement to two, updates the accessible reward label and applies the locked Android page title. It reuses the actual wardrobe's saving, ownership, progress and equip logic.
