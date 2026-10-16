@@ -12,7 +12,7 @@ async function fixture(options={}){
  let raw=Object.hasOwn(options,'saved')?options.saved:'',readFail=!!options.readFail,writeFail=false;
  const calls=[],errors=[],requests=[];
  const ctx=await browser.newContext({viewport:options.viewport||{width:390,height:844},deviceScaleFactor:options.dpr||1,reducedMotion:'reduce',hasTouch:!!options.touch,isMobile:!!options.mobile});
- const page=await ctx.newPage();page.setDefaultTimeout(30000);
+ const page=await ctx.newPage();page.setDefaultTimeout(30000);page.setDefaultNavigationTimeout(120000);
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'||/THREE\.WebGLProgram/.test(m.text()))errors.push(m.text());});page.on('request',r=>requests.push(r.url()));
  await ctx.exposeBinding('readCloud',async()=>{calls.push(['load']);if(options.loadDelay)await new Promise(r=>setTimeout(r,options.loadDelay));if(readFail)throw Error('Injected cloud read failure');return raw;});
  await ctx.exposeBinding('writeCloud',async(_,value)=>{calls.push(['save-start']);if(writeFail)throw Error('Injected cloud write failure');raw=value;calls.push(['save-ack']);});
@@ -94,11 +94,13 @@ const state=p=>p.evaluate(()=>JSON.parse(JSON.stringify(skinFadeStudio.getState(
 async function stroke(p){
  await p.getByRole('radio',{name:/^Guard 0,/}).click();await p.keyboard.press('ArrowRight');
  if((await state(p)).interactionMode!=='cut')await p.getByRole('button',{name:'Clipper off: drag to turn the customer',exact:true}).click();
- const point=await p.locator('.tutorial.tut-cut').evaluateAll(es=>es.length?{x:es[0].getBoundingClientRect().x,y:es[0].getBoundingClientRect().y}:null);
+ const point=await p.evaluate(()=>{const r=document.getElementById('scene').getBoundingClientRect();for(const fy of [.25,.3,.35,.4,.45,.5])for(const fx of [.4,.5,.6]){const x=r.left+r.width*fx,y=r.top+r.height*fy;if(HSC.view.raycast(x,y)&&HSC.view.raycast(x,y+40))return{x,y};}return null;});
  const size=p.viewportSize(),pt=point||{x:size.width*.47,y:size.height*.33};
- await p.mouse.move(pt.x,pt.y);await p.mouse.down();await p.mouse.move(pt.x+30,pt.y+80,{steps:10});await p.mouse.up();await p.waitForTimeout(300);
+ await p.mouse.move(pt.x,pt.y);await p.mouse.down();await p.mouse.move(pt.x+12,pt.y+40,{steps:10});await p.mouse.up();await p.waitForTimeout(300);
 }
-async function finish(p){await p.getByRole('button',{name:'Finish haircut',exact:true}).click();try{await p.locator('#hsc-hub.show').waitFor({state:'visible',timeout:45000});}catch(e){const debug=await p.evaluate(()=>({status:skinFadeStudio.getState().status,view:((v)=>({paused:v.paused,userPaused:v.userPaused,revealComplete:v.revealComplete,busy:v.busy}))(skinFadeStudio.getView()),detail:{level:HSC.detail.level,frameMs:HSC.detail.lastFrameMs},frames:__frames})).catch(()=>null);e.message+='\nReveal diagnostics: '+JSON.stringify(debug);throw e;}}
+// The unchanged reveal needs at least 15 frames. Full-detail SwiftShader frames
+// can take seconds on a contended CI runner, so allow software-renderer headroom.
+async function finish(p){await p.getByRole('button',{name:'Finish haircut',exact:true}).click();try{await p.locator('#hsc-hub.show').waitFor({state:'visible',timeout:120000});}catch(e){const debug=await p.evaluate(()=>({status:skinFadeStudio.getState().status,view:((v)=>({paused:v.paused,userPaused:v.userPaused,revealComplete:v.revealComplete,busy:v.busy}))(skinFadeStudio.getView()),detail:{level:HSC.detail.level,frameMs:HSC.detail.lastFrameMs},frames:__frames})).catch(()=>null);throw new Error(e.message+'\nReveal diagnostics: '+JSON.stringify(debug));}}
 async function next(p){await p.locator('.training-continue').click();await p.locator('#hsc-hub.show').waitFor({state:'hidden',timeout:45000});await p.getByRole('button',{name:'Finish haircut',exact:true}).waitFor({state:'visible',timeout:45000});}
 async function reward(p,mode){await p.evaluate(mode=>__yt.rewardMode=mode,mode);await p.locator('.hsc-vbtn').click();await p.waitForTimeout(700);}
 async function standard(){
@@ -106,7 +108,7 @@ async function standard(){
  await test('Ready signals use a real loading screen and occur once in order',async()=>{const m=await p.evaluate(()=>__yt.messages);assert.deepEqual(m.map(x=>x.name),['firstFrameReady','gameReady']);assert.equal(m[0].loading,true);assert.match(m[0].loadingText,/Loading/);assert.equal(m[1].loading,false);assert.equal(m[1].hud,true);assert.equal(await p.locator('.audio-toggle').count(),0);assert.equal(await p.locator('html').getAttribute('lang'),'fr-CA');});
  await test('Idle frames avoid GPU redraws; native guard and camera controls redraw the scene',async()=>{await p.evaluate(()=>{window.__renders=0;const render=HSC.view.render;HSC.view.render=function(...args){__renders++;return render.apply(this,args);};});await p.waitForTimeout(300);const before=await p.evaluate(()=>__renders);await p.waitForTimeout(500);assert.equal(await p.evaluate(()=>__renders),before);await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForFunction(n=>__renders>n,before);const after=await p.evaluate(()=>__renders);await p.keyboard.press('ArrowRight');await p.waitForFunction(n=>__renders>n,after);});
  if(engine==='chromium')await test('An idle WebGL context restoration redraws without needing player input',async()=>{const hair=(await state(p)).hair;await p.evaluate(()=>{const canvas=document.getElementById('scene');window.__contextExtension=canvas.getContext('webgl2').getExtension('WEBGL_lose_context');if(!__contextExtension)throw Error('Context-loss extension unavailable');window.__lost=false;canvas.addEventListener('webglcontextlost',()=>__lost=true,{once:true});__contextExtension.loseContext();});await p.waitForFunction(()=>__lost);const before=await p.evaluate(()=>__renders);await p.evaluate(()=>__contextExtension.restoreContext());await p.waitForFunction(n=>!document.getElementById('scene').getContext('webgl2').isContextLost()&&__renders>n,before,{timeout:45000});assert.deepEqual((await state(p)).hair,hair);});
- await test('Native cutting, cloud save and reload restore the exact haircut',async()=>{await stroke(p);const before=await state(p);assert(before.cutStrokeCount>0);await p.waitForTimeout(700);assert(f.raw().length>0);await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);const after=await state(p);assert.deepEqual(after.hair,before.hair);assert.equal(after.selectedGuard,before.selectedGuard);});
+ await test('Native cutting, cloud save and reload restore the exact haircut',async()=>{await stroke(p);await p.evaluate(()=>HSC.wardrobe.client.flushProgress());const before=await state(p);assert(before.cutStrokeCount>0);assert(f.raw().length>0);assert(Buffer.byteLength(f.raw())<65536);await p.reload({waitUntil:'domcontentloaded'});await p.waitForFunction(()=>!!window.skinFadeStudio);const after=await state(p);assert.deepEqual(after.hair,before.hair);assert.equal(after.selectedGuard,before.selectedGuard);});
  await test('Host pause stops input, rendering, animation scheduling and UI timers; mute survives resume',async()=>{
    await p.evaluate(()=>{__yt.callbacks.pause();});await p.waitForTimeout(500);
    const before=await state(p),frames=await p.evaluate(()=>__frames.executed);
@@ -122,9 +124,9 @@ async function standard(){
  await test('Paid replay restores the same customer and preserves the next queue and saved haircut score',async()=>{await finish(p);await p.waitForFunction(()=>__yt.scores.some(s=>s.value===HSC.meta.data.cuts&&s.value>0));assert.equal(JSON.parse(f.raw()).slots['skin-fade-studio-meta-v1'].cuts,await p.evaluate(()=>Math.max(...__yt.scores.map(s=>s.value))));await p.screenshot({timeout:60000,path:path.join(out,'completion.png')});const before=await state(p),queue=await p.evaluate(()=>JSON.stringify(HSC.meta.data.queue));await p.locator('.hsc-replay').click();await p.getByRole('button',{name:'Finish haircut',exact:true}).waitFor({state:'visible',timeout:30000});const after=await state(p);assert.equal(after.look.person.seed,before.look.person.seed);assert.deepEqual(after.hair,after.startHair);assert.equal(await p.evaluate(()=>JSON.stringify(HSC.meta.data.queue)),queue);});
  await test('A cloud write failure blocks the reward request and preserves usability',async()=>{await p.locator('#hsc-hud .hsc-rw').click();await p.locator('.hsc-tab').last().click();f.writeFail(true);const ads=await p.evaluate(()=>__yt.ads.length);await reward(p,'earned');assert.equal(await p.evaluate(()=>__yt.ads.length),ads);assert(await p.locator('.hsc-vbtn').isEnabled());f.writeFail(false);await p.keyboard.press('Escape');});
  await test('Only bundled resources and the official YouTube SDK are requested',async()=>{assert.deepEqual(f.errors,[]);assert(f.requests.every(url=>url.startsWith('http://release.test/')||url==='https://www.youtube.com/game_api/v1'));});
- const saved=f.raw();await f.close();
- await test('Fresh empty JSON sessions boot without errors, save, and restore after reload',async()=>{for(const saved of ['{}','null','[]','""']){const g=await fixture({saved}),p=g.page;try{assert.deepEqual(g.errors,[]);await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);const before=await state(p);assert.equal(JSON.parse(g.raw()).version,1);await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);assert.equal((await state(p)).selectedGuard,2);assert.deepEqual((await state(p)).hair,before.hair);assert.deepEqual(g.errors,[]);}finally{await g.close();}}});
- await test('Unread cloud data is preserved and Retry restores it',async()=>{const g=await fixture({saved,readFail:true}),p=g.page;try{await p.getByRole('button',{name:'Retry',exact:true}).waitFor({state:'visible'});assert.equal(g.raw(),saved);assert.equal(g.calls.filter(c=>c[0]==='save-start').length,0);g.readFail(false);await p.getByRole('button',{name:'Retry',exact:true}).click();await p.waitForFunction(()=>!!window.skinFadeStudio);assert.deepEqual((await state(p)).hair,JSON.parse(saved).slots['skin-fade-studio-session-v2'].hair);}finally{await g.close();}});
+ const saved=f.raw(),savedState=await state(p);await f.close();
+ await test('Fresh empty JSON sessions boot without errors, save, and restore after reload',async()=>{for(const saved of ['{}','null','[]','""']){const g=await fixture({saved}),p=g.page;try{assert.deepEqual(g.errors,[]);await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);const before=await state(p);assert([1,2].includes(JSON.parse(g.raw()).version));assert(Buffer.byteLength(g.raw())<65536);await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);assert.equal((await state(p)).selectedGuard,2);assert.deepEqual((await state(p)).hair,before.hair);assert.deepEqual(g.errors,[]);}finally{await g.close();}}});
+ await test('Unread cloud data is preserved and Retry restores it',async()=>{const g=await fixture({saved,readFail:true}),p=g.page;try{await p.getByRole('button',{name:'Retry',exact:true}).waitFor({state:'visible'});assert.equal(g.raw(),saved);assert.equal(g.calls.filter(c=>c[0]==='save-start').length,0);g.readFail(false);await p.getByRole('button',{name:'Retry',exact:true}).click();await p.waitForFunction(()=>!!window.skinFadeStudio);assert.deepEqual((await state(p)).hair,savedState.hair);}finally{await g.close();}});
  await test('A future cloud envelope shows recovery and never overwrites progress',async()=>{const saved=JSON.stringify({version:2,slots:{}}),g=await fixture({saved,blocked:true});try{await g.page.getByRole('heading',{name:'A newer game version is needed'}).waitFor({state:'visible'});assert.equal(g.raw(),saved);assert.equal(g.calls.filter(c=>c[0]==='save-start').length,0);}finally{await g.close();}});
  await test('Missing SDK gives a keyboard-focused Retry in a tiny embed',async()=>{const g=await fixture({missing:true,viewport:{width:225,height:400}});try{const retry=g.page.getByRole('button',{name:'Retry',exact:true});await retry.waitFor({state:'visible'});assert.equal(await retry.evaluate(e=>e===document.activeElement),true);await g.page.screenshot({timeout:60000,path:path.join(out,'missing-sdk.png')});}finally{await g.close();}});
  await test('An initial host pause defers gameplay until the host resumes',async()=>{const g=await fixture({initialPause:true});try{await g.page.waitForTimeout(600);assert.equal(await g.page.evaluate(()=>!!window.skinFadeStudio),false);await g.page.evaluate(()=>__yt.callbacks.resume());await g.page.waitForFunction(()=>!!window.skinFadeStudio);assert.equal(await g.page.evaluate(()=>__yt.messages.filter(m=>m.name==='gameReady').length),1);}finally{await g.close();}});
@@ -169,7 +171,8 @@ async function quality(){
    try{
     // Check native interaction at phone pixel densities before comparing the saved customer.
     await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);
-    const saved=f.raw(),before=await state(p);
+    // Compare rendering with the same decoded session; the older reference protects v2 saves.
+    const saved=await p.evaluate(async encoded=>{const slots={};for(const key of Object.keys(JSON.parse(encoded).slots))slots[key]=await HSC.wardrobe.client.loadProgress(key,null);return JSON.stringify({version:1,slots});},f.raw()),before=await state(p);
     const metrics=await p.evaluate(()=>{const c=document.getElementById('scene'),b=HSC.debugState.beardMesh;return{level:HSC.detail.level,shaderLow:HSC.detail.shaderLow,segments:HSC.detail.segments,beardSegments:b.geometry.attributes.position.count/2-1,beardCount:b.geometry.instanceCount,beardRoots:HSC.debugState.roots.count,antialias:c.getContext('webgl2').getContextAttributes().antialias,width:c.width,height:c.height,cssWidth:c.clientWidth,cssHeight:c.clientHeight};});
     assert.equal(metrics.level,'high');assert.equal(metrics.shaderLow,false);assert.equal(metrics.segments,8);assert.equal(metrics.beardSegments,8);assert.equal(metrics.beardCount,metrics.beardRoots);assert.equal(metrics.antialias,true);assert(metrics.width*metrics.height<=4000000);assert(metrics.width/metrics.cssWidth>=Math.min(dpr,2)-0.01);
     await p.evaluate(()=>__yt.callbacks.pause());await p.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-high.png`)});
@@ -260,13 +263,9 @@ async function startup(){
 }
 
 async function mobileStartup(){
- await test('Model construction overlaps a slow lighting download',async()=>{
-  const f=await fixture({envDelay:1500,dpr:2,touch:true,mobile:true});
-  try{const t=await f.page.evaluate(()=>HSC.startupTiming);assert(t.geometryReady<t.environmentReady,JSON.stringify(t));assert.equal(t.environment,'shipped');assert.deepEqual(f.errors,[]);return t;}finally{await f.close();}
- });
- await test('An optional IndexedDB request that never completes cannot hold startup for four seconds',async()=>{
-  const f=await fixture({stalledCache:true,dpr:2,touch:true,mobile:true});
-  try{const t=await f.page.evaluate(()=>HSC.startupTiming);assert(t.engineStart-t.sdkReady<1500,JSON.stringify(t));assert.equal(t.modelCache,'miss');assert.deepEqual(f.errors,[]);return t;}finally{await f.close();}
+ await test('Cold startup makes no optional lighting download even with a stalled model database',async()=>{
+  const f=await fixture({envDelay:10000,stalledCache:true,dpr:2,touch:true,mobile:true});
+  try{assert.equal(f.requests.filter(url=>url.includes('room-env.dat')).length,0);assert.equal(await f.page.evaluate(()=>HSC.startupTiming.environmentSource),'generated');assert.equal(await f.page.evaluate(()=>HSC.detail.maxStrands),30000);assert.deepEqual(f.errors,[]);}finally{await f.close();}
  });
  await test('A zero-sized Android preloading viewport boots and reflows without changing the saved customer',async()=>{
   const f=await fixture({zeroViewport:true,touch:true,mobile:true,dpr:2});
@@ -291,24 +290,9 @@ async function mobileStartup(){
    assert.equal((await state(p)).interactionMode,'rotate');assert.deepEqual(f.errors,[]);
   }finally{await f.close();}
  });
- await test('A corrupt derived head cache rebuilds, preserves player progress and repairs its cache',async()=>{
-  const f=await fixture({touch:true,mobile:true,dpr:2}),p=f.page;
-  try{
-   await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);const before=await state(p);
-   await p.waitForFunction(()=>HSC.startupTiming.deviceCacheSaved,null,{timeout:30000});
-   const pristine=await p.evaluate(async()=>{
-    const db=await new Promise((r,j)=>{const q=indexedDB.open('asmr-barber-models',1);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)});
-    let pristine;await new Promise((r,j)=>{const tx=db.transaction('models','readwrite'),store=tx.objectStore('models'),key='models-v2:'+HSC.geoBuild,q=store.get(key);q.onsuccess=()=>{const v=q.result;pristine={hash:v.models.head.hash,first:v.models.head.value.pos[0]};v.models.head.value.pos[0]=NaN;store.put(v,key)};tx.oncomplete=r;tx.onerror=()=>j(tx.error)});db.close();return pristine;
-   });
-   await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);const after=await state(p);assert.deepEqual(after.hair,before.hair);assert.deepEqual(after.look,before.look);assert.equal(after.selectedGuard,2);
-   // This optional read has a 100 ms production budget. A busy runner can take the
-   // deliberate cold-build path; either path must repair the actual stored record.
-   const read=await p.evaluate(()=>HSC.startupTiming);assert.equal(read.modelCacheInvalid||0,read.modelCache==='hit'?1:0);assert.equal(await p.locator('.boot-error').count(),0);
-   await p.waitForFunction(()=>HSC.startupTiming.deviceCacheSaved,null,{timeout:30000});
-   const repaired=await p.evaluate(async()=>{const db=await new Promise((r,j)=>{const q=indexedDB.open('asmr-barber-models',1);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)});try{return await new Promise((r,j)=>{const q=db.transaction('models').objectStore('models').get('models-v2:'+HSC.geoBuild);q.onsuccess=()=>r({hash:q.result.models.head.hash,first:q.result.models.head.value.pos[0]});q.onerror=()=>j(q.error)})}finally{db.close()}});
-   assert.deepEqual(repaired,pristine);
-   await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);assert.equal(await p.evaluate(()=>HSC.startupTiming.modelCacheInvalid||0),0);assert.deepEqual((await state(p)).hair,before.hair);assert.deepEqual(f.errors,[]);
-  }finally{await f.close();}
+ await test('Cloud progress restores without opening an optional model database',async()=>{
+  const f=await fixture({stalledCache:true,touch:true,mobile:true,dpr:2}),p=f.page;
+  try{await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.evaluate(()=>HSC.wardrobe.client.flushProgress());const before=await state(p);await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);const after=await state(p);assert.deepEqual(after.hair,before.hair);assert.deepEqual(after.look,before.look);assert.equal(after.selectedGuard,2);assert.deepEqual(f.errors,[]);}finally{await f.close();}
  });
  await test('Reflection texels and the full-detail customer survive context loss during play',async()=>{
   const f=await fixture({touch:true,mobile:true,dpr:2,inspectEnvironment:true}),p=f.page;
@@ -320,20 +304,20 @@ async function mobileStartup(){
    assert.deepEqual(await pixels(),before);assert.deepEqual((await state(p)).hair,stateBefore.hair);assert.deepEqual((await state(p)).look,stateBefore.look);assert.equal(await p.evaluate(()=>HSC.detail.maxStrands),30000);assert.deepEqual(f.errors,[]);return before;
   }finally{await f.close();}
  });
- await test('Warm startup can use device-cached lighting when the network copy is slow',async()=>{
-  const options={touch:true,mobile:true,dpr:2},f=await fixture(options),p=f.page;
-  try{
-   await p.waitForFunction(()=>HSC.startupTiming.deviceCacheSaved,null,{timeout:30000});options.envDelay=2500;
-   await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);
-   const t=await p.evaluate(()=>HSC.startupTiming);assert.equal(t.environmentSource,'device');assert.deepEqual(f.errors,[]);return t;
-  }finally{await f.close();}
+ await test('A paused startup with storage denied waits for SDK resume at full detail',async()=>{
+  const f=await fixture({initialPause:true,deniedStorage:true,hosted:true,touch:true,mobile:true,dpr:2}),p=f.page;
+  try{await p.waitForTimeout(500);assert.equal(await p.evaluate(()=>!!window.skinFadeStudio),false);assert.equal(f.requests.filter(url=>url.includes('room-env.dat')).length,0);await p.evaluate(()=>__yt.callbacks.resume());await p.waitForFunction(()=>!!window.skinFadeStudio);assert.equal(await p.evaluate(()=>HSC.detail.maxStrands),30000);assert.deepEqual(f.errors,[]);}finally{await f.close();}
  });
 }
 async function parity(){
  const crypto=require('node:crypto'),baseline=path.resolve(process.env.BASELINE_DIR);
  const f=await fixture({touch:true,mobile:true,dpr:2}),p=f.page;
  try{
-  await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);const saved=f.raw(),g=await fixture({saved,releaseRoot:baseline,touch:true,mobile:true,dpr:2});
+  await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);
+  // Give both releases the same decoded save. The older baseline intentionally
+  // protects a newer transport instead of interpreting its packed arrays.
+  const saved=await p.evaluate(async encoded=>{const slots={};for(const key of Object.keys(JSON.parse(encoded).slots))slots[key]=await HSC.wardrobe.client.loadProgress(key,null);return JSON.stringify({version:1,slots});},f.raw());
+  const g=await fixture({saved,releaseRoot:baseline,touch:true,mobile:true,dpr:2});
   try{
    const variants=[{}, {heritage:1,texture:'coily',beard:'full',age:'old'}, {norwood:'6',beard:'goatee'}, {baldType:'diffuse',beard:'boxed'}, {areata:true,beard:'full'}],evidence=[];
    for(let i=0;i<variants.length;i++){
@@ -360,7 +344,7 @@ async function standalonePreview(){
    assert.equal(await p.evaluate(()=>HSC.detail.maxStrands),30000);
    assert.equal(await p.evaluate(()=>HSC.detail.segments),8);
    const environmentRequests=f.requests.filter(url=>new URL(url).pathname==='/runtime/room-env.dat');
-   assert.equal(environmentRequests.length,1,JSON.stringify(environmentRequests));
+   assert.equal(environmentRequests.length,0,JSON.stringify(environmentRequests));
    await p.getByRole('radio',{name:/^Guard 2,/}).click();await p.waitForTimeout(700);const before=await state(p);
    await p.reload();await p.waitForFunction(()=>!!window.skinFadeStudio);
    assert.equal((await state(p)).selectedGuard,2);assert.deepEqual((await state(p)).hair,before.hair);

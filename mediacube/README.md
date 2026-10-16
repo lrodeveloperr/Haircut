@@ -2,18 +2,19 @@
 
 ## File to upload
 
-Current phone-confirmed official SDK release: `releases/asmr-barber-fade-master-v3.99-mediacube-youtube.zip`.
-The owner confirmed successful SDK-enabled phone boot on this exact runtime. All 15 ZIP files
-match the working Sites deployment. Content-versioned startup URLs prevent mixed cached assets;
-the engine, customer module, full graphics and game behavior match v3.98. Final affected CI is pending.
-It has not been uploaded to McPlay.
+Current audited official SDK candidate: `releases/asmr-barber-fade-master-v3.101-mediacube-youtube.zip`.
+This 410921-byte release retains the v3.100 game/customer/client/style bundles exactly, removes
+optional model-cache waits and downloaded lighting, and uses the original full-detail lighting
+generator with context restoration. Saved loading snapshots are removed. Targeted browser,
+startup, mobile recovery, Windows shader and exact rendered-parity checks pass. It has not been
+uploaded to McPlay; physical-device and actual host certification remain pending.
 This is a WebGL/HTML5 runtime archive with `index.html` at the root, not a source ZIP or Android package.
 
 This target uses the direct official YouTube Playables SDK at `https://www.youtube.com/game_api/v1`.
 It does not load Playgama Bridge, Playgama configuration, a mock SDK, external analytics or remote game assets.
 The existing Playgama and full-detail Android builds remain separate.
 
-See [phone-confirmed validation](VALIDATION-v3.99.md), [load-time evidence](VALIDATION-v3.98.md) and [exact build identity](BUILD-v3.99.json).
+See [exact-ZIP audit and final CI evidence](AUDIT-v3.91-v3.100.md) and [exact build identity](BUILD-v3.101.json).
 
 ## Rebuild
 
@@ -21,7 +22,7 @@ See [phone-confirmed validation](VALIDATION-v3.99.md), [load-time evidence](VALI
 bash source/build-youtube.sh
 # Produces source/build-youtube/, without an upload archive.
 
-bash source/release-youtube.sh v3.99
+bash source/release-youtube.sh v3.101
 # Creates the immutable release ZIP; refuses to overwrite an existing release.
 ```
 

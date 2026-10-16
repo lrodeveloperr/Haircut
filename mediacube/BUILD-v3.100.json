@@ -1,0 +1,57 @@
+{
+  "version": "v3.100",
+  "status": "Locally verified candidate. Actual hosted YouTube/MCPlay and physical-device checks pending.",
+  "archive": "releases/asmr-barber-fade-master-v3.100-mediacube-youtube.zip",
+  "archiveSha256": "bda36b1466d373566224f98cb6e41ad4c74d65187147824c9afbcdb1cbcf42b3",
+  "zipBytes": 726448,
+  "expandedBytes": 1418688,
+  "sdk": "https://www.youtube.com/game_api/v1",
+  "baseline": "v3.99",
+  "byteIdenticalToBaseline": {
+    "runtime/game.js": true,
+    "runtime/customers.js": true,
+    "runtime/room-env.dat": true,
+    "styles.css": true
+  },
+  "changes": [
+    "Lossless numeric-array RLE cloud transport with legacy save migration and future/corrupt-save protection.",
+    "SDK pause state owns poster visibility; no browser Page Visibility access.",
+    "Remove the loading element completely before gameReady.",
+    "Bound optional derived-model reads at 400 ms so a fast HTTP cache does not outrun IndexedDB.",
+    "Correct direct-YouTube notices and release diagnostic identifier."
+  ],
+  "validation": {
+    "directSDKContracts": "44/44 PASS",
+    "fixedGraphicsPolicy": "5/5 PASS",
+    "renderedPixelParity": "5 seeded customer variants PASS, exact SHA-256 matches",
+    "lighting": "Exact v3.94 decoded texel parity PASS",
+    "cacheURLs": "9 content-addressed assets PASS",
+    "nativeCutSaveReload": "PASS, 11 strokes and hair/beard/count restored exactly after acknowledged checkpoint",
+    "freshSaveBytes": 2292,
+    "nativeCutSaveBytes": 2614,
+    "nativeBrowserRegression": "Final isolated cutting/save/reload PASS. Earlier parallel software-GPU run had coordinate, navigation and reveal timeout failures; QA now uses raycast-selected input, explicit checkpoint acknowledgement and software-renderer timeout headroom.",
+    "CI": "pending",
+    "nativeFinishRewardedReplay": "PASS, same customer/job/queue and reset hair, no errors"
+  },
+  "loadingEstimate": {
+    "coldTypicalSeconds": 3,
+    "coldPlanningRangeSeconds": [
+      2,
+      5
+    ],
+    "repeatPlanningRangeSeconds": [
+      1,
+      3
+    ],
+    "constrainedDevices": "Can exceed 5\u201310 seconds. No universal latency guarantee.",
+    "scope": "Inference for modern phones on healthy WiFi/4G, excluding pre-roll/platform navigation. Not an actual YouTube-host measurement.",
+    "measuredFixtureColdSeconds": {
+      "local": 2.45,
+      "CPU4x_10Mbps_50msLatency": 5.7,
+      "CPU4x_2Mbps_150msLatency": 9.27
+    },
+    "warmCacheCPUWorkSavedSeconds": 1.2,
+    "caveats": "Chromium SwiftShader software GPU; host delays synthetic; small-sample timing estimates. No total-startup speedup claim from contended candidate runs."
+  },
+  "saveCompatibility": "Reads v1 and legacy Bridge saves. New compact envelopes use v2/ numeric-rle-v1; old releases protect these as future saves rather than overwriting them."
+}

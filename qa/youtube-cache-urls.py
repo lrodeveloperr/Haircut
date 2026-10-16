@@ -90,20 +90,16 @@ def main():
               f"A release script replaces the official SDK: {url}")
         check("strict-test-fixture" not in payload, f"A test SDK was packaged: {url}")
 
-    lighting = [item["href"] for item in parser.links
-                if item.get("rel") == "preload" and item.get("as") == "fetch"
-                and urlsplit(item.get("href", "")).path == "./runtime/room-env.dat"]
-    check(len(lighting) == 1, "Expected one versioned reflection-lighting preload")
-    geo = (root / "runtime/youtube-geo.js").read_text()
-    fetched = re.findall(r"\bfetch\(\s*(['\"])([^'\"]+)\1\s*,", geo)
-    check([url for _, url in fetched] == lighting,
-          "Reflection preload and fetch must use the exact same versioned URL")
+    check(not (root / 'runtime/room-env.dat').exists(), 'An optional lighting download returned')
+    geo = (root / 'runtime/youtube-geo.js').read_text()
+    check(not re.search(r'\b(?:fetch|indexedDB|DecompressionStream|structuredClone)\b', geo),
+          'The direct-build model adapter acquired optional startup I/O')
     print(json.dumps({"status": "PASS", "releaseDir": str(root),
                       "contentAddressedAssets": len(checked),
                       "changedPayloadRejections": len(checked),
                       "unversionedURLRejections": len(checked),
                       "officialSDKFirst": True, "gameEntryPreserved": True,
-                      "lightingPreloadMatchesFetch": True}, indent=2))
+                      "optionalStartupIOAbsent": True}, indent=2))
 
 
 if __name__ == "__main__":

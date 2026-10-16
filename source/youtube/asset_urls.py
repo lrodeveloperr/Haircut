@@ -6,17 +6,6 @@ import re
 
 def version_asset_urls(directory):
     directory = Path(directory)
-    lighting = directory / 'runtime/room-env.dat'
-    lighting_hash = hashlib.sha256(lighting.read_bytes()).hexdigest()[:16]
-    geo = directory / 'runtime/youtube-geo.js'
-    text, count = re.subn(
-        r"fetch\('\./runtime/room-env\.dat(?:\?[^']*)?',",
-        "fetch('./runtime/room-env.dat?v=" + lighting_hash + "',",
-        geo.read_text(),
-    )
-    assert count == 1, 'Expected one bundled lighting request'
-    geo.write_text(text)
-
     def version_reference(match):
         url = match[2]
         name, _, query = url.partition('?')

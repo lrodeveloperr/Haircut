@@ -48,10 +48,6 @@ s = (src / 'runtime/youtube-startup.js').read_text().replace('HSC.createYouTubeC
 s = (src / 'index.html').read_text()
 s = replace(s, '  <script src="https://www.youtube.com/game_api/v1"></script>\n', '')
 s = s.replace('youtube-client.js', 'local-preview-client.js').replace('youtube-startup.js', 'local-preview-startup.js')
-# There is no remote SDK wait in this target. Let geo.js start the one lighting
-# request directly: WebKit does not reuse this fetch preload in the browser QA.
-s, count = re.subn(r'  <link rel="preload" href="\./runtime/room-env\.dat(?:\?[^"]*)?" as="fetch" crossorigin="anonymous">\n', '', s)
-assert count == 1, 'Expected one lighting preload'
 (out / 'index.html').write_text(s)
 version_asset_urls(out)
 assert (out / 'runtime/game.js').read_bytes() == (src / 'runtime/game.js').read_bytes()
