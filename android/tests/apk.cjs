@@ -8,7 +8,8 @@ const {execFileSync}=require('node:child_process');
 const {chromium}=require('playwright');
 const app='com.worksbien.barbersimulatorasmr.debug',activity=app+'/com.worksbien.barbersimulatorasmr.MainActivity';
 const out=path.resolve('qa/results');fs.mkdirSync(out,{recursive:true});
-const adb=(...args)=>execFileSync('adb',args,{encoding:'utf8',timeout:30000}).trim();
+const adbPath=path.join(process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT,'platform-tools/adb');
+const adb=(...args)=>{console.log('adb',...args);return execFileSync(adbPath,args,{encoding:'utf8',timeout:30000}).trim();};
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const report={checks:[],layouts:[]};let browser,page;
 function check(name){report.checks.push(name);console.log('PASS:',name);}
@@ -20,8 +21,9 @@ async function connect(){
       browser=await chromium.connectOverCDP('http://127.0.0.1:9222',{timeout:5000});
       page=browser.contexts().flatMap(c=>c.pages()).find(p=>p.url().includes('appassets.androidplatform.net'));
       if(page){page.setDefaultTimeout(120000);return;}
-      await browser.close();
-    }catch(_){}
+      console.log('WebView targets:',browser.contexts().flatMap(c=>c.pages()).map(p=>p.url()));
+      throw Error('Game target not ready');
+    }catch(e){console.log('CDP connecting:',e.message);}
     await pause(500);
   }throw Error('installed WebView remote debugging unavailable');
 }
@@ -32,7 +34,7 @@ async function ready(){
     return c.width===Math.floor(c.clientWidth*r)&&c.height===Math.floor(c.clientHeight*r);
   });
 }
-async function screenshot(name){fs.writeFileSync(path.join(out,'android-installed-'+name+'.png'),execFileSync('adb',['exec-out','screencap','-p'],{timeout:30000}));}
+async function screenshot(name){fs.writeFileSync(path.join(out,'android-installed-'+name+'.png'),execFileSync(adbPath,['exec-out','screencap','-p'],{timeout:30000}));}
 async function cut(label){
   const p=await page.evaluate(()=>{
     const game=skinFadeStudio,view=HSC.view;
