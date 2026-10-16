@@ -26,6 +26,9 @@ game = replace(game, 'let ae=j.clientX,fe=j.clientY-(j.pointerType==="touch"?Mat
                'let target=n.touchTarget(j),ae=target.x,fe=target.y,ue=n.raycast(ae,fe);')
 game = replace(game, 'let ae=j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0),fe=j.pointerType==="touch"?22:12;',
                'let target=n.touchTarget(j),ae=target.y,fe=j.pointerType==="touch"?22:12;')
+# Guard arc anchors are local design units; pointer events are viewport pixels.
+game = replace(game, 'C=w.left+ds-p.clientX,x=w.top+ds-p.clientY',
+               'C=w.left+ds*(w.width/i.current.offsetWidth)-p.clientX,x=w.top+ds*(w.height/i.current.offsetHeight)-p.clientY')
 (out / 'runtime/game.js').write_text(game)
 
 client = (out / 'runtime/local-preview-client.js').read_text()
@@ -66,8 +69,9 @@ startup = (out / 'runtime/local-preview-startup.js').read_text().replace('HSC.cr
 (out / 'runtime/android-startup.js').write_text(startup)
 (out / 'runtime/local-preview-startup.js').unlink()
 shutil.copy2(root / 'android/native-transport.js', out / 'runtime/android-transport.js')
+shutil.copy2(root / 'android/viewport-compat.js', out / 'runtime/android-viewport.js')
 html = (out / 'index.html').read_text().replace('local-preview-client.js', 'android-client.js').replace('local-preview-startup.js', 'android-startup.js')
-html = replace(html, '  <script src="./runtime/android-client.js', '  <script src="./runtime/android-transport.js"></script>\n  <script src="./runtime/android-client.js')
+html = replace(html, '  <script src="./runtime/android-client.js', '  <script src="./runtime/android-viewport.js"></script>\n  <script src="./runtime/android-transport.js"></script>\n  <script src="./runtime/android-client.js')
 (out / 'index.html').write_text(html)
 spec = importlib.util.spec_from_file_location('android_policy', root / 'android/patch-runtime.py')
 policy = importlib.util.module_from_spec(spec)

@@ -38,12 +38,15 @@ jobs:
         if: ${{ !contains(github.event.head_commit.message, '[native-check]') }}
         run: |
           TARGET=full bash source/buildall.sh
+          node android/tests/viewport.cjs
           node android/tests/graphics.cjs
           node android/tests/rewards.cjs
           RELEASE_DIR=source/build-foundation node qa/contracts.cjs
       - name: Install native WebView test client
         run: npm install --no-save --package-lock=false playwright@1.58.2
       - name: Verify Android bridge in Chromium
+        env:
+          ANDROID_GUARD_ONLY: ${{ contains(github.event.head_commit.message, '[placement-compat]') && '1' || '0' }}
         if: ${{ !contains(github.event.head_commit.message, '[native-check]') }}
         run: |
           npx playwright install --with-deps chromium

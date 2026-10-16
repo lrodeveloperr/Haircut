@@ -57,6 +57,25 @@ function fakeHost() {
       await page.setViewportSize({width,height});await buffer();
       assert.deepEqual(await page.evaluate(()=>[HSC.detail.level,HSC.detail.minStrands,HSC.detail.segments,HSC.detail.antialias]),['high',30000,8,true]);
       const session=await ctx.newCDPSession(page);
+      const zoomProbe=await page.evaluate(()=>{
+        const parent=document.querySelector('.ui'),probe=document.createElement('div');
+        probe.style.cssText='position:fixed;left:0;top:0;width:10px;height:10px;zoom:2;visibility:hidden;pointer-events:none';
+        parent.append(probe);const width=probe.getBoundingClientRect().width,scale=parseFloat(getComputedStyle(parent).zoom)||1;probe.remove();return{width,scale};
+      });
+      assert(Math.abs(zoomProbe.width-20*zoomProbe.scale)<.25,'UI client rects must include cumulative CSS zoom');
+      for(const guard of [3,1]){
+        const p=await page.evaluate(g=>{
+          const button=document.querySelector(`#hud [role="radio"][aria-label^="Guard ${g},"]`),r=button.getBoundingClientRect();
+          window.__guardContact=null;window.addEventListener('pointerdown',e=>{__guardContact={trusted:e.isTrusted,label:e.target.closest('button')?.getAttribute('aria-label')};},{capture:true,once:true});
+          return{x:r.left+r.width/2,y:r.top+r.height/2};
+        },guard);
+        await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:8,radiusY:8}]});
+        await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        await page.waitForFunction(g=>skinFadeStudio.getState().selectedGuard===g,guard,{timeout:5000});
+        const touch=await page.evaluate(()=>__guardContact);
+        assert(touch?.trusted&&touch.label.startsWith(`Guard ${guard},`),'real touch must select the visible intermediate guard');
+      }
+      if(process.env.ANDROID_GUARD_ONLY==='1'){await session.detach();passed++;continue;}
       for(const region of ['top-scalp','sideburn','beard','lower-scalp']){
         console.log('REGION',width,height,region);
         const p=await page.evaluate(region=>{
@@ -153,6 +172,7 @@ function fakeHost() {
       assert.deepEqual(reuse.pen,{x:mouse.x,y:mouse.y,gap:0},'pen remains direct');
       await session.detach();passed++;
     }
+    if(process.env.ANDROID_GUARD_ONLY==='1'){console.log(`PASS: ${passed} Android zoom compatibility and trusted guard-touch cases.`);return;}
     fs.writeFileSync(path.join(root,'qa/results/android-browser-placement-report.json'),JSON.stringify(await page.evaluate(()=>window.__placementEvidence||[]),null,2));
     const saved=await page.evaluate(async()=>{
       const c=await HSC.youtubeClientPromise;await c.flushProgress();return JSON.stringify(skinFadeStudio.getState().hair);

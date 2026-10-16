@@ -99,7 +99,8 @@ let original=game.replace(fs.readFileSync(path.join(root,'android/clipper-input.
   .replace('raycast:j,touchTarget:androidTouchTarget,resetTouchTarget:androidResetTouchTarget,clipperScreen:androidClipperScreen,getYaw()', 'raycast:j,getYaw()')
   .replace('f=null,o.stop(),n.resetTouchTarget(),n.setClipper(!1)', 'f=null,o.stop(),n.setClipper(!1)')
   .replace('let target=n.touchTarget(j),ae=target.x,fe=target.y,ue=n.raycast(ae,fe);', 'let ae=j.clientX,fe=j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0),ue=n.raycast(ae,fe);')
-  .replace('let target=n.touchTarget(j),ae=target.y,fe=j.pointerType==="touch"?22:12;', 'let ae=j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0),fe=j.pointerType==="touch"?22:12;');
+  .replace('let target=n.touchTarget(j),ae=target.y,fe=j.pointerType==="touch"?22:12;', 'let ae=j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0),fe=j.pointerType==="touch"?22:12;')
+  .replace('C=w.left+ds*(w.width/i.current.offsetWidth)-p.clientX,x=w.top+ds*(w.height/i.current.offsetHeight)-p.clientY', 'C=w.left+ds-p.clientX,x=w.top+ds-p.clientY');
 assert.equal(original, fs.readFileSync(path.join(root, 'source/build-youtube/runtime/game.js'), 'utf8'), 'working engine unchanged outside reviewed touch adaptation');
 assert.equal(game.split('n.touchTarget(j)').length-1,2,'cut and proximity share one touch helper');
 assert(!game.includes('touchOffsetPx:0'));

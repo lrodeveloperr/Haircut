@@ -159,7 +159,7 @@ function nativeWebViewBounds(){
       const layout=await page.evaluate(()=>{
         const c=document.querySelector('#scene'),gl=c.getContext('webgl2'),d=HSC.detail;
         const rect=el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};};
-        return {width:innerWidth,height:innerHeight,dpr:devicePixelRatio,visualViewport:{width:visualViewport.width,height:visualViewport.height,scale:visualViewport.scale,offsetLeft:visualViewport.offsetLeft,offsetTop:visualViewport.offsetTop},canvas:rect(c),root:rect(document.querySelector('#game')),finishInset:parseFloat(getComputedStyle(document.querySelector('.ctl.finish').closest('.bar')).right),buffer:[c.width,c.height],level:d.level,strands:d.minStrands,segments:d.segments,
+        return {width:innerWidth,height:innerHeight,dpr:devicePixelRatio,visualViewport:{width:visualViewport.width,height:visualViewport.height,scale:visualViewport.scale,offsetLeft:visualViewport.offsetLeft,offsetTop:visualViewport.offsetTop},canvas:rect(c),root:rect(document.querySelector('#game')),uiZoom:parseFloat(getComputedStyle(document.querySelector('.ui')).zoom)||1,finishInset:parseFloat(getComputedStyle(document.querySelector('.ctl.finish').closest('.bar')).right),buffer:[c.width,c.height],level:d.level,strands:d.minStrands,segments:d.segments,
           renderer:gl.getParameter(gl.RENDERER),controls:[...document.querySelectorAll('#hud button')].filter(b=>b.getBoundingClientRect().width).map(b=>{
             const r=b.getBoundingClientRect();return{text:b.getAttribute('aria-label')||b.textContent.trim(),x:r.x,y:r.y,width:r.width,height:r.height};
           })};
@@ -171,7 +171,26 @@ function nativeWebViewBounds(){
       assert.equal(layout.level,'high');assert.equal(layout.strands,30000);assert.equal(layout.segments,8);
       for(const b of layout.controls)assert(b.x>=-1&&b.y>=-1&&b.x+b.width<=layout.width+1&&b.y+b.height<=layout.height+1,`control outside ${spec.name}: ${b.text}`);
       const finish=layout.controls.find(b=>b.text==='Finish haircut');
-      assert(finish&&Math.abs(finish.x+finish.width-(layout.canvas.x+layout.canvas.width-layout.finishInset))<2,'Finish must visually align with canvas right inset');
+      assert(finish&&Math.abs(finish.x+finish.width-(layout.canvas.x+layout.canvas.width-layout.finishInset*layout.uiZoom))<2,'Finish must visually align with canvas right inset');
+      layout.zoomProbe=await page.evaluate(()=>{
+        const parent=document.querySelector('.ui'),probe=document.createElement('div');probe.style.cssText='position:fixed;left:0;top:0;width:10px;height:10px;zoom:2;visibility:hidden;pointer-events:none';
+        parent.append(probe);const r=probe.getBoundingClientRect();probe.remove();return{width:r.width,height:r.height};
+      });
+      assert(Math.abs(layout.zoomProbe.width-20*layout.uiZoom)<.25,'native UI rects must include cumulative CSS zoom');
+      layout.guardTaps=[];
+      for(const guard of [3,1]){
+        const p=await page.evaluate(g=>{
+          const b=document.querySelector(`#hud [role="radio"][aria-label^="Guard ${g},"]`),r=b.getBoundingClientRect();
+          window.__guardTouch=null;window.addEventListener('pointerdown',e=>{__guardTouch={trusted:e.isTrusted,label:e.target.closest('button')?.getAttribute('aria-label')};},{capture:true,once:true});
+          return{x:r.left+r.width/2,y:r.top+r.height/2};
+        },guard);
+        const v=layout.visualViewport,b=layout.nativeBounds;
+        adb('shell','input','tap',String(Math.round(b.left+(p.x-v.offsetLeft)*(b.right-b.left)/v.width)),String(Math.round(b.top+(p.y-v.offsetTop)*(b.bottom-b.top)/v.height)));
+        await page.waitForFunction(g=>skinFadeStudio.getState().selectedGuard===g,guard,{timeout:5000});
+        const touch=await page.evaluate(()=>__guardTouch);assert(touch?.trusted&&touch.label.startsWith(`Guard ${guard},`),'native tap must hit and select the visible intermediate guard');
+        layout.guardTaps.push({guard,point:p,touch});
+      }
+      check(spec.name+' native guard1/3 taps match visible controls');
       layout.name=spec.name;layout.touch=await cut(spec.name,layout);
       await screenshot(spec.name);
     }
