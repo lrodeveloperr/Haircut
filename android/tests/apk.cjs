@@ -150,13 +150,31 @@ async function cut(label,layout){
     await page.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   }
 }
-function nativeWebViewBounds(){
-  adb('shell','uiautomator','dump','/sdcard/placement-window.xml');
-  const xml=adb('shell','cat','/sdcard/placement-window.xml');
-  const node=(xml.match(/<node[^>]*>/g)||[]).find(n=>n.includes('class="android.webkit.WebView"'));
-  const m=node?.match(/bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/);
-  assert(m,'native accessibility hierarchy must expose WebView bounds');
-  return{left:+m[1],top:+m[2],right:+m[3],bottom:+m[4]};
+async function nativeWebViewBounds(){
+  // UiAutomation can crash with Binder "Bad file descriptor" after display changes.
+  // Retry only that observation, never a failed coordinate/placement assertion.
+  // Delete its previous file first so a failed dump cannot reuse stale bounds.
+  const observation=(report.nativeInspections??=[]).length;
+  for(let attempt=1;attempt<=3;attempt++){
+    adb('shell','rm','-f','/sdcard/placement-window.xml');
+    try{
+      adb('shell','uiautomator','dump','/sdcard/placement-window.xml');
+    }catch(error){
+      (report.nativeInspectionRetries??=[]).push({observation,attempt,error:error.message});
+      if(attempt===3)throw error;
+      await pause(750);continue;
+    }
+    const xml=adb('shell','cat','/sdcard/placement-window.xml');
+    const evidence='android-installed-window-'+observation+'.xml';
+    fs.writeFileSync(path.join(out,evidence),xml);
+    const node=(xml.match(/<node[^>]*>/g)||[]).find(n=>n.includes('class="android.webkit.WebView"')&&n.includes('package="'+app+'"'));
+    const m=node?.match(/bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/);
+    assert(m,'fresh native accessibility hierarchy must expose this app’s WebView bounds');
+    const bounds={left:+m[1],top:+m[2],right:+m[3],bottom:+m[4]};
+    assert(bounds.right>bounds.left&&bounds.bottom>bounds.top,'native WebView bounds must be nonempty');
+    report.nativeInspections.push({observation,attempt,evidence,bounds});
+    return bounds;
+  }
 }
 (async()=>{
   const errors=[];
@@ -189,7 +207,7 @@ function nativeWebViewBounds(){
       await connect();page.on('pageerror',e=>errors.push(e.message));await ready();
       await page.waitForFunction(landscape=>(innerWidth>innerHeight)===landscape,spec.rotation===1);
       assert.equal(await page.evaluate(async()=>(await HSC.youtubeClientPromise).platformId),'android');
-      const nativeBounds=nativeWebViewBounds();
+      const nativeBounds=await nativeWebViewBounds();
       const layout=await page.evaluate(()=>{
         const c=document.querySelector('#scene'),gl=c.getContext('webgl2'),d=HSC.detail;
         const rect=el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};};
@@ -243,7 +261,7 @@ function nativeWebViewBounds(){
       const live=await page.evaluate(()=>{const c=document.querySelector('#scene'),r=c.getBoundingClientRect();return{
         width:innerWidth,height:innerHeight,dpr:devicePixelRatio,visualViewport:{width:visualViewport.width,height:visualViewport.height,scale:visualViewport.scale,offsetLeft:visualViewport.offsetLeft,offsetTop:visualViewport.offsetTop},
         canvas:{x:r.x,y:r.y,width:r.width,height:r.height},gap:HSC.view.clipperScreen().gap,hair:JSON.stringify(skinFadeStudio.getState().hair),level:HSC.detail.level};});
-      live.nativeBounds=nativeWebViewBounds();
+      live.nativeBounds=await nativeWebViewBounds();
       assert.equal(live.hair,before,'same-density live orientation must preserve haircut');delete live.hair;
       assert.equal(live.gap,null,'configuration change releases real held stroke');
       await page.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});assert.equal(live.level,'high');
