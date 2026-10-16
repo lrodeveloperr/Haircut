@@ -1,7 +1,6 @@
 package com.worksbien.barbersimulatorasmr;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Color;
@@ -120,18 +119,8 @@ public class MainActivity extends ComponentActivity {
     void onGameReady() { gameReady = true; }
 
     void openPrivacy() {
-        // A native overlay leaves the wardrobe and its existing pause owner in place.
-        final String[] choices = ads.isPrivacyOptionsRequired()
-                ? new String[]{getString(R.string.privacy_policy), getString(R.string.privacy_choices)}
-                : new String[]{getString(R.string.privacy_policy)};
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.privacy)
-                .setItems(choices, (dialog, item) -> {
-                    if (item == 0) openExternal(Uri.parse("https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/"));
-                    else ads.showPrivacyOptions();
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+        // Policy text is maintained on the website, never bundled or displayed inside the game.
+        openExternal(Uri.parse("https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/"));
     }
 
     void openExternal(Uri url) {

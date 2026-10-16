@@ -18,8 +18,8 @@ These three hashes remain unchanged after the privacy build. The new Android-onl
 - Reward rules: 8 cases PASS.
 - Game and bridge domain contracts: 35 cases PASS.
 - New four-layout privacy/geometry browser check: PASS, including strict equality of every existing measured control/card/panel bound before/after adding the shield, matched Close diameter/centreline, native entry dispatch, unchanged haircut and pause ownership. Eight raw before/after PNGs were captured locally.
-- Updated installed-APK privacy/native-menu matrix and native compile/lint: pending CI.
-- Public website privacy instructions updated in website commit `12f499327da9b6a7815f8d04fedc015a830013a7`. Both Cloudflare build checks succeeded. The public HTTPS page was then opened successfully in the browser and the new shield/menu instructions were read from the live page.
+- Updated installed-APK privacy/external-browser matrix and native compile/lint: pending CI.
+- Public policy remains on the website. Final direct-link instructions are in website commit `6db51090852492de51f1251c06ceb13d38fa430f`; deployment verification is pending. The preceding website update deployed successfully and its public HTTPS page was verified.
 
 ## QA observations and fixes
 
@@ -29,11 +29,14 @@ These three hashes remain unchanged after the privacy build. The new Android-onl
 
 ## Native privacy behavior
 
-- The shield opens an Android privacy menu with a policy link to the existing public page.
-- If UMP reports `PrivacyOptionsRequirementStatus.REQUIRED`, the menu also contains Privacy choices and reopens the SDK form.
-- Reopening privacy choices invalidates loaded ads and in-flight callbacks from the previous consent generation. New preloads use the current consent state.
-- No production ad IDs were configured for this work. Actual region-dependent UMP form availability requires the later app-specific AdMob consent-message setup and is not claimed as verified by an offline emulator.
+- One tap on the shield calls the existing Android external-browser handler with `https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/`.
+- No intermediate menu, bundled policy text, consent form, ad request or ad-specific behavior is attached to this button. Website policy edits do not require an app update.
+- `AdsController.java` is restored byte-for-byte to the approved `88f920b` baseline. No production IDs are configured.
+- The shield uses the existing generic circular-button style, preserving original Close selectors and initial keyboard focus.
+- Installed tests verify the real external ACTION_VIEW intent, external activity focus, unchanged existing wardrobe bounds and preserved haircut/pause on return. The emulator stays offline; public policy content is verified separately.
 
-- Native source review identified an initialization race: the initial Mobile Ads initialization callback could arrive while Privacy choices was open. A dedicated privacy-form pause now blocks every ad request until the SDK form closes, in addition to invalidating old cached requests. Browser/game assets are unchanged. This native-only correction is verified by the next compile/installed-APK run.
+## CI runs
 
-- The new shield uses the existing generic circular-button style rather than the Close-specific class. This preserves the original wardrobe focus target and Close selectors. The browser check now explicitly requires initial keyboard focus to remain on Close, as well as strict geometry equality.
+- Initial privacy source `d1a3123`, run https://github.com/lrodeveloperr/Haircut/actions/runs/38948587734: full build/domain/browser privacy/placement checks, APK compile/lint/signature passed. Installed phone portrait/landscape cutting and native privacy-menu checks passed; tablet portrait cutting had begun. The run was superseded/cancelled when the source-review fixes for Close focus and privacy-form ad suspension were pushed. It is partial evidence, not a successful final matrix.
+- Superseded menu source `e485782d9b0abc298eaa7fa3d9d86b8b2ae16a8e`, run https://github.com/lrodeveloperr/Haircut/actions/runs/38949610005: build/domain/browser checks and native compile/lint/signature passed. Installed matrix failed before its first placement assertion: UiAutomation returned a null root with exit status zero and created no XML. The existing bounded inspection retry now also covers reading a missing dump file; coordinate/placement assertions remain strict. This run does not verify the final direct-link behavior.
+- Final direct-link source/run: pending push and installed verification.

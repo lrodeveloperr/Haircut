@@ -78,21 +78,29 @@ async function privacy(layout) {
   assert(Math.abs(geometry.privacy[1]-geometry.close[1])<.1&&Math.abs(geometry.privacy[2]-geometry.close[2])<.1&&Math.abs(geometry.privacy[3]-geometry.close[3])<.1&&geometry.gap>0,'native shield matches Close size and alignment');
   await screenshot(layout.name+'-wardrobe-privacy');
   await tap('.hsc-privacy');
-  const xmlPath='/sdcard/privacy-'+layout.name+'.xml';
-  adb('shell','rm','-f',xmlPath);
-  adb('shell','uiautomator','dump','--compressed',xmlPath);
-  const xml=adb('shell','cat',xmlPath);
-  fs.writeFileSync(path.join(out,'android-installed-'+layout.name+'-privacy-menu.xml'),xml);
-  assert(xml.includes('text="Privacy policy"')&&xml.includes('text="Privacy"'),'trusted native tap must open the real Android policy menu');
-  await screenshot(layout.name+'-privacy-menu');
-  adb('shell','input','keyevent','KEYCODE_BACK');
-  assert(await page.evaluate(()=>skinFadeStudio.getView().paused),'closing native privacy menu keeps wardrobe pause');
-  assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),before,'native privacy menu preserves haircut');
+  let activities='';
+  for(let attempt=0;attempt<20;attempt++) {
+    activities=adb('shell','dumpsys','activity','activities');
+    if(activities.includes('https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/') &&
+       /(?:mResumedActivity|topResumedActivity).*ActivityRecord.*\}/.test(activities) &&
+       !activities.split('\n').filter(line=>/(?:mResumedActivity|topResumedActivity)/.test(line)).some(line=>line.includes(app))) break;
+    await pause(500);
+  }
+  fs.writeFileSync(path.join(out,'android-installed-'+layout.name+'-privacy-external-intent.txt'),activities);
+  assert(activities.includes('act=android.intent.action.VIEW')&&activities.includes('https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/'),'trusted native tap sends the policy URL to Android external browser handling');
+  const resumed=activities.split('\n').filter(line=>/(?:mResumedActivity|topResumedActivity)/.test(line));
+  assert(resumed.length&&!resumed.some(line=>line.includes(app)),'external browser handling takes focus outside the game');
+  await screenshot(layout.name+'-privacy-external');
+  // Network is disabled in this emulator. Verify the actual external intent here;
+  // deployment/content availability is verified separately on the public website.
+  adb('shell','am','start','-W','-n',activity);
+  await page.waitForFunction(()=>document.querySelector('#hsc-panel.open')&&skinFadeStudio.getView().paused);
+  assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),before,'returning from the external policy preserves haircut');
   await tap('.hsc-head .hsc-x:not(.hsc-privacy)');
   await page.waitForFunction(()=>!skinFadeStudio.getView().paused);
-  layout.privacy={existingBoundsUnchanged:true,alignment:geometry,menuOpened:true,hairPreserved:true};
+  layout.privacy={existingBoundsUnchanged:true,alignment:geometry,externalPolicyOpened:true,hairPreserved:true};
   check(layout.name+' privacy icon preserves all existing wardrobe bounds');
-  check(layout.name+' trusted native privacy tap opens policy menu and preserves haircut/pause');
+  check(layout.name+' trusted native privacy tap opens external policy and preserves haircut/pause');
 }
 // Decode the actual Android PNG to require composited marker pixels, not merely DOM existence.
 function markerPixels(png,contact,teeth,scale){
@@ -193,14 +201,16 @@ async function nativeWebViewBounds(){
   const observation=(report.nativeInspections??=[]).length;
   for(let attempt=1;attempt<=3;attempt++){
     adb('shell','rm','-f','/sdcard/placement-window.xml');
+    let xml;
     try{
       adb('shell','uiautomator','dump','/sdcard/placement-window.xml');
+      // UiAutomation can report a null root with exit status zero and create no file.
+      xml=adb('shell','cat','/sdcard/placement-window.xml');
     }catch(error){
       (report.nativeInspectionRetries??=[]).push({observation,attempt,error:error.message});
       if(attempt===3)throw error;
       await pause(750);continue;
     }
-    const xml=adb('shell','cat','/sdcard/placement-window.xml');
     const evidence='android-installed-window-'+observation+'.xml';
     fs.writeFileSync(path.join(out,evidence),xml);
     const node=(xml.match(/<node[^>]*>/g)||[]).find(n=>n.includes('class="android.webkit.WebView"')&&n.includes('package="'+app+'"'));

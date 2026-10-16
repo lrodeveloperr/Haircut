@@ -4,7 +4,7 @@ Gradle project for `com.worksbien.barbersimulatorasmr`. It bundles the Android w
 (`TARGET=full bash source/buildall.sh`, run automatically before every build) and shows it full screen in a
 WebView, offline, from the app's own origin.
 
-**Current continuation record: [Android release handoff](../RELEASE-HANDOFF.md).** The owner approved v1.0.5 cutting. v1.0.6 adds only the approved wardrobe privacy shield/native policy menu and UMP privacy-options reopening; its current verification state is recorded there and in [privacy QA](../PRIVACY-QA-2026-10-16.md). Debug always uses test ads. Production AdMob must be configured only after test-ad verification and immediately before release packaging/submission.
+**Current continuation record: [Android release handoff](../RELEASE-HANDOFF.md).** The owner approved v1.0.5 cutting. v1.0.6 adds the approved wardrobe privacy shield linking directly to the external policy page; its current verification state is recorded there and in [privacy QA](../PRIVACY-QA-2026-10-16.md). Debug always uses test ads. Production AdMob must be configured only after test-ad verification and immediately before release packaging/submission.
 
 **Status: debug APK compiled and verified on 16 October 2026.** The GitHub build passed 35 game
 contracts, 8 Android reward cases, 7 Chromium bridge cases, Android lint (zero errors) and APK signature
@@ -61,7 +61,7 @@ at `android/store-listing/en-US/images/icon.png`. Density-specific launcher PNGs
 ## Still open
 
 - Real AdMob ids and the upload key (`keystore.properties`).
-- Final native verification of the implemented wardrobe shield, policy link and UMP privacy-options entry
+- Final native verification of the implemented wardrobe shield and direct external policy link
   (see `android/PRIVACY-QA-2026-10-16.md`). No settings screen or existing-layout change was added.
 - A device test of consent, ads, saves, rotation/folding, back and pause.
 
