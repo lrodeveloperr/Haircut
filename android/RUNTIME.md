@@ -21,7 +21,7 @@ The default Playgama/Playables build and the direct YouTube builder do not call 
 
 ## AdMob boundary
 
-The native Android shell is in `android/native/` (source only, not yet compiled; see its README). The Android client's `showRewarded` promise must resolve `true` only from a verified earned-reward callback. Ad dismissal, loading, cancellation or an error must not resolve as an earned reward. These source changes do not claim live native AdMob delivery or a signed AAB.
+The native Android shell is in `android/native/` (debug APK compiled and checked; see its README and build record). The Android client's `showRewarded` promise must resolve `true` only from a verified earned-reward callback. Ad dismissal, loading, cancellation or an error must not resolve as an earned reward. The test APK does not claim live native AdMob delivery or a signed AAB.
 
 ## Verification
 

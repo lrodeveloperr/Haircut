@@ -4,9 +4,10 @@ Gradle project for `com.worksbien.barbersimulatorasmr`. It bundles the Android w
 (`TARGET=full bash source/buildall.sh`, run automatically before every build) and shows it full screen in a
 WebView, offline, from the app's own origin.
 
-**Status: source only. It has not been compiled yet**: the environment it was written in could not reach
-`dl.google.com` (Android SDK, Android Gradle plugin, AdMob). The JavaScript bridge is tested; the Java side is
-untested until the first build and a run on a real device.
+**Status: debug APK compiled and verified on 16 October 2026.** The GitHub build passed 35 game
+contracts, 8 Android reward cases, 7 Chromium bridge cases, Android lint (zero errors) and APK signature
+verification. The APK uses Google test ads and the `.debug` package. Real-device consent, ads and lifecycle
+testing remain separate. See [the exact build record](BUILD-2026-10-16.md).
 
 ## Build
 
@@ -58,6 +59,6 @@ at `android/store-listing/en-US/images/icon.png`. Density-specific launcher PNGs
 - Real AdMob ids and the upload key (`keystore.properties`).
 - An in-app link to the privacy policy and, where UMP requires it, a privacy options entry
   (see `android/PRIVACY-RELEASE-CONFIG.md`). The game has no settings screen yet, so this needs a placement.
-- First build, then a device test of consent, ads, saves, rotation/folding, back and pause.
+- A device test of consent, ads, saves, rotation/folding, back and pause.
 
 Test the bridge: `TARGET=full bash source/buildall.sh && node android/tests/bridge.cjs`.
