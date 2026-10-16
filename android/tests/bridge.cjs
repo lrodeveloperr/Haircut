@@ -125,6 +125,27 @@ function fakeHost() {
     assert.equal(g.level, 'high'); assert.equal(g.strands, 30000);
     passed++;
 
+    // A restored context must redraw an idle scene at full detail without changing the haircut.
+    const savedHair = await page.evaluate(() => JSON.stringify(skinFadeStudio.getState().hair));
+    await page.evaluate(() => {
+      const canvas = document.querySelector('#scene');
+      const gl = canvas.getContext('webgl2');
+      if (!gl || !gl.getExtension('WEBGL_lose_context')) throw Error('context-loss test requires WEBGL_lose_context');
+      if (!gl.getContextAttributes().antialias) throw Error('High must request an antialiased context');
+      window.__restoreDraws = 0;
+      const render = HSC.view.render;
+      HSC.view.render = (...args) => { __restoreDraws++; return render(...args); };
+      const lose = gl.getExtension('WEBGL_lose_context');
+      canvas.addEventListener('webglcontextlost', () => setTimeout(() => lose.restoreContext(), 150), { once: true });
+      lose.loseContext();
+    });
+    await page.waitForFunction(() => __restoreDraws > 0 && !document.querySelector('#scene').getContext('webgl2').isContextLost());
+    assert.equal(await page.evaluate(() => JSON.stringify(skinFadeStudio.getState().hair)), savedHair);
+    g = await graphics();
+    assert.equal(g.width, g.expectedWidth); assert.equal(g.height, g.expectedHeight);
+    assert.equal(g.level, 'high'); assert.equal(g.strands, 30000);
+    passed++;
+
     // two completed rewarded videos unlock today's clipper; the first saves 1/2 and survives a reload
     const key = await page.evaluate(() => HSC.wardrobe.data.pick.clipper);
     await page.locator('#hsc-hud .hsc-rw').click();

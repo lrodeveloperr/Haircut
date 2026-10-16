@@ -42,6 +42,12 @@ def adapt(runtime):
             'if(s.status==="reveal"&&!x){needsRender=true;D+=ae;')
     replace('(f||s.status==="reveal"&&!x||j%66<20||HSC.clippingsActive&&HSC.clippingsActive())&&n.render(!!(f||s.status==="reveal"&&!x||HSC.clippingsActive&&HSC.clippingsActive()))',
             '(()=>{let active=!!(f||s.status==="reveal"&&!x||HSC.clippingsActive&&HSC.clippingsActive());if(active||needsRender){n.render(active);needsRender=false}})()')
+    # Idle rendering must restart after WebGL restoration. Cancel an interrupted
+    # stroke on loss, then redraw the unchanged full-detail scene on restoration.
+    replace('P.observe(e),globalThis.addEventListener("resize",ce);',
+            'P.observe(e),globalThis.addEventListener("resize",ce);a.addEventListener("webglcontextlost",Ae);a.addEventListener("webglcontextrestored",ce);')
+    replace('P.disconnect(),globalThis.removeEventListener("resize",ce),',
+            'P.disconnect(),globalThis.removeEventListener("resize",ce),a.removeEventListener("webglcontextlost",Ae),a.removeEventListener("webglcontextrestored",ce),')
 
     path.write_text(s)
 
