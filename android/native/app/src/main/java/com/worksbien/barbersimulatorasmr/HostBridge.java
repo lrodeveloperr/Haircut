@@ -78,7 +78,15 @@ final class HostBridge {
     }
 
     @JavascriptInterface
-    public void gameReady() { activity.onGameReady(); }
+    public void gameReady() {
+        activity.onGameReady();
+        activity.runOnUiThread(() -> { if (!destroyed) ads.publishPrivacyOptions(); });
+    }
+
+    @JavascriptInterface
+    public void showPrivacyOptions() {
+        activity.runOnUiThread(() -> { if (!destroyed) ads.showPrivacyOptions(); });
+    }
 
     @JavascriptInterface
     public void openPrivacy() {

@@ -30,6 +30,7 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
       });
       await context.addInitScript(()=>{
         window.__privacyCalls=0;
+        window.__adOptionsCalls=0;
         window.AndroidHost={
           request(id,operation,payload) {setTimeout(()=>{
             if(operation==='save') localStorage.setItem('privacy-save',JSON.parse(payload));
@@ -39,6 +40,7 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
           showRewarded(){throw Error('privacy test must not request ads');},
           showInterstitial(){throw Error('privacy test must not request ads');},
           openPrivacy(){__privacyCalls++;},
+          showPrivacyOptions(){__adOptionsCalls++;},
         };
       });
       const page = await context.newPage(), errors=[];
@@ -52,7 +54,7 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
       await page.addStyleTag({content:'*{animation:none!important;transition:none!important}'});
       await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
       const geometry = () => page.evaluate(()=>{
-        const selectors=['#scene','#hsc-panel','.hsc-sheet','.hsc-head','.hsc-pickwrap','.hsc-pick','.hsc-coll','.hsc-grid','.hsc-pager', '.ui button','#hsc-hud button','#hsc-panel button:not(.hsc-privacy)'];
+        const selectors=['#scene','#hsc-panel','.hsc-sheet','.hsc-head','.hsc-pickwrap','.hsc-pick','.hsc-coll','.hsc-grid','.hsc-pager', '.ui button','#hsc-hud button','#hsc-panel button:not(.hsc-privacy):not(.hsc-ad-options)'];
         return selectors.flatMap(selector=>[...document.querySelectorAll(selector)].map((el,index)=>{
           const r=el.getBoundingClientRect(); return {selector,index,x:r.x,y:r.y,width:r.width,height:r.height};
         }));
@@ -65,6 +67,20 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
       await page.locator('.hsc-privacy').evaluate(el=>el.style.display='');
       const after = await geometry();
       assert.deepEqual(after,before,name+': all pre-existing element bounds must be unchanged');
+      assert.equal(await page.getByRole('button',{name:'Ad privacy choices',exact:true}).isVisible(),false,'ad choices hidden until UMP requires them');
+      const policyBounds=await page.locator('.hsc-privacy').evaluate(el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};});
+      await page.evaluate(()=>{__androidPrivacyOptionsRequired=true;window.dispatchEvent(new Event('android-privacy-options'));});
+      assert.deepEqual(await geometry(),after,name+': required ad choices do not move any existing control or card');
+      assert.deepEqual(await page.locator('.hsc-privacy').evaluate(el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};}),policyBounds,'direct policy shield stays fixed');
+      const optionsGeometry=await page.locator('.hsc-ad-options').evaluate(el=>{
+        const r=el.getBoundingClientRect(),p=document.querySelector('.hsc-privacy').getBoundingClientRect();
+        const left=Array.from(document.querySelectorAll('.hsc-head .hsc-tab')).map(t=>t.getBoundingClientRect().right);
+        return{width:r.width,height:r.height,gap:p.left-r.right,centreError:Math.abs(r.y+r.height/2-p.y-p.height/2),clearTabs:r.left>Math.max(...left)};
+      });
+      assert(optionsGeometry.gap>0&&optionsGeometry.centreError<.02&&optionsGeometry.clearTabs,name+': separate, aligned ad-choices target fits spare header space');
+      await page.getByRole('button',{name:'Ad privacy choices',exact:true}).click();
+      assert.equal(await page.evaluate(()=>__adOptionsCalls),1,'ad choices dispatches only its separate native UMP operation');
+      assert.equal(await page.evaluate(()=>__privacyCalls),0,'ad choices never invokes the external policy button');
       const alignment=await page.evaluate(()=>{
         const header=document.querySelector('.hsc-head');
         const p=header.querySelector('.hsc-privacy').getBoundingClientRect();
@@ -79,6 +95,10 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
       await page.screenshot({path:path.join(out,afterName)});report.screenshots.push(afterName);
       await page.getByRole('button',{name:'Privacy',exact:true}).click();
       assert.equal(await page.evaluate(()=>__privacyCalls),1,'one tap opens native privacy entry once');
+      assert.equal(await page.evaluate(()=>__adOptionsCalls),1,'policy shield never invokes UMP');
+      await page.evaluate(()=>{__androidPrivacyOptionsRequired=false;window.dispatchEvent(new Event('android-privacy-options'));});
+      assert.equal(await page.getByRole('button',{name:'Ad privacy choices',exact:true}).isVisible(),false,'current UMP status can remove ad choices');
+      assert.deepEqual(await geometry(),after,'hiding ad choices preserves the existing geometry');
       assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),hair,'opening privacy preserves haircut');
       assert(await page.evaluate(()=>skinFadeStudio.getView().paused),'wardrobe retains pause ownership');
       await page.evaluate(()=>{__androidHost.pause(true);__androidHost.pause(false);});
@@ -87,7 +107,7 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
       await page.waitForFunction(()=>!skinFadeStudio.getView().paused);
       assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),hair,'privacy return preserves haircut');
       assert.deepEqual(errors,[],'privacy path has no page exceptions');
-      report.layouts.push({name,width,height,existingBoundsUnchanged:true,alignment,nativeEntryCalls:1,hairPreserved:true,pauseOwnership:true,pageErrors:errors});
+      report.layouts.push({name,width,height,existingBoundsUnchanged:true,alignment,optionsGeometry,conditionalAdOptions:true,separateNativeDispatch:true,nativeEntryCalls:1,hairPreserved:true,pauseOwnership:true,pageErrors:errors});
       console.log('PASS privacy:',name,'unchanged existing layout; aligned shield; native entry; preserved haircut/pause');
       await context.close();
     }

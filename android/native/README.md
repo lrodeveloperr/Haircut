@@ -13,6 +13,10 @@ contracts, 8 Android reward cases, 7 Chromium bridge cases, Android lint (zero e
 verification. The APK uses Google test ads and the `.debug` package. Real-device consent, ads and lifecycle
 testing remain separate. See [the exact build record](BUILD-2026-10-16.md).
 
+## Production AdMob candidate
+
+v1.0.7 (8) configures the production IDs for release only and adds a distinct UMP-options icon only where required. Android compile/lint, generated-variant ID checks and four-layout browser checks pass. The owner approved pushing and merging this revision on 16 October. The previously delivered v1.0.6 APK remains the earlier test-ad binary; this source update does not replace that download. See [exact status and evidence](../ADMOB-RELEASE-SETUP.md).
+
 ## Build
 
 Needs JDK 17+ and the Android SDK (platform 36, build tools) with `sdk.dir` in `local.properties` or
@@ -25,17 +29,13 @@ cd android/native
 ```
 
 The debug app installs beside the Play version (`.debug` package suffix) and always uses Google's public test
-ad ids. A release build refuses to run without the real ids and the upload key in `keystore.properties`
-(never committed):
+ad ids. Release identifiers are tracked in `admob-production.properties` (public IDs, release only). Debug always uses Google test IDs. Release tasks reject missing/malformed/test-publisher IDs. The upload key and its passwords remain in `keystore.properties` (never committed):
 
 ```properties
 storeFile=upload.jks
 storePassword=...
 keyAlias=upload
 keyPassword=...
-admobAppId=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY
-admobRewardedId=ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ
-admobInterstitialId=ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ
 ```
 
 ## How it works
@@ -62,8 +62,8 @@ at `android/store-listing/en-US/images/icon.png`. Density-specific launcher PNGs
 
 ## Still open
 
-- Real AdMob ids and the upload key (`keystore.properties`).
-- Final production consent/advertising configuration and regional validation. The wardrobe shield/direct external policy link is verified; see `android/PRIVACY-QA-2026-10-16.md`. No settings screen or existing-layout change was added.
+- Upload signing (`keystore.properties`), the signed AAB and store submission. Production AdMob console setup and release-only code wiring are complete in this revision. See [production setup](../ADMOB-RELEASE-SETUP.md).
+- Signed-release regional/age validation. European and US consent messages are published. A separate conditional Ad privacy choices control uses spare wardrobe header space; the direct policy shield and every pre-existing control/card retain their bounds. See [production setup](../ADMOB-RELEASE-SETUP.md).
 - A device test of consent, ads, saves, rotation/folding, back and pause.
 
 Test the bridge: `TARGET=full bash source/buildall.sh && node android/tests/bridge.cjs`.

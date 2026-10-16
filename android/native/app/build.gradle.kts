@@ -4,12 +4,15 @@ plugins {
     id("com.android.application")
 }
 
-// Release values live in keystore.properties next to this project (never committed):
-//   storeFile, storePassword, keyAlias, keyPassword       upload key for Play
-//   admobAppId, admobRewardedId, admobInterstitialId      the real AdMob ids
+// Upload signing lives in keystore.properties (never committed).
+// Public production AdMob identifiers live separately in admob-production.properties.
 // Debug builds always use Google's public test ids, so no real ads are ever requested while testing.
 val local = Properties().apply {
     val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val productionAds = Properties().apply {
+    val f = rootProject.file("admob-production.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
 val testAppId = "ca-app-pub-3940256099942544~3347511713"
@@ -24,8 +27,8 @@ android {
         applicationId = "com.worksbien.barbersimulatorasmr"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.0.6"
+        versionCode = 8
+        versionName = "1.0.7"
     }
 
     signingConfigs {
@@ -50,9 +53,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            manifestPlaceholders["admobAppId"] = local.getProperty("admobAppId", testAppId)
-            buildConfigField("String", "ADMOB_REWARDED_ID", "\"${local.getProperty("admobRewardedId", testRewardedId)}\"")
-            buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"${local.getProperty("admobInterstitialId", testInterstitialId)}\"")
+            manifestPlaceholders["admobAppId"] = productionAds.getProperty("admobAppId", "")
+            buildConfigField("String", "ADMOB_REWARDED_ID", "\"${productionAds.getProperty("admobRewardedId", "")}\"")
+            buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"${productionAds.getProperty("admobInterstitialId", "")}\"")
             signingConfigs.findByName("upload")?.let { signingConfig = it }
         }
     }
@@ -93,10 +96,19 @@ val bundleGame by tasks.registering(Sync::class) {
 }
 tasks.named("preBuild") { dependsOn(bundleGame) }
 
-// Never ship Google's test ad ids in a Play release.
+// Validate every selected release task, including manifest/config inspection, without requesting an ad.
 gradle.taskGraph.whenReady {
-    val releasing = allTasks.any { it.project == project && it.name.contains("Release") && (it.name.startsWith("bundle") || it.name.startsWith("assemble")) }
-    if (releasing && listOf("admobAppId", "admobRewardedId", "admobInterstitialId").any { local.getProperty(it).isNullOrBlank() }) {
-        throw GradleException("Release builds need admobAppId, admobRewardedId and admobInterstitialId in android/native/keystore.properties")
+    val releasing = allTasks.any { it.project == project && it.name.contains("Release") }
+    if (releasing) {
+        val publisher = "8054612600809568"
+        val expected = mapOf(
+            "admobAppId" to Regex("ca-app-pub-$publisher~[0-9]{10}"),
+            "admobRewardedId" to Regex("ca-app-pub-$publisher/[0-9]{10}"),
+            "admobInterstitialId" to Regex("ca-app-pub-$publisher/[0-9]{10}")
+        )
+        if (expected.any { (key, format) -> !format.matches(productionAds.getProperty(key, "")) }
+                || productionAds.getProperty("admobRewardedId") == productionAds.getProperty("admobInterstitialId")) {
+            throw GradleException("Release tasks require this publisher's valid production app/rewarded/interstitial IDs in android/native/admob-production.properties; test IDs are forbidden")
+        }
     }
 }
