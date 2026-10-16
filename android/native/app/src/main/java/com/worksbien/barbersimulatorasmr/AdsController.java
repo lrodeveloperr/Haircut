@@ -12,6 +12,7 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.RequestConfiguration;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 import com.google.android.gms.ads.rewarded.RewardedAd;
@@ -38,6 +39,8 @@ final class AdsController {
     private RewardedAd rewarded;
     private InterstitialAd interstitial;
     private boolean loadingRewarded, loadingInterstitial, rewardedWanted, showing, destroyed;
+    private boolean privacyOptionsShowing;
+    private int consentGeneration;
     private final Runnable rewardedTimeout = () -> {
         if (rewardedWanted) { rewardedWanted = false; emit("rewarded", "failed"); }
     };
@@ -48,12 +51,44 @@ final class AdsController {
     }
 
     void start() {
+        MobileAds.setRequestConfiguration(new RequestConfiguration.Builder()
+                .setMaxAdContentRating(RequestConfiguration.MAX_AD_CONTENT_RATING_G).build());
         consent = UserMessagingPlatform.getConsentInformation(activity);
         consent.requestConsentInfoUpdate(activity, new ConsentRequestParameters.Builder().build(),
-                () -> UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity, formError -> initAds()),
-                requestError -> initAds());
+                () -> UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity, formError -> {
+                    publishPrivacyOptions();
+                    initAds();
+                }),
+                requestError -> { publishPrivacyOptions(); initAds(); });
         // consent gathered in an earlier session: ads may start straight away
         initAds();
+    }
+
+    void publishPrivacyOptions() {
+        if (destroyed) return;
+        boolean required = consent != null && consent.getPrivacyOptionsRequirementStatus()
+                == ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED;
+        web.evaluateJavascript("window.__androidPrivacyOptionsRequired=" + required
+                + ";window.dispatchEvent(new Event('android-privacy-options'))", null);
+    }
+
+    void showPrivacyOptions() {
+        if (destroyed || showing || rewardedWanted || privacyOptionsShowing || consent == null
+                || consent.getPrivacyOptionsRequirementStatus()
+                    != ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED) return;
+        privacyOptionsShowing = true;
+        // Previously cached ads must not survive a change in consent. Ignore any older load callback.
+        consentGeneration++;
+        rewarded = null;
+        interstitial = null;
+        loadingRewarded = loadingInterstitial = false;
+        UserMessagingPlatform.showPrivacyOptionsForm(activity, formError -> {
+            if (destroyed) return;
+            privacyOptionsShowing = false;
+            publishPrivacyOptions();
+            if (!canRequestAds()) return;
+            if (initialized.get()) { loadRewarded(); loadInterstitial(); } else initAds();
+        });
     }
 
     private boolean canRequestAds() {
@@ -69,11 +104,13 @@ final class AdsController {
     }
 
     private void loadRewarded() {
-        if (destroyed || loadingRewarded || rewarded != null || !canRequestAds()) return;
+        if (destroyed || privacyOptionsShowing || loadingRewarded || rewarded != null || !canRequestAds()) return;
         loadingRewarded = true;
+        final int generation = consentGeneration;
         RewardedAd.load(activity, BuildConfig.ADMOB_REWARDED_ID, new AdRequest.Builder().build(), new RewardedAdLoadCallback() {
             @Override
             public void onAdLoaded(@NonNull RewardedAd ad) {
+                if (destroyed || generation != consentGeneration) return;
                 loadingRewarded = false;
                 rewarded = ad;
                 if (rewardedWanted) { rewardedWanted = false; ui.removeCallbacks(rewardedTimeout); presentRewarded(); }
@@ -81,6 +118,7 @@ final class AdsController {
 
             @Override
             public void onAdFailedToLoad(@NonNull LoadAdError error) {
+                if (destroyed || generation != consentGeneration) return;
                 loadingRewarded = false;
                 if (rewardedWanted) { rewardedWanted = false; ui.removeCallbacks(rewardedTimeout); emit("rewarded", "failed"); }
             }
@@ -88,24 +126,27 @@ final class AdsController {
     }
 
     private void loadInterstitial() {
-        if (destroyed || loadingInterstitial || interstitial != null || !canRequestAds()) return;
+        if (destroyed || privacyOptionsShowing || loadingInterstitial || interstitial != null || !canRequestAds()) return;
         loadingInterstitial = true;
+        final int generation = consentGeneration;
         InterstitialAd.load(activity, BuildConfig.ADMOB_INTERSTITIAL_ID, new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {
             @Override
             public void onAdLoaded(@NonNull InterstitialAd ad) {
+                if (destroyed || generation != consentGeneration) return;
                 loadingInterstitial = false;
                 interstitial = ad;
             }
 
             @Override
             public void onAdFailedToLoad(@NonNull LoadAdError error) {
+                if (destroyed || generation != consentGeneration) return;
                 loadingInterstitial = false;
             }
         });
     }
 
     void showRewarded(String placement) {
-        if (showing || rewardedWanted) { emit("rewarded", "failed"); return; }
+        if (destroyed || privacyOptionsShowing || showing || rewardedWanted) { emit("rewarded", "failed"); return; }
         if (!canRequestAds()) { emit("rewarded", "failed"); return; }
         initAds();
         if (rewarded != null) { presentRewarded(); return; }
@@ -133,7 +174,7 @@ final class AdsController {
 
     void showInterstitial(String placement) {
         // the next customer never waits for an interstitial: none ready means none shown
-        if (showing || interstitial == null || !canRequestAds()) { emit("interstitial", "failed"); loadInterstitial(); return; }
+        if (destroyed || privacyOptionsShowing || showing || interstitial == null || !canRequestAds()) { emit("interstitial", "failed"); loadInterstitial(); return; }
         InterstitialAd ad = interstitial;
         interstitial = null;
         showing = true;
