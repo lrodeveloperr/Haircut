@@ -47,10 +47,15 @@ admobInterstitialId=ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ
   Rotation and folding keep the same page. Font size settings do not scale the game. Back closes the
   wardrobe, otherwise sends the app to the background. Leaving the app pauses the game and its sound.
 
+## App icon
+
+The launcher and starting-screen icon use the existing approved Play Console artwork, retained unchanged
+at `android/store-listing/en-US/images/icon.png`. Density-specific launcher PNGs are exported from that
+512 × 512 master. Android applies the launcher mask; no corner radius is baked into the artwork.
+
 ## Still open
 
 - Real AdMob ids and the upload key (`keystore.properties`).
-- The approved launcher icon: the current one is a placeholder.
 - An in-app link to the privacy policy and, where UMP requires it, a privacy options entry
   (see `android/PRIVACY-RELEASE-CONFIG.md`). The game has no settings screen yet, so this needs a placement.
 - First build, then a device test of consent, ads, saves, rotation/folding, back and pause.
