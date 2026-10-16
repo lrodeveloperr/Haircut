@@ -50,7 +50,9 @@ const clearDot = async (p) => {
     await L.yawTo(p, -93, 12);
     log(s, await wardrobe(p, 41, 23));
     if (!calib) {
-      await fade(p, 16, 226, 460, [[4, 262], [3, 282], [2, 302], [1, 324], [0, 350]], 4, 0.16);
+      // upper bands reach the temple; the short bands stay behind the stubble so the beard is untouched
+      await fade(p, 16, 226, 352, [[4, 262], [3, 282], [2, 302], [1, 324]], 4, 0.16);
+      await fade(p, 16, 166, 460, [[1, 340], [0, 356]], 4, 0.16);
       await clean(p);
     }
   } else if (scene === 's3') {
