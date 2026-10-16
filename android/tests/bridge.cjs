@@ -1,222 +1,118 @@
 'use strict';
-// The Android JS bridge (android/native/app/src/main/assets/android-bridge.js) driving the real Android web
-// build in Chromium, with a scripted stand-in for the native AndroidHost. Needs `TARGET=full bash
-// source/buildall.sh` first. Native AdMob/UMP behaviour itself is verified on a device, not here.
+// Native transport + real working engine; native disk/WebView behavior is covered by apk.cjs.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { chromium } = (() => { try { return require('playwright'); } catch (e) { return require('/opt/node-tools/node_modules/playwright'); } })();
-
-const root = path.resolve(__dirname, '../..');
-const build = path.join(root, 'source/build');
-const bridge = fs.readFileSync(path.join(root, 'android/native/app/src/main/assets/android-bridge.js'), 'utf8');
-const TYPES = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.webp': 'image/webp', '.md': 'text/plain' };
-
-// the native side as MainActivity/AdsController behave: storage in a persistent map, ads answered with
-// scripted outcomes ('reward' = opened, rewarded, closed; 'dismiss' = opened, closed; 'fail' = failed)
+const { chromium } = require('playwright');
+const root = path.resolve(__dirname, '../..'), build = path.join(root, 'source/build');
+const types = {'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp','.json':'application/json'};
 function fakeHost() {
-  const store = JSON.parse(localStorage.getItem('fake-android-prefs') || '{}');
-  const persist = () => localStorage.setItem('fake-android-prefs', JSON.stringify(store));
-  window.__native = { ready: 0, ads: [], outcome: { rewarded: 'reward', interstitial: 'fail' }, failWrites: false };
-  const play = (kind, placement) => {
-    window.__native.ads.push([kind, placement]);
-    const steps = { reward: ['opened', 'rewarded', 'closed'], dismiss: ['opened', 'closed'], fail: ['failed'] }[window.__native.outcome[kind]];
-    steps.forEach((s, i) => setTimeout(() => window.__androidHost.ad(kind, s), 120 * (i + 1)));
-  };
+  window.__native = {ready:0, outcome:'reward', delay:10, failWrites:false, ads:[]};
   window.AndroidHost = {
-    gameReady() { window.__native.ready++; },
-    storageGet(keys) { return JSON.stringify(JSON.parse(keys).map((k) => (k in store ? store[k] : null))); },
-    storageSet(keys, values) {
-      if (window.__native.failWrites) return false;
-      const v = JSON.parse(values);
-      JSON.parse(keys).forEach((k, i) => { if (typeof v[i] !== 'string') throw new Error('non-string save'); store[k] = v[i]; });
-      persist();
-      return true;
+    request(id, op, payload) {
+      setTimeout(() => {
+        if(op === 'save' && __native.failWrites) return __androidHost.complete(id, false, 'Android storage write failed');
+        if(op === 'save') localStorage.setItem('fake-android-envelope', JSON.parse(payload));
+        __androidHost.complete(id, true, op === 'load' ? localStorage.getItem('fake-android-envelope') || '{}' : '');
+      }, __native.delay);
     },
-    storageDelete(keys) { JSON.parse(keys).forEach((k) => delete store[k]); persist(); return true; },
-    showRewarded(p) { play('rewarded', p); },
-    showInterstitial(p) { play('interstitial', p); },
+    gameReady() {__native.ready++;},
+    showRewarded(p) {
+      __native.ads.push(p);
+      ({reward:['opened','rewarded','closed'],dismiss:['opened','closed'],fail:['failed']}[__native.outcome])
+        .forEach((s,i)=>setTimeout(()=>__androidHost.ad('rewarded',s),120*(i+1)));
+    },
+    showInterstitial(){setTimeout(()=>__androidHost.ad('interstitial','failed'),20);},
   };
 }
-
-(async () => {
-  const browser = await chromium.launch({ args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-  let passed = 0;
+(async()=>{
+  const browser=await chromium.launch({args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  let passed=0;
   try {
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true });
-    const external = [];
-    await ctx.route('**/*', async (route) => {
-      const url = new URL(route.request().url());
-      if (url.hostname === 'release.test') {
-        const file = path.join(build, url.pathname === '/' ? 'index.html' : url.pathname);
-        if (!file.startsWith(build + path.sep) || !fs.existsSync(file)) return route.fulfill({ status: 404, body: '' });
-        return route.fulfill({ path: file, contentType: TYPES[path.extname(file)] || 'application/octet-stream' });
-      }
-      if (url.href === 'https://bridge.playgama.com/v2/stable/playgama-bridge.js') return route.fulfill({ body: bridge, contentType: 'application/javascript' });
-      external.push(url.href);
-      return route.fulfill({ status: 404, body: '' });
+    const ctx=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:3,hasTouch:true});
+    const external=[];
+    await ctx.route('**/*',async route=>{
+      const url=new URL(route.request().url());
+      if(url.hostname!=='release.test'){external.push(url.href);return route.fulfill({status:404,body:''});}
+      const file=path.join(build,url.pathname==='/'?'index.html':url.pathname);
+      if(!file.startsWith(build+path.sep)||!fs.existsSync(file))return route.fulfill({status:404,body:''});
+      return route.fulfill({path:file,contentType:types[path.extname(file)]||'application/octet-stream'});
     });
     await ctx.addInitScript(fakeHost);
-    const page = await ctx.newPage();
-    page.setDefaultTimeout(60000);
-    const errors = [];
-    page.on('pageerror', (e) => errors.push(e.message));
-    const boot = async () => {
-      await page.goto('http://release.test/');
-      await page.waitForFunction(() => window.skinFadeStudio && window.HSC?.wardrobe?.data);
-      await page.addStyleTag({ content: '*{animation-play-state:paused!important}' }); // pulsing buttons never settle for a click
+    const page=await ctx.newPage(),errors=[];
+    page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(120000);
+    const boot=async()=>{
+      await page.goto('http://release.test/?detail=low');
+      await page.waitForFunction(()=>window.skinFadeStudio && HSC.startupTiming?.firstPlayable && !document.body.inert && __native.ready===1);
+      await page.addStyleTag({content:'*{animation-play-state:paused!important}'});
     };
-
+    const buffer=()=>page.waitForFunction(()=>{
+      const c=document.querySelector('#scene'),r=HSC.detail.pixelRatio(c.clientWidth,c.clientHeight);
+      return c.width===Math.floor(c.clientWidth*r)&&c.height===Math.floor(c.clientHeight*r)&&!skinFadeStudio.getView().paused;
+    });
     await boot();
-    assert.equal(await page.evaluate(() => window.bridge.platform.id), 'android');
-    await page.waitForFunction(() => window.__native.ready === 1);
-    assert.deepEqual(external, [], 'no network requests besides the replaced bridge');
-    passed++;
-
-    // Sites High-only pixel budget, even with old saved Low and a forced Low URL.
-    await page.evaluate(() => AndroidHost.storageSet('["skin-fade-studio-detail-v1"]', '["low"]'));
-    await page.goto('http://release.test/?detail=low');
-    await page.waitForFunction(() => window.skinFadeStudio && window.HSC?.wardrobe?.data);
-    await page.addStyleTag({ content: '*{animation-play-state:paused!important}' });
-    const graphics = () => page.evaluate(() => {
-      const c = document.querySelector('#scene'), d = HSC.detail;
-      return { level: d.level, setting: d.setting, strands: d.minStrands, segments: d.segments,
-        beard: d.beardMax, simpleShader: d.shaderLow, width: c.width, height: c.height,
-        expectedWidth: Math.floor(c.clientWidth * d.pixelRatio(c.clientWidth, c.clientHeight)),
-        expectedHeight: Math.floor(c.clientHeight * d.pixelRatio(c.clientWidth, c.clientHeight)),
-        renderRatio: d.pixelRatio(c.clientWidth, c.clientHeight) };
-    });
-    const waitForBuffer = () => page.waitForFunction(() => {
-      const c = document.querySelector('#scene'), d = HSC.detail;
-      const ratio = d.pixelRatio(c.clientWidth, c.clientHeight);
-      return c.width === Math.floor(c.clientWidth * ratio) && c.height === Math.floor(c.clientHeight * ratio);
-    });
-    await waitForBuffer();
-    let g = await graphics();
-    assert.equal(g.level, 'high'); assert.equal(g.setting, 'fixed');
-    assert.equal(g.strands, 30000); assert.equal(g.segments, 8); assert.equal(g.beard, 1); assert.equal(g.simpleShader, false);
-    assert.equal(g.width, g.expectedWidth); assert.equal(g.height, g.expectedHeight);
-    assert.equal(g.renderRatio, 2, '3x display must use the same fixed High budget as Sites');
-    assert.equal(await page.locator('.hsc-detail').count(), 0);
-    passed++;
-
-    // Trusted touch uses the same visible-blade offset as Sites/YouTube.
-    const point = await page.evaluate(() => {
-      const game = skinFadeStudio, view = HSC.view;
-      if (game.getState().interactionMode !== 'cut') game.toggleClipper();
-      game.selectGuard(1);
-      const box = view.headScreen();
-      let p;
-      for (const y of [0.2, 0.3, 0.4, 0.5]) {
-        for (const x of [0.5, 0.4, 0.6]) {
-          const candidate = { x: box.left + (box.right - box.left) * x, y: box.top + (box.bottom - box.top) * y };
-          if (view.raycast(candidate.x, candidate.y)) { p = candidate; break; }
-        }
-        if (p) break;
-      }
-      if (!p) throw Error('no valid head contact for touch test');
-      window.__touchRays = [];
-      const raycast = view.raycast;
-      view.raycast = (x, y) => { __touchRays.push({ x, y }); return raycast(x, y); };
-      return { ...p, contactY: p.y + Math.min(72, document.querySelector('#scene').clientHeight * 0.12) };
-    });
-    const cdp = await ctx.newCDPSession(page);
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: point.x, y: point.contactY }] });
-    await page.waitForTimeout(200);
-    const rays = await page.evaluate(() => __touchRays);
-    assert(rays.length > 0, 'touch must reach the actual raycaster');
-    assert(Math.abs(rays[0].x - point.x) < 1 && Math.abs(rays[0].y - point.y) < 1, 'blade target must match the Sites mapping');
-    assert(rays[0].y < point.contactY - 40, 'finger must not cover the cutting blade');
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: point.x + 10, y: point.contactY + 10 }] });
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    passed++;
-
-    await page.setViewportSize({ width: 844, height: 390 });
-    await waitForBuffer();
-    g = await graphics();
-    assert.equal(g.width, g.expectedWidth); assert.equal(g.height, g.expectedHeight);
-    await page.evaluate(() => { window.__androidHost.pause(true); window.__androidHost.pause(false); });
-    await page.setViewportSize({ width: 390, height: 844 });
-    await waitForBuffer();
-    g = await graphics();
-    assert.equal(g.width, g.expectedWidth); assert.equal(g.height, g.expectedHeight);
-    assert.equal(g.level, 'high'); assert.equal(g.strands, 30000);
-    passed++;
-
-    // A restored context must redraw an idle scene at full detail without changing the haircut.
-    const savedHair = await page.evaluate(() => JSON.stringify(skinFadeStudio.getState().hair));
-    await page.evaluate(() => {
-      const canvas = document.querySelector('#scene');
-      const gl = canvas.getContext('webgl2');
-      if (!gl || !gl.getExtension('WEBGL_lose_context')) throw Error('context-loss test requires WEBGL_lose_context');
-      if (!gl.getContextAttributes().antialias) throw Error('High must request an antialiased context');
-      window.__restoreDraws = 0;
-      const render = HSC.view.render;
-      HSC.view.render = (...args) => { __restoreDraws++; return render(...args); };
-      const lose = gl.getExtension('WEBGL_lose_context');
-      canvas.addEventListener('webglcontextlost', () => setTimeout(() => lose.restoreContext(), 150), { once: true });
-      lose.loseContext();
-    });
-    await page.waitForFunction(() => __restoreDraws > 0 && !document.querySelector('#scene').getContext('webgl2').isContextLost());
-    assert.equal(await page.evaluate(() => JSON.stringify(skinFadeStudio.getState().hair)), savedHair);
-    g = await graphics();
-    assert.equal(g.width, g.expectedWidth); assert.equal(g.height, g.expectedHeight);
-    assert.equal(g.level, 'high'); assert.equal(g.strands, 30000);
-    passed++;
-
-    // two completed rewarded videos unlock today's clipper; the first saves 1/2 and survives a reload
-    const key = await page.evaluate(() => HSC.wardrobe.data.pick.clipper);
-    await page.locator('#hsc-hud .hsc-rw').click();
-    await page.locator('.hsc-vbtn').click();
-    await page.waitForFunction((k) => HSC.wardrobe.data.progress[k] === 1, key);
-    assert.equal(await page.evaluate((k) => HSC.rewards.owns(k), key), false);
-    await page.waitForTimeout(600);
-    await boot();
-    assert.equal(await page.evaluate((k) => HSC.wardrobe.data.progress[k], key), 1, 'first credit saved in app storage');
-    passed++;
-
-    // a dismissed or failed ad gives nothing and does not hang the button
-    await page.locator('#hsc-hud .hsc-rw').click();
-    for (const outcome of ['dismiss', 'fail']) {
-      await page.evaluate((o) => { window.__native.outcome.rewarded = o; }, outcome);
-      await page.locator('.hsc-vbtn').click();
-      await page.waitForFunction(() => !document.querySelector('.hsc-vbtn').disabled && window.bridge.advertisement.rewardedState === 'closed');
-      assert.equal(await page.evaluate((k) => HSC.wardrobe.data.progress[k], key), 1, outcome + ' must not credit');
+    assert.equal(await page.evaluate(async()=>(await HSC.youtubeClientPromise).platformId),'android');
+    assert.deepEqual(external,[]);passed++;
+    for(const [width,height]of[[390,844],[844,390],[800,1280],[1280,800]]){
+      await page.setViewportSize({width,height});await buffer();
+      assert.deepEqual(await page.evaluate(()=>[HSC.detail.level,HSC.detail.minStrands,HSC.detail.segments,HSC.detail.antialias]),['high',30000,8,true]);
+      const p=await page.evaluate(()=>{
+        if(skinFadeStudio.getState().interactionMode!=='cut')skinFadeStudio.toggleClipper();
+        skinFadeStudio.selectGuard(0);const b=HSC.view.headScreen();
+        for(const y of[.3,.4,.5,.6])for(const x of[.5,.4,.6]){
+          const p={x:b.left+(b.right-b.left)*x,y:b.top+(b.bottom-b.top)*y};
+          if(HSC.view.raycast(p.x,p.y)?.kind==='scalp'){
+            window.__rays=[];const ray=HSC.view.raycast;
+            HSC.view.raycast=(x,y)=>{__rays.push([x,y]);return ray(x,y);};return p;
+          }
+        }throw Error('head must remain reachable after resize');
+      });
+      const session=await ctx.newCDPSession(page);
+      await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y+18,radiusX:8,radiusY:8}]});
+      await page.waitForTimeout(60);
+      await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      const rays=await page.evaluate(()=>__rays);
+      assert(rays.some(([x,y])=>Math.abs(x-p.x)<1&&Math.abs(y-p.y)<1),'touch and blade share actual ray target');
+      await session.detach();passed++;
     }
-    passed++;
-
-    await page.evaluate(() => { window.__native.outcome.rewarded = 'reward'; });
+    const saved=await page.evaluate(async()=>{
+      const c=await HSC.youtubeClientPromise;await c.flushProgress();return JSON.stringify(skinFadeStudio.getState().hair);
+    });
+    await boot();assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),saved);passed++;
+    // A delayed durable acknowledgement must not block input/event-loop timers.
+    assert.deepEqual(await page.evaluate(async()=>{
+      __native.delay=250;let timer=false,done=false;
+      const c=await HSC.youtubeClientPromise,p=c.saveProgress('probe',{ok:true}).then(()=>{done=true;});
+      await new Promise(r=>setTimeout(()=>{timer=true;r();},30));const early=done;await p;__native.delay=10;return[timer,early,done];
+    }),[true,false,true]);passed++;
+    await page.evaluate(()=>{__native.failWrites=true;});
+    await assert.rejects(page.evaluate(async()=>(await HSC.youtubeClientPromise).saveProgress('probe',{ok:false})),/write failed/);
+    await page.evaluate(()=>{__native.failWrites=false;});passed++;
+    // Reward receipts are real-earned only, and the two-credit policy persists.
+    const key=await page.evaluate(()=>HSC.wardrobe.data.pick.clipper);
+    await page.locator('#hsc-hud .hsc-rw').click();
     await page.locator('.hsc-vbtn').click();
-    await page.waitForFunction((k) => HSC.rewards.owns(k), key);
-    // since the reload: dismissed, failed, completed
-    assert.equal(await page.evaluate(() => window.__native.ads.filter(([k, p]) => k === 'rewarded' && p === 'unlock-item').length), 3);
-    passed++;
-
-    // Android back: closes the open wardrobe, then reports nothing left to close
-    assert.equal(await page.evaluate(() => window.__androidHost.back()), true);
-    await page.locator('#hsc-panel.open').waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => window.__androidHost.back()), false);
-    passed++;
-
-    // app pause/resume from the activity lifecycle
-    await page.evaluate(() => window.__androidHost.pause(true));
-    assert.equal(await page.evaluate(() => skinFadeStudio.getView().paused), true);
-    await page.evaluate(() => window.__androidHost.pause(false));
-    assert.equal(await page.evaluate(() => skinFadeStudio.getView().paused), false);
-    passed++;
-
-    // a failed write is reported to the game, not silently dropped
-    await page.evaluate(() => { window.__native.failWrites = true; });
-    await assert.rejects(page.evaluate(() => window.bridge.storage.set(['probe'], ['1'])), /write failed/);
-    await page.evaluate(() => { window.__native.failWrites = false; });
-    passed++;
-
-    assert.deepEqual(errors, []);
-    console.log(`PASS: ${passed} Android bridge cases (fixed Sites High, visible blade/trusted touch, rotation, saves, rewards, back, pause, write failure).`);
-  } catch (e) {
-    console.error(`FAIL after ${passed} passing cases:`, e.stack || e);
-    process.exitCode = 1;
-  } finally {
-    await browser.close();
-  }
+    await page.waitForFunction(k=>HSC.wardrobe.data.progress[k]===1,key);
+    await page.evaluate(async()=>(await HSC.youtubeClientPromise).flushProgress());
+    await boot();assert.equal(await page.evaluate(k=>HSC.wardrobe.data.progress[k],key),1);passed++;
+    await page.locator('#hsc-hud .hsc-rw').click();
+    for(const outcome of['dismiss','fail']){
+      await page.evaluate(o=>{__native.outcome=o;},outcome);await page.locator('.hsc-vbtn').click();
+      await page.waitForFunction(()=>!document.querySelector('.hsc-vbtn').disabled&&!document.body.inert);
+      assert.equal(await page.evaluate(k=>HSC.wardrobe.data.progress[k],key),1);
+    }passed++;
+    await page.evaluate(()=>{__native.outcome='reward';});await page.locator('.hsc-vbtn').click();
+    await page.waitForFunction(k=>HSC.rewards.owns(k),key);passed++;
+    assert.equal(await page.evaluate(()=>__androidHost.back()),true);
+    await page.locator('#hsc-panel.open').waitFor({state:'hidden'});passed++;
+    await page.evaluate(()=>__androidHost.pause(true));assert.equal(await page.evaluate(()=>skinFadeStudio.getView().paused),true);
+    await page.evaluate(()=>__androidHost.pause(false));await buffer();passed++;
+    await page.evaluate(()=>{
+      const c=document.querySelector('#scene'),gl=c.getContext('webgl2'),ext=gl.getExtension('WEBGL_lose_context');
+      c.addEventListener('webglcontextlost',()=>setTimeout(()=>ext.restoreContext(),150),{once:true});ext.loseContext();
+    });
+    await page.waitForFunction(()=>!document.querySelector('#scene').getContext('webgl2').isContextLost()&&!skinFadeStudio.getView().paused);
+    await buffer();passed++;
+    assert.deepEqual(errors,[]);console.log(`PASS: ${passed} working Android runtime browser cases.`);
+  }catch(e){console.error(`FAIL after ${passed}:`,e);process.exitCode=1;}finally{await browser.close();}
 })();

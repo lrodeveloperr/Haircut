@@ -7,13 +7,13 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '../..');
 const game = fs.readFileSync(path.join(root, 'source/build/runtime/game.js'), 'utf8');
 const customers = fs.readFileSync(path.join(root, 'source/build/runtime/customers.js'), 'utf8');
-const profile = customers.slice(0, customers.indexOf('// ---------------------------------------------------------------------------------------------'));
+const profile = customers.slice(customers.indexOf('(function (HSC) {'), customers.indexOf('// ---------------------------------------------------------------------------------------------'));
 const sitesProfile = fs.readFileSync(path.join(root, 'source/customers/detail-youtube.js'), 'utf8');
 const sitesGame = fs.readFileSync(path.join(root, 'source/src/runtime/game.js'), 'utf8');
 const aimStart = sitesGame.indexOf('function Ue(j){let ae=j.clientX');
 const sitesAim = sitesGame.slice(aimStart, sitesGame.indexOf('if(n.setClipper', aimStart)) + '}';
 const between = (start, end) => game.slice(game.indexOf(start), game.indexOf(end, game.indexOf(start)));
-const sampler = between('function he(ue){if(Pe)HSC.detail.sample', 'function _(ue=!0)');
+const sampler = between('function he(ue){if(Pe){let quality=HSC.detail.sample', 'let firstFramePending=');
 const budget = between('function He(ue){te=Math.max(HSC.detail.minStrands', 'let O={');
 const resize = between('function P(){var ue;', 'function L(){');
 const cut = between('function Ue(j){let ae=j.clientX', 'function Pe(j)');
@@ -79,22 +79,23 @@ for (const height of [400, 600, 844]) for (const type of ['touch', 'mouse', 'pen
   const context = vm.createContext({
     a: { clientHeight: height }, ur: { touchOffsetPx: 72 }, s: state, f: { lastUv: null },
     n: { raycast(x, y) { calls.push([x, y]); return hit; }, setClipper() {}, surface: {}, beardSurface: {} },
+    AndroidHost: {request() {}}, setTimeout, clearTimeout,
     HSC: { cutBeard: doCut }, Ts: doCut, o: { start() {}, stop() {} },
   });
+  vm.runInContext(fs.readFileSync(path.join(root, 'android/native-transport.js'), 'utf8'), context);
   vm.runInContext(cut + ';globalThis.cut=Ue;', context);
   context.cut({ clientX: 200.25, clientY: 300.75, pointerType: type });
-  const websiteCalls = [];
-  const website = vm.createContext({ a: { clientHeight: height }, ur: { touchOffsetPx: 72 },
-    n: { raycast(x, y) { websiteCalls.push([x, y]); return null; } } });
-  vm.runInContext(sitesAim + ';globalThis.aim=Ue;', website);
-  website.aim({ clientX: 200.25, clientY: 300.75, pointerType: type });
-  assert.deepEqual(calls, websiteCalls, `${type} must use the Sites touchscreen mapping`);
-  if (type === 'touch') assert(calls[0][1] < 300.75, 'blade must remain visible above the finger');
+  const offset = type === 'touch' ? 24 : 0;
+  assert.deepEqual(calls, [[200.25, 300.75 - offset]], `${type} uses compact consistent clearance on phone/tablet`);
+  for (const contactHeight of [1, 8, 16, 32, 80]) {
+    const clearance = context.HSC.android.touchOffset({pointerType:type, height:contactHeight});
+    assert(type === 'touch' ? clearance >= 18 && clearance <= 28 : clearance === 0);
+  }
   assert.equal(strokes[0][0], hit, 'the actual cutter must use that same hit');
   passed++;
 }
-assert(game.includes('Math.min(ur.touchOffsetPx,a.clientHeight*.12)'));
+assert.equal(game.replaceAll('HSC.android.touchOffset(j)', 'Math.min(ur.touchOffsetPx,a.clientHeight*.12)'), fs.readFileSync(path.join(root, 'source/build-youtube/runtime/game.js'), 'utf8'), 'Android uses the complete working engine');
 assert(!game.includes('touchOffsetPx:0'));
 assert(!game.includes('Ue>24&&te>HSC.detail.minStrands'));
 assert(!customers.includes("const KEY = 'skin-fade-studio-detail-v1'"));
-console.log(`PASS: ${passed} Android graphics/input cases (Sites High parity, 20-minute simulated cadences, resize, visible scalp/beard blade mapping).`);
+console.log(`PASS: ${passed} Android graphics/input cases (working engine parity, fixed High cadences, tablet resize, compact scalp/beard blade mapping).`);

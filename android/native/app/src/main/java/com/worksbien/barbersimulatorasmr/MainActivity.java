@@ -29,17 +29,16 @@ import java.io.ByteArrayInputStream;
 
 /**
  * Hosts the game's web build (bundled in assets/game, served offline from the app's own origin) in a
- * full-screen WebView. The page's Playgama Bridge script URL is answered with assets/android-bridge.js,
- * and every other outside request is refused, so the game runs without any web host services.
+ * full-screen WebView. Native transport provides storage and ads; outside game requests are refused.
  */
 public class MainActivity extends ComponentActivity {
     static final String ORIGIN = "https://appassets.androidplatform.net";
     private static final String GAME_URL = ORIGIN + "/assets/game/index.html";
-    private static final String PLAYGAMA_BRIDGE = "https://bridge.playgama.com/v2/stable/playgama-bridge.js";
     private static final long SPLASH_MAX_MS = 6000;
 
     private WebView web;
     private AdsController ads;
+    private HostBridge host;
     private volatile boolean gameReady;
     private long started;
 
@@ -85,9 +84,6 @@ public class MainActivity extends ComponentActivity {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri url = request.getUrl();
-                if (PLAYGAMA_BRIDGE.equals(url.toString())) {
-                    return assets.shouldInterceptRequest(Uri.parse(ORIGIN + "/assets/android-bridge.js"));
-                }
                 WebResourceResponse local = assets.shouldInterceptRequest(url);
                 if (local != null) return local;
                 // nothing else is fetched: the game is fully bundled
@@ -105,7 +101,8 @@ public class MainActivity extends ComponentActivity {
         });
 
         ads = new AdsController(this, web);
-        web.addJavascriptInterface(new HostBridge(this, ads), "AndroidHost");
+        host = new HostBridge(this, ads, web);
+        web.addJavascriptInterface(host, "AndroidHost");
         web.loadUrl(GAME_URL);
         ads.start();
 
@@ -159,6 +156,7 @@ public class MainActivity extends ComponentActivity {
 
     @Override
     protected void onDestroy() {
+        host.destroy();
         ads.destroy();
         web.destroy();
         super.onDestroy();
