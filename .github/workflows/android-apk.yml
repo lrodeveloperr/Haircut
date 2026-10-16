@@ -75,6 +75,7 @@ jobs:
           ANDROID_APK_LIFECYCLE_ONLY: ${{ contains(github.event.head_commit.message, '[lifecycle-check]') && '1' || '0' }}
           ANDROID_APK_PRIVACY_FOLLOWUP: ${{ contains(github.event.head_commit.message, '[privacy-follow-up]') && '1' || '0' }}
           ANDROID_APK_AGE_ONLY: ${{ contains(github.event.head_commit.message, '[age-check]') && '1' || '0' }}
+          ANDROID_APK_AGE_TABLET_ONLY: ${{ contains(github.event.head_commit.message, '[age-tablet]') && '1' || '0' }}
         with:
           api-level: 35
           target: google_apis

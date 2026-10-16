@@ -2,6 +2,33 @@
 
 Record every failed, cancelled, degraded, or unexpectedly expensive screenshot run. A `fixed` entry must cite a successful verifying run.
 
+## SC-0C9B2AB447 — uiautomator helper exits 137 after successful fresh XML dump
+<!-- screenshot-issue-json: {"first_observed":"2026-10-16T21:13:10+00:00","fix":"","id":"SC-0C9B2AB447","last_updated":"2026-10-16T21:13:10+00:00","minutes_wasted":3.8,"notes":"","platform":"android","prevention":"","repo":"lrodeveloperr/Haircut","root_cause":"","runner":"ubuntu","runs":["https://github.com/lrodeveloperr/Haircut/actions/runs/38967133699"],"signature":"uiautomator helper exits 137 after successful fresh XML dump","stage":"native-inspection","status":"open","symptom":"Phone age/denial/relaunch checks passed; tablet observation command returned 137 after reporting hierarchy written","verified_run":"","workflow":"Android APK"} -->
+
+- Status: `open`
+- Repository: `lrodeveloperr/Haircut`
+- Workflow: `Android APK`
+- Platform / runner: `android` / `ubuntu`
+- Stage: `native-inspection`
+- First observed: 2026-10-16T21:13:10+00:00
+- Last updated: 2026-10-16T21:13:10+00:00
+- Occurrences: 1
+- Runner minutes wasted: 3.8
+- Runs:
+  - https://github.com/lrodeveloperr/Haircut/actions/runs/38967133699
+
+**Symptom:** Phone age/denial/relaunch checks passed; tablet observation command returned 137 after reporting hierarchy written
+
+**Root cause:** Unknown
+
+**Fix:** Not yet verified
+
+**Verified by:** Not yet verified
+
+**Prevention:** Not yet recorded
+
+**Notes:** None
+
 ## SC-1140E6EF57 — awaitPromise native callback timeout leaves CDP socket alive
 <!-- screenshot-issue-json: {"first_observed":"2026-10-16T21:06:40+00:00","fix":"","id":"SC-1140E6EF57","last_updated":"2026-10-16T21:06:40+00:00","minutes_wasted":7.1,"notes":"","platform":"android","prevention":"","repo":"lrodeveloperr/Haircut","root_cause":"","runner":"ubuntu","runs":["https://github.com/lrodeveloperr/Haircut/actions/runs/38966116551"],"signature":"awaitPromise native callback timeout leaves CDP socket alive","stage":"native-ad-callback","status":"open","symptom":"First neutral native age choice passed; native callback test timed out and leaked socket kept runner active","verified_run":"","workflow":"Android APK"} -->
 
