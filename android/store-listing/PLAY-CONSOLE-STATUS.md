@@ -17,11 +17,12 @@ Updated 16 October 2026, America/Toronto.
 - **Data safety completed and saved**, with collection AND sharing declared for approximate location, app interactions, diagnostics and device/other IDs. All four: non-ephemeral, required collection, advertising/marketing + analytics + fraud/security/compliance purposes for collection and sharing.
 - Encryption in transit = Yes; account creation and external-account login = None; deletion request mechanism = Yes, with public policy #delete-data anchor and studio email. No independent-security or payment badge claimed.
 - **Dashboard visibly confirms 10 of 11 setup tasks complete**, with privacy policy and Data safety marked complete.
-- No media or Android binary uploaded, no release submitted or published. Saved declarations still await the eventual app review.
+- **Approved app icon (512×512) and feature graphic (1024×500) uploaded and attached to the default English listing**, then saved as draft. Both image names were visible and Console confirmed **Your changes have been saved**. The existing MediaCube cover was resized/cropped only, with no added captions. Other listing languages inherit default graphics when localized media is absent.
+- No Android binary uploaded, no release submitted or published. Saved declarations still await the eventual app review.
 
 ## Remaining setup item
 
-**Store listing media only.** Required icon, feature graphic and screenshots remain intentionally omitted at the owner's instruction. All ten languages' text is already saved.
+**Actual gameplay screenshots only.** The icon and feature graphic are uploaded and saved after owner approval. Phone screenshots are still absent (Console requires 2–8). Do not reuse cover artwork as purported gameplay screenshots. All ten languages' text is saved; optional video remains empty.
 
 ## Android release implementation boundary
 
