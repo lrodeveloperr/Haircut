@@ -1,42 +1,35 @@
 # Google Play Console setup status
 
-Recorded 15 October 2026, America/Toronto.
+Updated 16 October 2026 UTC (15 October America/Toronto).
 
-## Saved and verified in Play Console
+## Saved and verified
 
 - Developer: Worksbien Studios Inc.
 - App: **Barber Simulator: ASMR Haircut**.
-- Package: `com.worksbien.barbersimulatorasmr`. Use this exact application ID for Android packaging.
+- Package: `com.worksbien.barbersimulatorasmr`.
 - Play app ID: `4975100930006889688`.
-- Type: Game. Price: Free. Default language: English (United States), en-US.
-- The policy and US export declarations shown during creation were accepted after the owner confirmed the displayed action.
-- The English title, short description and full description were saved as a draft. Console displayed **Your changes have been saved**; the copy was also present after reopening the editor.
-- Six non-media declarations are saved and verified: Contains ads = Yes; sign-in/payment restrictions = No; government app = No; financial features = None; health features = None; target audience = 13-15, 16-17 and 18 and over. Each completed page showed the saved confirmation, or its completed state was verified in the overview.
-- The last observed dashboard showed five of eleven setup tasks complete before the target-audience save. The audience page then independently confirmed **Change saved**. No final IARC content rating has been issued; target audience and content rating are separate.
-- No media, Android binary or release was uploaded. Nothing was submitted for review or published.
+- Type: Game. Price: Free. Default language: English (United States).
+- English title, short description and full description saved as a draft in the preceding session.
+- Six declarations saved: contains ads; unrestricted reviewer access; not government; no financial features; no health features; audience 13–15, 16–17, 18+.
+- **Category Game / Simulation now saved**, with Console's change-saved confirmation.
+- **Store contact saved:** `info@worksbienstudios.com` and `https://worksbienstudios.com`. Phone omitted.
+- **Five tags applied and visible:** Casual, Hairdressers, Lifestyle simulation, Sandbox, Simulation.
+- Dashboard now confirms **7 of 11 setup tasks complete**, including category/contact.
+- No media, Android binary or release uploaded; nothing submitted for review or published.
 
-[Open the app dashboard](https://play.google.com/console/u/0/developers/7097804603172918698/app/4975100930006889688/app-dashboard).
+## Remaining
 
-## Pending Console work
+1. Content rating: IARC form prepared with Game selected and studio support email. Terms of Use remains unchecked; action-time confirmation is required to accept the legal agreement. No final rating or questionnaire submission.
+2. Privacy policy, Data safety and advertising ID: final Android wrapper and AdMob bridge still absent from the repository. Answers must match the actual final SDK, permissions and data flows; do not submit a blanket no-data-collected declaration for AdMob.
+3. Store listing: media intentionally omitted. English draft saved. Nine translations (es-419, pt-BR, fr-FR, de-DE, ar, ja-JP, ko-KR, id, hi-IN) remain prepared in this folder but not saved in Console.
 
-The other nine translations remain prepared in this folder and have **not** been saved in Console: es-419, pt-BR, fr-FR, de-DE, ar, ja-JP, ko-KR, id and hi-IN.
+The default listing editor still stalls this browser, including direct navigation to the observed editor link and reload recovery. No CAPTCHA or bot-screening message observed. Category/contact dialogs worked using the documented DOM interaction API; browser accessibility snapshots inside these dialogs caused protocol stalls. This is not evidence that the listing text or translations were saved.
 
-On the later retry, ordinary declaration pages worked and the six forms above were completed. The listing/language editor and category edit dialog continued to stall with browser protocol timeouts. This was a browser/page timeout, with no observed CAPTCHA or bot-detection message.
+## Retained product decisions
 
-These forms still need saving: privacy policy, content rating, Data safety, advertising ID, category/contact details and the final store listing, including the nine translations. Media remains intentionally omitted.
-
-The IARC rating form is open with Game selected and `info@worksbienstudios.com` entered. Its separate Terms of Use checkbox remains unchecked. Clicking Next without accepting displayed **You must accept the Terms of Use to continue.** No IARC agreement was accepted and no questionnaire was completed. These prepared fields are an open form, not a saved rating submission.
-
-## Product decisions for the remaining forms
-
-- Category: Game / Simulation (selected direction; not yet saved in Console).
-- Ads: **Contains ads = Yes is saved**. The Android plan uses AdMob and two verified rewarded videos per daily wardrobe item.
-- Access: no game account, credentials or subscription requirement is present in the current game. Optional rewarded items do not require reviewer credentials.
-- Government, financial and health features: none are present in the reviewed game.
-- Audience: 13+ teens and adults, saved in Console. Do not represent the unfinished IARC process as a final content rating.
-- Studio contact: `info@worksbienstudios.com`, verified from the existing MimicJoy page and privacy policy in `lrodeveloperr/Worksbien-website` on main. This address is prepared for the rating form; the general store contact editor has not been saved.
-- Do not add an offline, ad-free or numeric download-size claim before checking the final Android package.
-- Determine the content rating from the actual game, without treating realistic haircutting as violence. Target audience and rating are separate declarations.
-- Privacy policy, Data safety and advertising-ID answers must match the final Android wrapper, permissions and exact SDK configuration. The native Android wrapper and AdMob bridge are still pending; the web game's platform SDK is not evidence of the final Android data flows. AdMob collects/shares data, so a blanket **no data collected** answer is not justified.
-
-All ten language files retain the validated copy. Resume from this existing app record; do not create a second app.
+- Android daily clipper or cape item requires two completed, optional, separately initiated rewarded videos.
+- No account or subscription required for access.
+- Studio contact verified from the existing WorksBien website source.
+- No offline, ad-free or numeric download-size claims until final Android packaging validates them.
+- Target audience is separate from IARC rating; ordinary haircutting is not violence.
+- Preserve this existing app record; do not create a duplicate.
