@@ -2,6 +2,33 @@
 
 Record every failed, cancelled, degraded, or unexpectedly expensive screenshot run. A `fixed` entry must cite a successful verifying run.
 
+## SC-1140E6EF57 — awaitPromise native callback timeout leaves CDP socket alive
+<!-- screenshot-issue-json: {"first_observed":"2026-10-16T21:06:40+00:00","fix":"","id":"SC-1140E6EF57","last_updated":"2026-10-16T21:06:40+00:00","minutes_wasted":7.1,"notes":"","platform":"android","prevention":"","repo":"lrodeveloperr/Haircut","root_cause":"","runner":"ubuntu","runs":["https://github.com/lrodeveloperr/Haircut/actions/runs/38966116551"],"signature":"awaitPromise native callback timeout leaves CDP socket alive","stage":"native-ad-callback","status":"open","symptom":"First neutral native age choice passed; native callback test timed out and leaked socket kept runner active","verified_run":"","workflow":"Android APK"} -->
+
+- Status: `open`
+- Repository: `lrodeveloperr/Haircut`
+- Workflow: `Android APK`
+- Platform / runner: `android` / `ubuntu`
+- Stage: `native-ad-callback`
+- First observed: 2026-10-16T21:06:40+00:00
+- Last updated: 2026-10-16T21:06:40+00:00
+- Occurrences: 1
+- Runner minutes wasted: 7.1
+- Runs:
+  - https://github.com/lrodeveloperr/Haircut/actions/runs/38966116551
+
+**Symptom:** First neutral native age choice passed; native callback test timed out and leaked socket kept runner active
+
+**Root cause:** Unknown
+
+**Fix:** Not yet verified
+
+**Verified by:** Not yet verified
+
+**Prevention:** Not yet recorded
+
+**Notes:** None
+
 ## SC-76CF3F259C — emulator action splits multiline shell if
 <!-- screenshot-issue-json: {"first_observed":"2026-10-16T20:58:40+00:00","fix":"","id":"SC-76CF3F259C","last_updated":"2026-10-16T20:58:40+00:00","minutes_wasted":3.43,"notes":"","platform":"android","prevention":"","repo":"lrodeveloperr/Haircut","root_cause":"","runner":"ubuntu","runs":["https://github.com/lrodeveloperr/Haircut/actions/runs/38965626289"],"signature":"emulator action splits multiline shell if","stage":"launch","status":"open","symptom":"sh end of file unexpected expecting fi; native test script never launched","verified_run":"","workflow":"Android APK"} -->
 

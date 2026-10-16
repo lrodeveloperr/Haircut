@@ -42,9 +42,25 @@ function check(s){report.checks.push(s);console.log('PASS:',s);}
   if(spec.band<3){
    const pid=adb('shell','pidof',app).split(' ')[0];adb('forward','tcp:9222','localabstract:webview_devtools_remote_'+pid);
    const targets=await(await fetch('http://127.0.0.1:9222/json/list')).json();const target=targets.find(t=>t.url.includes('appassets.androidplatform.net'));assert(target);
-   const socket=new WebSocket(target.webSocketDebuggerUrl);await new Promise((r,j)=>{socket.addEventListener('open',r,{once:true});socket.addEventListener('error',j,{once:true});});
-   const result=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('denied ad callback timed out')),10000);socket.addEventListener('message',e=>{let m=JSON.parse(e.data);if(m.id===1){clearTimeout(timer);m.error?reject(Error(m.error.message)):resolve(m.result.result.value);}});socket.send(JSON.stringify({id:1,method:'Runtime.evaluate',params:{expression:"new Promise(resolve=>{const receive=__androidHost.ad;__androidHost.ad=(kind,state)=>{receive(kind,state);resolve({kind,state,game:!!skinFadeStudio})};AndroidHost.showRewarded('age-check')})",awaitPromise:true,returnByValue:true}}));});
-   socket.close();assert.deepEqual(result,{kind:'rewarded',state:'failed',game:true});
+   const socket=new WebSocket(target.webSocketDebuggerUrl);
+   try {
+    await new Promise((r,j)=>{const timer=setTimeout(()=>j(Error('CDP connection timed out')),10000);socket.addEventListener('open',()=>{clearTimeout(timer);r();},{once:true});socket.addEventListener('error',j,{once:true});});
+    let sequence=0;
+    const evaluateRemote=expression=>new Promise((resolve,reject)=>{
+     const id=++sequence;
+     const listener=e=>{const m=JSON.parse(e.data);if(m.id!==id)return;clearTimeout(timer);socket.removeEventListener('message',listener);if(m.error||m.result.exceptionDetails)reject(Error(JSON.stringify(m.error||m.result.exceptionDetails)));else resolve(m.result.result.value);};
+     const timer=setTimeout(()=>{socket.removeEventListener('message',listener);reject(Error('CDP evaluation timed out'));},10000);
+     socket.addEventListener('message',listener);socket.send(JSON.stringify({id,method:'Runtime.evaluate',params:{expression,returnByValue:true}}));
+    });
+    const readinessDeadline=Date.now()+120000;
+    while(Date.now()<readinessDeadline){if(await evaluateRemote('!!window.skinFadeStudio && !!window.__androidHost'))break;await new Promise(r=>setTimeout(r,250));}
+    assert(await evaluateRemote('!!window.skinFadeStudio && !!window.__androidHost'),'real bundled game must be ready');
+    // Return from CDP before awaiting a Java->WebView callback; poll the actual native event.
+    await evaluateRemote("window.__ageAdCheck={done:false}; window.__ageAdReceive=__androidHost.ad; __androidHost.ad=function(kind,state){__ageAdReceive(kind,state);window.__ageAdCheck={done:true,kind,state,game:!!window.skinFadeStudio}}; AndroidHost.showRewarded('age-check'); 'requested'");
+    let result;
+    for(let attempt=0;attempt<40;attempt++){result=await evaluateRemote('window.__ageAdCheck');if(result.done)break;await new Promise(r=>setTimeout(r,250));}
+    assert.deepEqual(result,{done:true,kind:'rewarded',state:'failed',game:true});
+   } finally { socket.close(); }
    check('under-18 core game available and native rewarded request denied without consent initialization: '+spec.label);
   }
   adb('shell','am','force-stop',app);adb('shell','am','start','-W','-n',activity);assert(!node(hierarchy(),'What is your age group?'));
@@ -54,4 +70,6 @@ function check(s){report.checks.push(s);console.log('PASS:',s);}
 }catch(e){report.status='FAIL';report.error=e.stack;process.exitCode=1;console.error(e);}finally{
  report.finished=new Date().toISOString();fs.writeFileSync(out+'/android-installed-age-report.json',JSON.stringify(report,null,2));
  adb('shell','wm','size','reset');adb('shell','wm','density','reset');
+ // All evidence writes are synchronous. A failed CDP socket must not strand the hosted emulator.
+ process.exit(process.exitCode||0);
 }})();
