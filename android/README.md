@@ -4,7 +4,7 @@ This folder holds the Android / Google Play release work for **Barber Simulator:
 
 Android English name: **LOCKED** (30 characters). See [naming, ASO and SEO](store-listing/NAMING-ASO-SEO.md), [canonical metadata](store-listing/metadata.json) and [prepared website SEO](store-listing/seo.json).
 
-Google Play app record: `com.worksbien.barbersimulatorasmr`. All ten localized text listings and ten non-media dashboard setup tasks are saved, including IARC, category/contact, privacy policy and Data safety. Only media remains in the dashboard setup checklist. See [verified Console status](store-listing/PLAY-CONSOLE-STATUS.md). Privacy declarations follow the approved [Android privacy release configuration](PRIVACY-RELEASE-CONFIG.md); the native wrapper/AdMob bridge and signed AAB are still pending and must match it. Use this exact package ID when building the wrapper.
+Google Play app record: `com.worksbien.barbersimulatorasmr`. All ten localized text listings and ten non-media dashboard setup tasks are saved, including IARC, category/contact, privacy policy and Data safety. Only media remains in the dashboard setup checklist. Four phone screenshots for that item are in [store-listing/en-US/images/phoneScreenshots/](store-listing/en-US/images/phoneScreenshots/), ready to upload. See [verified Console status](store-listing/PLAY-CONSOLE-STATUS.md). Privacy declarations follow the approved [Android privacy release configuration](PRIVACY-RELEASE-CONFIG.md); the native wrapper/AdMob bridge and signed AAB are still pending and must match it. Use this exact package ID when building the wrapper.
 
 ## Current release direction
 

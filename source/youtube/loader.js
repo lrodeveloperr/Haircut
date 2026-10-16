@@ -8,15 +8,10 @@
   globalThis.HSC = globalThis.HSC || {};
   HSC.startupTiming = {sdkReady: performance.now()};
   HSC.poster?.show(loading);
-  // The loading screen leaves the document's identity at once (readiness is reported after this)
-  // and fades out over the live game.
+  // Remove the loading UI before reporting readiness. Renaming its id would leave an
+  // unstyled status node behind and invalidate the selectors used for its fade.
   HSC.dismissLoading = () => {
-    if (!loading || !loading.isConnected || loading.id !== 'yt-loading') return;
-    loading.removeAttribute('id');
-    loading.setAttribute('aria-hidden', 'true');
-    if (!loading.classList.contains('has-poster') || matchMedia('(prefers-reduced-motion: reduce)').matches) { loading.remove(); return; }
-    loading.classList.add('yt-leaving');
-    setTimeout(() => loading.remove(), 300);
+    if (loading?.isConnected) loading.remove();
   };
   HSC.graphicsError = code => Object.assign(new Error('Game graphics could not initialize'), {code});
   // A short code on the recovery screen identifies the failure on a phone without a console.
@@ -52,7 +47,7 @@
     const safeText = value => String(value ?? '')
       .replace(/(?:https?:\/\/|blob:|data:)[^\s"'<>]+/g, '[resource]')
       .replace(/[\r\n\t]+/g, ' ').slice(0, 200);
-    lines.push('Diagnostic: sdk-v3.98-d1');
+    lines.push('Diagnostic: sdk-v3.101-d1');
     if (reached.length) lines.push('Stage: ' + reached[reached.length - 1]);
     lines.push('Error: ' + safeText(error?.name || 'Error') + ': ' + safeText(error?.message || error));
     const frame = String(error?.stack || '').match(/\/(runtime\/[A-Za-z0-9._-]+\.js)(?:\?[^\s)]*?)?:(\d+):(\d+)/);
