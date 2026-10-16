@@ -15,7 +15,7 @@
     "fullDescription": 1185
   },
   "category": "Simulation",
-  "categorySelectionStatus": "Recommended; select in Play Console at app setup",
+  "categorySelectionStatus": "Game / Simulation saved and verified in Play Console",
   "packageName": "com.worksbien.barbersimulatorasmr",
   "playConsole": {
     "developer": "Worksbien Studios Inc.",
@@ -24,21 +24,44 @@
     "appType": "Game",
     "pricing": "Free",
     "releaseStatus": "Draft; no release uploaded or submitted",
-    "savedListingLocales": ["en-US"],
-    "pendingListingLocales": ["es-419", "pt-BR", "fr-FR", "de-DE", "ar", "ja-JP", "ko-KR", "id", "hi-IN"],
-    "nonMediaDeclarationsStatus": "Six declarations saved and verified; rating terms, privacy/SDK disclosures and editor-blocked listing settings remain pending",
+    "savedListingLocales": [
+      "en-US"
+    ],
+    "pendingListingLocales": [
+      "es-419",
+      "pt-BR",
+      "fr-FR",
+      "de-DE",
+      "ar",
+      "ja-JP",
+      "ko-KR",
+      "id",
+      "hi-IN"
+    ],
+    "nonMediaDeclarationsStatus": "Six earlier declarations, category/contact and IARC content rating saved; privacy/SDK disclosures and editor-blocked translations remain pending",
     "savedDeclarations": {
       "containsAds": true,
       "requiresSignInOrPaymentForReview": false,
       "governmentApp": false,
       "financialFeatures": false,
       "healthFeatures": false,
-      "targetAudienceAgeGroups": ["13-15", "16-17", "18 and over"]
+      "targetAudienceAgeGroups": [
+        "13-15",
+        "16-17",
+        "18 and over"
+      ]
     },
-    "iarcStatus": "Game and studio contact prepared in open form; Terms of Use unchecked, questionnaire not completed",
+    "iarcStatus": "Completed and saved in Play Console on 2026-10-16 after explicit owner approval of IARC Terms of Use; ESRB Everyone, PEGI 3 and equivalent general audience ratings; certificate ID displays a dash",
     "studioSupportEmail": "info@worksbienstudios.com",
-    "storeContactSaveStatus": "Pending; studio address verified from existing company website source, not yet saved in store contact settings",
-    "statusReport": "PLAY-CONSOLE-STATUS.md"
+    "storeContactSaveStatus": "Saved and verified: info@worksbienstudios.com and https://worksbienstudios.com; phone omitted",
+    "statusReport": "PLAY-CONSOLE-STATUS.md",
+    "tags": [
+      "Casual",
+      "Hairdressers",
+      "Lifestyle simulation",
+      "Sandbox",
+      "Simulation"
+    ]
   },
   "differentiators": [
     "Freehand hair cutting",
