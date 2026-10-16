@@ -1,0 +1,116 @@
+{
+  "status": "PREPARED_NOT_PUBLISHED",
+  "appName": "Barber Simulator: ASMR Haircut",
+  "proposedPath": "/apps/barber-simulator-asmr-haircut/",
+  "proposedCanonicalUrl": "https://worksbienstudios.com/apps/barber-simulator-asmr-haircut/",
+  "pageTitle": "Barber Simulator: ASMR Haircut | WorksBien Studios",
+  "h1": "Barber Simulator: ASMR Haircut",
+  "metaDescription": "Create freehand haircuts and fades in a 3D barber shop. Rotate each customer, change clipper guards and enjoy ASMR cutting sounds on Android.",
+  "openGraph": {
+    "title": "Barber Simulator: ASMR Haircut",
+    "description": "A 3D barber game with freehand haircuts, fades, rotating customers and ASMR-inspired clipper sounds."
+  },
+  "headings": [
+    "A 3D barber simulator with freehand cutting",
+    "Shape a fade from every angle",
+    "Hear the clipper buzz and cutting sounds"
+  ],
+  "linkAnchor": "Barber Simulator: ASMR Haircut for Android",
+  "storeUrl": null,
+  "imageAlt": "Freehand fade haircut in Barber Simulator: ASMR Haircut",
+  "structuredDataDraft": {
+    "@context": "https://schema.org",
+    "@type": "MobileApplication",
+    "name": "Barber Simulator: ASMR Haircut",
+    "operatingSystem": "Android",
+    "applicationCategory": "GameApplication",
+    "applicationSubCategory": "Simulation",
+    "publisher": {
+      "@type": "Organization",
+      "name": "WorksBien Studios Inc."
+    },
+    "description": "A 3D barber game with freehand haircuts, 360-degree rotation and ASMR-inspired clipper sounds."
+  },
+  "localizedPages": [
+    {
+      "locale": "en-US",
+      "status": "PREPARED_NOT_PUBLISHED",
+      "h1": "Barber Simulator: ASMR Haircut",
+      "pageTitle": "Barber Simulator: ASMR Haircut | WorksBien Studios",
+      "metaDescription": "Cut fades in a 3D barber shop with clipper sounds and freehand control.",
+      "proposedPath": "/apps/barber-simulator-asmr-haircut/"
+    },
+    {
+      "locale": "es-419",
+      "status": "PREPARED_NOT_PUBLISHED",
+      "h1": "Barbero ASMR: Corte de Cabello",
+      "pageTitle": "Barbero ASMR: Corte de Cabello | WorksBien Studios",
+      "metaDescription": "Crea degradados en 3D con sonidos de máquina y libertad para cortar a tu manera.",
+      "proposedPath": "/es-419/apps/barber-simulator-asmr-haircut/"
+    },
+    {
+      "locale": "pt-BR",
+      "status": "PREPARED_NOT_PUBLISHED",
+      "h1": "Barbeiro ASMR: Corte de Cabelo",
+      "pageTitle": "Barbeiro ASMR: Corte de Cabelo | WorksBien Studios",
+      "metaDescription": "Faça degradês em 3D com sons de máquina e liberdade para criar seu corte.",
+      "proposedPath": "/pt-br/apps/barber-simulator-asmr-haircut/"
+    },
+    {
+      "locale": "fr-FR",
+      "status": "PREPARED_NOT_PUBLISHED",
+      "h1": "Barbier ASMR : Coupe & Dégradé",
+      "pageTitle": "Barbier ASMR : Coupe & Dégradé | WorksBien Studios",
+      "metaDescription": "Créez des dégradés en 3D avec le son des tondeuses et une coupe à main levée.",
+      "proposedPath": "/fr-fr/apps/barber-simulator-asmr-haircut/"
+    },
+    {
+      "locale": "de-DE",
+      "status": "PREPARED_NOT_PUBLISHED",
+      "h1": "Barbier ASMR: Haare schneiden",
+      "pageTitle": "Barbier ASMR: Haare schneiden | WorksBien Studios",
+      "metaDescription": "Gestalte 3D-Fades mit Trimmer-Sounds und schneide die Haare frei nach Wunsch.",
+      "proposedPath": "/de-de/apps/barber-simulator-asmr-haircut/"
+    },
+    {
+      "locale": "ar",
+      "status": "PREPARED_NOT_PUBLISHED",
+      "h1": "حلاق ASMR: لعبة قص الشعر",
+      "pageTitle": "حلاق ASMR: لعبة قص الشعر | WorksBien Studios",
+      "metaDescription": "قص الشعر واصنع تدريجات ثلاثية الأبعاد مع أصوات الماكينة والتحكم الحر.",
+      "proposedPath": "/ar/apps/barber-simulator-asmr-haircut/"
+    },
+    {
+      "locale": "ja-JP",
+      "status": "PREPARED_NOT_PUBLISHED",
+      "h1": "ASMR理容室：ヘアカットシミュレーター",
+      "pageTitle": "ASMR理容室：ヘアカットシミュレーター | WorksBien Studios",
+      "metaDescription": "バリカンの音を楽しみながら、3Dの髪を自由にカット。回転してフェードを仕上げよう。",
+      "proposedPath": "/ja-jp/apps/barber-simulator-asmr-haircut/"
+    },
+    {
+      "locale": "ko-KR",
+      "status": "PREPARED_NOT_PUBLISHED",
+      "h1": "ASMR 이발소: 헤어컷 시뮬레이터",
+      "pageTitle": "ASMR 이발소: 헤어컷 시뮬레이터 | WorksBien Studios",
+      "metaDescription": "바리캉 소리를 들으며 3D 헤어컷을 자유롭게 완성하세요. 돌려 보며 페이드를 다듬어 보세요.",
+      "proposedPath": "/ko-kr/apps/barber-simulator-asmr-haircut/"
+    },
+    {
+      "locale": "id",
+      "status": "PREPARED_NOT_PUBLISHED",
+      "h1": "ASMR Barber: Potong Rambut",
+      "pageTitle": "ASMR Barber: Potong Rambut | WorksBien Studios",
+      "metaDescription": "Buat potongan fade 3D dengan suara mesin cukur dan kendali bebas.",
+      "proposedPath": "/id/apps/barber-simulator-asmr-haircut/"
+    },
+    {
+      "locale": "hi-IN",
+      "status": "PREPARED_NOT_PUBLISHED",
+      "h1": "ASMR नाई: बाल काटने का गेम",
+      "pageTitle": "ASMR नाई: बाल काटने का गेम | WorksBien Studios",
+      "metaDescription": "क्लिपर की आवाज़ के साथ 3D हेयरकट बनाएं। सिर को घुमाकर मनचाहा कट दें।",
+      "proposedPath": "/hi-in/apps/barber-simulator-asmr-haircut/"
+    }
+  ]
+}

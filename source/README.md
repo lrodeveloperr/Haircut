@@ -18,6 +18,12 @@ Building only the game, without packaging: `bash source/buildall.sh` (Playables,
 `TARGET=full bash source/buildall.sh` (Android, detail levels Auto / Low / High). The result is in `source/build/`. The direct YouTube target uses `bash source/build-youtube.sh`,
 which selects its own fixed full-detail graphics policy and outputs `source/build-youtube/`.
 
+The Android `TARGET=full` web-runtime build also applies `android/patch-runtime.py`: its page title is
+**Barber Simulator: ASMR Haircut**, and each optional daily wardrobe item requires two completed
+rewarded videos. The shared/Playables targets retain their current rule. Run
+`node android/tests/rewards.cjs` for the Android reward regression. Native Android packaging and
+the AdMob client remain separate from this web-runtime build.
+
 ## How it is put together
 
 - `src/` — the original game (minified Three.js / Preact bundle `runtime/game.js`, `index.html`, `styles.css`,

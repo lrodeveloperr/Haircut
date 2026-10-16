@@ -40,6 +40,9 @@ c=json.load(open('src/playgama-bridge-config.json'))
 c['advertisement']['rewarded']={'disable':False,'placementFallback':'unlock-item','placements':[{'id':'unlock-item'},{'id':'replay-customer'}]}
 json.dump(c,open('build/playgama-bridge-config.json','w'),separators=(',',':'))
 PY
+if [ "${TARGET:-playables}" = full ]; then
+  python3 ../android/patch-runtime.py build
+fi
 node --check build/runtime/game.js
 node --check build/runtime/customers.js
 echo build-ok

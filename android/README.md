@@ -1,12 +1,15 @@
-# Android release
+# Barber Simulator: ASMR Haircut — Android
 
-This folder is reserved for the Android / Google Play version of Haircut Studio.
+This folder holds the Android / Google Play release work for **Barber Simulator: ASMR Haircut**.
+
+Android English name: **LOCKED** (30 characters). See [naming, ASO and SEO](store-listing/NAMING-ASO-SEO.md), [canonical metadata](store-listing/metadata.json) and [prepared website SEO](store-listing/seo.json).
 
 ## Current release direction
 
 - Package the current validated game for Android, preserving its gameplay, graphics and controls.
-- Position the release as a small-download ASMR barber / haircut game.
-- Prioritize search-led naming and listing optimization, including ASMR and relevant barber / haircut search terms. The final store title is pending research and selection.
+- Position the release as a small-download ASMR barber / haircut game; measure the final Android download before publishing a numeric size claim.
+- Use the locked English title **Barber Simulator: ASMR Haircut**. Supporting copy covers 3D freehand cutting, fades, barber shop gameplay and clipper sounds. Complete non-media listings for ten languages are in store-listing/.
+- Daily clipper and cape unlocks require **two completed rewarded videos per item** on Android. The existing partial-credit UI and saved progress are reused. See [Android runtime adaptation](RUNTIME.md).
 - Adapt platform services for Android, including AdMob and persistent saves.
 
 ## Historical v3.82 full-detail archive

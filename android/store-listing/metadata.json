@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "platform": "Google Play / Android",
+  "decisionDate": "2026-10-15",
+  "timeZone": "America/New_York",
+  "namingStatus": "LOCKED",
+  "listingStatus": "TEN_LANGUAGE_COPY_PREPARED",
+  "defaultLocale": "en-US",
+  "title": "Barber Simulator: ASMR Haircut",
+  "shortDescription": "Cut fades in a 3D barber shop with clipper sounds and freehand control.",
+  "fullDescription": "Cut hair your way in Barber Simulator: ASMR Haircut, a 3D barber shop game built around freehand cutting and satisfying clipper sounds.\n\nSHAPE YOUR OWN HAIRCUTS\nMove the clippers through the hair, change guard lengths and blend short and long sections into a fade. Follow the shape of each head and create the cut you want.\n\nSEE EVERY ANGLE\nRotate the customer through a full 360 degrees to reach the sides, crown and back. Check your work from different angles before the final reveal.\n\nENJOY THE SOUND OF EACH CUT\nHear the clipper buzz and cutting effects as you work through the hair. The ASMR-inspired sound and falling hair keep the focus on the cutting.\n\nMEET DIFFERENT CUSTOMERS\nWork with different hair textures, natural colors, face shapes and ages. Each new customer gives you a fresh look to shape.\n\nCUSTOMIZE YOUR BARBER SETUP\nChoose clipper designs and barber capes from the wardrobe.\n\nDaily clipper designs and capes are optional unlocks. Finish two rewarded videos to unlock each daily item.\n\nFinish the haircut, watch the reveal and move on to your next customer. A hands-on hair cutting simulator for anyone who enjoys fades, close-up detail and creative barber games.",
+  "characterCounts": {
+    "title": 30,
+    "shortDescription": 71,
+    "fullDescription": 1185
+  },
+  "category": "Simulation",
+  "categorySelectionStatus": "Recommended; select in Play Console at app setup",
+  "packageName": null,
+  "differentiators": [
+    "Freehand hair cutting",
+    "360-degree customer rotation",
+    "ASMR-inspired clipper and cutting sounds",
+    "Different customer appearances",
+    "Adjustable clipper guards",
+    "Clipper and cape wardrobe"
+  ],
+  "positioning": "A compact-download 3D ASMR barber game with freehand cutting.",
+  "publicationClaims": {
+    "numericDownloadSizeMB": null,
+    "smallDownloadClaim": "Hold until final Android device-download size is measured",
+    "offlinePlay": "Verify packaged Android build before adding to listing",
+    "adFree": false
+  },
+  "keywordField": "Google Play has no Apple-style hidden keyword field; research terms are mapped into truthful readable copy.",
+  "languageSelection": {
+    "basis": "Ten priority Google Play listing languages balancing broad reach and the product's target markets; not a statistical ranking of world languages.",
+    "languages": [
+      "English",
+      "Spanish (Latin America)",
+      "Portuguese (Brazil)",
+      "French",
+      "German",
+      "Arabic",
+      "Japanese",
+      "Korean",
+      "Indonesian",
+      "Hindi"
+    ]
+  },
+  "localizations": [
+    {
+      "locale": "en-US",
+      "language": "English",
+      "title": "Barber Simulator: ASMR Haircut",
+      "shortDescription": "Cut fades in a 3D barber shop with clipper sounds and freehand control.",
+      "fullDescription": "Cut hair your way in Barber Simulator: ASMR Haircut, a 3D barber shop game built around freehand cutting and satisfying clipper sounds.\n\nSHAPE YOUR OWN HAIRCUTS\nMove the clippers through the hair, change guard lengths and blend short and long sections into a fade. Follow the shape of each head and create the cut you want.\n\nSEE EVERY ANGLE\nRotate the customer through a full 360 degrees to reach the sides, crown and back. Check your work from different angles before the final reveal.\n\nENJOY THE SOUND OF EACH CUT\nHear the clipper buzz and cutting effects as you work through the hair. The ASMR-inspired sound and falling hair keep the focus on the cutting.\n\nMEET DIFFERENT CUSTOMERS\nWork with different hair textures, natural colors, face shapes and ages. Each new customer gives you a fresh look to shape.\n\nCUSTOMIZE YOUR BARBER SETUP\nChoose clipper designs and barber capes from the wardrobe.\n\nDaily clipper designs and capes are optional unlocks. Finish two rewarded videos to unlock each daily item.\n\nFinish the haircut, watch the reveal and move on to your next customer. A hands-on hair cutting simulator for anyone who enjoys fades, close-up detail and creative barber games.",
+      "status": "LOCKED_COPY",
+      "characterCounts": {
+        "title": 30,
+        "shortDescription": 71,
+        "fullDescription": 1185
+      }
+    },
+    {
+      "locale": "es-419",
+      "language": "Spanish (Latin America)",
+      "title": "Barbero ASMR: Corte de Cabello",
+      "shortDescription": "Crea degradados en 3D con sonidos de máquina y libertad para cortar a tu manera.",
+      "fullDescription": "Corta el cabello a tu manera en Barbero ASMR: Corte de Cabello. Un juego de barbería en 3D para crear cortes libremente y disfrutar del sonido de la máquina.\n\nCREA TU PROPIO CORTE\nPasa la máquina por el cabello, cambia la altura de los peines y combina distintas longitudes para crear un degradado. Sigue la forma de la cabeza y dale tu estilo.\n\nREVISA TODOS LOS ÁNGULOS\nGira al cliente 360 grados para trabajar los lados, la coronilla y la nuca. Revisa los detalles antes de ver el resultado final.\n\nDISFRUTA CADA PASADA\nEscucha el zumbido de la máquina y los sonidos del corte mientras cae el cabello. Una experiencia inspirada en el ASMR, centrada en el placer de cortar.\n\nCONOCE A DISTINTOS CLIENTES\nPrueba tus ideas con diferentes texturas y colores naturales de cabello, edades y rasgos.\n\nPERSONALIZA TUS HERRAMIENTAS\nElige diseños para la máquina y capas de barbería en el armario. Los artículos del día son opcionales: para desbloquear cada uno, completa dos anuncios de video con recompensa.\n\nTermina el corte, disfruta del resultado y pasa al siguiente cliente. Un simulador de cortes de cabello para quienes disfrutan los degradados, los detalles y la libertad de crear.",
+      "status": "LOCKED_COPY",
+      "characterCounts": {
+        "title": 30,
+        "shortDescription": 80,
+        "fullDescription": 1181
+      }
+    },
+    {
+      "locale": "pt-BR",
+      "language": "Portuguese (Brazil)",
+      "title": "Barbeiro ASMR: Corte de Cabelo",
+      "shortDescription": "Faça degradês em 3D com sons de máquina e liberdade para criar seu corte.",
+      "fullDescription": "Corte do seu jeito em Barbeiro ASMR: Corte de Cabelo. Um jogo de barbearia em 3D para criar cortes à mão livre e curtir o som da máquina.\n\nCRIE SEU PRÓPRIO CORTE\nPasse a máquina pelo cabelo, troque a altura dos pentes e combine comprimentos para fazer um degradê. Acompanhe o formato da cabeça e dê seu toque ao corte.\n\nVEJA TODOS OS ÂNGULOS\nGire o cliente em 360 graus para alcançar as laterais, o topo e a nuca. Confira os detalhes antes de revelar o resultado.\n\nCURTA CADA PASSADA\nOuça o zumbido da máquina e os sons do corte enquanto os fios caem. Uma experiência inspirada no ASMR, com o foco na satisfação de cortar cabelo.\n\nATENDA CLIENTES DIFERENTES\nExperimente suas ideias em cabelos de várias texturas e cores naturais, com clientes de diferentes idades e aparências.\n\nPERSONALIZE SEU VISUAL\nEscolha modelos de máquina e capas de barbearia no guarda-roupa. Os itens do dia são opcionais: assista a dois anúncios em vídeo com recompensa até o fim para desbloquear cada item.\n\nFinalize o corte, veja o resultado e atenda o próximo cliente. Um simulador de barbearia para quem gosta de degradês, detalhes e liberdade para criar.",
+      "status": "LOCKED_COPY",
+      "characterCounts": {
+        "title": 30,
+        "shortDescription": 73,
+        "fullDescription": 1135
+      }
+    },
+    {
+      "locale": "fr-FR",
+      "language": "French",
+      "title": "Barbier ASMR : Coupe & Dégradé",
+      "shortDescription": "Créez des dégradés en 3D avec le son des tondeuses et une coupe à main levée.",
+      "fullDescription": "Créez vos propres coupes dans Barbier ASMR : Coupe & Dégradé, un jeu de barbier en 3D qui associe la coupe à main levée aux sons de la tondeuse.\n\nDESSINEZ VOTRE COUPE\nPassez la tondeuse dans les cheveux, changez de sabot et jouez avec les longueurs pour réaliser un dégradé. Suivez les contours de la tête et donnez forme à vos idées.\n\nOBSERVEZ CHAQUE ANGLE\nFaites tourner le client à 360 degrés pour atteindre les côtés, le sommet du crâne et la nuque. Vérifiez les détails avant de découvrir le résultat final.\n\nPROFITEZ DU SON DE LA COUPE\nÉcoutez le bourdonnement de la tondeuse et les sons de coupe pendant que les cheveux tombent. Une ambiance inspirée de l'ASMR, centrée sur le plaisir du geste.\n\nRENCONTREZ DES CLIENTS VARIÉS\nTravaillez sur différentes textures et couleurs naturelles de cheveux, avec des visages et des âges variés.\n\nPERSONNALISEZ VOTRE MATÉRIEL\nChoisissez des modèles de tondeuse et des capes dans la garde-robe. Les objets du jour sont facultatifs : regardez deux vidéos publicitaires avec récompense jusqu'au bout pour débloquer chaque objet.\n\nTerminez la coupe, admirez le résultat et passez au client suivant. Un simulateur de coiffure pour les amateurs de dégradés, de détails et de liberté créative.",
+      "status": "LOCKED_COPY",
+      "characterCounts": {
+        "title": 30,
+        "shortDescription": 77,
+        "fullDescription": 1231
+      }
+    },
+    {
+      "locale": "de-DE",
+      "language": "German",
+      "title": "Barbier ASMR: Haare schneiden",
+      "shortDescription": "Gestalte 3D-Fades mit Trimmer-Sounds und schneide die Haare frei nach Wunsch.",
+      "fullDescription": "Schneide Haare nach deinen eigenen Vorstellungen in Barbier ASMR: Haare schneiden. Dieses 3D-Barbershop-Spiel verbindet freies Schneiden mit den Klängen der Haarschneidemaschine.\n\nGESTALTE DEINEN EIGENEN SCHNITT\nFühre die Maschine durch das Haar, wechsle die Aufsätze und verbinde unterschiedliche Längen zu einem Fade. Folge der Kopfform und setze deine Ideen um.\n\nBETRACHTE JEDEN WINKEL\nDrehe den Kunden um volle 360 Grad, um Seiten, Oberkopf und Hinterkopf zu erreichen. Prüfe die Details, bevor du das fertige Ergebnis ansiehst.\n\nGENIESSE DIE GERÄUSCHE\nHöre das Summen der Maschine und die Schneidegeräusche, während die Haare fallen. Das ASMR-inspirierte Klangerlebnis stellt das Schneiden in den Mittelpunkt.\n\nBEDIENE VERSCHIEDENE KUNDEN\nProbiere deine Schnitte an unterschiedlichen Haarstrukturen, natürlichen Haarfarben, Gesichtsformen und Altersgruppen aus.\n\nGESTALTE DEINE AUSRÜSTUNG\nWähle Designs für deine Maschine und Friseurumhänge in der Garderobe. Die täglichen Extras sind freiwillig: Sieh dir pro Gegenstand zwei Videoanzeigen vollständig an, um ihn freizuschalten.\n\nBeende den Haarschnitt, betrachte das Ergebnis und begrüße den nächsten Kunden. Ein Haarschneide-Simulator für alle, die Fades, feine Details und kreatives Arbeiten mögen.",
+      "status": "LOCKED_COPY",
+      "characterCounts": {
+        "title": 29,
+        "shortDescription": 77,
+        "fullDescription": 1256
+      }
+    },
+    {
+      "locale": "ar",
+      "language": "Arabic",
+      "title": "حلاق ASMR: لعبة قص الشعر",
+      "shortDescription": "قص الشعر واصنع تدريجات ثلاثية الأبعاد مع أصوات الماكينة والتحكم الحر.",
+      "fullDescription": "قص الشعر بطريقتك في حلاق ASMR: لعبة قص الشعر. استمتع بلعبة حلاقة ثلاثية الأبعاد تجمع بين حرية التحكم وأصوات ماكينة الحلاقة.\n\nابتكر قصتك الخاصة\nمرر الماكينة على الشعر، وغيّر أمشاط تحديد الطول، وامزج بين الأطوال لتصنع قصة متدرجة. اتبع شكل الرأس وأضف لمستك إلى كل قصة.\n\nشاهد الرأس من كل زاوية\nأدر الزبون بزاوية 360 درجة لتصل إلى الجانبين وأعلى الرأس والخلف. راجع التفاصيل قبل مشاهدة النتيجة النهائية.\n\nاستمتع بأصوات القص\nاسمع طنين الماكينة وأصوات القص بينما تتساقط خصلات الشعر. تجربة صوتية مستوحاة من ASMR تركز على متعة الحلاقة.\n\nزبائن بإطلالات متنوعة\nجرّب أفكارك مع أنواع شعر وألوان طبيعية مختلفة، ووجوه وأعمار متنوعة.\n\nخصص أدواتك\nاختر تصاميم للماكينة وأردية للحلاقة من خزانة الملابس. عناصر اليوم اختيارية: لفتح كل عنصر، شاهد إعلانَي فيديو بمكافأة حتى النهاية.\n\nأنه القصة، وشاهد النتيجة، ثم انتقل إلى الزبون التالي. محاكاة لقص الشعر تناسب محبي القصات المتدرجة والتفاصيل وحرية الإبداع.",
+      "status": "LOCKED_COPY",
+      "characterCounts": {
+        "title": 24,
+        "shortDescription": 69,
+        "fullDescription": 882
+      }
+    },
+    {
+      "locale": "ja-JP",
+      "language": "Japanese",
+      "title": "ASMR理容室：ヘアカットシミュレーター",
+      "shortDescription": "バリカンの音を楽しみながら、3Dの髪を自由にカット。回転してフェードを仕上げよう。",
+      "fullDescription": "「ASMR理容室：ヘアカットシミュレーター」で、自分だけのヘアスタイルを作ろう。髪を自由にカットする楽しさと、バリカンの音を味わえる3D理容室ゲームです。\n\n自分の手で仕上げる\nバリカンを動かし、アタッチメントで刈る長さを調整。短い部分と長い部分をつなげて、フェードカットを作れます。頭の形に合わせて、思いどおりのラインを目指しましょう。\n\n360度、どこからでも\nお客さんを360度回転させれば、サイドも頭頂部も後頭部もカットできます。いろいろな角度から細部を確認して、最後の仕上がりを楽しもう。\n\nカットの音を楽しむ\nバリカンのモーター音や、髪を刈る音。切った髪が落ちていく様子とともに、ASMRをイメージしたサウンドがカットの時間を彩ります。\n\nさまざまなお客さん\n髪質や自然な髪色、顔立ち、年齢の異なるお客さんが登場。新しいお客さんで、次のスタイルに挑戦できます。\n\n道具のデザインを選ぶ\nワードローブでバリカンやカットクロスのデザインを選べます。毎日のおすすめアイテムは任意で、アイテムごとにリワード動画広告を2本最後まで視聴するとアンロックできます。\n\nカットが終わったら、完成したスタイルを眺めて次のお客さんへ。フェードカットや細かな作業、自分で髪を切る感覚を楽しみたい人のためのヘアカットシミュレーターです。",
+      "status": "LOCKED_COPY",
+      "characterCounts": {
+        "title": 20,
+        "shortDescription": 41,
+        "fullDescription": 562
+      }
+    },
+    {
+      "locale": "ko-KR",
+      "language": "Korean",
+      "title": "ASMR 이발소: 헤어컷 시뮬레이터",
+      "shortDescription": "바리캉 소리를 들으며 3D 헤어컷을 자유롭게 완성하세요. 돌려 보며 페이드를 다듬어 보세요.",
+      "fullDescription": "ASMR 이발소: 헤어컷 시뮬레이터에서 나만의 스타일을 만들어 보세요. 자유롭게 머리를 자르는 재미와 바리캉 소리를 함께 즐기는 3D 이발소 게임입니다.\n\n내 손으로 만드는 헤어컷\n바리캉을 움직이고 덧날로 길이를 조절해 보세요. 짧은 부분과 긴 부분을 자연스럽게 연결하며 페이드컷을 만들 수 있습니다. 머리 모양을 따라 원하는 스타일을 완성하세요.\n\n어느 각도에서나 꼼꼼하게\n손님을 360도로 돌려 옆머리와 정수리, 뒷머리까지 다듬어 보세요. 여러 각도에서 세부적인 부분을 확인한 뒤 완성된 모습을 감상할 수 있습니다.\n\n자르는 소리까지 즐기세요\n바리캉의 모터 소리와 머리카락을 자르는 효과음, 잘린 머리카락이 떨어지는 모습까지. ASMR에서 영감을 받은 사운드가 헤어컷에 집중하는 재미를 더합니다.\n\n다양한 손님을 만나세요\n머리카락의 질감과 자연스러운 색상, 얼굴형과 나이가 다른 손님들이 찾아옵니다. 새로운 손님에게 새로운 스타일을 시도해 보세요.\n\n도구도 내 취향대로\n옷장에서 바리캉과 커트보 디자인을 고를 수 있습니다. 오늘의 아이템은 원하는 경우에만 잠금 해제하면 됩니다. 각 아이템마다 보상형 동영상 광고 2편을 끝까지 시청하면 잠금이 해제됩니다.\n\n헤어컷을 마치면 완성된 스타일을 감상하고 다음 손님을 맞이하세요. 페이드컷과 세밀한 작업, 자유로운 스타일링을 좋아하는 분들을 위한 헤어컷 시뮬레이터입니다.",
+      "status": "LOCKED_COPY",
+      "characterCounts": {
+        "title": 19,
+        "shortDescription": 51,
+        "fullDescription": 681
+      }
+    },
+    {
+      "locale": "id",
+      "language": "Indonesian",
+      "title": "ASMR Barber: Potong Rambut",
+      "shortDescription": "Buat potongan fade 3D dengan suara mesin cukur dan kendali bebas.",
+      "fullDescription": "Potong rambut dengan gayamu sendiri di ASMR Barber: Potong Rambut. Game barbershop 3D ini memadukan kebebasan mencukur dengan suara mesin cukur yang memuaskan.\n\nBUAT POTONGANMU SENDIRI\nGerakkan mesin cukur, ganti ukuran sisir mesin cukur, lalu padukan panjang rambut untuk membuat potongan fade. Ikuti bentuk kepala dan wujudkan gaya yang kamu inginkan.\n\nLIHAT DARI SEMUA SISI\nPutar pelanggan hingga 360 derajat untuk menjangkau bagian samping, atas, dan belakang kepala. Periksa detailnya sebelum melihat hasil akhir.\n\nNIKMATI SUARA SETIAP POTONGAN\nDengarkan dengung mesin dan efek suara saat rambut dipotong. Lihat helai rambut berjatuhan sambil menikmati suasana yang terinspirasi dari ASMR.\n\nTEMUI BERAGAM PELANGGAN\nCoba berbagai gaya pada pelanggan dengan tekstur rambut, warna alami, bentuk wajah, dan usia yang berbeda.\n\nPILIH DESAIN PERLENGKAPANMU\nPilih desain mesin cukur dan kain penutup pelanggan di lemari. Item harian bersifat opsional: tonton dua iklan video berhadiah sampai selesai untuk membuka setiap item.\n\nSelesaikan potongan, nikmati hasilnya, lalu lanjutkan ke pelanggan berikutnya. Simulator potong rambut untuk penggemar fade, detail, dan kebebasan berkreasi.",
+      "status": "LOCKED_COPY",
+      "characterCounts": {
+        "title": 26,
+        "shortDescription": 65,
+        "fullDescription": 1183
+      }
+    },
+    {
+      "locale": "hi-IN",
+      "language": "Hindi",
+      "title": "ASMR नाई: बाल काटने का गेम",
+      "shortDescription": "क्लिपर की आवाज़ के साथ 3D हेयरकट बनाएं। सिर को घुमाकर मनचाहा कट दें।",
+      "fullDescription": "ASMR नाई: बाल काटने का गेम में अपने अंदाज़ के हेयरकट बनाएं। इस 3D बार्बर शॉप गेम में अपनी मर्ज़ी से बाल काटें और कटिंग मशीन की आवाज़ का मज़ा लें।\n\nअपना पसंदीदा कट बनाएं\nमशीन को बालों पर चलाएं, अटैचमेंट बदलकर लंबाई तय करें और छोटे-बड़े बालों को मिलाकर फेड कट बनाएं। सिर के आकार के हिसाब से अपना स्टाइल तैयार करें।\n\nहर तरफ़ से देखें\nग्राहक को पूरे 360 डिग्री घुमाकर सिर के दोनों ओर, ऊपर और पीछे के बाल काटें। कट पूरा करने से पहले हर बारीकी देख लें।\n\nकटिंग की आवाज़ का मज़ा लें\nमशीन की गूंज और बाल कटने की आवाज़ सुनें। गिरते हुए बालों के साथ ASMR से प्रेरित साउंड आपको कटिंग में डूबने का एहसास देता है।\n\nअलग-अलग ग्राहकों पर नए स्टाइल\nबालों की अलग बनावट, प्राकृतिक रंग, चेहरे और उम्र वाले ग्राहकों पर अपने आइडिया आज़माएं।\n\nऔज़ारों को नया लुक दें\nवार्डरोब में मशीन और बार्बर केप के डिज़ाइन चुनें। रोज़ के किसी खास आइटम को अनलॉक करना चाहें, तो दो वीडियो विज्ञापन पूरे देखें। यह पूरी तरह वैकल्पिक है।\n\nकट पूरा करें, नतीजा देखें और अगले ग्राहक की बारी शुरू करें। फेड कट, बारीक काम और अपने अंदाज़ में स्टाइल बनाना पसंद करने वालों के लिए एक हेयरकट सिम्युलेटर।",
+      "status": "LOCKED_COPY",
+      "characterCounts": {
+        "title": 26,
+        "shortDescription": 68,
+        "fullDescription": 1049
+      }
+    }
+  ],
+  "dailyUnlocks": {
+    "platform": "Android",
+    "videosPerDailyItem": 2,
+    "items": [
+      "daily clipper design",
+      "daily barber cape"
+    ],
+    "optional": true,
+    "creditOn": "Verified completed rewarded video only",
+    "firstVideo": "One of two credits; item remains locked",
+    "secondVideo": "Unlock and equip that item",
+    "automaticBackToBackAds": false,
+    "existingOwnedItems": "Remain owned"
+  }
+}
