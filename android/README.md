@@ -2,9 +2,11 @@
 
 This folder holds the Android / Google Play release work for **Barber Simulator: ASMR Haircut**.
 
+**Continue here: [Android release handoff](RELEASE-HANDOFF.md).** It records owner approvals, the frozen cutting build, verified work, remaining release tasks and the required test-first/production-AdMob-last order. Update it after each completed stage so another chat or program can continue reliably.
+
 Android English name: **LOCKED** (30 characters). See [naming, ASO and SEO](store-listing/NAMING-ASO-SEO.md), [canonical metadata](store-listing/metadata.json) and [prepared website SEO](store-listing/seo.json).
 
-Google Play app record: `com.worksbien.barbersimulatorasmr`. All ten localized text listings and ten non-media dashboard setup tasks are saved, including IARC, category/contact, privacy policy and Data safety. Only media remains in the dashboard setup checklist. Four phone screenshots for that item are in [store-listing/en-US/images/phoneScreenshots/](store-listing/en-US/images/phoneScreenshots/), ready to upload. See [verified Console status](store-listing/PLAY-CONSOLE-STATUS.md). Privacy declarations follow the approved [Android privacy release configuration](PRIVACY-RELEASE-CONFIG.md); the native wrapper/AdMob bridge and signed AAB are still pending and must match it. Use this exact package ID when building the wrapper.
+Google Play app record: `com.worksbien.barbersimulatorasmr`. All ten localized listings, icon, feature graphic, four phone screenshots and setup declarations are saved as drafts, including IARC, category/contact, privacy policy and Data safety. See [saved Console status](store-listing/PLAY-CONSOLE-STATUS.md). The native wrapper, SDK bridge and local saves are implemented; the owner approved v1.0.5 cutting and positioning. Privacy finalization, production-only AdMob configuration, upload signing, the release AAB and submission remain tracked in the handoff. Use this exact package ID; do not create another Play app.
 
 ## Current release direction
 
