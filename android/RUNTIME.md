@@ -15,9 +15,20 @@ Android name: **Barber Simulator: ASMR Haircut**.
 
 ## Build integration
 
-`TARGET=full bash source/buildall.sh` applies `android/patch-runtime.py` to the generated Android web runtime. The patch sets the existing catalog's requirement to two, updates the accessible reward label and applies the locked Android page title. It reuses the actual wardrobe's saving, ownership, progress and equip logic.
+`TARGET=full bash source/buildall.sh` selects `source/customers/detail-android.js` and applies `android/patch-graphics.py` and `android/patch-runtime.py` to the generated Android web runtime. The reward patch sets the existing catalog's requirement to two, updates the accessible reward label and applies the locked Android page title. It reuses the actual wardrobe's saving, ownership, progress and equip logic.
 
 The default Playgama/Playables build and the direct YouTube builder do not call this adaptation. Shared source files and historical release ZIPs retain their existing naming and reward rule.
+
+## Fixed High graphics and direct cutting
+
+- Android always uses 30,000 scalp strands, eight scalp/beard segments, full beard density, full skin shading and requested MSAA. There is no Auto/Low selector or hardware classification; saved detail preferences and `?detail=low` cannot lower quality.
+- The drawing buffer follows the display's current native device pixel ratio, including density changes on resize. There is no application DPR cap, maximum-pixel downscaling or frame-driven resolution reduction. Hardware/WebView allocation limits remain outside application control.
+- Both former automatic quality controllers are disabled. Frame-time samples are diagnostic only and do not change rendering quality.
+- Static scenes redraw on changes rather than continuously. Cutting, rotation, reveal and falling clippings still update each animation frame. This saves idle GPU work without removing detail.
+- Touch, pen and mouse cut at their reported client coordinates. The former upward touch adjustment (up to 72 CSS pixels) is removed from both the actual cutter and its proximity helper. Clipper placement and hair removal continue to use the same surface hit.
+- Game saves, reward credits, hair lengths, brush dimensions and camera controls retain their existing rules.
+
+`node android/tests/graphics.cjs` exercises exact generated-runtime functions across native DPRs, portrait/landscape/large buffers, display-density changes, direct scalp/beard contact and twenty simulated minutes at each tested frame cadence. These are logic checks, not physical-device performance measurements. `node android/tests/bridge.cjs` additionally tests native-density rendering, saved/URL Low rejection, trusted touch and rotation against the real web game and Android bridge in Chromium.
 
 ## AdMob boundary
 
