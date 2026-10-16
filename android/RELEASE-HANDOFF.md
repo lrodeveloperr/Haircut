@@ -39,10 +39,10 @@ Updated: 2026-10-16, America/Toronto. Read this file first when continuing Andro
 - Support: `info@worksbienstudios.com`.
 - Website repository: `lrodeveloperr/Worksbien-website`; page: `public/apps/barber-simulator-asmr/privacy/index.html`. Main auto-deploys to Cloudflare Pages.
 - Privacy policy and Data safety were previously prepared/published/saved for the approved AdMob-only release configuration. Reconcile the final native SDK and permissions with [PRIVACY-RELEASE-CONFIG.md](PRIVACY-RELEASE-CONFIG.md).
-- The public URL could not be freshly verified by the latest HTTP checker (403); do not infer the policy is missing or rewrite it from memory. Inspect the website source and verify public accessibility before declaring this stage complete.
+- Public policy verified live in the browser after the website update; both Cloudflare deployment checks succeeded. The earlier HTTP-checker 403 did not reproduce in the browser.
 - Existing native dependencies: Google Mobile Ads `25.5.0`, UMP `3.2.0`; no mediation, Firebase Analytics, Crashlytics, sign-in or game backend.
 - Saves stay in private device storage. Android currently allows OS backup; do not promise backups are disabled.
-- Initial consent checking and earned-reward callbacks exist. In-app policy access and UMP privacy-options reopening are **not implemented yet**.
+- Initial consent checking, earned-reward callbacks, the approved policy shield and conditional UMP privacy-options reopening are implemented. App-specific consent-message configuration and actual regional UMP-form validation belong to the final AdMob stage.
 
 ## Ordered remaining checklist
 
@@ -51,7 +51,7 @@ Updated: 2026-10-16, America/Toronto. Read this file first when continuing Andro
 3. **Approved privacy UI — IMPLEMENTED; NATIVE VERIFICATION PENDING.** Android-only `android/privacy.js` adds the shield in flexible header space. The native policy menu links to the website and offers Privacy choices when UMP requires it. See [privacy QA evidence](PRIVACY-QA-2026-10-16.md).
 4. **Test-ad verification — IN PROGRESS.** Full build, 85 graphics/input cases, 8 reward cases, 35 contracts and four-layout privacy geometry/dispatch/state checks passed locally. Cutting renderer, clipper helper and shared wardrobe source remain byte-identical to owner-approved hashes. Native compile/lint and installed-APK policy-menu/phone/tablet checks await CI. Keep all test builds on Google's public test IDs.
 5. **Production AdMob — DEFERRED UNTIL 1–4 PASS.** The approved AdMob account was checked on 16 October; its five visible app records contain no Haircut entry. Create/confirm this Android app and the needed ad units, set applicable consent messages, check publisher `app-ads.txt`, and configure live IDs for release only. Keep debug builds on test IDs permanently.
-6. **Signing/AAB — PENDING.** No local upload keystore or release `keystore.properties`, and no AAB, existed at this audit. Check existing secure CI signing before creating a new upload key. Keep keys/passwords out of git and logs. Generate and verify a signed production AAB with the approved runtime and correct package/version.
+6. **Signing/AAB — PENDING.** No local upload keystore or release `keystore.properties`, and no AAB, existed at this audit. The repository Actions secrets page was checked: no repository or environment secrets exist. No secure signing material is configured here; set up upload signing before a release build. Keep keys/passwords out of git and logs. Generate and verify a signed production AAB with the approved runtime and correct package/version.
 7. **Play submission — PENDING.** Upload to the existing app, complete release details/countries/rollout and any remaining Console declarations, inspect automated checks, and send for review. Record exact source, AAB hash/version, track and confirmed review state. Do not report submission from a saved draft alone.
 8. **After publication — PENDING.** Link the live store entry in AdMob, complete app-ads.txt verification and app readiness review, and record actual serving status. Account approval alone does not mean this new game is approved for full ad serving.
 

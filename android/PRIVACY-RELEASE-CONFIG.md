@@ -2,7 +2,7 @@
 
 Date: 2026-10-16. Package: `com.worksbien.barbersimulatorasmr`.
 
-This is the release configuration used to prepare the unreleased app's Play Console disclosures. It is **not evidence that the native wrapper or SDK bridge has been implemented or runtime-verified**. No signed Android binary exists in the inspected repository tree. The eventual AAB must conform before upload/submission; otherwise update the policy and declarations.
+This is the release configuration used to prepare the unreleased app's Play Console disclosures. The native wrapper, SDK bridge, private saves and initial UMP consent flow are implemented. The approved wardrobe privacy shield and UMP privacy-options access were added for v1.0.6; final native verification is tracked in [privacy QA](PRIVACY-QA-2026-10-16.md). Production AdMob configuration, upload signing and the AAB remain separate release steps. Read the current [release handoff](RELEASE-HANDOFF.md) before continuing; the eventual AAB must conform to these disclosures.
 
 ## Approved release data boundary
 
@@ -15,6 +15,7 @@ This is the release configuration used to prepare the unreleased app's Play Cons
 - Use TLS for all transmitted user data and HTTPS for public policy/support links; disable cleartext traffic in the Android wrapper.
 - The Android build must remove Playgama, YouTube, CrazyGames and other web host services rather than shipping their SDKs alongside AdMob. Bind persistence to local app storage and rewarded callbacks to verified earned rewards.
 - Expose the public privacy URL within the app as well as the store listing.
+- In-app route: wardrobe hanger → privacy shield beside Close → Privacy policy. Privacy choices also appears in that native menu when UMP requires it; it reopens Google's consent form. The shield consumes existing flexible header space, preserving existing control/card geometry.
 - Android backup/device-transfer behavior must be checked. The policy does not promise disabled OS backups.
 
 ## Public policy
@@ -45,3 +46,4 @@ No name/email, contacts, recordings, photos, precise location or local haircut s
 - Google Play definitions: https://support.google.com/googleplay/android-developer/answer/10787469 (optional requires all users can opt out of that data collection; a contact email can be a deletion-request mechanism).
 - Game source reviewed: source/storage.js, android/RUNTIME.md, android/README.md and repository tree.
 - Public static page: lrodeveloperr/Worksbien-website, public/apps/barber-simulator-asmr/privacy/index.html. Main auto-deploys; live page verified.
+- Final policy access instructions: website commit `12f499327da9b6a7815f8d04fedc015a830013a7`, both Cloudflare checks successful and live HTTPS content verified on 2026-10-16. Advertising SDK/data categories remain unchanged.

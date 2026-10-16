@@ -4,6 +4,8 @@ Gradle project for `com.worksbien.barbersimulatorasmr`. It bundles the Android w
 (`TARGET=full bash source/buildall.sh`, run automatically before every build) and shows it full screen in a
 WebView, offline, from the app's own origin.
 
+**Current continuation record: [Android release handoff](../RELEASE-HANDOFF.md).** The owner approved v1.0.5 cutting. v1.0.6 adds only the approved wardrobe privacy shield/native policy menu and UMP privacy-options reopening; its current verification state is recorded there and in [privacy QA](../PRIVACY-QA-2026-10-16.md). Debug always uses test ads. Production AdMob must be configured only after test-ad verification and immediately before release packaging/submission.
+
 **Status: debug APK compiled and verified on 16 October 2026.** The GitHub build passed 35 game
 contracts, 8 Android reward cases, 7 Chromium bridge cases, Android lint (zero errors) and APK signature
 verification. The APK uses Google test ads and the `.debug` package. Real-device consent, ads and lifecycle
@@ -59,8 +61,8 @@ at `android/store-listing/en-US/images/icon.png`. Density-specific launcher PNGs
 ## Still open
 
 - Real AdMob ids and the upload key (`keystore.properties`).
-- An in-app link to the privacy policy and, where UMP requires it, a privacy options entry
-  (see `android/PRIVACY-RELEASE-CONFIG.md`). The game has no settings screen yet, so this needs a placement.
+- Final native verification of the implemented wardrobe shield, policy link and UMP privacy-options entry
+  (see `android/PRIVACY-QA-2026-10-16.md`). No settings screen or existing-layout change was added.
 - A device test of consent, ads, saves, rotation/folding, back and pause.
 
 Test the bridge: `TARGET=full bash source/buildall.sh && node android/tests/bridge.cjs`.
