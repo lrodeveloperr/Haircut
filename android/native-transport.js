@@ -16,13 +16,6 @@
       });
     },
     onPause(callback) { listeners.add(callback); callback(paused); return () => listeners.delete(callback); },
-    // 18–28 CSS pixels, based on reported finger contact size; normal fallback 24.
-    // Mouse/stylus are already direct. The same aim point drives blade and cutting.
-    touchOffset(event) {
-      if (event.pointerType !== 'touch') return 0;
-      const height = Number(event.height);
-      return Math.min(28, Math.max(18, (Number.isFinite(height) && height > 1 ? height / 2 : 16) + 8));
-    },
     advertisement(kind, placement) {
       if (ad) return Promise.resolve({ earned: false, displayed: false });
       return new Promise(resolve => {

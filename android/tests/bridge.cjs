@@ -63,16 +63,19 @@ function fakeHost() {
           const p={x:b.left+(b.right-b.left)*x,y:b.top+(b.bottom-b.top)*y};
           if((()=>{const hit=HSC.view.raycast(p.x,p.y);return hit&&hit.kind!=='beard';})()){
             window.__rays=[];const ray=HSC.view.raycast;
-            HSC.view.raycast=(x,y)=>{__rays.push([x,y]);return ray(x,y);};return p;
+            HSC.view.raycast=(x,y)=>{__rays.push([x,y]);return ray(x,y);};return {...p,gap:Math.min(72,document.querySelector('#scene').clientHeight*.12)};
           }
         }throw Error('head must remain reachable after resize');
       });
       const session=await ctx.newCDPSession(page);
-      await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y+18,radiusX:8,radiusY:8}]});
+      await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y+p.gap,radiusX:8,radiusY:8}]});
       await page.waitForTimeout(60);
       await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
       const rays=await page.evaluate(()=>__rays);
-      assert(rays.some(([x,y])=>Math.abs(x-p.x)<1&&Math.abs(y-p.y)<1),'touch and blade share actual ray target');
+      assert(rays.some(([x,y])=>Math.abs(x-p.x)<1&&Math.abs(y-p.y)<1),'touch and visible blade share the exact YouTube ray target');
+      await page.evaluate(()=>{__rays=[];});
+      await page.mouse.move(p.x,p.y);await page.mouse.down();await page.mouse.up();
+      assert((await page.evaluate(()=>__rays)).some(([x,y])=>Math.abs(x-p.x)<1&&Math.abs(y-p.y)<1),'mouse remains direct, exactly as YouTube');
       await session.detach();passed++;
     }
     const saved=await page.evaluate(async()=>{
