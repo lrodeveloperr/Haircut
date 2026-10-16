@@ -8,6 +8,10 @@ const root = path.resolve(__dirname, '../..');
 const game = fs.readFileSync(path.join(root, 'source/build/runtime/game.js'), 'utf8');
 const customers = fs.readFileSync(path.join(root, 'source/build/runtime/customers.js'), 'utf8');
 const profile = customers.slice(0, customers.indexOf('// ---------------------------------------------------------------------------------------------'));
+const sitesProfile = fs.readFileSync(path.join(root, 'source/customers/detail-youtube.js'), 'utf8');
+const sitesGame = fs.readFileSync(path.join(root, 'source/src/runtime/game.js'), 'utf8');
+const aimStart = sitesGame.indexOf('function Ue(j){let ae=j.clientX');
+const sitesAim = sitesGame.slice(aimStart, sitesGame.indexOf('if(n.setClipper', aimStart)) + '}';
 const between = (start, end) => game.slice(game.indexOf(start), game.indexOf(end, game.indexOf(start)));
 const sampler = between('function he(ue){if(Pe)HSC.detail.sample', 'function _(ue=!0)');
 const budget = between('function He(ue){te=Math.max(HSC.detail.minStrands', 'let O={');
@@ -17,10 +21,16 @@ let passed = 0;
 const plain = x => JSON.parse(JSON.stringify(x));
 
 for (const ratio of [1, 1.25, 2, 3, 4]) {
-  const context = vm.createContext({ devicePixelRatio: ratio, location: { search: '?detail=low' },
+  const context = vm.createContext({ devicePixelRatio: ratio, innerWidth: 390, innerHeight: 844, location: { search: '?detail=low' },
     navigator: new Proxy({}, { get() { throw Error('fixed High must not classify hardware'); } }) });
   vm.runInContext(profile, context);
-  assert.equal(context.HSC.detail.pixelRatio(), ratio, 'native density must not be capped');
+  const sites = vm.createContext({ devicePixelRatio: ratio, innerWidth: 390, innerHeight: 844 });
+  vm.runInContext(sitesProfile, sites);
+  const expectedRatio = sites.HSC.detail.pixelRatio();
+  assert.equal(context.HSC.detail.pixelRatio(), expectedRatio, 'Android must match Sites High density');
+  for (const key of ['maxStrands', 'minStrands', 'segments', 'beardSegments', 'beardMax', 'clipMax', 'clipRate', 'pixelMax', 'pixelMin', 'maxPixels', 'antialias', 'shaderLow']) {
+    assert.equal(context.HSC.detail[key], sites.HSC.detail[key], `Sites High parity: ${key}`);
+  }
   assert.equal(context.HSC.detail.level, 'high');
   assert.equal(context.HSC.initDetail, undefined, 'old saved Low must not be loaded');
   assert.equal(context.HSC.setDetailSetting, undefined, 'no Auto/Low control');
@@ -32,7 +42,7 @@ for (const ratio of [1, 1.25, 2, 3, 4]) {
       for(let ms=${interval};ms<=1200000;ms+=${interval})he(ms);
       globalThis.result={strands:te,pixel:$,ceiling:J};
     }`, context);
-    assert.deepEqual(plain(context.result), { strands: 30000, pixel: ratio, ceiling: ratio });
+    assert.deepEqual(plain(context.result), { strands: 30000, pixel: expectedRatio, ceiling: expectedRatio });
     assert.equal(context.actualStrands, 30000);
     assert.equal(context.HSC.detail.segments, 8);
     assert.equal(context.HSC.detail.beardSegments, 8);
@@ -52,7 +62,8 @@ for (const ratio of [1, 1.25, 2, 3, 4]) {
     globalThis.resizeTo=(w,h)=>{e.clientWidth=w;e.clientHeight=h;P();return{width:e.width,height:e.height,pixel:$}};
   }`, context);
   for (const [w, h] of [[390, 844], [844, 390], [1280, 800], [2560, 1600]]) {
-    assert.deepEqual(plain(context.resizeTo(w, h)), { width: Math.floor(w * ratio), height: Math.floor(h * ratio), pixel: ratio });
+    const target = sites.HSC.detail.pixelRatio(w, h);
+    assert.deepEqual(plain(context.resizeTo(w, h)), { width: Math.floor(w * target), height: Math.floor(h * target), pixel: target });
     passed++;
   }
   context.devicePixelRatio = 1.5;
@@ -66,17 +77,24 @@ for (const height of [400, 600, 844]) for (const type of ['touch', 'mouse', 'pen
   const hit = { u: 0.5, v: 0.5, kind };
   const doCut = (s, points) => { strokes.push(points); return { state: s, changed: false }; };
   const context = vm.createContext({
-    a: { clientHeight: height }, s: state, f: { lastUv: null },
+    a: { clientHeight: height }, ur: { touchOffsetPx: 72 }, s: state, f: { lastUv: null },
     n: { raycast(x, y) { calls.push([x, y]); return hit; }, setClipper() {}, surface: {}, beardSurface: {} },
     HSC: { cutBeard: doCut }, Ts: doCut, o: { start() {}, stop() {} },
   });
   vm.runInContext(cut + ';globalThis.cut=Ue;', context);
   context.cut({ clientX: 200.25, clientY: 300.75, pointerType: type });
-  assert.deepEqual(calls, [[200.25, 300.75]], `${type} must aim directly at contact`);
+  const websiteCalls = [];
+  const website = vm.createContext({ a: { clientHeight: height }, ur: { touchOffsetPx: 72 },
+    n: { raycast(x, y) { websiteCalls.push([x, y]); return null; } } });
+  vm.runInContext(sitesAim + ';globalThis.aim=Ue;', website);
+  website.aim({ clientX: 200.25, clientY: 300.75, pointerType: type });
+  assert.deepEqual(calls, websiteCalls, `${type} must use the Sites touchscreen mapping`);
+  if (type === 'touch') assert(calls[0][1] < 300.75, 'blade must remain visible above the finger');
   assert.equal(strokes[0][0], hit, 'the actual cutter must use that same hit');
   passed++;
 }
-assert(!game.includes('Math.min(ur.touchOffsetPx,a.clientHeight*.12)'));
+assert(game.includes('Math.min(ur.touchOffsetPx,a.clientHeight*.12)'));
+assert(!game.includes('touchOffsetPx:0'));
 assert(!game.includes('Ue>24&&te>HSC.detail.minStrands'));
 assert(!customers.includes("const KEY = 'skin-fade-studio-detail-v1'"));
-console.log(`PASS: ${passed} Android graphics/input cases (20-minute simulated cadences, native DPR/resize, direct scalp/beard contact).`);
+console.log(`PASS: ${passed} Android graphics/input cases (Sites High parity, 20-minute simulated cadences, resize, visible scalp/beard blade mapping).`);

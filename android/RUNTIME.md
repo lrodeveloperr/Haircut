@@ -19,16 +19,16 @@ Android name: **Barber Simulator: ASMR Haircut**.
 
 The default Playgama/Playables build and the direct YouTube builder do not call this adaptation. Shared source files and historical release ZIPs retain their existing naming and reward rule.
 
-## Fixed High graphics and direct cutting
+## Fixed Sites High graphics and touchscreen mapping
 
 - Android always uses 30,000 scalp strands, eight scalp/beard segments, full beard density, full skin shading and requested MSAA. There is no Auto/Low selector or hardware classification; saved detail preferences and `?detail=low` cannot lower quality.
-- The drawing buffer follows the display's current native device pixel ratio, including density changes on resize. There is no application DPR cap, maximum-pixel downscaling or frame-driven resolution reduction. Hardware/WebView allocation limits remain outside application control.
+- The drawing buffer uses the same fixed High policy as Sites/YouTube: at most 2x pixel density and four million pixels, recomputed for actual canvas bounds on viewport/display changes. This replaces v1.0.1's unrestricted native density, which could unnecessarily multiply GPU work. Hair geometry, shading and antialiasing remain full High; slow frames never lower resolution or detail.
 - Both former automatic quality controllers are disabled. Frame-time samples are diagnostic only and do not change rendering quality.
 - Static scenes redraw on changes rather than continuously. Cutting, rotation, reveal and falling clippings still update each animation frame. This saves idle GPU work without removing detail.
-- Touch, pen and mouse cut at their reported client coordinates. The former upward touch adjustment (up to 72 CSS pixels) is removed from both the actual cutter and its proximity helper. Clipper placement and hair removal continue to use the same surface hit.
+- Touch uses the shared Sites/YouTube placement: the blade stays above the finger by `min(72 CSS pixels, 12% of canvas height)`, so its cutting edge remains visible. Mouse/pen retain their shared direct mapping. This restores the website's mapping instead of v1.0.1's blade-under-finger adjustment. Clipper placement and hair removal continue to use the same surface hit.
 - Game saves, reward credits, hair lengths, brush dimensions and camera controls retain their existing rules.
 
-`node android/tests/graphics.cjs` exercises exact generated-runtime functions across native DPRs, portrait/landscape/large buffers, display-density changes, direct scalp/beard contact and twenty simulated minutes at each tested frame cadence. These are logic checks, not physical-device performance measurements. `node android/tests/bridge.cjs` additionally tests native-density rendering, saved/URL Low rejection, trusted touch and rotation against the real web game and Android bridge in Chromium.
+`node android/tests/graphics.cjs` compares the actual Android graphics policy with the Sites/YouTube profile and the touch mapping with shared website code. It exercises portrait/landscape/large buffers, display-density changes, scalp/beard placement and twenty simulated minutes at each tested frame cadence. These are logic checks, not physical-device performance measurements. `node android/tests/bridge.cjs` additionally tests the fixed Sites pixel budget, saved/URL Low rejection, visible blade placement with trusted touch, rotation and context restoration against the real web game and Android bridge in Chromium.
 
 ## AdMob boundary
 
