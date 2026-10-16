@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright');
 const root = path.resolve(__dirname, '../..'), build = path.join(root, 'source/build');
+const placementReport=path.join(root,'qa/results',process.env.ANDROID_LAST_LAYOUT==='1'?'android-browser-placement-last-layout-report.json':'android-browser-placement-report.json');
 const types = {'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp','.json':'application/json'};
 function fakeHost() {
   window.__native = {ready:0, outcome:'reward', delay:10, failWrites:false, ads:[]};
@@ -50,10 +51,31 @@ function fakeHost() {
       const c=document.querySelector('#scene'),r=HSC.detail.pixelRatio(c.clientWidth,c.clientHeight);
       return c.width===Math.floor(c.clientWidth*r)&&c.height===Math.floor(c.clientHeight*r)&&!skinFadeStudio.getView().paused;
     });
+    const releaseTouch=async(session,type,id)=>{
+      const domType=type==='touchCancel'?'pointercancel':'pointerup';
+      await page.evaluate(({domType,id})=>{
+        window.__placementRelease=null;
+        const listener=e=>{
+          if(e.pointerId!==id)return;
+          window.removeEventListener(domType,listener,true);
+          window.__placementRelease={type:e.type,id:e.pointerId,target:e.target.id,trusted:e.isTrusted,time:performance.now(),gapBefore:HSC.view.clipperScreen().gap};
+        };
+        window.addEventListener(domType,listener,true);
+      },{domType,id});
+      await session.send('Input.dispatchTouchEvent',{type,touchPoints:[]});
+      // A CDP acknowledgment can precede DOM input delivery under software-GPU load.
+      // Require the genuine matching canvas event and reset; never invoke the reset helper here.
+      await page.waitForFunction(({domType,id})=>{
+        const e=window.__placementRelease;
+        return e?.type===domType&&e.id===id&&e.target==='scene'&&e.trusted&&HSC.view.clipperScreen().gap===null;
+      },{domType,id},{timeout:5000});
+      assert.equal(await page.evaluate(()=>HSC.view.clipperScreen().gap),null,'real end/cancel releases per-stroke clearance');
+      console.log('DOM-RELEASE',JSON.stringify(await page.evaluate(()=>__placementRelease)));
+    };
     await boot();
     assert.equal(await page.evaluate(async()=>(await HSC.youtubeClientPromise).platformId),'android');
     assert.deepEqual(external,[]);passed++;
-    for(const [width,height]of[[390,844],[844,390],[800,1280],[1280,800]]){
+    for(const [width,height]of(process.env.ANDROID_LAST_LAYOUT==='1'?[[1280,800]]:[[390,844],[844,390],[800,1280],[1280,800]])){
       await page.setViewportSize({width,height});await buffer();
       assert.deepEqual(await page.evaluate(()=>[HSC.detail.level,HSC.detail.minStrands,HSC.detail.segments,HSC.detail.antialias]),['high',30000,8,true]);
       const session=await ctx.newCDPSession(page);
@@ -140,8 +162,7 @@ function fakeHost() {
           await page.evaluate(item=>__placementEvidence.push(item),{region,move:true,contact,model:moved});
         }
         assert(validMoves>0,'at least one held move must remain on '+region);
-        await session.send('Input.dispatchTouchEvent',{type:region==='sideburn'?'touchCancel':'touchEnd',touchPoints:[]});
-        assert.equal(await page.evaluate(()=>HSC.view.clipperScreen().gap),null,'end/cancel releases per-stroke clearance');
+        await releaseTouch(session,region==='sideburn'?'touchCancel':'touchEnd',geometry.contact.id);
         // A second real stroke must acquire a new gap after release.
         await page.evaluate(()=>window.addEventListener('pointerdown',e=>{__placementContact={id:e.pointerId};},{capture:true,once:true}));
         await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:8,radiusY:8}]});
@@ -149,7 +170,7 @@ function fakeHost() {
         const reused=await page.evaluate(()=>({id:__placementContact.id,gap:HSC.view.clipperScreen().gap}));
         console.log('POINTER-REUSE',JSON.stringify({previous:geometry.contact.id,current:reused.id,gap:reused.gap}));
         assert(reused.gap>=36&&reused.gap<=45,'reused pointer receives bounded new stroke gap');
-        await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        await releaseTouch(session,'touchEnd',reused.id);
         assert.equal(await page.evaluate(()=>HSC.view.clipperScreen().gap),null);
       }
       // Mouse/pen continue to target their actual pointer, independent of touch grip placement.
@@ -158,7 +179,17 @@ function fakeHost() {
       await page.waitForFunction(()=>HSC.view.clipperScreen().visible);
       const m=await page.evaluate(()=>HSC.view.clipperScreen());
       assert(Math.hypot(m.target.x-mouse.x,m.target.y-mouse.y)<2,'mouse target remains direct');
+      await page.evaluate(()=>{
+        window.__placementMouseRelease=null;
+        const listener=e=>{
+          if(e.pointerType!=='mouse')return;
+          window.removeEventListener('pointerup',listener,true);
+          __placementMouseRelease={target:e.target.id,trusted:e.isTrusted,id:e.pointerId};
+        };
+        window.addEventListener('pointerup',listener,true);
+      });
       await page.mouse.up();
+      await page.waitForFunction(()=>__placementMouseRelease?.trusted&&__placementMouseRelease.target==='scene',undefined,{timeout:5000});
       const reuse=await page.evaluate(p=>{
         const v=HSC.view,a={clientX:p.x,clientY:p.y,pointerType:'touch',pointerId:777};
         const first=v.touchTarget(a),moved=v.touchTarget({...a,clientY:a.clientY+12});
@@ -176,7 +207,7 @@ function fakeHost() {
       await session.detach();passed++;
     }
     if(process.env.ANDROID_GUARD_ONLY==='1'||process.env.ANDROID_PLACEMENT_SMOKE==='1'){assert.deepEqual(errors,[]);console.log(`PASS: ${passed} Android zoom/guard and ${process.env.ANDROID_PLACEMENT_SMOKE==='1'?'four-layout placement smoke':'compatibility'} cases with zero page errors.`);return;}
-    fs.writeFileSync(path.join(root,'qa/results/android-browser-placement-report.json'),JSON.stringify(await page.evaluate(()=>window.__placementEvidence||[]),null,2));
+    fs.writeFileSync(placementReport,JSON.stringify(await page.evaluate(()=>window.__placementEvidence||[]),null,2));
     const saved=await page.evaluate(async()=>{
       const c=await HSC.youtubeClientPromise;await c.flushProgress();return JSON.stringify(skinFadeStudio.getState().hair);
     });
@@ -217,6 +248,6 @@ function fakeHost() {
     await buffer();passed++;
     assert.deepEqual(errors,[]);console.log(`PASS: ${passed} working Android runtime browser cases.`);
   }catch(e){console.error(`FAIL after ${passed}:`,e);process.exitCode=1;}finally{
-    if(reviewPage)try{const dir=path.join(root,'qa/results');fs.mkdirSync(dir,{recursive:true});const evidence=await reviewPage.evaluate(()=>window.__placementEvidence||[]);if(evidence.length)fs.writeFileSync(path.join(dir,'android-browser-placement-report.json'),JSON.stringify(evidence,null,2));}catch(_){}
+    if(reviewPage)try{const dir=path.join(root,'qa/results');fs.mkdirSync(dir,{recursive:true});const evidence=await reviewPage.evaluate(()=>window.__placementEvidence||[]);if(evidence.length)fs.writeFileSync(placementReport,JSON.stringify(evidence,null,2));}catch(_){}
     await browser.close();}
 })();
