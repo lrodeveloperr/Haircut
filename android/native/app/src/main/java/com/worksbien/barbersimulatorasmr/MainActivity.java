@@ -38,6 +38,7 @@ public class MainActivity extends ComponentActivity {
 
     private WebView web;
     private AdsController ads;
+    private AdAgeGate ageGate;
     private HostBridge host;
     private volatile boolean gameReady;
     private long started;
@@ -104,7 +105,8 @@ public class MainActivity extends ComponentActivity {
         host = new HostBridge(this, ads, web);
         web.addJavascriptInterface(host, "AndroidHost");
         web.loadUrl(GAME_URL);
-        ads.start();
+        ageGate = new AdAgeGate(this, ads::start);
+        ageGate.start();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -161,6 +163,7 @@ public class MainActivity extends ComponentActivity {
 
     @Override
     protected void onDestroy() {
+        ageGate.destroy();
         host.destroy();
         ads.destroy();
         web.destroy();

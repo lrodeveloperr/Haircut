@@ -1,0 +1,10 @@
+{
+  "platform": "android",
+  "locale": "en-US",
+  "source": "workflow exact github.sha; application code identical to bb81bc267d2b1ef4f91db10e41ef69f9510928da",
+  "preserved": {"run": 38967133699, "artifact": 12075167290, "rawBands": [0, 1, 2], "completedCheckBands": [0, 1]},
+  "remainingCheckBands": [2, 3],
+  "expectedNewPngCount": 1,
+  "newRaw": {"file": "android-installed-age-band-3.png", "size": "2560x1600", "state": "neutral age choice; no preselection"},
+  "reason": "Reuse three verified captures and six completed phone checks; complete only tablet checks after repairing native hierarchy observation."
+}
