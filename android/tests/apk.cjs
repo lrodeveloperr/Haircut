@@ -4,7 +4,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const {execFileSync}=require('node:child_process');
+const {execFileSync,spawn}=require('node:child_process');
 const app='com.worksbien.barbersimulatorasmr.debug',activity=app+'/com.worksbien.barbersimulatorasmr.MainActivity';
 const out=path.resolve('qa/results');fs.mkdirSync(out,{recursive:true});
 const adbPath=path.join(process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT,'platform-tools/adb');
@@ -68,19 +68,37 @@ async function cut(label){
       if(hit && hit.kind!=='beard' && state.hair[Math.min(63,Math.floor(hit.v*64))*128+Math.min(127,Math.floor(hit.u*128))]>1){
         window.__nativeTouches=[];
         window.addEventListener('pointerdown',e=>__nativeTouches.push({x:e.clientX,y:e.clientY,height:e.height,trusted:e.isTrusted}),{once:true,capture:true});
-        return {...p,dpr:devicePixelRatio,before:JSON.stringify(state.hair)};
+        if(!window.__originalCutRay)window.__originalCutRay=view.raycast;
+        window.__cutRays=[];
+        view.raycast=(x,y)=>{__cutRays.push({x,y});return __originalCutRay(x,y);};
+        return {...p,dpr:devicePixelRatio,gap:Math.min(72,document.querySelector('#scene').clientHeight*.12),before:JSON.stringify(state.hair)};
       }
     }throw Error('No accessible uncut scalp after window resize');
   });
   // The emulator profile has no camera cutout and bars are hidden. Actual native pixel input.
-  adb('shell','input','swipe',String(Math.round(p.x*p.dpr)),String(Math.round((p.y+24)*p.dpr)),String(Math.round((p.x+6)*p.dpr)),String(Math.round((p.y+30)*p.dpr)),'220');
+  const swipe=['shell','input','swipe',String(Math.round(p.x*p.dpr)),String(Math.round((p.y+p.gap)*p.dpr)),String(Math.round((p.x+6)*p.dpr)),String(Math.round((p.y+p.gap+6)*p.dpr))];
+  if(process.env.CAPTURE_BLADE==='1'&&label==='phone-portrait'){
+    // Capture the real native blade while the finger is held down, before pointer-up hides it.
+    const child=spawn(adbPath,[...swipe,'5000'],{stdio:'ignore'});
+    const done=new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',code=>code===0?resolve():reject(Error('native held swipe failed')));});
+    await page.waitForFunction(()=>__nativeTouches.length>0&&__cutRays.length>0);
+    await page.evaluate(()=>{
+      const p=__nativeTouches[0],marker=document.createElement('div');marker.id='test-finger-contact';
+      marker.style.cssText=`position:fixed;left:${p.x-18}px;top:${p.y-18}px;width:36px;height:36px;border:2px dashed #ff4060;border-radius:50%;background:#ff406030;pointer-events:none;z-index:99999;box-sizing:border-box`;
+      document.body.append(marker);
+    });
+    try{await screenshot(label+'-blade-held');}finally{await page.evaluate(()=>document.querySelector('#test-finger-contact')?.remove());await done;}
+  }else adb(...swipe,'220');
   await page.waitForFunction(before=>JSON.stringify(skinFadeStudio.getState().hair)!==before,p.before);
   const touch=await page.evaluate(()=>__nativeTouches[0]);
   assert(touch?.trusted,'native input must produce trusted touch');
-  assert(Math.abs(touch.x-p.x)<3&&Math.abs(touch.y-(p.y+24))<3,'native and WebView coordinates must agree');
-  const gap=await page.evaluate(t=>HSC.android.touchOffset({pointerType:'touch',height:t.height}),touch);
-  assert(gap>=18&&gap<=28,'blade clearance remains compact on tablet and phone');
-  check(label+' native swipe removes hair with compact blade clearance');
+  assert(Math.abs(touch.x-p.x)<3&&Math.abs(touch.y-(p.y+p.gap))<3,'native and WebView coordinates must agree');
+  const rays=await page.evaluate(()=>__cutRays);
+  const blade=rays.find(r=>Math.abs(r.x-p.x)<2&&Math.abs(r.y-p.y)<2);
+  assert(blade,'native finger position must aim the visible blade at the exact intended scalp point');
+  assert(Math.abs(touch.y-blade.y-p.gap)<2,'native blade clearance must equal YouTube');
+  check(label+' native swipe cuts at the visible blade with exact YouTube clearance');
+  Object.assign(touch,{blade,gap:p.gap});
   return touch;
 }
 (async()=>{
@@ -90,6 +108,10 @@ async function cut(label){
     // Acknowledge Android's one-time full-screen teaching bubble in this test fixture.
     adb('shell','settings','put','secure','immersive_mode_confirmations','confirmed');
     adb('shell','svc','wifi','disable');adb('shell','svc','data','disable');
+    // Background SMS apps in the factory image can show unrelated ANR dialogs under software GPU load.
+    for(const pkg of ['com.android.messaging','com.google.android.apps.messaging']){
+      try{if(adb('shell','pm','path',pkg).includes('package:'))adb('shell','pm','disable-user','--user','0',pkg);}catch(_){}
+    }
     adb('install','-r','android/native/app/build/outputs/apk/debug/app-debug.apk');
     adb('shell','settings','put','system','accelerometer_rotation','0');
     adb('shell','wm','user-rotation','lock','0');

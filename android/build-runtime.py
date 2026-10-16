@@ -1,4 +1,4 @@
-"""Package the working Sites engine for Android; adapt only host services and touch clearance."""
+"""Package the working Sites engine for Android; adapt only host services and Android reward/title policy."""
 from pathlib import Path
 import importlib.util
 import shutil
@@ -15,14 +15,9 @@ def replace(text, old, new):
         raise ValueError(f'Android host adaptation expected one occurrence: {old[:100]}')
     return text.replace(old, new)
 
-# Keep the tested renderer/startup/camera/geometry path intact. Only the touch
-# clearance differs: a small, contact-aware gap, rather than the old 72px lift.
-game = (out / 'runtime/game.js').read_text()
-old = 'Math.min(ur.touchOffsetPx,a.clientHeight*.12)'
-assert game.count(old) == 2
-game = game.replace(old, 'HSC.android.touchOffset(j)')
-assert game.replace('HSC.android.touchOffset(j)', old) == (source / 'build-youtube/runtime/game.js').read_text()
-(out / 'runtime/game.js').write_text(game)
+# Preserve the entire working YouTube engine, including its blade-visible touch
+# clearance and direct mouse/pen aiming. Do not patch either input path.
+assert (out / 'runtime/game.js').read_bytes() == (source / 'build-youtube/runtime/game.js').read_bytes()
 
 client = (out / 'runtime/local-preview-client.js').read_text()
 client = replace(client, 'HSC.createLocalPreviewClient', 'HSC.createAndroidClient')
@@ -79,4 +74,4 @@ shutil.move(str(source / 'build'), foundation)
 shutil.copytree(out, source / 'build')
 for file in (out / 'runtime').glob('*.js'):
     subprocess.run(['node', '--check', str(file)], check=True)
-print('Android: working Sites engine, asynchronous native host, compact visible touch clearance')
+print('Android: working Sites engine, asynchronous native host, exact YouTube blade-visible input mapping')

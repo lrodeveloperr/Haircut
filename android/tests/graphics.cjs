@@ -71,7 +71,7 @@ for (const ratio of [1, 1.25, 2, 3, 4]) {
   passed++;
 }
 
-for (const height of [400, 600, 844]) for (const type of ['touch', 'mouse', 'pen']) for (const kind of ['scalp', 'beard']) {
+for (const height of [320, 400, 600, 844, 1280]) for (const type of ['touch', 'mouse', 'pen']) for (const kind of ['scalp', 'beard']) {
   const calls = [], strokes = [];
   const state = { selectedGuard: 1 };
   const hit = { u: 0.5, v: 0.5, kind };
@@ -79,23 +79,23 @@ for (const height of [400, 600, 844]) for (const type of ['touch', 'mouse', 'pen
   const context = vm.createContext({
     a: { clientHeight: height }, ur: { touchOffsetPx: 72 }, s: state, f: { lastUv: null },
     n: { raycast(x, y) { calls.push([x, y]); return hit; }, setClipper() {}, surface: {}, beardSurface: {} },
-    AndroidHost: {request() {}}, setTimeout, clearTimeout,
     HSC: { cutBeard: doCut }, Ts: doCut, o: { start() {}, stop() {} },
   });
-  vm.runInContext(fs.readFileSync(path.join(root, 'android/native-transport.js'), 'utf8'), context);
   vm.runInContext(cut + ';globalThis.cut=Ue;', context);
   context.cut({ clientX: 200.25, clientY: 300.75, pointerType: type });
-  const offset = type === 'touch' ? 24 : 0;
-  assert.deepEqual(calls, [[200.25, 300.75 - offset]], `${type} uses compact consistent clearance on phone/tablet`);
-  for (const contactHeight of [1, 8, 16, 32, 80]) {
-    const clearance = context.HSC.android.touchOffset({pointerType:type, height:contactHeight});
-    assert(type === 'touch' ? clearance >= 18 && clearance <= 28 : clearance === 0);
-  }
+  const websiteCalls = [];
+  const website = vm.createContext({a: {clientHeight: height}, ur: {touchOffsetPx: 72},
+    n: {raycast(x,y) {websiteCalls.push([x,y]);return null;}}});
+  vm.runInContext(sitesAim + ';globalThis.aim=Ue;', website);
+  website.aim({clientX:200.25,clientY:300.75,pointerType:type});
+  assert.deepEqual(calls, websiteCalls, `${type}/${kind}/${height}: exact YouTube aiming`);
+  const gap=type === 'touch' ? Math.min(72, height * .12) : 0;
+  assert.deepEqual(calls, [[200.25,300.75-gap]], 'blade and actual cutter use the same surface target');
   assert.equal(strokes[0][0], hit, 'the actual cutter must use that same hit');
   passed++;
 }
-assert.equal(game.replaceAll('HSC.android.touchOffset(j)', 'Math.min(ur.touchOffsetPx,a.clientHeight*.12)'), fs.readFileSync(path.join(root, 'source/build-youtube/runtime/game.js'), 'utf8'), 'Android uses the complete working engine');
+assert.equal(game, fs.readFileSync(path.join(root, 'source/build-youtube/runtime/game.js'), 'utf8'), 'Android uses the complete working engine');
 assert(!game.includes('touchOffsetPx:0'));
 assert(!game.includes('Ue>24&&te>HSC.detail.minStrands'));
 assert(!customers.includes("const KEY = 'skin-fade-studio-detail-v1'"));
-console.log(`PASS: ${passed} Android graphics/input cases (working engine parity, fixed High cadences, tablet resize, compact scalp/beard blade mapping).`);
+console.log(`PASS: ${passed} Android graphics/input cases (working engine parity, fixed High cadences, tablet resize, exact YouTube mouse/touch scalp/beard blade mapping).`);
