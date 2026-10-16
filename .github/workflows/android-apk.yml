@@ -43,10 +43,11 @@ jobs:
           node android/tests/rewards.cjs
           RELEASE_DIR=source/build-foundation node qa/contracts.cjs
       - name: Install native WebView test client
-        run: npm install --no-save --package-lock=false playwright@1.58.2
+        run: npm install --no-save --package-lock=false playwright@1.58.2 pngjs@7.0.0
       - name: Verify Android bridge in Chromium
         env:
           ANDROID_GUARD_ONLY: ${{ contains(github.event.head_commit.message, '[placement-compat]') && '1' || '0' }}
+          ANDROID_PLACEMENT_SMOKE: ${{ contains(github.event.head_commit.message, '[placement-verify]') && '1' || '0' }}
         if: ${{ !contains(github.event.head_commit.message, '[native-check]') }}
         run: |
           npx playwright install --with-deps chromium

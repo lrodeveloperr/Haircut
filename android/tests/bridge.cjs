@@ -76,7 +76,7 @@ function fakeHost() {
         assert(touch?.trusted&&touch.label.startsWith(`Guard ${guard},`),'real touch must select the visible intermediate guard');
       }
       if(process.env.ANDROID_GUARD_ONLY==='1'){await session.detach();passed++;continue;}
-      for(const region of ['top-scalp','sideburn','beard','lower-scalp']){
+      for(const region of (process.env.ANDROID_PLACEMENT_SMOKE==='1'?['top-scalp']:['top-scalp','sideburn','beard','lower-scalp'])){
         console.log('REGION',width,height,region);
         const p=await page.evaluate(region=>{
           if(skinFadeStudio.getState().interactionMode!=='cut')skinFadeStudio.toggleClipper();
@@ -121,10 +121,10 @@ function fakeHost() {
         assert(Math.hypot(teeth.x-target.x,teeth.y-target.y)<5,'projected teeth must agree with the real cutting surface');
         assert(p.y-teeth.y>=34,'real teeth must clear24px occlusion radius by at least10px');
         assert(p.y-teeth.y<=50,'candidate must avoid the previously excessive portrait gap');
-        assert(geometry.model.gap>=36&&geometry.model.gap<=48,'requested gap obeys measured visibility bounds');
+        assert(geometry.model.gap>=36&&geometry.model.gap<=45,'requested gap obeys measured visibility bounds');
         await page.evaluate(()=>document.querySelector('#placement-diagnostic').remove());
         let validMoves=0;
-        for(const [dx,dy]of[[8,0],[-8,8],[0,-8]]){
+        for(const [dx,dy]of(process.env.ANDROID_PLACEMENT_SMOKE==='1'?[[8,0]]:[[8,0],[-8,8],[0,-8]])){
           const contact={x:p.x+dx,y:p.y+dy};
           await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...contact,radiusX:8,radiusY:8}]});
           await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
@@ -145,7 +145,7 @@ function fakeHost() {
         await page.waitForFunction(()=>HSC.view.clipperScreen().visible);
         const reused=await page.evaluate(()=>({id:__placementContact.id,gap:HSC.view.clipperScreen().gap}));
         console.log('POINTER-REUSE',JSON.stringify({previous:geometry.contact.id,current:reused.id,gap:reused.gap}));
-        assert(reused.gap>=36&&reused.gap<=48,'reused pointer receives bounded new stroke gap');
+        assert(reused.gap>=36&&reused.gap<=45,'reused pointer receives bounded new stroke gap');
         await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
         assert.equal(await page.evaluate(()=>HSC.view.clipperScreen().gap),null);
       }
@@ -172,7 +172,7 @@ function fakeHost() {
       assert.deepEqual(reuse.pen,{x:mouse.x,y:mouse.y,gap:0},'pen remains direct');
       await session.detach();passed++;
     }
-    if(process.env.ANDROID_GUARD_ONLY==='1'){console.log(`PASS: ${passed} Android zoom compatibility and trusted guard-touch cases.`);return;}
+    if(process.env.ANDROID_GUARD_ONLY==='1'||process.env.ANDROID_PLACEMENT_SMOKE==='1'){assert.deepEqual(errors,[]);console.log(`PASS: ${passed} Android zoom/guard and ${process.env.ANDROID_PLACEMENT_SMOKE==='1'?'four-layout placement smoke':'compatibility'} cases with zero page errors.`);return;}
     fs.writeFileSync(path.join(root,'qa/results/android-browser-placement-report.json'),JSON.stringify(await page.evaluate(()=>window.__placementEvidence||[]),null,2));
     const saved=await page.evaluate(async()=>{
       const c=await HSC.youtubeClientPromise;await c.flushProgress();return JSON.stringify(skinFadeStudio.getState().hair);

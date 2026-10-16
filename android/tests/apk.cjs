@@ -57,7 +57,13 @@ async function ready(){
     return c.width===Math.floor(c.clientWidth*r)&&c.height===Math.floor(c.clientHeight*r);
   });
 }
-async function screenshot(name){fs.writeFileSync(path.join(out,'android-installed-'+name+'.png'),execFileSync(adbPath,['exec-out','screencap','-p'],{timeout:30000,maxBuffer:32*1024*1024}));}
+async function screenshot(name){const png=execFileSync(adbPath,['exec-out','screencap','-p'],{timeout:30000,maxBuffer:32*1024*1024});fs.writeFileSync(path.join(out,'android-installed-'+name+'.png'),png);return png;}
+// Decode the actual Android PNG to require composited marker pixels, not merely DOM existence.
+function markerPixels(png,contact,teeth,scale){
+  const {width,height,data:pixels}=require('pngjs').PNG.sync.read(png),channels=4,stride=width*channels;
+  const count=(point,radius,predicate)=>{let n=0;for(let y=Math.max(0,Math.floor(point[1]-radius));y<Math.min(height,Math.ceil(point[1]+radius));y++)for(let x=Math.max(0,Math.floor(point[0]-radius));x<Math.min(width,Math.ceil(point[0]+radius));x++){const i=y*stride+x*channels;if(predicate(pixels[i],pixels[i+1],pixels[i+2]))n++;}return n;};
+  return{contact:count(contact,26*scale,(r,g,b)=>r>220&&g>35&&g<110&&b>60&&b<160),teeth:count(teeth,6*scale,(r,g,b)=>r<70&&g>200&&b>200)};
+}
 async function cut(label,layout){
   const p=await page.evaluate(()=>{
     const game=skinFadeStudio,view=HSC.view;
@@ -96,6 +102,9 @@ async function cut(label,layout){
     report.lastPlacement={label,contact:p,geometry};
     console.log('PLACEMENT',JSON.stringify(report.lastPlacement));
     await page.evaluate(({p,geometry})=>{
+      // Preserve the last genuine High frame while DOM markers reach the native compositor.
+      const view=HSC.view,render=view.render;window.__placementRenderPin={view,render,skipped:0};
+      view.render=function(){__placementRenderPin.skipped++;};
       const overlay=document.createElement('div');overlay.id='placement-diagnostic';overlay.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:99999';
       for(const [name,point,color,size]of[['contact',p,'#ff4060',48],['teeth',geometry.teeth,'#00ffff',8],['grip',geometry.grip,'#ffff00',8]]){
         const m=document.createElement('div');m.dataset.point=name;m.style.cssText=`position:absolute;left:${point.x-size/2}px;top:${point.y-size/2}px;width:${size}px;height:${size}px;border:2px solid ${color};border-radius:50%;box-sizing:border-box`;overlay.append(m);
@@ -103,16 +112,41 @@ async function cut(label,layout){
       document.body.append(overlay);
     },{p,geometry});
     await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
-    await screenshot(label+'-blade-held');
+    // Page.captureScreenshot flushes compositor work; the evidence image remains an OS capture.
+    await page.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
+    let markers;
+    for(let attempt=0;attempt<3;attempt++){
+      const png=await screenshot(label+'-blade-held');
+      markers=markerPixels(png,nativePoint(p.x,p.y),nativePoint(geometry.teeth.x,geometry.teeth.y),(b.right-b.left)/v.width);
+      if(markers.contact>5&&markers.teeth>3)break;
+      await pause(250);
+    }
+    report.lastPlacement.markers=markers;
+    assert(markers.contact>5&&markers.teeth>3,'OS capture must contain actual contact and tooth diagnostic markers');
+    await page.evaluate(()=>{const p=__placementRenderPin;p.view.render=p.render;delete window.__placementRenderPin;document.querySelector('#placement-diagnostic')?.remove();});
+    // A real move after restoring rendering proves this capture pin cannot conceal a stuck renderer.
+    const movedContact={x:p.x+6,y:p.y+4};
+    await page.evaluate(()=>{const view=HSC.view,render=view.render;window.__placementRestore={view,render,frames:0};view.render=function(...args){const r=render.apply(this,args);__placementRestore.frames++;return r;};});
+    await page.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...movedContact,radiusX:8,radiusY:8}]});
+    await page.waitForFunction(()=>__placementRestore.frames>0);
+    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+    const moved=await page.evaluate(()=>HSC.view.clipperScreen());
+    report.lastPlacement.moved={contact:movedContact,geometry:moved};
+    assert(moved.visible&&moved.target,'real held move stays on the model after capture');
+    assert.equal(moved.gap,geometry.gap,'capture restore preserves the frozen stroke gap');
+    assert(Math.hypot(moved.target.x-geometry.target.x,moved.target.y-geometry.target.y)>2,'restored renderer follows actual moved contact');
+    assert(Math.hypot(moved.teeth.x-moved.target.x,moved.teeth.y-moved.target.y)<5,'restored real teeth follow cutting surface');
+    assert(movedContact.y-moved.teeth.y>=34&&movedContact.y-moved.teeth.y<=50,'restored moving teeth retain visible bounded clearance');
+    await page.evaluate(()=>{const p=__placementRestore;p.view.render=p.render;delete window.__placementRestore;});
     assert(geometry.visible,'real rendered clipper must be visible during held touch');
     assert(Math.hypot(geometry.teeth.x-geometry.target.x,geometry.teeth.y-geometry.target.y)<5,'projected teeth must agree with real cutting surface');
     assert(p.y-geometry.teeth.y>=34,'projected blade clears24px occlusion radius by at least10px');
     assert(p.y-geometry.teeth.y<=50,'placement avoids the prior excessive portrait gap');
-    assert(geometry.gap>=36&&geometry.gap<=48,'per-stroke gap obeys visibility bounds');
+    assert(geometry.gap>=36&&geometry.gap<=45,'per-stroke gap obeys visibility bounds');
     check(label+' actual tooth/grip projection agrees with held touch');
-    return{nativeTouch,contact:p,geometry};
+    return{nativeTouch,contact:p,geometry,markers,moved:{contact:movedContact,geometry:moved}};
   }finally{
-    await page.evaluate(()=>document.querySelector('#placement-diagnostic')?.remove());
+    await page.evaluate(()=>{for(const key of ['__placementRestore','__placementRenderPin']){const p=window[key];if(p){p.view.render=p.render;delete window[key];}}document.querySelector('#placement-diagnostic')?.remove();});
     await page.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   }
 }
@@ -201,7 +235,7 @@ function nativeWebViewBounds(){
       await page.waitForFunction(()=>HSC.view.clipperScreen().visible);
       await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
       const held=await page.evaluate(()=>({gap:HSC.view.clipperScreen().gap,hair:JSON.stringify(skinFadeStudio.getState().hair)}));
-      assert(held.gap>=36&&held.gap<=48,'live resize must interrupt a real bounded held stroke');
+      assert(held.gap>=36&&held.gap<=45,'live resize must interrupt a real bounded held stroke');
       const before=held.hair;
       adb('shell','wm','size',size); // Same density and live WebView: genuine configuration roundtrip.
       await page.waitForFunction(landscape=>(innerWidth>innerHeight)===landscape,size==='2560x1600');await ready();

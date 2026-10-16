@@ -2,8 +2,9 @@
 // Grip projection suggests placement within a bounded finger-clearance envelope.
 // The teeth and cutter retain their common ray hit.
 let androidTouchId = null, androidTouchGap = null, androidTouchRawGap = null;
-// A 48px contact envelope plus 12px blade clearance; never return to the rejected72px gap.
-const androidBoundGap = gap => Math.max(36,Math.min(48,Number.isFinite(gap)?gap:36));
+// A 48px contact envelope plus 12px minimum clearance. The 45px ray cap
+// reserves the independently checked <5px tooth projection error below 50px.
+const androidBoundGap = gap => Math.max(36,Math.min(45,Number.isFinite(gap)?gap:36));
 function androidProject(point) {
   const r = e.getBoundingClientRect(), p = point.clone().project(ze);
   return {x:r.left+O.x+(p.x+1)*O.width/2, y:r.top+O.y+(1-p.y)*O.height/2};
