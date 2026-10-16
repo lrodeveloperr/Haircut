@@ -11,7 +11,8 @@ const adbPath=path.join(process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT,'
 const adb=(...args)=>{console.log('adb',...args);return execFileSync(adbPath,args,{encoding:'utf8',timeout:30000,maxBuffer:8*1024*1024}).trim();};
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const lifecycleOnly=process.env.ANDROID_APK_LIFECYCLE_ONLY==='1';
-const report={checks:[],layouts:[],mode:lifecycleOnly?'lifecycle-follow-up':'full'};let browser,page;
+const privacyFollowUp=process.env.ANDROID_APK_PRIVACY_FOLLOWUP==='1';
+const report={checks:[],layouts:[],mode:privacyFollowUp?'privacy-and-lifecycle-follow-up':lifecycleOnly?'lifecycle-follow-up':'full'};let browser,page;
 function check(name){report.checks.push(name);console.log('PASS:',name);}
 // WebView intentionally lacks browser-context/download APIs required by desktop Playwright.
 // Attach directly to the inspected page with standard CDP, leaving the native app in control.
@@ -110,6 +111,11 @@ async function privacy(layout) {
   const before=await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair));
   await tap('.hsc-rw');
   await page.waitForFunction(()=>document.querySelector('#hsc-panel.open .hsc-privacy')&&skinFadeStudio.getView().paused);
+  await page.evaluate(()=>{
+    const style=document.createElement('style');style.id='privacy-capture-stability';
+    style.textContent='*{animation:none!important;transition:none!important}';document.head.append(style);
+    return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  });
   const geometry=await page.evaluate(()=>{
     const button=document.querySelector('.hsc-privacy');
     const measure=()=>[...document.querySelectorAll('#hsc-panel button:not(.hsc-privacy),.hsc-sheet,.hsc-head,.hsc-pick,.hsc-coll,.hsc-grid')].map(el=>{const r=el.getBoundingClientRect();return[r.x,r.y,r.width,r.height];});
@@ -119,7 +125,22 @@ async function privacy(layout) {
   });
   assert.deepEqual(geometry.after,geometry.before,'native privacy icon must not move existing wardrobe elements');
   assert(Math.abs(geometry.privacy[1]-geometry.close[1])<.1&&Math.abs(geometry.privacy[2]-geometry.close[2])<.1&&Math.abs(geometry.privacy[3]-geometry.close[3])<.1&&geometry.gap>0,'native shield matches Close size and alignment');
-  await screenshot(layout.name+'-wardrobe-privacy');
+  await page.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
+  // A DOM-open state can precede the actual Android compositor frame. Require
+  // the cream shield target in native pixels before accepting the raw capture.
+  let painted=false;
+  for(let attempt=0;attempt<10;attempt++) {
+    const png=await screenshot(layout.name+'-wardrobe-privacy');
+    const image=require('pngjs').PNG.sync.read(png),b=layout.nativeBounds,v=layout.visualViewport,p=geometry.privacy;
+    let cream=0;
+    for(let n=0;n<8;n++) {
+      const angle=n*Math.PI/4,cx=p[0]+p[2]/2+Math.cos(angle)*p[2]*.30,cy=p[1]+p[3]/2+Math.sin(angle)*p[3]*.30;
+      const x=Math.round(b.left+(cx-v.offsetLeft)*(b.right-b.left)/v.width),y=Math.round(b.top+(cy-v.offsetTop)*(b.bottom-b.top)/v.height),i=(y*image.width+x)*4;
+      if(image.data[i]>235&&image.data[i+1]>220&&image.data[i+2]>195)cream++;
+    }
+    if(cream>=7){painted=true;break;}await pause(250);
+  }
+  assert(painted,'raw Android capture must actually show the cream privacy control');
   await tap('.hsc-privacy');
   let activities='';
   for(let attempt=0;attempt<20;attempt++) {
@@ -141,6 +162,7 @@ async function privacy(layout) {
   assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),before,'returning from the external policy preserves haircut');
   await tap('.hsc-head .hsc-x:not(.hsc-privacy)');
   await page.waitForFunction(()=>!skinFadeStudio.getView().paused);
+  await page.evaluate(()=>document.querySelector('#privacy-capture-stability')?.remove());
   layout.privacy={existingBoundsUnchanged:true,alignment:geometry,externalPolicyOpened:true,hairPreserved:true};
   check(layout.name+' privacy icon preserves all existing wardrobe bounds');
   check(layout.name+' trusted native privacy tap opens external policy and preserves haircut/pause');
@@ -320,7 +342,7 @@ async function nativeWebViewBounds(){
       });
       assert(Math.abs(layout.zoomProbe.width-20*layout.uiZoom)<.25,'native UI rects must include cumulative CSS zoom');
       layout.guardTaps=[];
-      for(const guard of [3,1]){
+      for(const guard of privacyFollowUp?[]:[3,1]){
         const p=await page.evaluate(g=>{
           const b=document.querySelector(`#hud [role="radio"][aria-label^="Guard ${g},"]`),r=b.getBoundingClientRect();
           window.__guardTouch=null;window.addEventListener('pointerdown',e=>{__guardTouch={trusted:e.isTrusted,label:e.target.closest('button')?.getAttribute('aria-label')};},{capture:true,once:true});
@@ -332,14 +354,16 @@ async function nativeWebViewBounds(){
         const touch=await page.evaluate(()=>__guardTouch);assert(touch?.trusted&&touch.label.startsWith(`Guard ${guard},`),'native tap must hit and select the visible intermediate guard');
         layout.guardTaps.push({guard,point:p,touch});
       }
-      check(spec.name+' native guard1/3 taps match visible controls');
-      layout.name=spec.name;layout.touch=await cut(spec.name,layout);
-      await screenshot(spec.name);
+      if(!privacyFollowUp){
+        check(spec.name+' native guard1/3 taps match visible controls');
+        layout.touch=await cut(spec.name,layout);await screenshot(spec.name);
+      }
       if(!lifecycleOnly)await privacy(layout);
+      if(privacyFollowUp&&spec===specs[specs.length-1])layout.touch=await cut('follow-up',layout);
     }
     report.rotations=[];
     let previousContact=report.layouts[report.layouts.length-1].touch.contact;
-    for(const size of lifecycleOnly?[]:['1600x2560','2560x1600']){
+    for(const size of lifecycleOnly||privacyFollowUp?[]:['1600x2560','2560x1600']){
       await page.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:previousContact.x,y:previousContact.y,radiusX:8,radiusY:8}]});
       await page.waitForFunction(()=>HSC.view.clipperScreen().visible);
       await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
