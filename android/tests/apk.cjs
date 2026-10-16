@@ -5,7 +5,6 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const {execFileSync}=require('node:child_process');
-const {chromium}=require('playwright');
 const app='com.worksbien.barbersimulatorasmr.debug',activity=app+'/com.worksbien.barbersimulatorasmr.MainActivity';
 const out=path.resolve('qa/results');fs.mkdirSync(out,{recursive:true});
 const adbPath=path.join(process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT,'platform-tools/adb');
@@ -13,16 +12,40 @@ const adb=(...args)=>{console.log('adb',...args);return execFileSync(adbPath,arg
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const report={checks:[],layouts:[]};let browser,page;
 function check(name){report.checks.push(name);console.log('PASS:',name);}
+// WebView intentionally lacks browser-context/download APIs required by desktop Playwright.
+// Attach directly to the inspected page with standard CDP, leaving the native app in control.
+async function attach(target) {
+  const socket=new WebSocket(target.webSocketDebuggerUrl);
+  await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true});});
+  let id=0;const pending=new Map(),handlers=new Map();
+  socket.addEventListener('message',event=>{
+    const message=JSON.parse(event.data);
+    if(message.id){const p=pending.get(message.id);if(!p)return;pending.delete(message.id);clearTimeout(p.timer);message.error?p.reject(Error(message.error.message)):p.resolve(message.result);}
+    else for(const fn of handlers.get(message.method)||[])fn(message.params);
+  });
+  const send=(method,params={})=>new Promise((resolve,reject)=>{
+    const key=++id,timer=setTimeout(()=>{pending.delete(key);reject(Error('CDP timed out: '+method));},120000);
+    pending.set(key,{resolve,reject,timer});socket.send(JSON.stringify({id:key,method,params}));
+  });
+  const evaluate=async(fn,arg)=>{
+    const response=await send('Runtime.evaluate',{expression:'('+fn.toString()+')('+(arg===undefined?'undefined':JSON.stringify(arg))+')',awaitPromise:true,returnByValue:true,userGesture:true});
+    if(response.exceptionDetails)throw Error(response.exceptionDetails.exception?.description||response.exceptionDetails.text);
+    return response.result.value;
+  };
+  await send('Runtime.enable');
+  browser={close:async()=>socket.close()};
+  page={evaluate,on(name,fn){if(name==='pageerror')handlers.set('Runtime.exceptionThrown',[p=>fn(Error(p.exceptionDetails.exception?.description||p.exceptionDetails.text))]);},
+    async waitForFunction(fn,arg,options={}){const deadline=Date.now()+(options.timeout||120000);while(Date.now()<deadline){if(await evaluate(fn,arg))return;await pause(250);}throw Error('Installed page condition timed out: '+fn.toString());}};
+}
 async function connect(){
-  for(let n=0;n<40;n++){
+  for(let n=0;n<30;n++){
     try{
       const pid=adb('shell','pidof',app).split(' ')[0];
       adb('forward','tcp:9222','localabstract:webview_devtools_remote_'+pid);
-      browser=await chromium.connectOverCDP('http://127.0.0.1:9222',{timeout:5000});
-      page=browser.contexts().flatMap(c=>c.pages()).find(p=>p.url().includes('appassets.androidplatform.net'));
-      if(page){page.setDefaultTimeout(120000);return;}
-      console.log('WebView targets:',browser.contexts().flatMap(c=>c.pages()).map(p=>p.url()));
-      throw Error('Game target not ready');
+      const targets=await(await fetch('http://127.0.0.1:9222/json/list',{signal:AbortSignal.timeout(5000)})).json();
+      const target=targets.find(p=>p.url.includes('appassets.androidplatform.net'));
+      if(target){await attach(target);return;}
+      console.log('WebView target pending:',targets.map(p=>p.url));
     }catch(e){console.log('CDP connecting:',e.message);}
     await pause(500);
   }throw Error('installed WebView remote debugging unavailable');
