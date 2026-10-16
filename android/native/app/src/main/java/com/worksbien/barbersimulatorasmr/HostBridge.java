@@ -80,6 +80,11 @@ final class HostBridge {
     @JavascriptInterface
     public void gameReady() { activity.onGameReady(); }
 
+    @JavascriptInterface
+    public void openPrivacy() {
+        activity.runOnUiThread(() -> { if (!destroyed) activity.openPrivacy(); });
+    }
+
     void destroy() {
         destroyed = true;
         storage.shutdown(); // finish queued durable writes, without calling the destroyed WebView

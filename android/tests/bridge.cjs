@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright');
 const root = path.resolve(__dirname, '../..'), build = path.join(root, 'source/build');
+const placementReport=path.join(root,'qa/results',process.env.ANDROID_LAST_LAYOUT==='1'?'android-browser-placement-last-layout-report.json':'android-browser-placement-report.json');
 const types = {'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp','.json':'application/json'};
 function fakeHost() {
   window.__native = {ready:0, outcome:'reward', delay:10, failWrites:false, ads:[]};
@@ -26,8 +27,8 @@ function fakeHost() {
   };
 }
 (async()=>{
-  const browser=await chromium.launch({args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-  let passed=0;
+  const browser=await chromium.launch({...(process.env.CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.CHROMIUM_EXECUTABLE_PATH}:{}),args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  let passed=0,reviewPage;
   try {
     const ctx=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:3,hasTouch:true});
     const external=[];
@@ -39,7 +40,7 @@ function fakeHost() {
       return route.fulfill({path:file,contentType:types[path.extname(file)]||'application/octet-stream'});
     });
     await ctx.addInitScript(fakeHost);
-    const page=await ctx.newPage(),errors=[];
+    const page=reviewPage=await ctx.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(120000);
     const boot=async()=>{
       await page.goto('http://release.test/?detail=low');
@@ -50,34 +51,163 @@ function fakeHost() {
       const c=document.querySelector('#scene'),r=HSC.detail.pixelRatio(c.clientWidth,c.clientHeight);
       return c.width===Math.floor(c.clientWidth*r)&&c.height===Math.floor(c.clientHeight*r)&&!skinFadeStudio.getView().paused;
     });
+    const releaseTouch=async(session,type,id)=>{
+      const domType=type==='touchCancel'?'pointercancel':'pointerup';
+      await page.evaluate(({domType,id})=>{
+        window.__placementRelease=null;
+        const listener=e=>{
+          if(e.pointerId!==id)return;
+          window.removeEventListener(domType,listener,true);
+          window.__placementRelease={type:e.type,id:e.pointerId,target:e.target.id,trusted:e.isTrusted,time:performance.now(),gapBefore:HSC.view.clipperScreen().gap};
+        };
+        window.addEventListener(domType,listener,true);
+      },{domType,id});
+      await session.send('Input.dispatchTouchEvent',{type,touchPoints:[]});
+      // A CDP acknowledgment can precede DOM input delivery under software-GPU load.
+      // Require the genuine matching canvas event and reset; never invoke the reset helper here.
+      await page.waitForFunction(({domType,id})=>{
+        const e=window.__placementRelease;
+        return e?.type===domType&&e.id===id&&e.target==='scene'&&e.trusted&&HSC.view.clipperScreen().gap===null;
+      },{domType,id},{timeout:5000});
+      assert.equal(await page.evaluate(()=>HSC.view.clipperScreen().gap),null,'real end/cancel releases per-stroke clearance');
+      console.log('DOM-RELEASE',JSON.stringify(await page.evaluate(()=>__placementRelease)));
+    };
     await boot();
     assert.equal(await page.evaluate(async()=>(await HSC.youtubeClientPromise).platformId),'android');
     assert.deepEqual(external,[]);passed++;
-    for(const [width,height]of[[390,844],[844,390],[800,1280],[1280,800]]){
+    for(const [width,height]of(process.env.ANDROID_LAST_LAYOUT==='1'?[[1280,800]]:[[390,844],[844,390],[800,1280],[1280,800]])){
       await page.setViewportSize({width,height});await buffer();
       assert.deepEqual(await page.evaluate(()=>[HSC.detail.level,HSC.detail.minStrands,HSC.detail.segments,HSC.detail.antialias]),['high',30000,8,true]);
-      const p=await page.evaluate(()=>{
-        if(skinFadeStudio.getState().interactionMode!=='cut')skinFadeStudio.toggleClipper();
-        skinFadeStudio.selectGuard(0);const b=HSC.view.headScreen();
-        for(const y of[.3,.4,.5,.6])for(const x of[.5,.4,.6]){
-          const p={x:b.left+(b.right-b.left)*x,y:b.top+(b.bottom-b.top)*y};
-          if((()=>{const hit=HSC.view.raycast(p.x,p.y);return hit&&hit.kind!=='beard';})()){
-            window.__rays=[];const ray=HSC.view.raycast;
-            HSC.view.raycast=(x,y)=>{__rays.push([x,y]);return ray(x,y);};return {...p,gap:Math.min(72,document.querySelector('#scene').clientHeight*.12)};
-          }
-        }throw Error('head must remain reachable after resize');
-      });
       const session=await ctx.newCDPSession(page);
-      await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y+p.gap,radiusX:8,radiusY:8}]});
-      await page.waitForTimeout(60);
-      await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-      const rays=await page.evaluate(()=>__rays);
-      assert(rays.some(([x,y])=>Math.abs(x-p.x)<1&&Math.abs(y-p.y)<1),'touch and visible blade share the exact YouTube ray target');
-      await page.evaluate(()=>{__rays=[];});
-      await page.mouse.move(p.x,p.y);await page.mouse.down();await page.mouse.up();
-      assert((await page.evaluate(()=>__rays)).some(([x,y])=>Math.abs(x-p.x)<1&&Math.abs(y-p.y)<1),'mouse remains direct, exactly as YouTube');
+      const zoomProbe=await page.evaluate(()=>{
+        const parent=document.querySelector('.ui'),probe=document.createElement('div');
+        probe.style.cssText='position:fixed;left:0;top:0;width:10px;height:10px;zoom:2;visibility:hidden;pointer-events:none';
+        parent.append(probe);const width=probe.getBoundingClientRect().width,scale=parseFloat(getComputedStyle(parent).zoom)||1;probe.remove();return{width,scale};
+      });
+      assert(Math.abs(zoomProbe.width-20*zoomProbe.scale)<.25,'UI client rects must include cumulative CSS zoom');
+      for(const guard of [3,1]){
+        const p=await page.evaluate(g=>{
+          const button=document.querySelector(`#hud [role="radio"][aria-label^="Guard ${g},"]`),r=button.getBoundingClientRect();
+          window.__guardContact=null;window.addEventListener('pointerdown',e=>{__guardContact={trusted:e.isTrusted,label:e.target.closest('button')?.getAttribute('aria-label')};},{capture:true,once:true});
+          return{x:r.left+r.width/2,y:r.top+r.height/2};
+        },guard);
+        await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:8,radiusY:8}]});
+        await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        await page.waitForFunction(g=>skinFadeStudio.getState().selectedGuard===g,guard,{timeout:5000});
+        const touch=await page.evaluate(()=>__guardContact);
+        assert(touch?.trusted&&touch.label.startsWith(`Guard ${guard},`),'real touch must select the visible intermediate guard');
+      }
+      if(process.env.ANDROID_GUARD_ONLY==='1'){await session.detach();passed++;continue;}
+      for(const region of (process.env.ANDROID_PLACEMENT_SMOKE==='1'?['top-scalp']:['top-scalp','sideburn','beard','lower-scalp'])){
+        console.log('REGION',width,height,region);
+        const p=await page.evaluate(region=>{
+          if(skinFadeStudio.getState().interactionMode!=='cut')skinFadeStudio.toggleClipper();
+          skinFadeStudio.selectGuard(0);
+          const yaw=region==='beard'?180:region==='sideburn'?-90:-55;
+          skinFadeStudio.turn(yaw-skinFadeStudio.getState().cameraYawDeg);
+          const b=HSC.view.headScreen();
+          const rows=region==='beard'?Array.from({length:Math.max(0,Math.ceil((innerHeight-25-b.bottom)/24))},(_,i)=>b.bottom+i*24):
+            (region==='top-scalp'?[.2,.25,.3,.35]:region==='sideburn'?[.8,.95,1.1,1.25,.65]:[.9,1,1.1,1.2]).map(fy=>b.top+(b.bottom-b.top)*fy);
+          for(const cy of rows)
+          for(const fx of(region==='sideburn'?[.15,.85,.25,.75,.35,.65]:[.5,.4,.6,.3,.7,.2,.8])){
+            const contact={clientX:b.left+(b.right-b.left)*fx,clientY:cy,pointerType:'touch'};
+            if(contact.clientY<25||contact.clientY>innerHeight-25)continue;
+            const t=HSC.view.touchTarget(contact),hit=HSC.view.raycast(t.x,t.y);
+            if(hit&&(region==='beard'?hit.kind==='beard':hit.kind!=='beard')&&(region!=='sideburn'||(Math.abs(hit.position[0])>.7&&hit.v<.4))&&(region!=='top-scalp'||hit.v>.65)&&(region!=='lower-scalp'||hit.v<.3)){
+              window.__placementContact=null;
+              window.addEventListener('pointerdown',e=>window.__placementContact={x:e.clientX,y:e.clientY,type:e.pointerType,id:e.pointerId,trusted:e.isTrusted},{capture:true,once:true});
+              return {x:contact.clientX,y:contact.clientY};
+            }
+          }
+          throw Error('No reachable '+region+' touch target');
+        },region);
+        await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:8,radiusY:8}]});
+        await page.waitForFunction(()=>HSC.view.clipperScreen().visible);
+        await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+        const geometry=await page.evaluate(()=>({contact:__placementContact,model:HSC.view.clipperScreen(),cut:window.HSC.lastCut}));
+        console.log('PLACEMENT',JSON.stringify({width,height,region,...geometry}));
+        await page.evaluate(({p,geometry,region})=>{
+          // Pin a genuine frame only during diagnostic composition, as in installed-APK QA.
+          const view=HSC.view,render=view.render;window.__placementCapturePin={view,render};view.render=function(){};
+          const overlay=document.createElement('div');overlay.id='placement-diagnostic';overlay.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:99999';
+          for(const [name,point,color,size]of[['contact',p,'#ff4060',48],['teeth',geometry.model.teeth,'#00ffff',8],['grip',geometry.model.grip,'#ffff00',8]]){
+            const m=document.createElement('div');m.dataset.point=name;m.style.cssText=`position:absolute;left:${point.x-size/2}px;top:${point.y-size/2}px;width:${size}px;height:${size}px;border:2px solid ${color};border-radius:50%;box-sizing:border-box`;overlay.append(m);
+          }
+          document.body.append(overlay);
+          (window.__placementEvidence||=[]).push({region,...geometry});
+        },{p,geometry,region});
+        await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+        const dir=path.join(root,'qa/results');fs.mkdirSync(dir,{recursive:true});
+        try{await page.screenshot({path:path.join(dir,`android-browser-placement-${width}x${height}-${region}.png`)});}
+        finally{await page.evaluate(()=>{const p=__placementCapturePin;p.view.render=p.render;delete window.__placementCapturePin;});}
+        assert(geometry.contact?.trusted&&geometry.contact.type==='touch');
+        assert(geometry.model.visible,'actual model must be visible while touch is held');
+        const {teeth,grip,target}=geometry.model;
+        assert(Math.hypot(teeth.x-target.x,teeth.y-target.y)<5,'projected teeth must agree with the real cutting surface');
+        assert(p.y-teeth.y>=34,'real teeth must clear24px occlusion radius by at least10px');
+        assert(p.y-teeth.y<=50,'candidate must avoid the previously excessive portrait gap');
+        assert(geometry.model.gap>=36&&geometry.model.gap<=45,'requested gap obeys measured visibility bounds');
+        await page.evaluate(()=>document.querySelector('#placement-diagnostic').remove());
+        let validMoves=0;
+        for(const [dx,dy]of(process.env.ANDROID_PLACEMENT_SMOKE==='1'?[[8,0]]:[[8,0],[-8,8],[0,-8]])){
+          const contact={x:p.x+dx,y:p.y+dy};
+          await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{...contact,radiusX:8,radiusY:8}]});
+          await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+          const moved=await page.evaluate(()=>HSC.view.clipperScreen());
+          if(!moved.visible||!moved.target)continue; // off the model correctly hides the tool
+          validMoves++;
+          assert.equal(moved.gap,geometry.model.gap,'gap must not jump across surface normals during a stroke');
+          assert(Math.hypot(moved.teeth.x-moved.target.x,moved.teeth.y-moved.target.y)<5,'moved actual teeth track cutter');
+          assert(contact.y-moved.teeth.y>=34&&contact.y-moved.teeth.y<=50,'moved blade stays outside occlusion envelope');
+          await page.evaluate(item=>__placementEvidence.push(item),{region,move:true,contact,model:moved});
+        }
+        assert(validMoves>0,'at least one held move must remain on '+region);
+        await releaseTouch(session,region==='sideburn'?'touchCancel':'touchEnd',geometry.contact.id);
+        // A second real stroke must acquire a new gap after release.
+        await page.evaluate(()=>window.addEventListener('pointerdown',e=>{__placementContact={id:e.pointerId};},{capture:true,once:true}));
+        await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:8,radiusY:8}]});
+        await page.waitForFunction(()=>HSC.view.clipperScreen().visible);
+        const reused=await page.evaluate(()=>({id:__placementContact.id,gap:HSC.view.clipperScreen().gap}));
+        console.log('POINTER-REUSE',JSON.stringify({previous:geometry.contact.id,current:reused.id,gap:reused.gap}));
+        assert(reused.gap>=36&&reused.gap<=45,'reused pointer receives bounded new stroke gap');
+        await releaseTouch(session,'touchEnd',reused.id);
+        assert.equal(await page.evaluate(()=>HSC.view.clipperScreen().gap),null);
+      }
+      // Mouse/pen continue to target their actual pointer, independent of touch grip placement.
+      const mouse=await page.evaluate(()=>{const b=HSC.view.headScreen();return{x:b.x,y:b.y};});
+      await page.mouse.move(mouse.x,mouse.y);await page.mouse.down();
+      await page.waitForFunction(()=>HSC.view.clipperScreen().visible);
+      const m=await page.evaluate(()=>HSC.view.clipperScreen());
+      assert(Math.hypot(m.target.x-mouse.x,m.target.y-mouse.y)<2,'mouse target remains direct');
+      await page.evaluate(()=>{
+        window.__placementMouseRelease=null;
+        const listener=e=>{
+          if(e.pointerType!=='mouse')return;
+          window.removeEventListener('pointerup',listener,true);
+          __placementMouseRelease={target:e.target.id,trusted:e.isTrusted,id:e.pointerId};
+        };
+        window.addEventListener('pointerup',listener,true);
+      });
+      await page.mouse.up();
+      await page.waitForFunction(()=>__placementMouseRelease?.trusted&&__placementMouseRelease.target==='scene',undefined,{timeout:5000});
+      const reuse=await page.evaluate(p=>{
+        const v=HSC.view,a={clientX:p.x,clientY:p.y,pointerType:'touch',pointerId:777};
+        const first=v.touchTarget(a),moved=v.touchTarget({...a,clientY:a.clientY+12});
+        v.resetTouchTarget();const cleared=v.clipperScreen().gap;
+        const preview=v.touchTarget({clientX:a.clientX,clientY:a.clientY+12,pointerType:'touch'});
+        const next=v.touchTarget({...a,clientY:a.clientY+12});
+        v.resetTouchTarget();
+        const pen=v.touchTarget({...a,pointerType:'pen'});
+        return{first,moved,cleared,preview,next,pen};
+      },mouse);
+      assert.equal(reuse.first.gap,reuse.moved.gap,'same pointer retains one gap within stroke');
+      assert.equal(reuse.cleared,null,'explicit interruption clears cached ID');
+      assert.equal(reuse.next.gap,reuse.preview.gap,'reused pointer ID computes fresh target after reset');
+      assert.deepEqual(reuse.pen,{x:mouse.x,y:mouse.y,gap:0},'pen remains direct');
       await session.detach();passed++;
     }
+    if(process.env.ANDROID_GUARD_ONLY==='1'||process.env.ANDROID_PLACEMENT_SMOKE==='1'){assert.deepEqual(errors,[]);console.log(`PASS: ${passed} Android zoom/guard and ${process.env.ANDROID_PLACEMENT_SMOKE==='1'?'four-layout placement smoke':'compatibility'} cases with zero page errors.`);return;}
+    fs.writeFileSync(placementReport,JSON.stringify(await page.evaluate(()=>window.__placementEvidence||[]),null,2));
     const saved=await page.evaluate(async()=>{
       const c=await HSC.youtubeClientPromise;await c.flushProgress();return JSON.stringify(skinFadeStudio.getState().hair);
     });
@@ -117,5 +247,7 @@ function fakeHost() {
     await page.waitForFunction(()=>!document.querySelector('#scene').getContext('webgl2').isContextLost()&&!skinFadeStudio.getView().paused);
     await buffer();passed++;
     assert.deepEqual(errors,[]);console.log(`PASS: ${passed} working Android runtime browser cases.`);
-  }catch(e){console.error(`FAIL after ${passed}:`,e);process.exitCode=1;}finally{await browser.close();}
+  }catch(e){console.error(`FAIL after ${passed}:`,e);process.exitCode=1;}finally{
+    if(reviewPage)try{const dir=path.join(root,'qa/results');fs.mkdirSync(dir,{recursive:true});const evidence=await reviewPage.evaluate(()=>window.__placementEvidence||[]);if(evidence.length)fs.writeFileSync(placementReport,JSON.stringify(evidence,null,2));}catch(_){}
+    await browser.close();}
 })();

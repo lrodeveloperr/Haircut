@@ -118,6 +118,11 @@ public class MainActivity extends ComponentActivity {
 
     void onGameReady() { gameReady = true; }
 
+    void openPrivacy() {
+        // Policy text is maintained on the website, never bundled or displayed inside the game.
+        openExternal(Uri.parse("https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/"));
+    }
+
     void openExternal(Uri url) {
         if (!"https".equals(url.getScheme())) return;
         try {

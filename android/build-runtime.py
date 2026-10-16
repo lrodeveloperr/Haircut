@@ -15,9 +15,21 @@ def replace(text, old, new):
         raise ValueError(f'Android host adaptation expected one occurrence: {old[:100]}')
     return text.replace(old, new)
 
-# Preserve the entire working YouTube engine, including its blade-visible touch
-# clearance and direct mouse/pen aiming. Do not patch either input path.
-assert (out / 'runtime/game.js').read_bytes() == (source / 'build-youtube/runtime/game.js').read_bytes()
+# Keep the working renderer and adapt only Android touch targeting. A finger holds
+# a bounded projected-grip target instead of using the former 24/72px extremes.
+game = (out / 'runtime/game.js').read_text()
+game = replace(game, 'let ae=ue=>{ue.preventDefault();k=true;',
+               (root / 'android/clipper-input.js').read_text() + '\nlet ae=ue=>{ue.preventDefault();k=true;')
+game = replace(game, 'raycast:j,getYaw()', 'raycast:j,touchTarget:androidTouchTarget,resetTouchTarget:androidResetTouchTarget,clipperScreen:androidClipperScreen,getYaw()')
+game = replace(game, 'f=null,o.stop(),n.setClipper(!1)', 'f=null,o.stop(),n.resetTouchTarget(),n.setClipper(!1)')
+game = replace(game, 'let ae=j.clientX,fe=j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0),ue=n.raycast(ae,fe);',
+               'let target=n.touchTarget(j),ae=target.x,fe=target.y,ue=n.raycast(ae,fe);')
+game = replace(game, 'let ae=j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0),fe=j.pointerType==="touch"?22:12;',
+               'let target=n.touchTarget(j),ae=target.y,fe=j.pointerType==="touch"?22:12;')
+# Guard arc anchors are local design units; pointer events are viewport pixels.
+game = replace(game, 'C=w.left+ds-p.clientX,x=w.top+ds-p.clientY',
+               'C=w.left+ds*(w.width/i.current.offsetWidth)-p.clientX,x=w.top+ds*(w.height/i.current.offsetHeight)-p.clientY')
+(out / 'runtime/game.js').write_text(game)
 
 client = (out / 'runtime/local-preview-client.js').read_text()
 client = replace(client, 'HSC.createLocalPreviewClient', 'HSC.createAndroidClient')
@@ -57,8 +69,11 @@ startup = (out / 'runtime/local-preview-startup.js').read_text().replace('HSC.cr
 (out / 'runtime/android-startup.js').write_text(startup)
 (out / 'runtime/local-preview-startup.js').unlink()
 shutil.copy2(root / 'android/native-transport.js', out / 'runtime/android-transport.js')
+shutil.copy2(root / 'android/viewport-compat.js', out / 'runtime/android-viewport.js')
+shutil.copy2(root / 'android/privacy.js', out / 'runtime/android-privacy.js')
 html = (out / 'index.html').read_text().replace('local-preview-client.js', 'android-client.js').replace('local-preview-startup.js', 'android-startup.js')
-html = replace(html, '  <script src="./runtime/android-client.js', '  <script src="./runtime/android-transport.js"></script>\n  <script src="./runtime/android-client.js')
+html = replace(html, '  <script src="./runtime/android-client.js', '  <script src="./runtime/android-viewport.js"></script>\n  <script src="./runtime/android-transport.js"></script>\n  <script src="./runtime/android-client.js')
+html = replace(html, '  <script src="./runtime/game.js', '  <script src="./runtime/android-privacy.js"></script>\n  <script src="./runtime/game.js')
 (out / 'index.html').write_text(html)
 spec = importlib.util.spec_from_file_location('android_policy', root / 'android/patch-runtime.py')
 policy = importlib.util.module_from_spec(spec)
@@ -74,4 +89,4 @@ shutil.move(str(source / 'build'), foundation)
 shutil.copytree(out, source / 'build')
 for file in (out / 'runtime').glob('*.js'):
     subprocess.run(['node', '--check', str(file)], check=True)
-print('Android: working Sites engine, asynchronous native host, exact YouTube blade-visible input mapping')
+print('Android: working Sites engine, asynchronous native host, projected clipper-grip touch targeting')

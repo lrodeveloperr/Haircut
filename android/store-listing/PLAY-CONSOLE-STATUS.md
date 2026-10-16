@@ -35,7 +35,7 @@ The listing passed the Assets step, was saved from its Review step, and the reop
 
 ## Remaining release work
 
-Implement, build, sign and validate the Android wrapper/AAB against the approved configuration below, then upload a release for testing. The saved store listing is complete; it is not a verified Android binary.
+The native wrapper/SDK bridge and test-ad APK are implemented; the owner approved v1.0.5 cutting and clipper distance. The approved privacy shield is implemented for v1.0.6 and the public policy access instructions are deployed. Native privacy verification, production-only AdMob configuration, signing/AAB and submission are tracked in [the canonical Android release handoff](../RELEASE-HANDOFF.md). Keep testing on test IDs; live AdMob is the last configuration step before release packaging/submission. The listing remains a saved draft until an actual release is sent for review.
 
 ## Android release implementation boundary
 
