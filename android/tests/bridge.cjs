@@ -94,10 +94,18 @@ function fakeHost() {
     // Trusted Android-style touch drives the same cutting point, without the old upward bias.
     const point = await page.evaluate(() => {
       const game = skinFadeStudio, view = HSC.view;
-      game.completeTutorial();
       if (game.getState().interactionMode !== 'cut') game.toggleClipper();
       game.selectGuard(1);
-      const p = game.hairHint();
+      const box = view.headScreen();
+      let p;
+      for (const y of [0.2, 0.3, 0.4, 0.5]) {
+        for (const x of [0.5, 0.4, 0.6]) {
+          const candidate = { x: box.left + (box.right - box.left) * x, y: box.top + (box.bottom - box.top) * y };
+          if (view.raycast(candidate.x, candidate.y)) { p = candidate; break; }
+        }
+        if (p) break;
+      }
+      if (!p) throw Error('no valid head contact for touch test');
       window.__touchRays = [];
       const raycast = view.raycast;
       view.raycast = (x, y) => { __touchRays.push({ x, y }); return raycast(x, y); };
