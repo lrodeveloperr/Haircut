@@ -2,7 +2,13 @@
 
 The owner authorized a full Google policy/listing review and submission. This is a readiness review, not a guarantee of Google approval.
 
-## Evidence and findings before further code changes
+## Owner-directed rollback — current status
+
+**Current status — owner-requested rollback, 16 October 2026:** The unapproved age prompt and blanket under-18 ad block have been removed. Native implementation and native test workflow exactly match `9032cdf838cb01673c31ae29f6d82c692570c94d`. Build 9 was withdrawn from Google review and is now an unsubmitted release. The original signed **v1.0.7 (8)** is verified and available for restoration. No new build or emulator run was needed. Replacement/resubmission awaits explicit owner approval; automatic approval review blocked discarding the withdrawn release. Do not submit build 9. See [rollback record](ROLLBACK-AGE-GATE-2026-10-16.md).
+
+The earlier decision to block every under-18 player was an unapproved product/monetization change, not a universal Google requirement. The audit below is historical and must not be used to reintroduce that design. Advertising does not automatically raise IARC ratings; ads/offers must fit the assigned content rating. Existing ESRB Everyone / PEGI 3 and target audience 13+ have not been changed. No blanket compliance guarantee is made for the restored baseline.
+
+## Historical evidence and findings before further code changes
 
 - Existing app/package verified in Play Console; no duplicate created.
 - Signed v1.0.7 (8) uploaded and parsed successfully; target API 36, estimated Play download 2.77 MB. Production draft created with release notes in all ten listing languages.
@@ -27,7 +33,7 @@ Preserve gameplay, cutting geometry, wardrobe controls and earned-reward rules. 
 - https://developers.google.com/admob/android/targeting
 - https://support.google.com/admob/answer/7313578
 
-## Submission status
+## Historical submission status
 
 **Submitted to Google review.** At 2026-10-16T21:22:13Z, Publishing overview explicitly showed **Changes in review** and **Your changes are now in review** after the final quick checks completed. All 21 changes include production **1.0.8 (9)**, ten localized listings and their declarations. Managed publishing is off; full rollout follows Google approval. This is not an approval or publication claim.
 

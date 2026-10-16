@@ -16,5 +16,3 @@ PILIH DESAIN PERLENGKAPANMU
 Pilih desain mesin cukur dan kain penutup pelanggan di lemari. Item harian bersifat opsional: tonton dua iklan video berhadiah sampai selesai untuk membuka setiap item.
 
 Selesaikan potongan, nikmati hasilnya, lalu lanjutkan ke pelanggan berikutnya. Simulator potong rambut untuk penggemar fade, detail, dan kebebasan berkreasi.
-
-Ketersediaan iklan berbeda menurut usia dan wilayah.

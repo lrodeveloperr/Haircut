@@ -51,7 +51,6 @@ final class AdsController {
     }
 
     void start() {
-        if (destroyed || !AdAgeGate.advertisingAllowed(activity)) return;
         MobileAds.setRequestConfiguration(new RequestConfiguration.Builder()
                 .setMaxAdContentRating(RequestConfiguration.MAX_AD_CONTENT_RATING_G).build());
         consent = UserMessagingPlatform.getConsentInformation(activity);
@@ -93,7 +92,7 @@ final class AdsController {
     }
 
     private boolean canRequestAds() {
-        return AdAgeGate.advertisingAllowed(activity) && consent != null && consent.canRequestAds();
+        return consent != null && consent.canRequestAds();
     }
 
     private void initAds() {

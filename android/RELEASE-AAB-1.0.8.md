@@ -1,6 +1,8 @@
 # Android production bundle — v1.0.8 (9)
 
-Built and validated on 16 October 2026 for the existing Play app `com.worksbien.barbersimulatorasmr`.
+**WITHDRAWN — DO NOT SUBMIT.** The owner rejected the unapproved age gate/ad block. Build 9 was removed from review and remains only an unsubmitted Console release. Restore the original signed v1.0.7 (8) after explicit approval. [Rollback record](ROLLBACK-AGE-GATE-2026-10-16.md).
+
+Historical record: built and validated on 16 October 2026 for the existing Play app `com.worksbien.barbersimulatorasmr`.
 
 | Field | Verified value |
 | --- | --- |

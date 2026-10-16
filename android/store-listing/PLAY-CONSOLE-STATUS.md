@@ -2,16 +2,15 @@
 
 Updated 16 October 2026, America/Toronto.
 
-## Current review state
+## Current rollback state
 
-**Production v1.0.8 (9) and all 21 changes are in Google review**, confirmed 2026-10-16T21:22:13Z. Final quick checks completed successfully and Publishing overview states **Your changes are now in review**. Managed publishing off; full rollout follows approval. No approval/publication claim.
+**Build 9 has been withdrawn from review** at the owner’s instruction. Console confirms **Changes not yet submitted for review** and release 1.0.8 (9) **Not yet sent for review**. It has not been published.
 
-- [Verified Console](https://play.google.com/console/u/0/developers/7097804603172918698/app/4975100930006889688/publishing)
-- [Complete policy/listing audit](../PLAY-RELEASE-AUDIT-2026-10-16.md)
-- [Exact signed artifact and verification](../RELEASE-AAB-1.0.8.md)
-- Release regions: 176 named countries excluding mainland China plus rest of world (177 entries). Ten locales and release-note languages.
-- Advertising ID declaration completed; icon and feature artwork AI labels saved. Four actual gameplay screenshots retain non-AI status. Every description includes age/region ad availability.
-- Privacy policy updated live for the neutral local age choice. Unknown and under-18 users cannot initiate UMP, explicit Mobile Ads initialization or ad requests. Core game available; all 11 native age/privacy checks passed across four layouts.
+The native age question and blanket under-18 advertising block are removed in source. Original signed v1.0.7 (8) is intact, verified and available for reuse. No rebuild or emulator run was needed. Restoring the Console release and resubmitting requires explicit owner approval: automatic approval review rejected Discard release, and Manage artifact returned an unexpected Console error.
+
+The existing Advertising ID and AI artwork declarations remain. Original full descriptions are restored in the repository; live removal of the added age/region sentence is pending approval with the replacement submission. Existing ratings remain ESRB Everyone / PEGI 3; declared target audience remains 13+. [Rollback record](../ROLLBACK-AGE-GATE-2026-10-16.md).
+
+## Historical saved/submitted state
 
 ## Saved and verified in Play Console
 
@@ -44,7 +43,7 @@ Source directory: `android/store-listing/en-US/images/phoneScreenshots/`. Each f
 
 The listing passed the Assets step, was saved from its Review step, and the reopened editor showed all four filenames in order, count 4/8, and **Ready to send for review**. Other languages inherit default graphics when localized graphics are absent. Optional video remains empty. These assets are now part of the submitted listing.
 
-## Remaining release work
+## Historical remaining release work
 
 Google review and publication are pending. No further edits or resubmission are needed while this revision is in review. After publication, link the public listing in AdMob and complete app readiness; record actual serving status. Account approval does not mean this game is approved for full ad serving.
 

@@ -1,11 +1,3 @@
 <resources>
-    <string name="app_name" translatable="false">Barber Simulator: ASMR Haircut</string>
-    <string name="age_title">What is your age group?</string>
-    <string name="age_continue">Continue</string>
-    <string-array name="age_bands">
-        <item>Under 13</item>
-        <item>13–15</item>
-        <item>16–17</item>
-        <item>18 or older</item>
-    </string-array>
+    <string name="app_name">Barber Simulator: ASMR Haircut</string>
 </resources>

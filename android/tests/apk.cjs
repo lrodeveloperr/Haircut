@@ -60,23 +60,6 @@ async function ready(){
   });
 }
 async function screenshot(name){const png=execFileSync(adbPath,['exec-out','screencap','-p'],{timeout:30000,maxBuffer:32*1024*1024});fs.writeFileSync(path.join(out,'android-installed-'+name+'.png'),png);return png;}
-async function completeAdultAgeFixture() {
-  try { if(adb('shell','run-as',app,'cat','shared_prefs/advertising-age.xml').includes('value="3"')) return; } catch (_) {}
-  let xml;
-  for(let attempt=0;attempt<4;attempt++) {
-    adb('shell','uiautomator','dump','--compressed','/sdcard/age-fixture.xml');
-    xml=adb('shell','cat','/sdcard/age-fixture.xml');
-    if(xml.includes('What is your age group?'))break;
-  }
-  const tapText=text=>{
-    const n=(xml.match(/<node[^>]*>/g)||[]).find(n=>n.match(/text="([^"]*)"/)?.[1].toLowerCase()===text.toLowerCase());
-    const b=n?.match(/bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/);assert(b,'native adult fixture control missing: '+text);
-    adb('shell','input','tap',String((+b[1]+ +b[3])>>1),String((+b[2]+ +b[4])>>1));
-  };
-  tapText('18 or older');
-  adb('shell','uiautomator','dump','--compressed','/sdcard/age-fixture.xml');xml=adb('shell','cat','/sdcard/age-fixture.xml');
-  tapText('Continue');
-}
 async function offlineAdvertisement() {
   // Disabling connectivity cannot invalidate an already cached Google test ad.
   // Observe real native callbacks; close only a labelled native ad close control.
@@ -333,7 +316,6 @@ async function nativeWebViewBounds(){
       await pause(500);
       // Fresh WebView per density: do not carry stale page scale between fake devices.
       adb('shell','am','start','-W','-n',activity);
-      await completeAdultAgeFixture();
       await connect();page.on('pageerror',e=>errors.push(e.message));await ready();
       await page.waitForFunction(landscape=>(innerWidth>innerHeight)===landscape,spec.rotation===1);
       assert.equal(await page.evaluate(async()=>(await HSC.youtubeClientPromise).platformId),'android');
