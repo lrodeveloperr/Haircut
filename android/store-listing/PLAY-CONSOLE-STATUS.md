@@ -22,7 +22,7 @@ Updated 16 October 2026, America/Toronto.
 
 ## Remaining setup item
 
-**Actual gameplay screenshots only.** The icon and feature graphic are uploaded and saved after owner approval. Phone screenshots are still absent (Console requires 2–8). Do not reuse cover artwork as purported gameplay screenshots. All ten languages' text is saved; optional video remains empty.
+**Actual gameplay screenshots only.** The icon and feature graphic are uploaded and saved after owner approval. Phone screenshots are still absent (Console requires 2–8). Four 1080×1920 gameplay screenshots are prepared in [screenshots/](screenshots/README.md), not yet uploaded. Do not reuse cover artwork as purported gameplay screenshots. All ten languages' text is saved; optional video remains empty.
 
 ## Android release implementation boundary
 
