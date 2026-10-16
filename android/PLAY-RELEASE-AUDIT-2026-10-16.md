@@ -2,7 +2,13 @@
 
 The owner authorized a full Google policy/listing review and submission. This is a readiness review, not a guarantee of Google approval.
 
-## Owner-directed rollback — current status
+## Latest approved release state
+
+**Current release: v1.0.7 (8), submission accepted.** The owner explicitly approved replacement/resubmission at 17:41 New York time on 16 October 2026. The withdrawn build 9 release was discarded; its artifact remains in Console history. Original signed build 8 was selected from the existing artifact library, accepted, and marked Ready to release with no release validation error. All 21 changes were sent for review. At 2026-10-16T21:55:47Z, Publishing overview showed **Changes in review**, with automated quick checks still running and the notice that changes will proceed to review once checks complete. This is a submission acknowledgement, not a completed-check, approval or publication claim.
+
+All ten original descriptions restored and verified live; public privacy rollback verified. Existing Advertising ID/AI declarations retained. No new gameplay, monetization, audience or age-rating change. The blanket under-18 block is absent from the restored source and the submitted original build 8.
+
+## Owner-directed rollback history
 
 **Current status — owner-requested rollback, 16 October 2026:** The unapproved age prompt and blanket under-18 ad block have been removed. Native implementation and native test workflow exactly match `9032cdf838cb01673c31ae29f6d82c692570c94d`. Build 9 was withdrawn from Google review and is now an unsubmitted release. The original signed **v1.0.7 (8)** is verified and available for restoration. No new build or emulator run was needed. Replacement/resubmission awaits explicit owner approval; automatic approval review blocked discarding the withdrawn release. Do not submit build 9. See [rollback record](ROLLBACK-AGE-GATE-2026-10-16.md).
 

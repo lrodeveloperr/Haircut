@@ -1,6 +1,6 @@
 # Android privacy and Data safety release configuration
 
-The native wrapper and original AdMob/UMP flow are implemented and restored to the pre-age-gate baseline at the owner’s explicit request. There is no native age question or blanket under-18 ad block. The unapproved age-band paragraph was removed from the public privacy policy in website commit `b84473749ee137893747d88b9907cc98d8b83ded`. Game saves retain the original OS-backup behavior. Build 9 is withdrawn; original signed v1.0.7 (8) is available for restoration after approval. See [rollback record](ROLLBACK-AGE-GATE-2026-10-16.md).
+The native wrapper and original AdMob/UMP flow are implemented and restored to the pre-age-gate baseline at the owner’s explicit request. There is no native age question or blanket under-18 ad block. The unapproved age-band paragraph was removed from the public privacy policy in website commit `b84473749ee137893747d88b9907cc98d8b83ded`. Game saves retain the original OS-backup behavior. Build 9’s release is discarded; original signed v1.0.7 (8) was restored and submitted after explicit approval. Automated Google checks/review are pending. The rollback policy was verified live. See [rollback record](ROLLBACK-AGE-GATE-2026-10-16.md).
 
 ## Approved release data boundary
 

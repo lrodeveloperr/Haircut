@@ -2,13 +2,20 @@
 
 Updated 16 October 2026, America/Toronto.
 
-## Current rollback state
+## Current release state
 
-**Build 9 has been withdrawn from review** at the owner’s instruction. Console confirms **Changes not yet submitted for review** and release 1.0.8 (9) **Not yet sent for review**. It has not been published.
+**Current release: v1.0.7 (8), submission accepted.** The owner explicitly approved replacement/resubmission at 17:41 New York time on 16 October 2026. The withdrawn build 9 release was discarded; its artifact remains in Console history. Original signed build 8 was selected from the existing artifact library, accepted, and marked Ready to release with no release validation error. All 21 changes were sent for review. At 2026-10-16T21:55:47Z, Publishing overview showed **Changes in review**, with automated quick checks still running and the notice that changes will proceed to review once checks complete. This is a submission acknowledgement, not a completed-check, approval or publication claim.
 
-The native age question and blanket under-18 advertising block are removed in source. Original signed v1.0.7 (8) is intact, verified and available for reuse. No rebuild or emulator run was needed. Restoring the Console release and resubmitting requires explicit owner approval: automatic approval review rejected Discard release, and Manage artifact returned an unexpected Console error.
+- Existing bundle **8 (1.0.7)** only in the replacement production release; measured new-install download **2.77 MB**, API 26+ / target 36. No version-code increase or rebuild needed.
+- All ten full descriptions restored exactly, verified in the live editor against repository source, and saved. Thirty canonical source fields pass the listing validator.
+- Ten initial release-note languages saved. Original regions, full rollout after approval, ratings, target audience and ads preserved.
+- Advertising ID and icon/feature AI labels retained. Four authentic gameplay screenshots and all approved media unchanged.
+- Public privacy page reopened live after rollback deployment: no age-band paragraph or under-18 ad-block claim.
+- ESRB Everyone / PEGI 3; audience 13–15, 16–17 and adults. No age/rating change performed.
 
-The existing Advertising ID and AI artwork declarations remain. Original full descriptions are restored in the repository; live removal of the added age/region sentence is pending approval with the replacement submission. Existing ratings remain ESRB Everyone / PEGI 3; declared target audience remains 13+. [Rollback record](../ROLLBACK-AGE-GATE-2026-10-16.md).
+Verified Console: https://play.google.com/console/u/0/developers/7097804603172918698/app/4975100930006889688/publishing
+
+[Exact artifact](../RELEASE-AAB-1.0.7.md) · [Rollback and owner approval](../ROLLBACK-AGE-GATE-2026-10-16.md).
 
 ## Historical saved/submitted state
 

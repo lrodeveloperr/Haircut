@@ -13,11 +13,22 @@ The owner rejected the unapproved native age question and blanket under-18 ad bl
 - Unapproved age-band paragraph removed from public privacy source, website commit `b84473749ee137893747d88b9907cc98d8b83ded`.
 - Owner approval boundary recorded in root `AGENTS.md` and canonical handoff.
 
-## Pending approval / blocker
+## Earlier approval block — resolved
 
 The Console replacement is not complete. Automatic approval review rejected clicking **Discard release**, citing a destructive/costly-to-recreate draft action and asking for explicit authorization. No bypass was attempted. The safer **Manage artifact** menu returned unexpected Console error `(451B47CD)` and offered no replacement action. The existing build 9 release remains withdrawn, not deleted or resubmitted.
 
 Proposed next action for owner approval: discard only the withdrawn **1.0.8 (9) release**, create its replacement from the already uploaded original **1.0.7 (8)** bundle, retain/reapply the ten original release notes and existing rollout/countries, remove the added age-specific availability wording from live descriptions, verify Console checks, then resubmit. The original AAB and release-note source are preserved. If Console requires a higher version code, stop and explain before rebuilding.
+
+## Approved restoration/submission — current result
+
+**Current release: v1.0.7 (8), submission accepted.** The owner explicitly approved replacement/resubmission at 17:41 New York time on 16 October 2026. The withdrawn build 9 release was discarded; its artifact remains in Console history. Original signed build 8 was selected from the existing artifact library, accepted, and marked Ready to release with no release validation error. All 21 changes were sent for review. At 2026-10-16T21:55:47Z, Publishing overview showed **Changes in review**, with automated quick checks still running and the notice that changes will proceed to review once checks complete. This is a submission acknowledgement, not a completed-check, approval or publication claim.
+
+- Automatic approval rejection resolved by the owner’s explicit instruction. Discard confirmation stated existing bundles remain in the artifact library; only the withdrawn release was discarded.
+- Original bundle **8 (1.0.7)** added from Console artifact library, ten release-note languages entered, preview Ready to release, measured new-install download **2.77 MB**. No higher version code required.
+- All ten original full descriptions restored and verified byte-for-byte through the live editor before Save. Existing declarations/media retained.
+- Public privacy rollback paragraph verified absent on the live HTTPS page.
+- **21 changes submitted**. Managed publishing remains off; full rollout follows approval. Google checks, review and publication remain external pending stages.
+- No further app/game/AdMob edits, new build, emulator run or live-ad request.
 
 ## Rating impact
 

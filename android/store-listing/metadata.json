@@ -4,7 +4,7 @@
   "decisionDate": "2026-10-15",
   "timeZone": "America/New_York",
   "namingStatus": "LOCKED",
-  "listingStatus": "Rollback requested; original two-video advertising flow restored in source; release preparation pending",
+  "listingStatus": "Original ten descriptions restored, verified live and submitted with build 8",
   "defaultLocale": "en-US",
   "title": "Barber Simulator: ASMR Haircut",
   "shortDescription": "Cut fades in a 3D barber shop with clipper sounds and freehand control.",
@@ -23,7 +23,7 @@
     "dashboardUrl": "https://play.google.com/console/u/0/developers/7097804603172918698/app/4975100930006889688/app-dashboard",
     "appType": "Game",
     "pricing": "Free",
-    "releaseStatus": "Age-gated build 9 withdrawn from review; restoring validated build 8",
+    "releaseStatus": "Production v1.0.7 (8) restored and submission accepted; automated quick checks in progress",
     "savedListingLocales": [
       "en-US",
       "es-419",
@@ -90,7 +90,7 @@
     },
     "remainingSetupTasks": [],
     "media": {
-      "status": "Approved icon, feature graphic and four authentic gameplay screenshots submitted; icon/feature AI labels saved",
+      "status": "Approved original assets retained and submitted with build 8",
       "icon": {
         "filename": "barber-icon-512x512.png",
         "width": 512,
@@ -143,7 +143,8 @@
       "sha256": "cecc1c906ec50e1d3ef03fc888f4bf53dea5af4844213080b3063bda65bcbfbd",
       "sourceCommit": "1b28d3eec9f15371398284b0e3237a5540130a78",
       "targetSdk": 36,
-      "track": "production"
+      "track": "production",
+      "playMeasuredDownload": "2.77 MB"
     },
     "advertisingId": {
       "usesAdvertisingId": true,
@@ -159,19 +160,35 @@
       "blanketUnder18AdBlock": false,
       "status": "Removed at explicit owner instruction on 2026-10-16; original advertising flow restored"
     },
-    "quickChecks": "Final post-submission quick checks completed successfully; Your changes are now in review",
+    "quickChecks": "Running after submission; manual review follows successful completion",
     "countryRegionEntries": 177,
     "mainlandChinaTargeted": false,
     "submission": {
-      "confirmedAtUtc": "2026-10-16T21:22:13Z",
-      "status": "Withdrawn at owner instruction",
+      "confirmedAtUtc": "2026-10-16T21:55:47Z",
+      "status": "Submitted; automated quick checks in progress",
+      "consoleSection": "Changes in review",
       "changes": 21,
       "track": "production",
       "managedPublishing": false,
       "fullRolloutAfterApproval": true,
       "verifiedConsoleUrl": "https://play.google.com/console/u/0/developers/7097804603172918698/app/4975100930006889688/publishing",
-      "approvalPending": true
-    }
+      "approvalPending": true,
+      "ownerApprovalReceivedAt": "2026-10-16T17:41:23-04:00",
+      "supersededRelease": "1.0.8 (9) withdrawn and release discarded"
+    },
+    "restoredFullDescriptionsVerifiedLive": [
+      "en-US",
+      "es-419",
+      "pt-BR",
+      "fr-FR",
+      "de-DE",
+      "ar",
+      "ja-JP",
+      "ko-KR",
+      "id",
+      "hi-IN"
+    ],
+    "publicPrivacyRollbackVerifiedLive": true
   },
   "differentiators": [
     "Freehand hair cutting",

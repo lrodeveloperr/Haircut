@@ -1,6 +1,6 @@
 # Signed Android AAB — v1.0.7 (8)
 
-Built and verified 16 October 2026. This record completes upload signing and production AAB generation. Store upload/submission is the next stage.
+Built and verified 16 October 2026. The same original signed artifact was restored from Play Console’s artifact library and submitted with owner approval after withdrawing/discarding the unapproved build 9 release. No rebuild or re-signing. Publishing overview acknowledges Changes in review; automated quick checks remain running as of 2026-10-16T21:55:47Z. Approval/publication pending.
 
 ## Exact release
 
@@ -35,7 +35,13 @@ Built and verified 16 October 2026. This record completes upload signing and pro
 - No camera, microphone, precise-location, contacts or personal-media/storage permission introduced.
 - No live ad was requested, displayed or clicked during artifact verification. This offline artifact verification does not assert physical-device UMP form rendering or AdMob serving approval.
 
-## Continuation
+## Current Play submission
+
+**Current release: v1.0.7 (8), submission accepted.** The owner explicitly approved replacement/resubmission at 17:41 New York time on 16 October 2026. The withdrawn build 9 release was discarded; its artifact remains in Console history. Original signed build 8 was selected from the existing artifact library, accepted, and marked Ready to release with no release validation error. All 21 changes were sent for review. At 2026-10-16T21:55:47Z, Publishing overview showed **Changes in review**, with automated quick checks still running and the notice that changes will proceed to review once checks complete. This is a submission acknowledgement, not a completed-check, approval or publication claim.
+
+Play measured download: **2.77 MB**. Ten listing/release-note languages and 177 country/region entries retained. Verified Console: https://play.google.com/console/u/0/developers/7097804603172918698/app/4975100930006889688/publishing
+
+## Original continuation instructions — historical
 
 Upload this exact AAB to existing Play app `com.worksbien.barbersimulatorasmr`, app ID `4975100930006889688`, and verify its accepted version/hash/certificate. Complete first-upload signing setup, final Console advertising/region/age declarations and automated checks before sending the release for review. Do not create another Play app. Post-publication store linking and AdMob readiness review remain separate.
 
