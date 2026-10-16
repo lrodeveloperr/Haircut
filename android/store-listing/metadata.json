@@ -103,7 +103,19 @@
         "height": 500
       },
       "provenance": "Existing approved MediaCube cover resized/cropped only; no added text",
-      "screenshots": "Pending actual gameplay captures",
+      "screenshots": {
+        "status": "Prepared in repo, not yet uploaded to Console",
+        "path": "en-US/images/phoneScreenshots/",
+        "files": [
+          "1-fade-clipper-back.png",
+          "2-skin-fade-side.png",
+          "3-buzz-clipper-top.png",
+          "4-beard-front.png"
+        ],
+        "width": 1080,
+        "height": 1920,
+        "provenance": "Real gameplay frames from the Android full-detail build; no captions"
+      },
       "video": "Omitted"
     }
   },
