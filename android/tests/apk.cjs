@@ -92,7 +92,7 @@ async function cut(label){
     adb('shell','svc','wifi','disable');adb('shell','svc','data','disable');
     adb('install','-r','android/native/app/build/outputs/apk/debug/app-debug.apk');
     adb('shell','settings','put','system','accelerometer_rotation','0');
-    adb('shell','settings','put','system','user_rotation','0');
+    adb('shell','wm','user-rotation','lock','0');
     adb('shell','am','start','-W','-n',activity);
     await connect();page.on('pageerror',e=>errors.push(e.message));await ready();
     report.webview=adb('shell','dumpsys','webviewupdate');
@@ -100,12 +100,14 @@ async function cut(label){
     check('installed APK boots full working engine');
     for(const spec of[
       {name:'phone-portrait',size:'1080x1920',density:'420',rotation:0},
-      {name:'phone-landscape',size:'1080x1920',density:'420',rotation:1},
+      {name:'phone-landscape',size:'1920x1080',density:'420',rotation:1},
       {name:'tablet-portrait',size:'1600x2560',density:'320',rotation:0},
-      {name:'tablet-landscape',size:'1600x2560',density:'320',rotation:1},
+      {name:'tablet-landscape',size:'2560x1600',density:'320',rotation:1},
     ]){
       adb('shell','wm','size',spec.size);adb('shell','wm','density',spec.density);
-      adb('shell','settings','put','system','user_rotation',String(spec.rotation));
+      // Resize the real Android display to each aspect; sensor rotation is not reliable in headless AVDs.
+      // This still delivers native orientation/screen-size/density configuration changes to the activity.
+      adb('shell','wm','user-rotation','lock','0');
       await page.waitForFunction(landscape=>(innerWidth>innerHeight)===landscape,spec.rotation===1);
       await pause(750);await ready();
       const layout=await page.evaluate(()=>{
@@ -136,7 +138,7 @@ async function cut(label){
     await screenshot('relaunch');assert.deepEqual(errors,[]);
     report.status='PASS';console.log(JSON.stringify(report,null,2));
   }catch(e){report.status='FAIL';report.error=e.stack||String(e);console.error(report.error);process.exitCode=1;
-    try{await screenshot('failure');if(page)report.page=await page.evaluate(()=>({url:location.href,text:document.body.innerText,error:document.documentElement.dataset.bootError,timing:window.HSC?.startupTiming}));}catch(_){}
+    try{await screenshot('failure');if(page)report.page=await page.evaluate(()=>({width:innerWidth,height:innerHeight,dpr:devicePixelRatio,touches:window.__nativeTouches,url:location.href,text:document.body.innerText,error:document.documentElement.dataset.bootError,timing:window.HSC?.startupTiming}));}catch(_){}
   }finally{
     fs.writeFileSync(path.join(out,'android-installed-report.json'),JSON.stringify(report,null,2));
     try{fs.writeFileSync(path.join(out,'android-installed-logcat.txt'),adb('logcat','-d','-t','3000'));}catch(_){}
