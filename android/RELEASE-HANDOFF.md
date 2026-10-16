@@ -14,6 +14,7 @@ Updated: 2026-10-16, America/Toronto. Read this file first when continuing Andro
 ## Repository and exact approved build
 
 - Repository: https://github.com/lrodeveloperr/Haircut
+- Production AdMob integration: [PR #9](https://github.com/lrodeveloperr/Haircut/pull/9) merged on 16 October 2026 at `fdbcdcf8214b254c2b67d9cc51e143bff148995e`; tested implementation head `a8154509cad8200df932cee952fe2dee554b12ea`. The remote tree matched the locally verified candidate exactly. No new GitHub workflow was triggered by this Android-only branch; the native build/lint, variant-ID and four-layout results above are local verification.
 - Current source: `main`. Android CI branch: `build/android-current-apk`. PR https://github.com/lrodeveloperr/Haircut/pull/8 was merged after successful final verification (merge `c0c1ea1d5d285ffd1edc32b907044502cf9c756a`).
 - Starting source for this finalization: `88f920b9cd369a4e69667b67fc29136250cb4e17`.
 - Approved runtime source: `24bb0958d8627791321392f2e42a9814ddcd9784`; later changes through `9b467a55a78a562d517e91ab54ac3b7d07309770` are QA-only. See [expert sign-off](CLIPPER-PLACEMENT-REVIEW.md).
@@ -94,3 +95,5 @@ The existing CI workflow is `.github/workflows/android-apk.yml`. It builds a tes
 - 2026-10-16: AdMob console setup completed and verified. Production app ID `ca-app-pub-8054612600809568~2715928050`, rewarded `ca-app-pub-8054612600809568/6612520040`, interstitial `ca-app-pub-8054612600809568/5498748924`. Local candidate v1.0.7 (8) preserves cutting and adds separately required UMP options in spare header space. Pushes were automatically rejected; source/documentation remain local pending explicit push authorization. No signing, AAB, Play upload or submission was performed.
 
 - 2026-10-16, owner approval received: publishing and merging the tested production-AdMob revision is explicitly authorized. The earlier rejection is resolved. No additional runtime changes were made after local verification; signing/AAB, Play submission and post-publication serving review remain outstanding.
+
+- 2026-10-16, publication verified: PR #9 is merged and `main` contains the production AdMob integration. The approval block is resolved. Stage 5 is complete; signing/AAB and submission remain pending. Debug retains Google test IDs.
