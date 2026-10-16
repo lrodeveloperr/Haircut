@@ -6,7 +6,7 @@ WebView, offline, from the app's own origin.
 
 **Current continuation record: [Android release handoff](../RELEASE-HANDOFF.md).** The owner approved v1.0.5 cutting. v1.0.6 adds the approved wardrobe privacy shield linking directly to the external policy page; its current verification state is recorded there and in [privacy QA](../PRIVACY-QA-2026-10-16.md). Debug always uses test ads. Production AdMob must be configured only after test-ad verification and immediately before release packaging/submission.
 
-**Current status: v1.0.6 privacy-link debug APK verified on 16 October 2026.** See [privacy QA](../PRIVACY-QA-2026-10-16.md) for the successful four-layout/native/lifecycle evidence and exact artifact hash. The existing advertising controller and approved cutting source are unchanged.
+**Current status: signed production AAB v1.0.7 (8) built and verified on 16 October 2026.** See [exact release/signing record](../RELEASE-AAB-1.0.7.md). The previously delivered v1.0.6 debug APK remains a historical test-ad binary; signing did not change the game.
 
 **Historical initial native build:** The GitHub build passed 35 game
 contracts, 8 Android reward cases, 7 Chromium bridge cases, Android lint (zero errors) and APK signature
@@ -62,7 +62,7 @@ at `android/store-listing/en-US/images/icon.png`. Density-specific launcher PNGs
 
 ## Still open
 
-- Upload signing (`keystore.properties`), the signed AAB and store submission. Production AdMob console setup and release-only code wiring are complete in this revision. See [production setup](../ADMOB-RELEASE-SETUP.md).
+- Store upload/submission. Upload signing and the signed production AAB are complete; the private backup restores signing on another machine. See [release/signing record](../RELEASE-AAB-1.0.7.md).
 - Signed-release regional/age validation. European and US consent messages are published. A separate conditional Ad privacy choices control uses spare wardrobe header space; the direct policy shield and every pre-existing control/card retain their bounds. See [production setup](../ADMOB-RELEASE-SETUP.md).
 - A device test of consent, ads, saves, rotation/folding, back and pause.
 

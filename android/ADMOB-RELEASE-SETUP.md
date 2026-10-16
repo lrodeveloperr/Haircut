@@ -39,7 +39,7 @@ Complete production AdMob setup only. Signing/AAB and Play submission remain sep
 
 Console configuration and the tested code integration in this revision are complete. On 16 October 2026 the owner explicitly approved pushing and merging these changes into `lrodeveloperr/Haircut`, resolving the earlier automatic approval rejection. The publication branch is `release/android-admob-production`; its pull request records the merge receipt. The last runtime/code change remains the locally verified v1.0.7 (8) candidate.
 
-Signing/AAB and Play submission are still separate stages. Store linking and Google's app readiness review require publication and remain post-publication work. Never claim this unpublished game is approved for full ad serving.
+Signing/AAB is complete; see [exact signed release](RELEASE-AAB-1.0.7.md). Play upload/submission remains next. Store linking and Google's app readiness review require publication and remain post-publication work. Never claim this unpublished game is approved for full ad serving.
 
 ## Verification
 
