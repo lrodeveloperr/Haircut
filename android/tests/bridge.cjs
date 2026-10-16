@@ -105,6 +105,8 @@ function fakeHost() {
         const geometry=await page.evaluate(()=>({contact:__placementContact,model:HSC.view.clipperScreen(),cut:window.HSC.lastCut}));
         console.log('PLACEMENT',JSON.stringify({width,height,region,...geometry}));
         await page.evaluate(({p,geometry,region})=>{
+          // Pin a genuine frame only during diagnostic composition, as in installed-APK QA.
+          const view=HSC.view,render=view.render;window.__placementCapturePin={view,render};view.render=function(){};
           const overlay=document.createElement('div');overlay.id='placement-diagnostic';overlay.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:99999';
           for(const [name,point,color,size]of[['contact',p,'#ff4060',48],['teeth',geometry.model.teeth,'#00ffff',8],['grip',geometry.model.grip,'#ffff00',8]]){
             const m=document.createElement('div');m.dataset.point=name;m.style.cssText=`position:absolute;left:${point.x-size/2}px;top:${point.y-size/2}px;width:${size}px;height:${size}px;border:2px solid ${color};border-radius:50%;box-sizing:border-box`;overlay.append(m);
@@ -114,7 +116,8 @@ function fakeHost() {
         },{p,geometry,region});
         await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
         const dir=path.join(root,'qa/results');fs.mkdirSync(dir,{recursive:true});
-        await page.screenshot({path:path.join(dir,`android-browser-placement-${width}x${height}-${region}.png`)});
+        try{await page.screenshot({path:path.join(dir,`android-browser-placement-${width}x${height}-${region}.png`)});}
+        finally{await page.evaluate(()=>{const p=__placementCapturePin;p.view.render=p.render;delete window.__placementCapturePin;});}
         assert(geometry.contact?.trusted&&geometry.contact.type==='touch');
         assert(geometry.model.visible,'actual model must be visible while touch is held');
         const {teeth,grip,target}=geometry.model;
