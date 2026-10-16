@@ -10,7 +10,7 @@
     if (!close || header.querySelector('.hsc-privacy')) return result;
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'hsc-x hsc-privacy';
+    button.className = 'hsc-btn hsc-privacy';
     button.setAttribute('aria-label', 'Privacy');
     button.title = 'Privacy';
     button.style.flex = '0 0 auto';

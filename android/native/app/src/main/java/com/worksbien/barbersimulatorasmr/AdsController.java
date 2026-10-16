@@ -37,7 +37,7 @@ final class AdsController {
     private ConsentInformation consent;
     private RewardedAd rewarded;
     private InterstitialAd interstitial;
-    private boolean loadingRewarded, loadingInterstitial, rewardedWanted, showing, destroyed;
+    private boolean loadingRewarded, loadingInterstitial, rewardedWanted, showing, destroyed, privacyFormOpen;
     private int privacyGeneration;
     private final Runnable rewardedTimeout = () -> {
         if (rewardedWanted) { rewardedWanted = false; emit("rewarded", "failed"); }
@@ -58,7 +58,7 @@ final class AdsController {
     }
 
     private boolean canRequestAds() {
-        return consent != null && consent.canRequestAds();
+        return !privacyFormOpen && consent != null && consent.canRequestAds();
     }
 
     boolean isPrivacyOptionsRequired() {
@@ -67,7 +67,8 @@ final class AdsController {
     }
 
     void showPrivacyOptions() {
-        if (destroyed || showing || rewardedWanted || !isPrivacyOptionsRequired()) return;
+        if (destroyed || showing || rewardedWanted || privacyFormOpen || !isPrivacyOptionsRequired()) return;
+        privacyFormOpen = true;
         // Discard requests made under the previous consent choices, including late callbacks.
         privacyGeneration++;
         rewarded = null;
@@ -75,6 +76,7 @@ final class AdsController {
         loadingRewarded = false;
         loadingInterstitial = false;
         UserMessagingPlatform.showPrivacyOptionsForm(activity, formError -> {
+            privacyFormOpen = false;
             if (destroyed || !canRequestAds()) return;
             initAds();
             loadRewarded();

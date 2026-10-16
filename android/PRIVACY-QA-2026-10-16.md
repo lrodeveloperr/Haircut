@@ -33,3 +33,7 @@ These three hashes remain unchanged after the privacy build. The new Android-onl
 - If UMP reports `PrivacyOptionsRequirementStatus.REQUIRED`, the menu also contains Privacy choices and reopens the SDK form.
 - Reopening privacy choices invalidates loaded ads and in-flight callbacks from the previous consent generation. New preloads use the current consent state.
 - No production ad IDs were configured for this work. Actual region-dependent UMP form availability requires the later app-specific AdMob consent-message setup and is not claimed as verified by an offline emulator.
+
+- Native source review identified an initialization race: the initial Mobile Ads initialization callback could arrive while Privacy choices was open. A dedicated privacy-form pause now blocks every ad request until the SDK form closes, in addition to invalidating old cached requests. Browser/game assets are unchanged. This native-only correction is verified by the next compile/installed-APK run.
+
+- The new shield uses the existing generic circular-button style rather than the Close-specific class. This preserves the original wardrobe focus target and Close selectors. The browser check now explicitly requires initial keyboard focus to remain on Close, as well as strict geometry equality.

@@ -48,6 +48,7 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
       await page.waitForFunction(()=>window.skinFadeStudio&&HSC.startupTiming?.firstPlayable&&!document.body.inert&&document.querySelector('.hsc-privacy'));
       await page.getByRole('button',{name:'Wardrobe',exact:true}).click();
       await page.waitForFunction(()=>document.querySelector('#hsc-panel.open')&&skinFadeStudio.getView().paused);
+      assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Close','opening wardrobe retains its existing Close focus');
       await page.addStyleTag({content:'*{animation:none!important;transition:none!important}'});
       await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
       const geometry = () => page.evaluate(()=>{
