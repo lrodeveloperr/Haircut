@@ -51,6 +51,14 @@ jobs:
       - name: Compile APK and run Android lint
         working-directory: android/native
         run: ./gradlew --no-daemon --stacktrace assembleDebug lintDebug
+      - name: Verify and package APK
+        run: |
+          mkdir -p android-apk
+          cp android/native/app/build/outputs/apk/debug/app-debug.apk android-apk/Barber-Simulator-ASMR-Haircut.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose android-apk/Barber-Simulator-ASMR-Haircut.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging android-apk/Barber-Simulator-ASMR-Haircut.apk > android-apk/apk-details.txt
+          git rev-parse HEAD > android-apk/source-commit.txt
+          sha256sum android-apk/Barber-Simulator-ASMR-Haircut.apk > android-apk/SHA256SUMS
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -72,14 +80,6 @@ jobs:
           mkdir -p qa/results
           ps aux > qa/results/android-installed-host-processes.txt
           sudo dmesg | tail -100 > qa/results/android-installed-host-kernel.txt
-      - name: Verify and package APK
-        run: |
-          mkdir -p android-apk
-          cp android/native/app/build/outputs/apk/debug/app-debug.apk android-apk/Barber-Simulator-ASMR-Haircut.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose android-apk/Barber-Simulator-ASMR-Haircut.apk
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging android-apk/Barber-Simulator-ASMR-Haircut.apk > android-apk/apk-details.txt
-          git rev-parse HEAD > android-apk/source-commit.txt
-          sha256sum android-apk/Barber-Simulator-ASMR-Haircut.apk > android-apk/SHA256SUMS
       - uses: actions/upload-artifact@v4
         if: always()
         with:

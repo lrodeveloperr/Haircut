@@ -8,7 +8,7 @@ const {execFileSync}=require('node:child_process');
 const app='com.worksbien.barbersimulatorasmr.debug',activity=app+'/com.worksbien.barbersimulatorasmr.MainActivity';
 const out=path.resolve('qa/results');fs.mkdirSync(out,{recursive:true});
 const adbPath=path.join(process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT,'platform-tools/adb');
-const adb=(...args)=>{console.log('adb',...args);return execFileSync(adbPath,args,{encoding:'utf8',timeout:30000}).trim();};
+const adb=(...args)=>{console.log('adb',...args);return execFileSync(adbPath,args,{encoding:'utf8',timeout:30000,maxBuffer:8*1024*1024}).trim();};
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const report={checks:[],layouts:[]};let browser,page;
 function check(name){report.checks.push(name);console.log('PASS:',name);}
@@ -57,7 +57,7 @@ async function ready(){
     return c.width===Math.floor(c.clientWidth*r)&&c.height===Math.floor(c.clientHeight*r);
   });
 }
-async function screenshot(name){fs.writeFileSync(path.join(out,'android-installed-'+name+'.png'),execFileSync(adbPath,['exec-out','screencap','-p'],{timeout:30000}));}
+async function screenshot(name){fs.writeFileSync(path.join(out,'android-installed-'+name+'.png'),execFileSync(adbPath,['exec-out','screencap','-p'],{timeout:30000,maxBuffer:32*1024*1024}));}
 async function cut(label){
   const p=await page.evaluate(()=>{
     const game=skinFadeStudio,view=HSC.view;
