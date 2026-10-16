@@ -6,6 +6,7 @@ import android.webkit.JavascriptInterface;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * The native side of assets/android-bridge.js. Saves live only in the app's private storage on the
@@ -27,7 +28,7 @@ final class HostBridge {
         JSONArray keys = new JSONArray(keysJson), out = new JSONArray();
         for (int i = 0; i < keys.length(); i++) {
             String v = prefs.getString(keys.getString(i), null);
-            out.put(v == null ? JSONArray.NULL : v);
+            out.put(v == null ? JSONObject.NULL : v);
         }
         return out.toString();
     }
