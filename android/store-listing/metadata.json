@@ -4,7 +4,7 @@
   "decisionDate": "2026-10-15",
   "timeZone": "America/New_York",
   "namingStatus": "LOCKED",
-  "listingStatus": "PLAY_CONSOLE_TEN_LANGUAGE_TEXT_DRAFTS_SAVED",
+  "listingStatus": "PLAY_CONSOLE_TEN_LANGUAGE_LISTING_SAVED_READY_TO_SEND_FOR_REVIEW",
   "defaultLocale": "en-US",
   "title": "Barber Simulator: ASMR Haircut",
   "shortDescription": "Cut fades in a 3D barber shop with clipper sounds and freehand control.",
@@ -37,7 +37,7 @@
       "hi-IN"
     ],
     "pendingListingLocales": [],
-    "nonMediaDeclarationsStatus": "All ten dashboard non-media setup tasks complete, including privacy policy and Data safety; media remains intentionally omitted. Privacy disclosures saved against approved AdMob release configuration; native wrapper/AAB not yet implemented or verified.",
+    "nonMediaDeclarationsStatus": "All non-media setup tasks saved. Store listing text and required media now saved; native wrapper/AAB not yet implemented or verified.",
     "savedDeclarations": {
       "containsAds": true,
       "requiresSignInOrPaymentForReview": false,
@@ -61,7 +61,7 @@
       "Sandbox",
       "Simulation"
     ],
-    "dashboardSetupTasksCompleted": 10,
+    "dashboardSetupTasksCompleted": 11,
     "dashboardSetupTasksTotal": 11,
     "privacyPolicyUrl": "https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/",
     "dataDeletionUrl": "https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/#delete-data",
@@ -87,11 +87,9 @@
       "externalAccountLogin": false,
       "deletionRequestMechanism": true
     },
-    "remainingSetupTasks": [
-      "Store listing actual gameplay screenshots"
-    ],
+    "remainingSetupTasks": [],
     "media": {
-      "status": "Approved icon and feature graphic uploaded, attached to default en-US and saved as draft",
+      "status": "Icon, feature graphic and four gameplay screenshots attached to default en-US and saved; listing Ready to send for review",
       "icon": {
         "filename": "barber-icon-512x512.png",
         "width": 512,
@@ -103,9 +101,34 @@
         "height": 500
       },
       "provenance": "Existing approved MediaCube cover resized/cropped only; no added text",
-      "screenshots": "Pending actual gameplay captures",
+      "screenshots": {
+        "status": "Uploaded and saved; reopened editor verified all four in numbered order, count 4/8",
+        "locale": "en-US",
+        "inheritedByOtherLocales": true,
+        "captions": false,
+        "width": 1080,
+        "height": 1920,
+        "format": "PNG",
+        "colorMode": "RGB",
+        "sourceBranch": "ccr-16be693f-dnlovt",
+        "sourceCommit": "22d7b152e03f732773007eac69f74d94a99de33d",
+        "sourceDirectory": "android/store-listing/en-US/images/phoneScreenshots",
+        "filenames": [
+          "1-fade-clipper-back.png",
+          "2-skin-fade-side.png",
+          "3-buzz-clipper-top.png",
+          "4-beard-front.png"
+        ],
+        "sourceBlobShas": [
+          "254a6230a2e336c24404f1ee5fd3a890a6f9c042",
+          "4e59b43662721372759de26c85c56715dca5b367",
+          "a2a60cccdc340941985e5b6ce9276c637703632b",
+          "fdd42562e2a49c991288f2d83a9f0032b8e1d5e6"
+        ]
+      },
       "video": "Omitted"
-    }
+    },
+    "dashboardSetupVerification": "Previously 10/11; after final listing saved, setup card disappeared and listing status became Ready to send for review."
   },
   "differentiators": [
     "Freehand hair cutting",
