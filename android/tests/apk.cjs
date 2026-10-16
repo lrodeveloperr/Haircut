@@ -176,8 +176,14 @@ function nativeWebViewBounds(){
       await screenshot(spec.name);
     }
     report.rotations=[];
+    let previousContact=report.layouts[report.layouts.length-1].touch.contact;
     for(const size of ['1600x2560','2560x1600']){
-      const before=await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair));
+      await page.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:previousContact.x,y:previousContact.y,radiusX:8,radiusY:8}]});
+      await page.waitForFunction(()=>HSC.view.clipperScreen().visible);
+      await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+      const held=await page.evaluate(()=>({gap:HSC.view.clipperScreen().gap,hair:JSON.stringify(skinFadeStudio.getState().hair)}));
+      assert(held.gap>=36&&held.gap<=48,'live resize must interrupt a real bounded held stroke');
+      const before=held.hair;
       adb('shell','wm','size',size); // Same density and live WebView: genuine configuration roundtrip.
       await page.waitForFunction(landscape=>(innerWidth>innerHeight)===landscape,size==='2560x1600');await ready();
       await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
@@ -186,11 +192,12 @@ function nativeWebViewBounds(){
         canvas:{x:r.x,y:r.y,width:r.width,height:r.height},gap:HSC.view.clipperScreen().gap,hair:JSON.stringify(skinFadeStudio.getState().hair),level:HSC.detail.level};});
       live.nativeBounds=nativeWebViewBounds();
       assert.equal(live.hair,before,'same-density live orientation must preserve haircut');delete live.hair;
-      assert.equal(live.gap,null,'configuration change releases held stroke');assert.equal(live.level,'high');
+      assert.equal(live.gap,null,'configuration change releases real held stroke');
+      await page.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});assert.equal(live.level,'high');
       assert(Math.abs(live.visualViewport.scale-1)<.02);
       assert(Math.abs(live.canvas.width-live.visualViewport.width)<2&&Math.abs(live.canvas.height-live.visualViewport.height)<2,'live canvas must fill viewport');
       assert(Math.abs((live.nativeBounds.right-live.nativeBounds.left)/live.dpr-live.visualViewport.width)<2,'live native/CSS mapping stays aligned');
-      live.touch=await cut('live-'+size,live);report.rotations.push(live);
+      live.interruptedGap=held.gap;live.touch=await cut('live-'+size,live);previousContact=live.touch.contact;report.rotations.push(live);
       check('same-density live resize '+size+' preserves layout, input and haircut');
     }
     const saved=await page.evaluate(async()=>{await(await HSC.youtubeClientPromise).flushProgress();return JSON.stringify(skinFadeStudio.getState().hair);});
