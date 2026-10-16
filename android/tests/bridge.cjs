@@ -62,6 +62,8 @@ function fakeHost() {
         const p=await page.evaluate(region=>{
           if(skinFadeStudio.getState().interactionMode!=='cut')skinFadeStudio.toggleClipper();
           skinFadeStudio.selectGuard(0);
+          const yaw=region==='beard'?180:region==='sideburn'?-90:-55;
+          skinFadeStudio.turn(yaw-skinFadeStudio.getState().cameraYawDeg);
           const b=HSC.view.headScreen();
           for(const fy of (region==='top-scalp'?[.2,.25,.3,.35]:region==='sideburn'?[.8,.95,1.1,1.25,.65]:region==='lower-scalp'?[.9,1,1.1,1.2]:[.70,.80,.90,1,1.1,1.2,1.3,1.4]))
           for(const fx of(region==='sideburn'?[.15,.85,.25,.75,.35,.65]:[.5,.4,.6,.3,.7,.2,.8])){
