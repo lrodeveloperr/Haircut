@@ -4,7 +4,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const {execFileSync,spawn}=require('node:child_process');
+const {execFileSync}=require('node:child_process');
 const app='com.worksbien.barbersimulatorasmr.debug',activity=app+'/com.worksbien.barbersimulatorasmr.MainActivity';
 const out=path.resolve('qa/results');fs.mkdirSync(out,{recursive:true});
 const adbPath=path.join(process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT,'platform-tools/adb');
@@ -34,7 +34,7 @@ async function attach(target) {
   };
   await send('Runtime.enable');
   browser={close:async()=>socket.close()};
-  page={evaluate,on(name,fn){if(name==='pageerror')handlers.set('Runtime.exceptionThrown',[p=>fn(Error(p.exceptionDetails.exception?.description||p.exceptionDetails.text))]);},
+  page={evaluate,send,on(name,fn){if(name==='pageerror')handlers.set('Runtime.exceptionThrown',[p=>fn(Error(p.exceptionDetails.exception?.description||p.exceptionDetails.text))]);},
     async waitForFunction(fn,arg,options={}){const deadline=Date.now()+(options.timeout||120000);while(Date.now()<deadline){if(await evaluate(fn,arg))return;await pause(250);}throw Error('Installed page condition timed out: '+fn.toString());}};
 }
 async function connect(){
@@ -58,48 +58,71 @@ async function ready(){
   });
 }
 async function screenshot(name){fs.writeFileSync(path.join(out,'android-installed-'+name+'.png'),execFileSync(adbPath,['exec-out','screencap','-p'],{timeout:30000,maxBuffer:32*1024*1024}));}
-async function cut(label){
+async function cut(label,layout){
   const p=await page.evaluate(()=>{
     const game=skinFadeStudio,view=HSC.view;
     if(game.getState().interactionMode!=='cut')game.toggleClipper();game.selectGuard(1);
     const state=game.getState(),b=view.headScreen();
-    for(const y of[.25,.35,.45,.55,.65])for(const x of[.5,.4,.6,.3,.7]){
-      const p={x:b.left+(b.right-b.left)*x,y:b.top+(b.bottom-b.top)*y},hit=view.raycast(p.x,p.y);
-      if(hit && hit.kind!=='beard' && state.hair[Math.min(63,Math.floor(hit.v*64))*128+Math.min(127,Math.floor(hit.u*128))]>1){
+    for(const fy of[.45,.55,.65,.35,.75])for(const fx of[.5,.4,.6,.3,.7]){
+      const p={x:b.left+(b.right-b.left)*fx,y:b.top+(b.bottom-b.top)*fy};
+      if(p.y<24||p.y>innerHeight-24)continue;
+      const t=view.touchTarget({clientX:p.x,clientY:p.y,pointerType:'touch'}),hit=view.raycast(t.x,t.y);
+      if(hit&&hit.kind!=='beard'&&state.hair[Math.min(63,Math.floor(hit.v*64))*128+Math.min(127,Math.floor(hit.u*128))]>1){
         window.__nativeTouches=[];
-        window.addEventListener('pointerdown',e=>__nativeTouches.push({x:e.clientX,y:e.clientY,height:e.height,trusted:e.isTrusted}),{once:true,capture:true});
-        if(!window.__originalCutRay)window.__originalCutRay=view.raycast;
-        window.__cutRays=[];
-        view.raycast=(x,y)=>{__cutRays.push({x,y});return __originalCutRay(x,y);};
-        return {...p,dpr:devicePixelRatio,gap:Math.min(72,document.querySelector('#scene').clientHeight*.12),before:JSON.stringify(state.hair)};
+        const listener=e=>__nativeTouches.push({x:e.clientX,y:e.clientY,height:e.height,trusted:e.isTrusted,type:e.pointerType});
+        if(window.__placementListener)window.removeEventListener('pointerdown',__placementListener,true);
+        window.__placementListener=listener;window.addEventListener('pointerdown',listener,true);
+        return{...p,before:JSON.stringify(state.hair)};
       }
-    }throw Error('No accessible uncut scalp after window resize');
+    }throw Error('No reachable uncut scalp for native contact');
   });
-  // The emulator profile has no camera cutout and bars are hidden. Actual native pixel input.
-  const swipe=['shell','input','swipe',String(Math.round(p.x*p.dpr)),String(Math.round((p.y+p.gap)*p.dpr)),String(Math.round((p.x+6)*p.dpr)),String(Math.round((p.y+p.gap+6)*p.dpr))];
-  if(process.env.CAPTURE_BLADE==='1'&&label==='phone-portrait'){
-    // Capture the real native blade while the finger is held down, before pointer-up hides it.
-    const child=spawn(adbPath,[...swipe,'5000'],{stdio:'ignore'});
-    const done=new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',code=>code===0?resolve():reject(Error('native held swipe failed')));});
-    await page.waitForFunction(()=>__nativeTouches.length>0&&__cutRays.length>0);
-    await page.evaluate(()=>{
-      const p=__nativeTouches[0],marker=document.createElement('div');marker.id='test-finger-contact';
-      marker.style.cssText=`position:fixed;left:${p.x-18}px;top:${p.y-18}px;width:36px;height:36px;border:2px dashed #ff4060;border-radius:50%;background:#ff406030;pointer-events:none;z-index:99999;box-sizing:border-box`;
-      document.body.append(marker);
-    });
-    try{await screenshot(label+'-blade-held');}finally{await page.evaluate(()=>document.querySelector('#test-finger-contact')?.remove());await done;}
-  }else adb(...swipe,'220');
+  // Convert using independently observed native WebView bounds and visual viewport.
+  const b=layout.nativeBounds,v=layout.visualViewport;
+  const nativePoint=(x,y)=>[Math.round(b.left+(x-v.offsetLeft)*(b.right-b.left)/v.width),Math.round(b.top+(y-v.offsetTop)*(b.bottom-b.top)/v.height)];
+  const start=nativePoint(p.x,p.y),end=nativePoint(p.x+6,p.y+6);
+  adb('shell','input','swipe',String(start[0]),String(start[1]),String(end[0]),String(end[1]),'220');
   await page.waitForFunction(before=>JSON.stringify(skinFadeStudio.getState().hair)!==before,p.before);
-  const touch=await page.evaluate(()=>__nativeTouches[0]);
-  assert(touch?.trusted,'native input must produce trusted touch');
-  assert(Math.abs(touch.x-p.x)<3&&Math.abs(touch.y-(p.y+p.gap))<3,'native and WebView coordinates must agree');
-  const rays=await page.evaluate(()=>__cutRays);
-  const blade=rays.find(r=>Math.abs(r.x-p.x)<2&&Math.abs(r.y-p.y)<2);
-  assert(blade,'native finger position must aim the visible blade at the exact intended scalp point');
-  assert(Math.abs(touch.y-blade.y-p.gap)<2,'native blade clearance must equal YouTube');
-  check(label+' native swipe cuts at the visible blade with exact YouTube clearance');
-  Object.assign(touch,{blade,gap:p.gap});
-  return touch;
+  const nativeTouch=await page.evaluate(()=>__nativeTouches[0]);
+  assert(nativeTouch?.trusted&&nativeTouch.type==='touch','ADB must produce trusted native touch');
+  assert(Math.abs(nativeTouch.x-p.x)<3&&Math.abs(nativeTouch.y-p.y)<3,'native and visual CSS coordinates must agree');
+  check(label+' native swipe cuts with verified viewport mapping');
+  // Hold in the actual installed WebView using CDP; unlike a timed ADB swipe this has
+  // no five-second expiry while a screenshot is composing. The ADB path above is tested separately.
+  await page.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:8,radiusY:8}]});
+  try{
+    await page.waitForFunction(()=>HSC.view.clipperScreen().visible);
+    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+    const geometry=await page.evaluate(()=>HSC.view.clipperScreen());
+    report.lastPlacement={label,contact:p,geometry};
+    console.log('PLACEMENT',JSON.stringify(report.lastPlacement));
+    await page.evaluate(({p,geometry})=>{
+      const overlay=document.createElement('div');overlay.id='placement-diagnostic';overlay.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:99999';
+      for(const [name,point,color,size]of[['contact',p,'#ff4060',48],['teeth',geometry.teeth,'#00ffff',8],['grip',geometry.grip,'#ffff00',8]]){
+        const m=document.createElement('div');m.dataset.point=name;m.style.cssText=`position:absolute;left:${point.x-size/2}px;top:${point.y-size/2}px;width:${size}px;height:${size}px;border:2px solid ${color};border-radius:50%;box-sizing:border-box`;overlay.append(m);
+      }
+      document.body.append(overlay);
+    },{p,geometry});
+    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+    await screenshot(label+'-blade-held');
+    assert(geometry.visible,'real rendered clipper must be visible during held touch');
+    assert(Math.hypot(geometry.teeth.x-geometry.target.x,geometry.teeth.y-geometry.target.y)<5,'projected teeth must agree with real cutting surface');
+    assert(p.y-geometry.teeth.y>=34,'projected blade clears24px occlusion radius by at least10px');
+    assert(p.y-geometry.teeth.y<=50,'placement avoids the prior excessive portrait gap');
+    assert(geometry.gap>=36&&geometry.gap<=48,'per-stroke gap obeys visibility bounds');
+    check(label+' actual tooth/grip projection agrees with held touch');
+    return{nativeTouch,contact:p,geometry};
+  }finally{
+    await page.evaluate(()=>document.querySelector('#placement-diagnostic')?.remove());
+    await page.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  }
+}
+function nativeWebViewBounds(){
+  adb('shell','uiautomator','dump','/sdcard/placement-window.xml');
+  const xml=adb('shell','cat','/sdcard/placement-window.xml');
+  const node=(xml.match(/<node[^>]*>/g)||[]).find(n=>n.includes('class="android.webkit.WebView"'));
+  const m=node?.match(/bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/);
+  assert(m,'native accessibility hierarchy must expose WebView bounds');
+  return{left:+m[1],top:+m[2],right:+m[3],bottom:+m[4]};
 }
 (async()=>{
   const errors=[];
@@ -115,34 +138,60 @@ async function cut(label){
     adb('install','-r','android/native/app/build/outputs/apk/debug/app-debug.apk');
     adb('shell','settings','put','system','accelerometer_rotation','0');
     adb('shell','wm','user-rotation','lock','0');
-    adb('shell','am','start','-W','-n',activity);
-    await connect();page.on('pageerror',e=>errors.push(e.message));await ready();
     report.webview=adb('shell','dumpsys','webviewupdate');
-    assert.equal(await page.evaluate(async()=>(await HSC.youtubeClientPromise).platformId),'android');
-    check('installed APK boots full working engine');
     for(const spec of[
       {name:'phone-portrait',size:'1080x1920',density:'420',rotation:0},
       {name:'phone-landscape',size:'1920x1080',density:'420',rotation:1},
       {name:'tablet-portrait',size:'1600x2560',density:'320',rotation:0},
       {name:'tablet-landscape',size:'2560x1600',density:'320',rotation:1},
     ]){
+      if(browser){await browser.close();browser=null;}
+      adb('shell','am','force-stop',app);
       adb('shell','wm','size',spec.size);adb('shell','wm','density',spec.density);
-      // Resize the real Android display to each aspect; sensor rotation is not reliable in headless AVDs.
-      // This still delivers native orientation/screen-size/density configuration changes to the activity.
       adb('shell','wm','user-rotation','lock','0');
+      await pause(500);
+      // Fresh WebView per density: do not carry stale page scale between fake devices.
+      adb('shell','am','start','-W','-n',activity);
+      await connect();page.on('pageerror',e=>errors.push(e.message));await ready();
       await page.waitForFunction(landscape=>(innerWidth>innerHeight)===landscape,spec.rotation===1);
-      await pause(750);await ready();
+      assert.equal(await page.evaluate(async()=>(await HSC.youtubeClientPromise).platformId),'android');
+      const nativeBounds=nativeWebViewBounds();
       const layout=await page.evaluate(()=>{
         const c=document.querySelector('#scene'),gl=c.getContext('webgl2'),d=HSC.detail;
-        return {width:innerWidth,height:innerHeight,dpr:devicePixelRatio,buffer:[c.width,c.height],level:d.level,strands:d.minStrands,segments:d.segments,
+        const rect=el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};};
+        return {width:innerWidth,height:innerHeight,dpr:devicePixelRatio,visualViewport:{width:visualViewport.width,height:visualViewport.height,scale:visualViewport.scale,offsetLeft:visualViewport.offsetLeft,offsetTop:visualViewport.offsetTop},canvas:rect(c),root:rect(document.querySelector('#game')),finishInset:parseFloat(getComputedStyle(document.querySelector('.ctl.finish').closest('.bar')).right),buffer:[c.width,c.height],level:d.level,strands:d.minStrands,segments:d.segments,
           renderer:gl.getParameter(gl.RENDERER),controls:[...document.querySelectorAll('#hud button')].filter(b=>b.getBoundingClientRect().width).map(b=>{
             const r=b.getBoundingClientRect();return{text:b.getAttribute('aria-label')||b.textContent.trim(),x:r.x,y:r.y,width:r.width,height:r.height};
           })};
       });
+      layout.nativeBounds=nativeBounds;layout.requestedDisplay=spec;layout.name=spec.name;report.layouts.push(layout);
+      assert(Math.abs(layout.visualViewport.scale-1)<.02,'fresh native viewport scale must be1');
+      assert(Math.abs(layout.canvas.width-layout.visualViewport.width)<2&&Math.abs(layout.canvas.height-layout.visualViewport.height)<2,'canvas must fill visual viewport');
+      assert(Math.abs((nativeBounds.right-nativeBounds.left)/layout.dpr-layout.visualViewport.width)<2,'native width, DPR and viewport must agree');
       assert.equal(layout.level,'high');assert.equal(layout.strands,30000);assert.equal(layout.segments,8);
       for(const b of layout.controls)assert(b.x>=-1&&b.y>=-1&&b.x+b.width<=layout.width+1&&b.y+b.height<=layout.height+1,`control outside ${spec.name}: ${b.text}`);
-      layout.name=spec.name;layout.touch=await cut(spec.name);report.layouts.push(layout);
+      const finish=layout.controls.find(b=>b.text==='Finish haircut');
+      assert(finish&&Math.abs(finish.x+finish.width-(layout.canvas.x+layout.canvas.width-layout.finishInset))<2,'Finish must visually align with canvas right inset');
+      layout.name=spec.name;layout.touch=await cut(spec.name,layout);
       await screenshot(spec.name);
+    }
+    report.rotations=[];
+    for(const size of ['1600x2560','2560x1600']){
+      const before=await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair));
+      adb('shell','wm','size',size); // Same density and live WebView: genuine configuration roundtrip.
+      await page.waitForFunction(landscape=>(innerWidth>innerHeight)===landscape,size==='2560x1600');await ready();
+      await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+      const live=await page.evaluate(()=>{const c=document.querySelector('#scene'),r=c.getBoundingClientRect();return{
+        width:innerWidth,height:innerHeight,dpr:devicePixelRatio,visualViewport:{width:visualViewport.width,height:visualViewport.height,scale:visualViewport.scale,offsetLeft:visualViewport.offsetLeft,offsetTop:visualViewport.offsetTop},
+        canvas:{x:r.x,y:r.y,width:r.width,height:r.height},gap:HSC.view.clipperScreen().gap,hair:JSON.stringify(skinFadeStudio.getState().hair),level:HSC.detail.level};});
+      live.nativeBounds=nativeWebViewBounds();
+      assert.equal(live.hair,before,'same-density live orientation must preserve haircut');delete live.hair;
+      assert.equal(live.gap,null,'configuration change releases held stroke');assert.equal(live.level,'high');
+      assert(Math.abs(live.visualViewport.scale-1)<.02);
+      assert(Math.abs(live.canvas.width-live.visualViewport.width)<2&&Math.abs(live.canvas.height-live.visualViewport.height)<2,'live canvas must fill viewport');
+      assert(Math.abs((live.nativeBounds.right-live.nativeBounds.left)/live.dpr-live.visualViewport.width)<2,'live native/CSS mapping stays aligned');
+      live.touch=await cut('live-'+size,live);report.rotations.push(live);
+      check('same-density live resize '+size+' preserves layout, input and haircut');
     }
     const saved=await page.evaluate(async()=>{await(await HSC.youtubeClientPromise).flushProgress();return JSON.stringify(skinFadeStudio.getState().hair);});
     adb('shell','input','keyevent','KEYCODE_HOME');await pause(500);adb('shell','am','start','-W','-n',activity);await ready();

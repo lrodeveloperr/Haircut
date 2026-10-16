@@ -15,9 +15,18 @@ def replace(text, old, new):
         raise ValueError(f'Android host adaptation expected one occurrence: {old[:100]}')
     return text.replace(old, new)
 
-# Preserve the entire working YouTube engine, including its blade-visible touch
-# clearance and direct mouse/pen aiming. Do not patch either input path.
-assert (out / 'runtime/game.js').read_bytes() == (source / 'build-youtube/runtime/game.js').read_bytes()
+# Keep the working renderer and adapt only Android touch targeting. A finger holds
+# a bounded projected-grip target instead of using the former 24/72px extremes.
+game = (out / 'runtime/game.js').read_text()
+game = replace(game, 'let ae=ue=>{ue.preventDefault();k=true;',
+               (root / 'android/clipper-input.js').read_text() + '\nlet ae=ue=>{ue.preventDefault();k=true;')
+game = replace(game, 'raycast:j,getYaw()', 'raycast:j,touchTarget:androidTouchTarget,resetTouchTarget:androidResetTouchTarget,clipperScreen:androidClipperScreen,getYaw()')
+game = replace(game, 'f=null,o.stop(),n.setClipper(!1)', 'f=null,o.stop(),n.resetTouchTarget(),n.setClipper(!1)')
+game = replace(game, 'let ae=j.clientX,fe=j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0),ue=n.raycast(ae,fe);',
+               'let target=n.touchTarget(j),ae=target.x,fe=target.y,ue=n.raycast(ae,fe);')
+game = replace(game, 'let ae=j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0),fe=j.pointerType==="touch"?22:12;',
+               'let target=n.touchTarget(j),ae=target.y,fe=j.pointerType==="touch"?22:12;')
+(out / 'runtime/game.js').write_text(game)
 
 client = (out / 'runtime/local-preview-client.js').read_text()
 client = replace(client, 'HSC.createLocalPreviewClient', 'HSC.createAndroidClient')
@@ -74,4 +83,4 @@ shutil.move(str(source / 'build'), foundation)
 shutil.copytree(out, source / 'build')
 for file in (out / 'runtime').glob('*.js'):
     subprocess.run(['node', '--check', str(file)], check=True)
-print('Android: working Sites engine, asynchronous native host, exact YouTube blade-visible input mapping')
+print('Android: working Sites engine, asynchronous native host, projected clipper-grip touch targeting')

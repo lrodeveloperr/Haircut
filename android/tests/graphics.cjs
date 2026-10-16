@@ -16,7 +16,7 @@ const between = (start, end) => game.slice(game.indexOf(start), game.indexOf(end
 const sampler = between('function he(ue){if(Pe){let quality=HSC.detail.sample', 'let firstFramePending=');
 const budget = between('function He(ue){te=Math.max(HSC.detail.minStrands', 'let O={');
 const resize = between('function P(){var ue;', 'function L(){');
-const cut = between('function Ue(j){let ae=j.clientX', 'function Pe(j)');
+const cut = between('function Ue(j){', 'function Pe(j)');
 let passed = 0;
 const plain = x => JSON.parse(JSON.stringify(x));
 
@@ -78,7 +78,8 @@ for (const height of [320, 400, 600, 844, 1280]) for (const type of ['touch', 'm
   const doCut = (s, points) => { strokes.push(points); return { state: s, changed: false }; };
   const context = vm.createContext({
     a: { clientHeight: height }, ur: { touchOffsetPx: 72 }, s: state, f: { lastUv: null },
-    n: { raycast(x, y) { calls.push([x, y]); return hit; }, setClipper() {}, surface: {}, beardSurface: {} },
+    n: { touchTarget(event) { return {x:event.clientX,y:event.clientY-(event.pointerType==='touch'?height*.05:0)}; },
+      raycast(x, y) { calls.push([x, y]); return hit; }, setClipper() {}, surface: {}, beardSurface: {} },
     HSC: { cutBeard: doCut }, Ts: doCut, o: { start() {}, stop() {} },
   });
   vm.runInContext(cut + ';globalThis.cut=Ue;', context);
@@ -88,14 +89,20 @@ for (const height of [320, 400, 600, 844, 1280]) for (const type of ['touch', 'm
     n: {raycast(x,y) {websiteCalls.push([x,y]);return null;}}});
   vm.runInContext(sitesAim + ';globalThis.aim=Ue;', website);
   website.aim({clientX:200.25,clientY:300.75,pointerType:type});
-  assert.deepEqual(calls, websiteCalls, `${type}/${kind}/${height}: exact YouTube aiming`);
-  const gap=type === 'touch' ? Math.min(72, height * .12) : 0;
-  assert.deepEqual(calls, [[200.25,300.75-gap]], 'blade and actual cutter use the same surface target');
+  if(type!=='touch')assert.deepEqual(calls, websiteCalls, `${type}/${kind}/${height}: direct YouTube aiming`);
+  const gap=type === 'touch' ? height*.05 : 0;
+  assert.deepEqual(calls, [[200.25,300.75-gap]], 'cutter forwards the shared target helper result');
   assert.equal(strokes[0][0], hit, 'the actual cutter must use that same hit');
   passed++;
 }
-assert.equal(game, fs.readFileSync(path.join(root, 'source/build-youtube/runtime/game.js'), 'utf8'), 'Android uses the complete working engine');
+let original=game.replace(fs.readFileSync(path.join(root,'android/clipper-input.js'),'utf8')+'\n','')
+  .replace('raycast:j,touchTarget:androidTouchTarget,resetTouchTarget:androidResetTouchTarget,clipperScreen:androidClipperScreen,getYaw()', 'raycast:j,getYaw()')
+  .replace('f=null,o.stop(),n.resetTouchTarget(),n.setClipper(!1)', 'f=null,o.stop(),n.setClipper(!1)')
+  .replace('let target=n.touchTarget(j),ae=target.x,fe=target.y,ue=n.raycast(ae,fe);', 'let ae=j.clientX,fe=j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0),ue=n.raycast(ae,fe);')
+  .replace('let target=n.touchTarget(j),ae=target.y,fe=j.pointerType==="touch"?22:12;', 'let ae=j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0),fe=j.pointerType==="touch"?22:12;');
+assert.equal(original, fs.readFileSync(path.join(root, 'source/build-youtube/runtime/game.js'), 'utf8'), 'working engine unchanged outside reviewed touch adaptation');
+assert.equal(game.split('n.touchTarget(j)').length-1,2,'cut and proximity share one touch helper');
 assert(!game.includes('touchOffsetPx:0'));
 assert(!game.includes('Ue>24&&te>HSC.detail.minStrands'));
 assert(!customers.includes("const KEY = 'skin-fade-studio-detail-v1'"));
-console.log(`PASS: ${passed} Android graphics/input cases (working engine parity, fixed High cadences, tablet resize, exact YouTube mouse/touch scalp/beard blade mapping).`);
+console.log(`PASS: ${passed} Android graphics/input cases (working renderer parity, fixed High cadences, tablet resize, shared touch-target forwarding and direct mouse/pen).`);

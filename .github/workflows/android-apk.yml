@@ -87,6 +87,7 @@ jobs:
           path: |
             android-apk/
             qa/results/android-installed-*
+            qa/results/android-browser-placement-*
             android/native/app/build/reports/lint-results-debug.html
             android/native/app/build/reports/lint-results-debug.xml
           if-no-files-found: ignore
