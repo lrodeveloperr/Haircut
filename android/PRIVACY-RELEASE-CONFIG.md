@@ -2,7 +2,7 @@
 
 Date: 2026-10-16. Package: `com.worksbien.barbersimulatorasmr`.
 
-This is the release configuration used to prepare the unreleased app's Play Console disclosures. The native wrapper, SDK bridge, private saves and initial UMP consent flow are implemented. The approved wardrobe shield linking directly to the external policy page was added for v1.0.6; native verification passed and is recorded in [privacy QA](PRIVACY-QA-2026-10-16.md). Production AdMob configuration, upload signing and the AAB remain separate release steps. Read the current [release handoff](RELEASE-HANDOFF.md) before continuing; the eventual AAB must conform to these disclosures.
+The native wrapper, SDK bridge, private saves, UMP consent/privacy options and production AdMob configuration are implemented. Signed production v1.0.8 (9) is uploaded to the existing Play app. Unknown and under-18 players do not enter advertising/UMP; a neutral local age band is excluded from backup and device transfer. See [the release audit](PLAY-RELEASE-AUDIT-2026-10-16.md) and [current release record](RELEASE-AAB-1.0.8.md). Submission status is tracked in [the release handoff](RELEASE-HANDOFF.md).
 
 ## Approved release data boundary
 

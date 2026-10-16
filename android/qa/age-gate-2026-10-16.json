@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "checks": [
+    "native neutral choice and local persistence for Under 13 at 1080x1920",
+    "under-18 core game available and native rewarded request denied without consent initialization: Under 13",
+    "saved choice survives relaunch: Under 13",
+    "native neutral choice and local persistence for 13\u201315 at 1920x1080",
+    "under-18 core game available and native rewarded request denied without consent initialization: 13\u201315",
+    "saved choice survives relaunch: 13\u201315",
+    "native neutral choice and local persistence for 16\u201317 at 1600x2560",
+    "under-18 core game available and native rewarded request denied without consent initialization: 16\u201317",
+    "saved choice survives relaunch: 16\u201317",
+    "native neutral choice and local persistence for 18 or older at 2560x1600",
+    "saved choice survives relaunch: 18 or older"
+  ],
+  "runs": [
+    38967133699,
+    38967888876
+  ],
+  "uniqueRawScreenshots": 4,
+  "appBuildSource": "bb81bc267d2b1ef4f91db10e41ef69f9510928da",
+  "finalTestSource": "6bd8679521024ae9d47133ce19e0a0d7cca96f2e",
+  "note": "Six phone checks and three raw captures preserved from first partial run. Five remaining tablet checks and one new raw passed in focused follow-up. No app/game source changed between runs."
+}

@@ -2,6 +2,15 @@
 
 Updated: 2026-10-16, America/Toronto. Read this file first when continuing Android work from another chat, editor or program.
 
+## Current release status
+
+**Production v1.0.8 (9) is in Google review**, confirmed 2026-10-16T21:22:13Z. All 21 changes submitted; final quick checks passed. Managed publishing is off and full rollout follows Google approval. No further release action is required while review is pending.
+
+- Exact signed AAB: 5,192,721 bytes, SHA-256 `5b0ada5bca61d63dd5ade02418e3af8283041fb501a5c0114d54b3459ca31e42`, built from `bb81bc267d2b1ef4f91db10e41ef69f9510928da`. [Artifact record](RELEASE-AAB-1.0.8.md).
+- [Full listing/policy audit](PLAY-RELEASE-AUDIT-2026-10-16.md): all ten locales, disclosures, artwork and permissions reviewed; missing Advertising ID and AI artwork labels corrected.
+- Neutral local age choice blocks advertising/consent before a choice and below 18, preserving core gameplay. Private age preference excluded from backup/transfer. Frozen renderer/controls/rewards unchanged. Eleven installed checks and four raw layouts verified. [PR #10](https://github.com/lrodeveloperr/Haircut/pull/10) merged at `9d371552d05ff97a96d423bc3bf65b2f910b5cab`.
+- Google approval and publication pending. After publication, link the store entry in AdMob and complete app readiness; no full-serving approval claimed.
+
 ## Owner decisions and release order
 
 - The owner tested v1.0.5 (6) on 16 October and approved the cutting and finger-to-blade distance as perfect. Freeze the approved cutting, clipper placement, camera, graphics, hair, controls and reward rules.
@@ -29,8 +38,8 @@ Updated: 2026-10-16, America/Toronto. Read this file first when continuing Andro
 - App: Barber Simulator: ASMR Haircut; package `com.worksbien.barbersimulatorasmr`; app ID `4975100930006889688`.
 - Existing dashboard: https://play.google.com/console/u/0/developers/7097804603172918698/app/4975100930006889688/app-dashboard
 - Saved listing record: [PLAY-CONSOLE-STATUS.md](store-listing/PLAY-CONSOLE-STATUS.md).
-- Already saved: ten localized listings, icon, feature graphic, four gameplay screenshots, contact/category/tags, ads declaration, reviewer access, content rating, target audience, privacy URL and Data safety. These are drafts awaiting review, not published approvals.
-- Live account app list checked on 16 October: app remains **Draft**. Detailed editor navigation timed out during the latest audit; recheck Console when preparing submission.
+- Already saved: ten localized listings, icon, feature graphic, four gameplay screenshots, contact/category/tags, ads declaration, reviewer access, content rating, target audience, privacy URL and Data safety. These are submitted and in review, not published approvals.
+- Live Publishing overview confirmed **Changes in review** on 16 October after submission and completed quick checks.
 - Declared audience includes ages 13–15, 16–17 and adults. Verify consent/advertising configuration against the declared audience and distribution regions; do not silently retarget the app.
 
 ## Privacy — current state and work
@@ -42,8 +51,8 @@ Updated: 2026-10-16, America/Toronto. Read this file first when continuing Andro
 - Privacy policy and Data safety were previously prepared/published/saved for the approved AdMob-only release configuration. Reconcile the final native SDK and permissions with [PRIVACY-RELEASE-CONFIG.md](PRIVACY-RELEASE-CONFIG.md).
 - Public policy verified live in the browser after the website update; both Cloudflare deployment checks succeeded. The earlier HTTP-checker 403 did not reproduce in the browser.
 - Existing native dependencies: Google Mobile Ads `25.5.0`, UMP `3.2.0`; no mediation, Firebase Analytics, Crashlytics, sign-in or game backend.
-- Saves stay in private device storage. Android currently allows OS backup; do not promise backups are disabled.
-- Initial consent checking and earned-reward callbacks remain unchanged from the approved baseline. The shield only opens the public policy URL. AdMob consent-message configuration and any separately required advertising privacy controls belong to the final AdMob stage, outside this button.
+- Game saves stay in private device storage and remain eligible for OS backup. The new advertising age-band preference alone is excluded from backup and device transfer.
+- Adult consent checking and earned-reward callbacks remain unchanged from the approved baseline; unknown and under-18 players cannot initiate advertising consent or ad requests. The shield only opens the public policy URL. AdMob consent-message configuration and any separately required advertising privacy controls belong to the final AdMob stage, outside this button.
 
 ## Ordered remaining checklist
 
@@ -52,8 +61,8 @@ Updated: 2026-10-16, America/Toronto. Read this file first when continuing Andro
 3. **Approved privacy UI — DONE.** Android-only `android/privacy.js` adds the shield in flexible header space. One tap opens the policy URL in the external browser, with no menu or ad-related action. See [privacy QA evidence](PRIVACY-QA-2026-10-16.md).
 4. **Test-ad verification — DONE FOR THIS PRIVACY UPDATE.** Full build, 85 graphics/input cases, 8 reward cases, 35 contracts and four-layout privacy geometry/dispatch/state checks passed locally. Cutting renderer, clipper helper and shared wardrobe source remain byte-identical to owner-approved hashes. Native compile/lint/signature and all four installed privacy/external-link checks passed. Source `591b3db` passed 27 native checks; its cached-test-ad fixture was then corrected without changing app code. Final focused source `bef3f313e41852ac447476a1222cf3cf9d2fc733` passed all 13 privacy/capture/lifecycle/save checks in https://github.com/lrodeveloperr/Haircut/actions/runs/38953250070. These runs together cover the original matrix and the added privacy path. Actual native wardrobe screenshots were visually reviewed on all four layouts. Keep all test builds on Google's public test IDs.
 5. **Production AdMob — DONE IN THIS REVISION.** On 16 October the game was created in AdMob with rewarded and next-customer units; European (32 languages) and US-state (3 language variants) messages were published; the live publisher file matched; high-engagement ads were disabled and General Audiences filtering verified. Release-only IDs and a separate, conditionally required UMP-options control are integrated. The existing external policy shield remains unchanged. v1.0.7 (8) passed native compile/lint, generated debug/release ID checks, negative release-ID guards and four-layout browser verification. The owner explicitly approved pushing and merging on 16 October, resolving the earlier approval block. See [complete production setup and verification](ADMOB-RELEASE-SETUP.md). Debug remains test-only; signing and submission are next.
-6. **Signing/AAB — DONE.** Dedicated RSA-4096 upload key created with a separate durable private backup; no key/password in git or the AAB. Signed production AAB **v1.0.7 (8)** built from `1b28d3eec9f15371398284b0e3237a5540130a78`. File `barber-simulator-asmr-v1.0.7-build-8.aab`, 5,188,387 bytes; SHA-256 `cecc1c906ec50e1d3ef03fc888f4bf53dea5af4844213080b3063bda65bcbfbd`. Release lint, strict JAR signature verification, bundle validation, signed APK generation and artifact-level configuration/assets checks passed. See [release/signing record](RELEASE-AAB-1.0.7.md) for certificate fingerprint, backup filename and restore instructions. GitHub signing secrets remain unconfigured; the direct build lane is complete. First-upload Play signing enrollment/registration belongs to the upload stage.
-7. **Play submission — PENDING.** Upload to the existing app, complete release details/countries/rollout and any remaining Console declarations, inspect automated checks, and send for review. Record exact source, AAB hash/version, track and confirmed review state. Do not report submission from a saved draft alone.
+6. **Signing/AAB — DONE.** Current signed v1.0.8 (9) replaces draft-only v1.0.7 (8). Dedicated upload key unchanged and backed up privately; no secrets in git. Clean build/lint, strict signature, bundle/APK, permissions/production IDs and unchanged game-assets checks passed. See [current artifact record](RELEASE-AAB-1.0.8.md) and historical signing/restoration record [v1.0.7](RELEASE-AAB-1.0.7.md).
+7. **Play submission — DONE.** Existing app, production **1.0.8 (9)** only, 177 country/region entries excluding mainland China, ten listing/release-note languages. All 21 changes submitted. Final quick checks passed and **Changes in review** confirmed 2026-10-16T21:22:13Z. [Console](https://play.google.com/console/u/0/developers/7097804603172918698/app/4975100930006889688/publishing). Approval/publication pending.
 8. **After publication — PENDING.** Link the live store entry in AdMob, complete app-ads.txt verification and app readiness review, and record actual serving status. Account approval alone does not mean this new game is approved for full ad serving.
 
 ## Commands and evidence
@@ -99,3 +108,5 @@ The existing CI workflow is `.github/workflows/android-apk.yml`. It builds a tes
 - 2026-10-16, publication verified: PR #9 is merged and `main` contains the production AdMob integration. The approval block is resolved. Stage 5 is complete; signing/AAB and submission remain pending. Debug retains Google test IDs.
 
 - 2026-10-16, signed AAB completed: v1.0.7 (8), 5,188,387 bytes, SHA-256 `cecc1c906ec50e1d3ef03fc888f4bf53dea5af4844213080b3063bda65bcbfbd`. Dedicated upload key and private backup saved separately. Release build/lint, signature, bundle structure, generated APK signature, production IDs and unchanged game assets verified. No Play upload/submission performed.
+
+- 2026-10-16, release submitted: full listing/policy audit corrected Advertising ID and AI artwork labels and found the teen-advertising consent gap. Neutral local age safeguard added in v1.0.8 (9), with gameplay freeze preserved. Native checks 11/11 and four layout captures verified; PR #10 merged. Signed build 9 replaces draft-only build 8. Google Console confirms all 21 changes in review after final quick checks. This latest entry supersedes historical pending statuses above.

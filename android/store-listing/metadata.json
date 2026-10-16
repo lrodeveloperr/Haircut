@@ -4,7 +4,7 @@
   "decisionDate": "2026-10-15",
   "timeZone": "America/New_York",
   "namingStatus": "LOCKED",
-  "listingStatus": "PLAY_CONSOLE_TEN_LANGUAGE_LISTING_SAVED_READY_TO_SEND_FOR_REVIEW",
+  "listingStatus": "Submitted; Google Play Changes in review confirmed 2026-10-16",
   "defaultLocale": "en-US",
   "title": "Barber Simulator: ASMR Haircut",
   "shortDescription": "Cut fades in a 3D barber shop with clipper sounds and freehand control.",
@@ -23,7 +23,7 @@
     "dashboardUrl": "https://play.google.com/console/u/0/developers/7097804603172918698/app/4975100930006889688/app-dashboard",
     "appType": "Game",
     "pricing": "Free",
-    "releaseStatus": "Draft; no release uploaded or submitted",
+    "releaseStatus": "Production v1.0.8 (9) and all 21 changes submitted; Changes in review confirmed",
     "savedListingLocales": [
       "en-US",
       "es-419",
@@ -37,7 +37,7 @@
       "hi-IN"
     ],
     "pendingListingLocales": [],
-    "nonMediaDeclarationsStatus": "All non-media setup tasks saved. Store listing text and required media now saved; native wrapper/AAB not yet implemented or verified.",
+    "nonMediaDeclarationsStatus": "All declarations reviewed live against the signed AdMob artifact; Advertising ID completed; under-18 advertising safeguard implemented",
     "savedDeclarations": {
       "containsAds": true,
       "requiresSignInOrPaymentForReview": false,
@@ -66,9 +66,9 @@
     "privacyPolicyUrl": "https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/",
     "dataDeletionUrl": "https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/#delete-data",
     "dataSafety": {
-      "status": "Saved and dashboard marked complete",
+      "status": "Reviewed live, saved and submitted for Google review",
       "configurationEvidence": "../PRIVACY-RELEASE-CONFIG.md",
-      "androidRuntimeVerified": false,
+      "androidRuntimeVerified": true,
       "dataTypesCollectedAndShared": [
         "Approximate location",
         "App interactions",
@@ -85,11 +85,12 @@
       "encryptedInTransit": true,
       "accountCreation": false,
       "externalAccountLogin": false,
-      "deletionRequestMechanism": true
+      "deletionRequestMechanism": true,
+      "runtimeVerificationScope": "11 installed debug APK age/privacy checks passed plus prior test-ad privacy/reward verification; source, artifact and official SDK disclosures reconciled. No live advertising or production network traffic exercised."
     },
     "remainingSetupTasks": [],
     "media": {
-      "status": "Icon, feature graphic and four gameplay screenshots attached to default en-US and saved; listing Ready to send for review",
+      "status": "Approved icon, feature graphic and four authentic gameplay screenshots submitted; icon/feature AI labels saved",
       "icon": {
         "filename": "barber-icon-512x512.png",
         "width": 512,
@@ -126,9 +127,65 @@
           "fdd42562e2a49c991288f2d83a9f0032b8e1d5e6"
         ]
       },
-      "video": "Omitted"
+      "video": "Omitted",
+      "aiLabels": {
+        "icon": true,
+        "featureGraphic": true,
+        "gameplayScreenshots": false
+      }
     },
-    "dashboardSetupVerification": "Previously 10/11; after final listing saved, setup card disappeared and listing status became Ready to send for review."
+    "dashboardSetupVerification": "Previously 10/11; after final listing saved, setup card disappeared and listing status became Ready to send for review.",
+    "releaseArtifact": {
+      "versionName": "1.0.8",
+      "versionCode": 9,
+      "fileName": "barber-simulator-asmr-v1.0.8-build-9.aab",
+      "bytes": 5192721,
+      "sha256": "5b0ada5bca61d63dd5ade02418e3af8283041fb501a5c0114d54b3459ca31e42",
+      "sourceCommit": "bb81bc267d2b1ef4f91db10e41ef69f9510928da",
+      "targetSdk": 36,
+      "track": "production",
+      "playMeasuredDownload": "2.77 MB"
+    },
+    "advertisingId": {
+      "usesAdvertisingId": true,
+      "purposes": [
+        "Advertising or marketing",
+        "Analytics",
+        "Fraud prevention, security and compliance"
+      ],
+      "manifestPermissionVerified": true
+    },
+    "ageProtection": {
+      "minimumTargetAge": 13,
+      "adsMinimumAge": 18,
+      "unknownAgeAds": false,
+      "birthDateCollected": false,
+      "ageBandTransmitted": false,
+      "agePreferenceExcludedFromBackupAndTransfer": true,
+      "nativeVerification": {
+        "status": "PASS",
+        "checks": 11,
+        "uniqueRawScreenshots": 4,
+        "runs": [
+          38967133699,
+          38967888876
+        ],
+        "evidence": "../qa/age-gate-2026-10-16.json"
+      }
+    },
+    "quickChecks": "Final post-submission quick checks completed successfully; Your changes are now in review",
+    "countryRegionEntries": 177,
+    "mainlandChinaTargeted": false,
+    "submission": {
+      "confirmedAtUtc": "2026-10-16T21:22:13Z",
+      "status": "In review",
+      "changes": 21,
+      "track": "production",
+      "managedPublishing": false,
+      "fullRolloutAfterApproval": true,
+      "verifiedConsoleUrl": "https://play.google.com/console/u/0/developers/7097804603172918698/app/4975100930006889688/publishing",
+      "approvalPending": true
+    }
   },
   "differentiators": [
     "Freehand hair cutting",
