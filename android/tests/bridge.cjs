@@ -65,9 +65,11 @@ function fakeHost() {
           const yaw=region==='beard'?180:region==='sideburn'?-90:-55;
           skinFadeStudio.turn(yaw-skinFadeStudio.getState().cameraYawDeg);
           const b=HSC.view.headScreen();
-          for(const fy of (region==='top-scalp'?[.2,.25,.3,.35]:region==='sideburn'?[.8,.95,1.1,1.25,.65]:region==='lower-scalp'?[.9,1,1.1,1.2]:[.70,.80,.90,1,1.1,1.2,1.3,1.4]))
+          const rows=region==='beard'?Array.from({length:Math.max(0,Math.ceil((innerHeight-25-b.bottom)/24))},(_,i)=>b.bottom+i*24):
+            (region==='top-scalp'?[.2,.25,.3,.35]:region==='sideburn'?[.8,.95,1.1,1.25,.65]:[.9,1,1.1,1.2]).map(fy=>b.top+(b.bottom-b.top)*fy);
+          for(const cy of rows)
           for(const fx of(region==='sideburn'?[.15,.85,.25,.75,.35,.65]:[.5,.4,.6,.3,.7,.2,.8])){
-            const contact={clientX:b.left+(b.right-b.left)*fx,clientY:b.top+(b.bottom-b.top)*fy,pointerType:'touch'};
+            const contact={clientX:b.left+(b.right-b.left)*fx,clientY:cy,pointerType:'touch'};
             if(contact.clientY<25||contact.clientY>innerHeight-25)continue;
             const t=HSC.view.touchTarget(contact),hit=HSC.view.raycast(t.x,t.y);
             if(hit&&(region==='beard'?hit.kind==='beard':hit.kind!=='beard')&&(region!=='sideburn'||(Math.abs(hit.position[0])>.7&&hit.v<.4))&&(region!=='top-scalp'||hit.v>.65)&&(region!=='lower-scalp'||hit.v<.3)){
