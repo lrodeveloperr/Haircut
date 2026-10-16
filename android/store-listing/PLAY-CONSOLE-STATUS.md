@@ -16,13 +16,26 @@ Updated 16 October 2026, America/Toronto.
 - **Privacy policy published and verified live**, and URL saved in Console: https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/
 - **Data safety completed and saved**, with collection AND sharing declared for approximate location, app interactions, diagnostics and device/other IDs. All four: non-ephemeral, required collection, advertising/marketing + analytics + fraud/security/compliance purposes for collection and sharing.
 - Encryption in transit = Yes; account creation and external-account login = None; deletion request mechanism = Yes, with public policy #delete-data anchor and studio email. No independent-security or payment badge claimed.
-- **Dashboard visibly confirms 10 of 11 setup tasks complete**, with privacy policy and Data safety marked complete.
+- Before the screenshot upload, Dashboard confirmed 10 of 11 setup tasks complete. After saving the completed listing, the setup card disappeared and the listing status visibly became **Ready to send for review**.
 - **Approved app icon (512×512) and feature graphic (1024×500) uploaded and attached to the default English listing**, then saved as draft. Both image names were visible and Console confirmed **Your changes have been saved**. The existing MediaCube cover was resized/cropped only, with no added captions. Other listing languages inherit default graphics when localized media is absent.
 - No Android binary uploaded, no release submitted or published. Saved declarations still await the eventual app review.
 
-## Remaining setup item
+## Gameplay screenshots uploaded and saved
 
-**Actual gameplay screenshots only.** The icon and feature graphic are uploaded and saved after owner approval. Phone screenshots are still absent (Console requires 2–8). Do not reuse cover artwork as purported gameplay screenshots. All ten languages' text is saved; optional video remains empty.
+All four original screenshots from branch `ccr-16be693f-dnlovt`, commit `22d7b152e03f732773007eac69f74d94a99de33d`, were uploaded unchanged and attached to default en-US in this order:
+
+1. `1-fade-clipper-back.png`
+2. `2-skin-fade-side.png`
+3. `3-buzz-clipper-top.png`
+4. `4-beard-front.png`
+
+Source directory: `android/store-listing/en-US/images/phoneScreenshots/`. Each file is an opaque RGB PNG, 1080×1920 (9:16), under 8 MB, with no captions. Local git blob hashes matched the source branch. The repo's capture README describes authentic full-detail gameplay states. The original cover remains separate icon/feature artwork.
+
+The listing passed the Assets step, was saved from its Review step, and the reopened editor showed all four filenames in order, count 4/8, and **Ready to send for review**. Other languages inherit default graphics when localized graphics are absent. Optional video remains empty. No review submission or release was performed.
+
+## Remaining release work
+
+Implement, build, sign and validate the Android wrapper/AAB against the approved configuration below, then upload a release for testing. The saved store listing is complete; it is not a verified Android binary.
 
 ## Android release implementation boundary
 
