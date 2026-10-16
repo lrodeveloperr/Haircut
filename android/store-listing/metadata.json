@@ -4,7 +4,7 @@
   "decisionDate": "2026-10-15",
   "timeZone": "America/New_York",
   "namingStatus": "LOCKED",
-  "listingStatus": "PLAY_CONSOLE_APP_CREATED_ENGLISH_DRAFT_SAVED",
+  "listingStatus": "PLAY_CONSOLE_TEN_LANGUAGE_TEXT_DRAFTS_SAVED",
   "defaultLocale": "en-US",
   "title": "Barber Simulator: ASMR Haircut",
   "shortDescription": "Cut fades in a 3D barber shop with clipper sounds and freehand control.",
@@ -25,9 +25,7 @@
     "pricing": "Free",
     "releaseStatus": "Draft; no release uploaded or submitted",
     "savedListingLocales": [
-      "en-US"
-    ],
-    "pendingListingLocales": [
+      "en-US",
       "es-419",
       "pt-BR",
       "fr-FR",
@@ -38,7 +36,8 @@
       "id",
       "hi-IN"
     ],
-    "nonMediaDeclarationsStatus": "Six earlier declarations, category/contact and IARC content rating saved; privacy/SDK disclosures and editor-blocked translations remain pending",
+    "pendingListingLocales": [],
+    "nonMediaDeclarationsStatus": "Six original declarations, category/contact and IARC content rating saved; ten language text drafts saved; privacy/SDK disclosures require final native Android wrapper and AdMob implementation",
     "savedDeclarations": {
       "containsAds": true,
       "requiresSignInOrPaymentForReview": false,
@@ -61,7 +60,9 @@
       "Lifestyle simulation",
       "Sandbox",
       "Simulation"
-    ]
+    ],
+    "dashboardSetupTasksCompleted": 8,
+    "dashboardSetupTasksTotal": 11
   },
   "differentiators": [
     "Freehand hair cutting",
