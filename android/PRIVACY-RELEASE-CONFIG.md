@@ -2,8 +2,6 @@
 
 The native wrapper and original AdMob/UMP flow are implemented and restored to the pre-age-gate baseline at the owner’s explicit request. There is no native age question or blanket under-18 ad block. The unapproved age-band paragraph was removed from the public privacy policy in website commit `b84473749ee137893747d88b9907cc98d8b83ded`. Game saves retain the original OS-backup behavior. Build 9 is withdrawn; original signed v1.0.7 (8) is available for restoration after approval. See [rollback record](ROLLBACK-AGE-GATE-2026-10-16.md).
 
-The native wrapper, SDK bridge, private saves, UMP consent/privacy options and production AdMob configuration are implemented. Signed production v1.0.8 (9) is uploaded to the existing Play app. Unknown and under-18 players do not enter advertising/UMP; a neutral local age band is excluded from backup and device transfer. See [the release audit](PLAY-RELEASE-AUDIT-2026-10-16.md) and [current release record](RELEASE-AAB-1.0.8.md). Submission status is tracked in [the release handoff](RELEASE-HANDOFF.md).
-
 ## Approved release data boundary
 
 - Device-local saves only: current haircut/customer, progression, wardrobe ownership, daily item partial credits, streaks, audio and other preferences.
