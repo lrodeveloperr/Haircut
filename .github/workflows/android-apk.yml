@@ -51,6 +51,7 @@ jobs:
         if: ${{ !contains(github.event.head_commit.message, '[native-check]') }}
         run: |
           npx playwright install --with-deps chromium
+          node android/tests/privacy.cjs
           node android/tests/bridge.cjs
       - name: Compile APK and run Android lint
         working-directory: android/native
@@ -92,6 +93,7 @@ jobs:
             android-apk/
             qa/results/android-installed-*
             qa/results/android-browser-placement-*
+            qa/results/android-browser-privacy-*
             android/native/app/build/reports/lint-results-debug.html
             android/native/app/build/reports/lint-results-debug.xml
           if-no-files-found: ignore

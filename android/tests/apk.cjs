@@ -58,6 +58,42 @@ async function ready(){
   });
 }
 async function screenshot(name){const png=execFileSync(adbPath,['exec-out','screencap','-p'],{timeout:30000,maxBuffer:32*1024*1024});fs.writeFileSync(path.join(out,'android-installed-'+name+'.png'),png);return png;}
+async function privacy(layout) {
+  const tap = async selector => {
+    const p=await page.evaluate(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};},selector);
+    const b=layout.nativeBounds,v=layout.visualViewport;
+    adb('shell','input','tap',String(Math.round(b.left+(p.x-v.offsetLeft)*(b.right-b.left)/v.width)),String(Math.round(b.top+(p.y-v.offsetTop)*(b.bottom-b.top)/v.height)));
+  };
+  const before=await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair));
+  await tap('.hsc-rw');
+  await page.waitForFunction(()=>document.querySelector('#hsc-panel.open .hsc-privacy')&&skinFadeStudio.getView().paused);
+  const geometry=await page.evaluate(()=>{
+    const button=document.querySelector('.hsc-privacy');
+    const measure=()=>[...document.querySelectorAll('#hsc-panel button:not(.hsc-privacy),.hsc-sheet,.hsc-head,.hsc-pick,.hsc-coll,.hsc-grid')].map(el=>{const r=el.getBoundingClientRect();return[r.x,r.y,r.width,r.height];});
+    button.style.display='none';const before=measure();button.style.display='';const after=measure();
+    const p=button.getBoundingClientRect(),c=document.querySelector('.hsc-head .hsc-x:not(.hsc-privacy)').getBoundingClientRect();
+    return{before,after,privacy:[p.x,p.y,p.width,p.height],close:[c.x,c.y,c.width,c.height],gap:c.left-p.right};
+  });
+  assert.deepEqual(geometry.after,geometry.before,'native privacy icon must not move existing wardrobe elements');
+  assert(Math.abs(geometry.privacy[1]-geometry.close[1])<.1&&Math.abs(geometry.privacy[2]-geometry.close[2])<.1&&Math.abs(geometry.privacy[3]-geometry.close[3])<.1&&geometry.gap>0,'native shield matches Close size and alignment');
+  await screenshot(layout.name+'-wardrobe-privacy');
+  await tap('.hsc-privacy');
+  const xmlPath='/sdcard/privacy-'+layout.name+'.xml';
+  adb('shell','rm','-f',xmlPath);
+  adb('shell','uiautomator','dump','--compressed',xmlPath);
+  const xml=adb('shell','cat',xmlPath);
+  fs.writeFileSync(path.join(out,'android-installed-'+layout.name+'-privacy-menu.xml'),xml);
+  assert(xml.includes('text="Privacy policy"')&&xml.includes('text="Privacy"'),'trusted native tap must open the real Android policy menu');
+  await screenshot(layout.name+'-privacy-menu');
+  adb('shell','input','keyevent','KEYCODE_BACK');
+  assert(await page.evaluate(()=>skinFadeStudio.getView().paused),'closing native privacy menu keeps wardrobe pause');
+  assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),before,'native privacy menu preserves haircut');
+  await tap('.hsc-head .hsc-x:not(.hsc-privacy)');
+  await page.waitForFunction(()=>!skinFadeStudio.getView().paused);
+  layout.privacy={existingBoundsUnchanged:true,alignment:geometry,menuOpened:true,hairPreserved:true};
+  check(layout.name+' privacy icon preserves all existing wardrobe bounds');
+  check(layout.name+' trusted native privacy tap opens policy menu and preserves haircut/pause');
+}
 // Decode the actual Android PNG to require composited marker pixels, not merely DOM existence.
 function markerPixels(png,contact,teeth,scale){
   const {width,height,data:pixels}=require('pngjs').PNG.sync.read(png),channels=4,stride=width*channels;
@@ -245,6 +281,7 @@ async function nativeWebViewBounds(){
       check(spec.name+' native guard1/3 taps match visible controls');
       layout.name=spec.name;layout.touch=await cut(spec.name,layout);
       await screenshot(spec.name);
+      await privacy(layout);
     }
     report.rotations=[];
     let previousContact=report.layouts[report.layouts.length-1].touch.contact;

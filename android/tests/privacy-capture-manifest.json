@@ -1,0 +1,65 @@
+{
+  "purpose": "Verify the approved Android privacy shield without moving existing controls",
+  "source": "resolved by the workflow checkout SHA",
+  "platform": "Android debug/test ads only",
+  "locale": "en",
+  "screens": [
+    {
+      "name": "phone-portrait",
+      "width": 390,
+      "height": 844,
+      "state": "wardrobe-before",
+      "filename": "android-browser-privacy-phone-portrait-before.png"
+    },
+    {
+      "name": "phone-portrait",
+      "width": 390,
+      "height": 844,
+      "state": "wardrobe-after",
+      "filename": "android-browser-privacy-phone-portrait-after.png"
+    },
+    {
+      "name": "phone-landscape",
+      "width": 844,
+      "height": 390,
+      "state": "wardrobe-before",
+      "filename": "android-browser-privacy-phone-landscape-before.png"
+    },
+    {
+      "name": "phone-landscape",
+      "width": 844,
+      "height": 390,
+      "state": "wardrobe-after",
+      "filename": "android-browser-privacy-phone-landscape-after.png"
+    },
+    {
+      "name": "tablet-portrait",
+      "width": 800,
+      "height": 1280,
+      "state": "wardrobe-before",
+      "filename": "android-browser-privacy-tablet-portrait-before.png"
+    },
+    {
+      "name": "tablet-portrait",
+      "width": 800,
+      "height": 1280,
+      "state": "wardrobe-after",
+      "filename": "android-browser-privacy-tablet-portrait-after.png"
+    },
+    {
+      "name": "tablet-landscape",
+      "width": 1280,
+      "height": 800,
+      "state": "wardrobe-before",
+      "filename": "android-browser-privacy-tablet-landscape-before.png"
+    },
+    {
+      "name": "tablet-landscape",
+      "width": 1280,
+      "height": 800,
+      "state": "wardrobe-after",
+      "filename": "android-browser-privacy-tablet-landscape-after.png"
+    }
+  ],
+  "expectedPngCount": 8
+}

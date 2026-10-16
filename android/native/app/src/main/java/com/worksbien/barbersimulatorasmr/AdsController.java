@@ -38,6 +38,7 @@ final class AdsController {
     private RewardedAd rewarded;
     private InterstitialAd interstitial;
     private boolean loadingRewarded, loadingInterstitial, rewardedWanted, showing, destroyed;
+    private int privacyGeneration;
     private final Runnable rewardedTimeout = () -> {
         if (rewardedWanted) { rewardedWanted = false; emit("rewarded", "failed"); }
     };
@@ -60,6 +61,27 @@ final class AdsController {
         return consent != null && consent.canRequestAds();
     }
 
+    boolean isPrivacyOptionsRequired() {
+        return consent != null && consent.getPrivacyOptionsRequirementStatus()
+                == ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED;
+    }
+
+    void showPrivacyOptions() {
+        if (destroyed || showing || rewardedWanted || !isPrivacyOptionsRequired()) return;
+        // Discard requests made under the previous consent choices, including late callbacks.
+        privacyGeneration++;
+        rewarded = null;
+        interstitial = null;
+        loadingRewarded = false;
+        loadingInterstitial = false;
+        UserMessagingPlatform.showPrivacyOptionsForm(activity, formError -> {
+            if (destroyed || !canRequestAds()) return;
+            initAds();
+            loadRewarded();
+            loadInterstitial();
+        });
+    }
+
     private void initAds() {
         if (!canRequestAds() || initialized.getAndSet(true)) return;
         new Thread(() -> MobileAds.initialize(activity, status -> ui.post(() -> {
@@ -71,9 +93,11 @@ final class AdsController {
     private void loadRewarded() {
         if (destroyed || loadingRewarded || rewarded != null || !canRequestAds()) return;
         loadingRewarded = true;
+        final int generation = privacyGeneration;
         RewardedAd.load(activity, BuildConfig.ADMOB_REWARDED_ID, new AdRequest.Builder().build(), new RewardedAdLoadCallback() {
             @Override
             public void onAdLoaded(@NonNull RewardedAd ad) {
+                if (destroyed || generation != privacyGeneration) return;
                 loadingRewarded = false;
                 rewarded = ad;
                 if (rewardedWanted) { rewardedWanted = false; ui.removeCallbacks(rewardedTimeout); presentRewarded(); }
@@ -81,6 +105,7 @@ final class AdsController {
 
             @Override
             public void onAdFailedToLoad(@NonNull LoadAdError error) {
+                if (destroyed || generation != privacyGeneration) return;
                 loadingRewarded = false;
                 if (rewardedWanted) { rewardedWanted = false; ui.removeCallbacks(rewardedTimeout); emit("rewarded", "failed"); }
             }
@@ -90,15 +115,18 @@ final class AdsController {
     private void loadInterstitial() {
         if (destroyed || loadingInterstitial || interstitial != null || !canRequestAds()) return;
         loadingInterstitial = true;
+        final int generation = privacyGeneration;
         InterstitialAd.load(activity, BuildConfig.ADMOB_INTERSTITIAL_ID, new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {
             @Override
             public void onAdLoaded(@NonNull InterstitialAd ad) {
+                if (destroyed || generation != privacyGeneration) return;
                 loadingInterstitial = false;
                 interstitial = ad;
             }
 
             @Override
             public void onAdFailedToLoad(@NonNull LoadAdError error) {
+                if (destroyed || generation != privacyGeneration) return;
                 loadingInterstitial = false;
             }
         });
