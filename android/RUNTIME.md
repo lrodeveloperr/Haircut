@@ -39,3 +39,5 @@ The native Android shell is in `android/native/` (debug APK compiled and checked
 ## Verification
 
 Run `node android/tests/rewards.cjs`. It exercises the actual catalog and wardrobe with the Android adaptation: first-credit persistence, second-credit unlock/equip, cancellation/error, reload, independent cape progress, duplicate-tap protection, UI badge count and isolation of the legacy one-video rule.
+
+Optional `CAPTURE_BLADE=1 node android/tests/apk.cjs` adds a held-touch phone capture with a diagnostic contact marker. Keep long captures separate from the default native swipe checks: the headless software GPU can preempt its display context and raise an Android input timeout under prolonged capture load. This is test-environment evidence, not a physical-device frame-rate measurement.

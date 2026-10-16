@@ -77,7 +77,7 @@ async function cut(label){
   });
   // The emulator profile has no camera cutout and bars are hidden. Actual native pixel input.
   const swipe=['shell','input','swipe',String(Math.round(p.x*p.dpr)),String(Math.round((p.y+p.gap)*p.dpr)),String(Math.round((p.x+6)*p.dpr)),String(Math.round((p.y+p.gap+6)*p.dpr))];
-  if(label.endsWith('portrait')){
+  if(process.env.CAPTURE_BLADE==='1'&&label==='phone-portrait'){
     // Capture the real native blade while the finger is held down, before pointer-up hides it.
     const child=spawn(adbPath,[...swipe,'5000'],{stdio:'ignore'});
     const done=new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',code=>code===0?resolve():reject(Error('native held swipe failed')));});
