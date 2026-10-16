@@ -3,7 +3,7 @@
 Decision date: 15 October 2026, America/New_York  
 Repository: lrodeveloperr/Haircut  
 Android name status: **LOCKED**  
-Listing status: **TEN-LANGUAGE COPY PREPARED; ANDROID BUILD PENDING**  
+Listing status: **ENGLISH CONSOLE DRAFT SAVED; SIX DECLARATIONS SAVED; NINE TRANSLATIONS AND ANDROID BUILD PENDING**  
 Scope: Android / Google Play naming and prepared website metadata.
 
 ## 1. Locked English name
@@ -36,7 +36,7 @@ An indexed web and Google Play search screen did not surface an exact full-title
 | Offline Android play | Final packaged Android services not implemented here | Verify before adding |
 | Ad-free, professional training, AI try-on, shop-management tycoon, hair regrowth or scissors | Not established by the reviewed game source | Excluded from listing |
 
-The listing describes the existing game's functions. It does not claim that an Android AAB has been built, that metadata has been uploaded, or that a store release has passed review.
+The listing describes the existing game's functions. The English metadata is now saved as a Play Console draft; the other nine translations remain prepared. An Android AAB has not been built here and no store release has been submitted or passed review. See [verified Console status](PLAY-CONSOLE-STATUS.md).
 
 ## 3. Evidence and search intent
 
@@ -171,9 +171,9 @@ The SEO page covers Android, barber simulator, ASMR haircut game, 3D barber shop
 | Artifact | Required canonical value / action | State |
 |---|---|---|
 | Android README | Barber Simulator: ASMR Haircut | Updated in this change |
-| Google Play English title, short and full description | metadata.json and localized text files | Prepared in repository |
+| Google Play English title, short and full description | metadata.json and localized text files | Saved as a Console draft |
 | Android app label / accessibility label | Exact locked Android title | Apply when Android app exists |
-| Localized store metadata | Selected local titles and complete translated copy | Prepared in ten locale folders |
+| Localized store metadata | Selected local titles and complete translated copy | Ten locale folders prepared; English saved, other nine uploads pending |
 | Android screenshots / feature graphic / video | Locked name where shown; authentic game | Brief prepared; asset creation separate |
 | Website page / SEO tags / internal links | seo.json values | Prepared; website deployment separate |
 | Android privacy and support pages | Exact Android title, final SDK/data behavior | Update with actual Android implementation |

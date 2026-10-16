@@ -4,7 +4,7 @@ This folder holds the Android / Google Play release work for **Barber Simulator:
 
 Android English name: **LOCKED** (30 characters). See [naming, ASO and SEO](store-listing/NAMING-ASO-SEO.md), [canonical metadata](store-listing/metadata.json) and [prepared website SEO](store-listing/seo.json).
 
-Google Play app record created: `com.worksbien.barbersimulatorasmr`. The English listing is saved as a draft; nine translations and the non-media setup forms remain pending after Console became unresponsive. See the [verified Console status](store-listing/PLAY-CONSOLE-STATUS.md). Use this package ID when building the Android wrapper.
+Google Play app record created: `com.worksbien.barbersimulatorasmr`. The English listing is saved as a draft. Six declarations are now saved: ads, app access, government, financial features, health and a 13+ target audience. Nine translations, category/contact settings, rating and privacy/SDK disclosures remain pending. See the [verified Console status](store-listing/PLAY-CONSOLE-STATUS.md). Use this package ID when building the Android wrapper.
 
 ## Current release direction
 

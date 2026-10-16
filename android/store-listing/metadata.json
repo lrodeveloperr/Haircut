@@ -26,7 +26,18 @@
     "releaseStatus": "Draft; no release uploaded or submitted",
     "savedListingLocales": ["en-US"],
     "pendingListingLocales": ["es-419", "pt-BR", "fr-FR", "de-DE", "ar", "ja-JP", "ko-KR", "id", "hi-IN"],
-    "nonMediaDeclarationsStatus": "Pending; browser became unresponsive before forms could be completed",
+    "nonMediaDeclarationsStatus": "Six declarations saved and verified; rating terms, privacy/SDK disclosures and editor-blocked listing settings remain pending",
+    "savedDeclarations": {
+      "containsAds": true,
+      "requiresSignInOrPaymentForReview": false,
+      "governmentApp": false,
+      "financialFeatures": false,
+      "healthFeatures": false,
+      "targetAudienceAgeGroups": ["13-15", "16-17", "18 and over"]
+    },
+    "iarcStatus": "Game and studio contact prepared in open form; Terms of Use unchecked, questionnaire not completed",
+    "studioSupportEmail": "info@worksbienstudios.com",
+    "storeContactSaveStatus": "Pending; studio address verified from existing company website source, not yet saved in store contact settings",
     "statusReport": "PLAY-CONSOLE-STATUS.md"
   },
   "differentiators": [
