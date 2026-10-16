@@ -43,7 +43,7 @@ function fakeHost() {
   const browser = await chromium.launch({ args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   let passed = 0;
   try {
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true });
     const external = [];
     await ctx.route('**/*', async (route) => {
       const url = new URL(route.request().url());
@@ -71,6 +71,58 @@ function fakeHost() {
     assert.equal(await page.evaluate(() => window.bridge.platform.id), 'android');
     await page.waitForFunction(() => window.__native.ready === 1);
     assert.deepEqual(external, [], 'no network requests besides the replaced bridge');
+    passed++;
+
+    // High-only at native density, even with old saved Low and a forced Low URL.
+    await page.evaluate(() => AndroidHost.storageSet('["skin-fade-studio-detail-v1"]', '["low"]'));
+    await page.goto('http://release.test/?detail=low');
+    await page.waitForFunction(() => window.skinFadeStudio && window.HSC?.wardrobe?.data);
+    await page.addStyleTag({ content: '*{animation-play-state:paused!important}' });
+    const graphics = () => page.evaluate(() => {
+      const c = document.querySelector('#scene'), d = HSC.detail;
+      return { level: d.level, setting: d.setting, strands: d.minStrands, segments: d.segments,
+        beard: d.beardMax, simpleShader: d.shaderLow, width: c.width, height: c.height,
+        expectedWidth: Math.floor(c.clientWidth * devicePixelRatio), expectedHeight: Math.floor(c.clientHeight * devicePixelRatio) };
+    });
+    let g = await graphics();
+    assert.equal(g.level, 'high'); assert.equal(g.setting, 'fixed');
+    assert.equal(g.strands, 30000); assert.equal(g.segments, 8); assert.equal(g.beard, 1); assert.equal(g.simpleShader, false);
+    assert.equal(g.width, g.expectedWidth); assert.equal(g.height, g.expectedHeight);
+    assert.equal(await page.locator('.hsc-detail').count(), 0);
+    passed++;
+
+    // Trusted Android-style touch drives the same cutting point, without the old upward bias.
+    const point = await page.evaluate(() => {
+      const game = skinFadeStudio, view = HSC.view;
+      game.completeTutorial();
+      if (game.getState().interactionMode !== 'cut') game.toggleClipper();
+      game.selectGuard(1);
+      const p = game.hairHint();
+      window.__touchRays = [];
+      const raycast = view.raycast;
+      view.raycast = (x, y) => { __touchRays.push({ x, y }); return raycast(x, y); };
+      return p;
+    });
+    const cdp = await ctx.newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: point.x, y: point.y }] });
+    await page.waitForTimeout(200);
+    const rays = await page.evaluate(() => __touchRays);
+    assert(rays.length > 0, 'touch must reach the actual raycaster');
+    assert(Math.abs(rays[0].x - point.x) < 1 && Math.abs(rays[0].y - point.y) < 1, 'blade target must match contact');
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: point.x + 10, y: point.y + 10 }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    passed++;
+
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.waitForTimeout(250);
+    g = await graphics();
+    assert.equal(g.width, g.expectedWidth); assert.equal(g.height, g.expectedHeight);
+    await page.evaluate(() => { window.__androidHost.pause(true); window.__androidHost.pause(false); });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(250);
+    g = await graphics();
+    assert.equal(g.width, g.expectedWidth); assert.equal(g.height, g.expectedHeight);
+    assert.equal(g.level, 'high'); assert.equal(g.strands, 30000);
     passed++;
 
     // two completed rewarded videos unlock today's clipper; the first saves 1/2 and survives a reload
@@ -121,7 +173,7 @@ function fakeHost() {
     passed++;
 
     assert.deepEqual(errors, []);
-    console.log(`PASS: ${passed} Android bridge cases (boot, saves, two rewarded videos, dismissed/failed ads, back, pause, write failure).`);
+    console.log(`PASS: ${passed} Android bridge cases (fixed High/native DPR, trusted touch, rotation, saves, rewards, back, pause, write failure).`);
   } catch (e) {
     console.error(`FAIL after ${passed} passing cases:`, String(e.message || e).split('\n')[0]);
     process.exitCode = 1;

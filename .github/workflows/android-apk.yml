@@ -37,6 +37,7 @@ jobs:
       - name: Build Android runtime and test rewards
         run: |
           TARGET=full bash source/buildall.sh
+          node android/tests/graphics.cjs
           node android/tests/rewards.cjs
           node qa/contracts.cjs
       - name: Verify Android bridge in Chromium

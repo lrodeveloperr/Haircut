@@ -1,0 +1,53 @@
+"""Android-only fixed High graphics and direct touch contact, applied after shared patches."""
+from pathlib import Path
+import sys
+
+
+def adapt(runtime):
+    path = Path(runtime)
+    s = path.read_text()
+
+    def replace(old, new, count=1):
+        nonlocal s
+        actual = s.count(old)
+        if actual != count:
+            raise ValueError(f"Android graphics expected {count} occurrences, got {actual}: {old[:100]}")
+        s = s.replace(old, new)
+
+    # Cut exactly at the reported pointer, in CSS coordinates. Both cutting and the
+    # proximity helper share this point; do not merely move the visible clipper.
+    replace('j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0)', 'j.clientY', 2)
+    replace('touchOffsetPx:72', 'touchOffsetPx:0', 3)
+
+    # Remove the renderer's independent adaptive controller as well as using the
+    # fixed profile. Sampling slow frames must have no quality-changing side effects.
+    start = s.index('function he(ue){Pe&&(Ue=Ue*.93+')
+    end = s.index('function _(ue=!0)', start)
+    replace(s[start:end], 'function he(ue){if(Pe)HSC.detail.sample(ue-Pe);Pe=ue}')
+    replace('resetTiming(){Pe=0}', 'resetTiming(){Pe=0;HSC.detail.resetHistory()}')
+    # Re-evaluate native density on resize/display changes, without any adaptive
+    # floor, DPR cap or pixel-budget downscaling.
+    replace('let ye=Math.max(1,e.clientWidth),Ie=Math.max(1,e.clientHeight),B=Math.floor(ye*$),E=Math.floor(Ie*$);',
+            'let ye=Math.max(1,e.clientWidth),Ie=Math.max(1,e.clientHeight);J=$=HSC.detail.pixelRatio();let B=Math.floor(ye*$),E=Math.floor(Ie*$);')
+
+    # Reuse the existing YouTube idle-render policy: static scenes need no GPU
+    # redraw. Cutting, rotation, reveal and falling hair still render each frame.
+    replace('function J(){var j,ae;s=HSC.ensure(s)',
+            'let needsRender=true;function J(){needsRender=true;var j,ae;s=HSC.ensure(s)')
+    replace('function Ae(){if(f)try{a.releasePointerCapture(f.id)}',
+            'function Ae(){needsRender=true;if(f)try{a.releasePointerCapture(f.id)}')
+    replace('let ce=()=>{Ae(),C||n.render(!1)}',
+            'let ce=()=>{Ae();if(!C&&!c){n.render(!1);needsRender=false}}')
+    replace('if(s.status==="reveal"&&!x){D+=ae;',
+            'if(s.status==="reveal"&&!x){needsRender=true;D+=ae;')
+    replace('(f||s.status==="reveal"&&!x||j%66<20||HSC.clippingsActive&&HSC.clippingsActive())&&n.render(!!(f||s.status==="reveal"&&!x||HSC.clippingsActive&&HSC.clippingsActive()))',
+            '(()=>{let active=!!(f||s.status==="reveal"&&!x||HSC.clippingsActive&&HSC.clippingsActive());if(active||needsRender){n.render(active);needsRender=false}})()')
+
+    path.write_text(s)
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        raise SystemExit('usage: python3 android/patch-graphics.py RUNTIME_GAME_JS')
+    adapt(sys.argv[1])
+    print('Android fixed High graphics, native resolution and direct touch applied')

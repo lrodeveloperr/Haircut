@@ -2,7 +2,7 @@ set -e
 cd "$(dirname "$0")"
 # Keep publisher-specific graphics policy separate from the Android and legacy Playgama targets.
 case "${TARGET:-playables}" in
-  full) DETAIL=detail ;;
+  full) DETAIL=detail-android ;;
   youtube) DETAIL=detail-youtube ;;
   *) DETAIL=detail-playables ;;
 esac
@@ -41,6 +41,7 @@ c['advertisement']['rewarded']={'disable':False,'placementFallback':'unlock-item
 json.dump(c,open('build/playgama-bridge-config.json','w'),separators=(',',':'))
 PY
 if [ "${TARGET:-playables}" = full ]; then
+  python3 ../android/patch-graphics.py build/runtime/game.js
   python3 ../android/patch-runtime.py build
 fi
 node --check build/runtime/game.js
