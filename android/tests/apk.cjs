@@ -87,6 +87,8 @@ async function cut(label){
   const errors=[];
   try{
     adb('logcat','-c');
+    // Acknowledge Android's one-time full-screen teaching bubble in this test fixture.
+    adb('shell','settings','put','secure','immersive_mode_confirmations','confirmed');
     adb('shell','svc','wifi','disable');adb('shell','svc','data','disable');
     adb('install','-r','android/native/app/build/outputs/apk/debug/app-debug.apk');
     adb('shell','settings','put','system','accelerometer_rotation','0');
