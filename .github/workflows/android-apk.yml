@@ -71,6 +71,8 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Play installed APK on phone and tablet windows
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ANDROID_APK_LIFECYCLE_ONLY: ${{ contains(github.event.head_commit.message, '[lifecycle-check]') && '1' || '0' }}
         with:
           api-level: 35
           target: google_apis

@@ -1,0 +1,13 @@
+# Android privacy build and raw-capture sessions — 16 October 2026
+
+This is a repository-local continuation ledger for the existing APK workflow. It records superseded and failed attempts as well as the final result. No separate marketing-capture workflow was introduced. Source/runtime and assertion failures are kept separate from native observation failures.
+
+| Source / run | Outcome | Reached / useful evidence | Cause / next action |
+| --- | --- | --- | --- |
+| `d1a3123` / [38948587734](https://github.com/lrodeveloperr/Haircut/actions/runs/38948587734) | Cancelled, partial | Full build/domain/browser privacy/placement; compile/lint/signature passed. Phone portrait/landscape installed checks passed. | Superseded by source review: retain original Close focus. The intermediate policy menu and ad additions were later removed on owner instruction. |
+| `e485782` / [38949610005](https://github.com/lrodeveloperr/Haircut/actions/runs/38949610005) | Failed | Full build/domain/browser privacy/guard; compile/lint/signature passed. Installed matrix stopped before first placement assertion. | UiAutomation returned null root and exit 0, with no XML file. Extend the existing bounded observation retry to include reading the missing file. Do not retry or weaken geometry/cutting assertions. |
+| `591b3db` / [38950870866](https://github.com/lrodeveloperr/Haircut/actions/runs/38950870866) | Failed, privacy capture complete | Compile/lint/signature and27native checks passed; all8privacy captures/4intent records verified. | Offline-ad fixture failed to close an actually played cached Google test ad. App ads controller remains unchanged. Follow up only lifecycle/save with real callback assertions. |
+
+Each full browser privacy capture expects eight raw PNGs (before/after across four layouts). Each final installed matrix expects four wardrobe/privacy screenshots and four external-handler screenshots, alongside the pre-existing cutting/rotation/relaunch evidence. For `591b3db`,19PNGs were downloaded:18planned captures and one failure diagnostic; the relaunch capture was not reached. All8privacy captures are complete.
+
+Timing, time to usable raws, assistant-call counts and runner-minute savings were not measured. They are unknown, not zero. Runs were triggered by commits, without manual workflow dispatches. Partial/failed artifacts were preserved. Artifact12068464011 was downloaded once for failure diagnosis and direct-link evidence; it is not a successful full-matrix deliverable. The final lifecycle-only follow-up reuses identical application source and does not repeat the four-layout matrix. Native capture reuses the existing compiled APK and single emulator boot; no additional browser matrix is repeated for native-only changes.

@@ -46,4 +46,4 @@ No name/email, contacts, recordings, photos, precise location or local haircut s
 - Google Play definitions: https://support.google.com/googleplay/android-developer/answer/10787469 (optional requires all users can opt out of that data collection; a contact email can be a deletion-request mechanism).
 - Game source reviewed: source/storage.js, android/RUNTIME.md, android/README.md and repository tree.
 - Public static page: lrodeveloperr/Worksbien-website, public/apps/barber-simulator-asmr/privacy/index.html. Main auto-deploys; live page verified.
-- Direct-link policy access instructions: website commit `6db51090852492de51f1251c06ceb13d38fa430f`; final deployment verification is tracked in privacy QA. Advertising SDK/data categories remain unchanged.
+- Direct-link policy access instructions: website commit `6db51090852492de51f1251c06ceb13d38fa430f`; both Cloudflare deployments and the live HTTPS direct-link instructions were verified on 2026-10-16. Advertising SDK/data categories remain unchanged.

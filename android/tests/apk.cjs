@@ -10,7 +10,8 @@ const out=path.resolve('qa/results');fs.mkdirSync(out,{recursive:true});
 const adbPath=path.join(process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT,'platform-tools/adb');
 const adb=(...args)=>{console.log('adb',...args);return execFileSync(adbPath,args,{encoding:'utf8',timeout:30000,maxBuffer:8*1024*1024}).trim();};
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
-const report={checks:[],layouts:[]};let browser,page;
+const lifecycleOnly=process.env.ANDROID_APK_LIFECYCLE_ONLY==='1';
+const report={checks:[],layouts:[],mode:lifecycleOnly?'lifecycle-follow-up':'full'};let browser,page;
 function check(name){report.checks.push(name);console.log('PASS:',name);}
 // WebView intentionally lacks browser-context/download APIs required by desktop Playwright.
 // Attach directly to the inspected page with standard CDP, leaving the native app in control.
@@ -58,6 +59,48 @@ async function ready(){
   });
 }
 async function screenshot(name){const png=execFileSync(adbPath,['exec-out','screencap','-p'],{timeout:30000,maxBuffer:32*1024*1024});fs.writeFileSync(path.join(out,'android-installed-'+name+'.png'),png);return png;}
+async function offlineAdvertisement() {
+  // Disabling connectivity cannot invalidate an already cached Google test ad.
+  // Observe real native callbacks; close only a labelled native ad close control.
+  await page.evaluate(()=>{
+    window.__offlineAdCheck={events:[],done:false};
+    const receive=__androidHost.ad;
+    __androidHost.ad=function(kind,state){__offlineAdCheck.events.push(kind+':'+state);return receive(kind,state);};
+    (async()=>{
+      try{__offlineAdCheck.earned=await(await HSC.youtubeClientPromise).showRewarded('apk-offline-check');}
+      catch(error){__offlineAdCheck.error=String(error);}
+      finally{__offlineAdCheck.done=true;}
+    })();
+  });
+  let result, captured=false;
+  const deadline=Date.now()+60000;
+  while(Date.now()<deadline) {
+    result=await page.evaluate(()=>__offlineAdCheck);
+    if(result.done)break;
+    const activities=adb('shell','dumpsys','activity','activities');
+    if(activities.split('\n').some(line=>/(?:mResumedActivity|topResumedActivity)/.test(line)&&line.includes('/com.google.android.gms.ads.AdActivity'))) {
+      const xmlPath='/sdcard/offline-test-ad.xml';
+      try {
+        adb('shell','rm','-f',xmlPath);adb('shell','uiautomator','dump','--compressed',xmlPath);
+        const xml=adb('shell','cat',xmlPath);
+        fs.writeFileSync(path.join(out,'android-installed-offline-test-ad.xml'),xml);
+        const node=(xml.match(/<node[^>]*>/g)||[]).find(n=>/(?:text|content-desc)="(?:Close ad|Close|Dismiss)(?: button)?"/i.test(n)&&n.includes('clickable="true"'));
+        const b=node?.match(/bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/);
+        if(b) {
+          if(!captured){await screenshot('offline-cached-test-ad');captured=true;}
+          adb('shell','input','tap',String(Math.round((+b[1]+ +b[3])/2)),String(Math.round((+b[2]+ +b[4])/2)));
+        }
+      } catch(error) { (report.adInspectionErrors??=[]).push(error.message); }
+    }
+    await pause(1000);
+  }
+  assert(result?.done,'offline no-fill or cached test-ad closure must resolve within60s');
+  assert(!result.error,result.error);
+  assert.equal(result.earned,result.events.includes('rewarded:rewarded'),'reward result must match the actual native earned callback');
+  if(result.earned)assert(result.events.includes('rewarded:opened')&&result.events.includes('rewarded:closed'),'a cached earned ad must have really opened and closed');
+  report.offlineAd=result;await ready();
+  check('native offline ad resolves without stuck pause; reward matches native callback (cached test ads allowed)');
+}
 async function privacy(layout) {
   const tap = async selector => {
     const p=await page.evaluate(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};},selector);
@@ -237,12 +280,13 @@ async function nativeWebViewBounds(){
     adb('shell','settings','put','system','accelerometer_rotation','0');
     adb('shell','wm','user-rotation','lock','0');
     report.webview=adb('shell','dumpsys','webviewupdate');
-    for(const spec of[
+    const specs=[
       {name:'phone-portrait',size:'1080x1920',density:'420',rotation:0},
       {name:'phone-landscape',size:'1920x1080',density:'420',rotation:1},
       {name:'tablet-portrait',size:'1600x2560',density:'320',rotation:0},
       {name:'tablet-landscape',size:'2560x1600',density:'320',rotation:1},
-    ]){
+    ];
+    for(const spec of lifecycleOnly?specs.slice(0,1):specs){
       if(browser){await browser.close();browser=null;}
       adb('shell','am','force-stop',app);
       adb('shell','wm','size',spec.size);adb('shell','wm','density',spec.density);
@@ -291,11 +335,11 @@ async function nativeWebViewBounds(){
       check(spec.name+' native guard1/3 taps match visible controls');
       layout.name=spec.name;layout.touch=await cut(spec.name,layout);
       await screenshot(spec.name);
-      await privacy(layout);
+      if(!lifecycleOnly)await privacy(layout);
     }
     report.rotations=[];
     let previousContact=report.layouts[report.layouts.length-1].touch.contact;
-    for(const size of ['1600x2560','2560x1600']){
+    for(const size of lifecycleOnly?[]:['1600x2560','2560x1600']){
       await page.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:previousContact.x,y:previousContact.y,radiusX:8,radiusY:8}]});
       await page.waitForFunction(()=>HSC.view.clipperScreen().visible);
       await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
@@ -323,10 +367,7 @@ async function nativeWebViewBounds(){
     assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),saved);check('background/resume preserves haircut and releases host pause');
     // Offline/no-fill native ads cannot grant rewards or trap the game in a pause.
     adb('shell','svc','wifi','disable');adb('shell','svc','data','disable');
-    const earned=await page.evaluate(async()=>(await HSC.youtubeClientPromise).showRewarded('apk-offline-check'));
-    // A cached Google test ad may legitimately earn a receipt only after manual playback;
-    // no-fill offline is expected here, so any earned result must fail this automated test.
-    assert.equal(earned,false);await ready();check('native offline/no-fill ad returns without reward or stuck pause');
+    await offlineAdvertisement();
     await page.evaluate(async()=>(await HSC.youtubeClientPromise).flushProgress());
     await browser.close();browser=null;
     adb('shell','am','force-stop',app);adb('shell','am','start','-W','-n',activity);await connect();await ready();

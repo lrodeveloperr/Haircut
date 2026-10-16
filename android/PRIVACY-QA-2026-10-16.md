@@ -18,8 +18,8 @@ These three hashes remain unchanged after the privacy build. The new Android-onl
 - Reward rules: 8 cases PASS.
 - Game and bridge domain contracts: 35 cases PASS.
 - New four-layout privacy/geometry browser check: PASS, including strict equality of every existing measured control/card/panel bound before/after adding the shield, matched Close diameter/centreline, native entry dispatch, unchanged haircut and pause ownership. Eight raw before/after PNGs were captured locally.
-- Updated installed-APK privacy/external-browser matrix and native compile/lint: pending CI.
-- Public policy remains on the website. Final direct-link instructions are in website commit `6db51090852492de51f1251c06ceb13d38fa430f`; deployment verification is pending. The preceding website update deployed successfully and its public HTTPS page was verified.
+- Installed-APK privacy/external-browser checks: PASS on all four layouts. Native compile/lint/signature: PASS. The full native run passed27checks before its offline-ad test fixture timed out; see below.
+- Public policy remains on the website. Final direct-link instructions are in website commit `6db51090852492de51f1251c06ceb13d38fa430f`; both Cloudflare deployments succeeded and the direct-link paragraph was read from the live HTTPS page on 16 October.
 
 ## QA observations and fixes
 
@@ -39,4 +39,12 @@ These three hashes remain unchanged after the privacy build. The new Android-onl
 
 - Initial privacy source `d1a3123`, run https://github.com/lrodeveloperr/Haircut/actions/runs/38948587734: full build/domain/browser privacy/placement checks, APK compile/lint/signature passed. Installed phone portrait/landscape cutting and native privacy-menu checks passed; tablet portrait cutting had begun. The run was superseded/cancelled when the source-review fixes for Close focus and privacy-form ad suspension were pushed. It is partial evidence, not a successful final matrix.
 - Superseded menu source `e485782d9b0abc298eaa7fa3d9d86b8b2ae16a8e`, run https://github.com/lrodeveloperr/Haircut/actions/runs/38949610005: build/domain/browser checks and native compile/lint/signature passed. Installed matrix failed before its first placement assertion: UiAutomation returned a null root with exit status zero and created no XML. The existing bounded inspection retry now also covers reading a missing dump file; coordinate/placement assertions remain strict. This run does not verify the final direct-link behavior.
-- Final direct-link source/run: pending push and installed verification.
+- Final direct-link source `591b3dbb34a1e618ce392b6789f2707a505e9edc`, run https://github.com/lrodeveloperr/Haircut/actions/runs/38950870866: compile/lint/signature passed, as did27installed checks including all four direct-link/geometry/return checks, cutting, two live resizes and background/resume. Its offline-ad fixture timed out: the screenshot shows a cached Google Test Ad with Reward granted and a Close control; logcat confirms AdActivity and the earned callback. Disabling connectivity does not remove a cached creative. The test incorrectly awaited completion without closing that real ad. The app advertising controller is unchanged; this is not evidence of a privacy-button failure.
+- QA-only follow-up handles a cached Google sample ad through its labelled native Close control and checks the result against actual native reward callbacks. It reruns only the remaining lifecycle/save path, avoiding another full layout matrix. Source and run: pending push.
+
+## Inspected artifact from `591b3db`
+
+- Artifact12068464011 downloaded once. All eight intended privacy screenshots and four external ACTION_VIEW intent records are present. The intent records show the full policy URL and external browser focus.
+- Nineteen native PNGs are present:18planned useful captures plus the diagnostic failure image. The final relaunch screenshot was not reached; total count alone is not a complete-matrix pass.
+- Debug APK v1.0.6(7),8,090,935bytes, SHA-256 `a878f0d97801916230183de41a549087882b9ab653bd102df70384e0e866c11e`. The actual APK game asset matches the approved renderer hash above; Android privacy script hash is `2df1b64e30fc29bb7a9d76dec276dfffe8ed957758947966a777f9ed7c386fba`.
+- Do not call this full run successful or store-ready. The remaining lifecycle fixture follow-up must finish before production release work.
