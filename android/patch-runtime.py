@@ -1,4 +1,4 @@
-"""Apply Android-only name, daily reward policy and face masters to a freshly built web runtime.
+"""Apply Android-only name and daily reward policy to a freshly built web runtime.
 
 Native AdMob delivery is supplied by the future Android client. Its showRewarded
 promise must resolve true only for a verified earned reward, never merely dismissal.
@@ -41,7 +41,6 @@ def adapt(build_dir):
         '"Today\'s pick: watch a video to get it"',
         '"Today\'s pick: watch " + (need - done) + " rewarded video" + ((need - done) === 1 ? "" : "s") + " to unlock"',
     )
-    customers = replace_once(customers, "const USE_MASTERS = false;", "const USE_MASTERS = true;")
     index = replace_once(index, "<title>ASMR Barber: Fade Master</title>", f"<title>{TITLE}</title>")
     index = replace_once(index, 'aria-label="ASMR Barber: Fade Master"', f'aria-label="{TITLE}"')
 
@@ -54,4 +53,4 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         raise SystemExit("usage: python3 android/patch-runtime.py BUILD_DIRECTORY")
     adapt(sys.argv[1])
-    print("Android name, two-video daily rewards and face masters applied")
+    print("Android name and two-video daily rewards applied")
