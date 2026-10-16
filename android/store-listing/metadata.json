@@ -37,7 +37,7 @@
       "hi-IN"
     ],
     "pendingListingLocales": [],
-    "nonMediaDeclarationsStatus": "Six original declarations, category/contact and IARC content rating saved; ten language text drafts saved; privacy/SDK disclosures require final native Android wrapper and AdMob implementation",
+    "nonMediaDeclarationsStatus": "All ten dashboard non-media setup tasks complete, including privacy policy and Data safety; media remains intentionally omitted. Privacy disclosures saved against approved AdMob release configuration; native wrapper/AAB not yet implemented or verified.",
     "savedDeclarations": {
       "containsAds": true,
       "requiresSignInOrPaymentForReview": false,
@@ -61,8 +61,35 @@
       "Sandbox",
       "Simulation"
     ],
-    "dashboardSetupTasksCompleted": 8,
-    "dashboardSetupTasksTotal": 11
+    "dashboardSetupTasksCompleted": 10,
+    "dashboardSetupTasksTotal": 11,
+    "privacyPolicyUrl": "https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/",
+    "dataDeletionUrl": "https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/#delete-data",
+    "dataSafety": {
+      "status": "Saved and dashboard marked complete",
+      "configurationEvidence": "../PRIVACY-RELEASE-CONFIG.md",
+      "androidRuntimeVerified": false,
+      "dataTypesCollectedAndShared": [
+        "Approximate location",
+        "App interactions",
+        "Diagnostics",
+        "Device or other IDs"
+      ],
+      "purposes": [
+        "Advertising or marketing",
+        "Analytics",
+        "Fraud prevention, security and compliance"
+      ],
+      "ephemeral": false,
+      "collection": "Required",
+      "encryptedInTransit": true,
+      "accountCreation": false,
+      "externalAccountLogin": false,
+      "deletionRequestMechanism": true
+    },
+    "remainingSetupTasks": [
+      "Store listing required media"
+    ]
   },
   "differentiators": [
     "Freehand hair cutting",
