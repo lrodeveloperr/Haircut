@@ -6,7 +6,9 @@ WebView, offline, from the app's own origin.
 
 **Current continuation record: [Android release handoff](../RELEASE-HANDOFF.md).** The owner approved v1.0.5 cutting. v1.0.6 adds the approved wardrobe privacy shield linking directly to the external policy page; its current verification state is recorded there and in [privacy QA](../PRIVACY-QA-2026-10-16.md). Debug always uses test ads. Production AdMob must be configured only after test-ad verification and immediately before release packaging/submission.
 
-**Status: debug APK compiled and verified on 16 October 2026.** The GitHub build passed 35 game
+**Current status: v1.0.6 privacy-link debug APK verified on 16 October 2026.** See [privacy QA](../PRIVACY-QA-2026-10-16.md) for the successful four-layout/native/lifecycle evidence and exact artifact hash. The existing advertising controller and approved cutting source are unchanged.
+
+**Historical initial native build:** The GitHub build passed 35 game
 contracts, 8 Android reward cases, 7 Chromium bridge cases, Android lint (zero errors) and APK signature
 verification. The APK uses Google test ads and the `.debug` package. Real-device consent, ads and lifecycle
 testing remain separate. See [the exact build record](BUILD-2026-10-16.md).
@@ -61,8 +63,7 @@ at `android/store-listing/en-US/images/icon.png`. Density-specific launcher PNGs
 ## Still open
 
 - Real AdMob ids and the upload key (`keystore.properties`).
-- Final native verification of the implemented wardrobe shield and direct external policy link
-  (see `android/PRIVACY-QA-2026-10-16.md`). No settings screen or existing-layout change was added.
+- Final production consent/advertising configuration and regional validation. The wardrobe shield/direct external policy link is verified; see `android/PRIVACY-QA-2026-10-16.md`. No settings screen or existing-layout change was added.
 - A device test of consent, ads, saves, rotation/folding, back and pause.
 
 Test the bridge: `TARGET=full bash source/buildall.sh && node android/tests/bridge.cjs`.
