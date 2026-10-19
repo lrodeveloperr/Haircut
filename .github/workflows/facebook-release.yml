@@ -12,6 +12,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    env:
+      FACEBOOK_REWARDED_UNLOCK_ID: "1796376608154024_1798959264562425"
+      FACEBOOK_REWARDED_REPLAY_ID: "1796376608154024_1798959264562425"
+      FACEBOOK_INTERSTITIAL_ID: "1796376608154024_1798959834562368"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,6 +34,9 @@ jobs:
           config=json.loads((root/'fbapp-config.json').read_text())
           assert config['instant_games']['navigation_menu_version']=='NAV_BAR'
           assert config['instant_games']['orientation']=='PORTRAIT'
+          ad_config=(root/'runtime/facebook-config.js').read_text()
+          assert '1796376608154024_1798959264562425' in ad_config
+          assert '1796376608154024_1798959834562368' in ad_config
           text='\n'.join(p.read_text(errors='ignore') for p in root.rglob('*') if p.is_file())
           assert 'fbinstant.8.0.js' in text
           assert 'const sdk = globalThis.FBInstant' in text
