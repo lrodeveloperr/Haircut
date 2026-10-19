@@ -1,4 +1,4 @@
-/* Meta Instant Games SDK v8 adapter. No Playgama or cross-publisher SDKs. */
+/* Meta Instant Games SDK v8 adapter. No alternate host or cross-publisher SDKs. */
 (function (HSC) {
   'use strict';
   const schemas = new Map([
