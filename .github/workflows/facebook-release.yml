@@ -1,0 +1,66 @@
+name: Facebook Instant Games release
+on:
+  push:
+    branches: [facebook-instant-games]
+    paths: ['source/**', 'qa/**', '.github/workflows/facebook-release.yml']
+  pull_request:
+    paths: ['source/**', 'qa/**', '.github/workflows/facebook-release.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      FACEBOOK_REWARDED_UNLOCK_ID: "1796376608154024_1798959264562425"
+      FACEBOOK_REWARDED_REPLAY_ID: "1796376608154024_1798959264562425"
+      FACEBOOK_INTERSTITIAL_ID: "1796376608154024_1798959834562368"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Build the Meta-only target
+        run: |
+          bash source/build-facebook.sh
+          python3 source/facebook/package.py /tmp/barber-facebook.zip
+      - name: Verify platform boundary and bundle contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, zipfile
+          root=Path('source/build-facebook')
+          assert (root/'index.html').is_file()
+          config=json.loads((root/'fbapp-config.json').read_text())
+          assert config['instant_games']['navigation_menu_version']=='NAV_BAR'
+          assert config['instant_games']['orientation']=='PORTRAIT'
+          ad_config=(root/'runtime/facebook-config.js').read_text()
+          assert '1796376608154024_1798959264562425' in ad_config
+          assert '1796376608154024_1798959834562368' in ad_config
+          text='\n'.join(p.read_text(errors='ignore') for p in root.rglob('*') if p.is_file())
+          assert 'fbinstant.8.0.js' in text
+          assert 'const sdk = globalThis.FBInstant' in text
+          assert 'sdk.initializeAsync' in text
+          assert 'sdk.startGameAsync' in text
+          assert 'getRewardedVideoAsync' in text and 'getInterstitialAdAsync' in text
+          assert 'getDataAsync' in text and 'setDataAsync' in text and 'flushDataAsync' in text
+          assert 'playgama.com' not in text and 'ytgame' not in text and 'youtube.com/game_api' not in text
+          with zipfile.ZipFile('/tmp/barber-facebook.zip') as z:
+              assert 'index.html' in z.namelist() and 'fbapp-config.json' in z.namelist()
+          print('facebook-contracts-ok')
+          PY
+      - name: Test standalone preview boot
+        run: |
+          npm install --no-save --package-lock=false playwright@1.58.2
+          npx playwright install --with-deps chromium
+          python3 -m http.server 8128 --directory source/build-facebook >/tmp/facebook-http.log 2>&1 &
+          node - <<'JS'
+          const {chromium}=require('playwright');
+          (async()=>{const b=await chromium.launch({headless:true});const p=await b.newPage({viewport:{width:390,height:844}});const errors=[];p.on('pageerror',e=>errors.push(String(e)));await p.goto('http://127.0.0.1:8128/?facebook_preview=1');await p.waitForFunction(()=>globalThis.skinFadeStudio?.getState);const s=await p.evaluate(()=>skinFadeStudio.getState());if(!s)throw Error('No game state');if(errors.length)throw Error(errors.join('\n'));await b.close();})();
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: facebook-instant-games-bundle
+          path: /tmp/barber-facebook.zip
+          retention-days: 14
