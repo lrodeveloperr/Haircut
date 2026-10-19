@@ -46,13 +46,6 @@ ad_config = {
     json.dumps(ad_config, separators=(',', ':')) + ';\n')
 
 index = (out / 'index.html').read_text()
-old = '''  <div id="yt-loading" role="status" aria-label="Loading game"><span aria-hidden="true">✂</span><span>Loading…</span></div>
-  <script src="https://www.youtube.com/game_api/v1"></script>
-  <script src="./runtime/youtube-poster.js"></script>
-  <script src="./runtime/youtube-loader.js"></script>
-  <script src="./runtime/youtube-geo.js"></script>
-  <script src="./runtime/youtube-client.js"></script>
-  <script src="./runtime/youtube-startup.js"></script>'''
 new = '''  <div id="fb-loading" role="status" aria-label="Loading game"><span aria-hidden="true">✂</span><span>Loading…</span></div>
   <script src="https://connect.facebook.net/en_US/fbinstant.8.0.js"></script>
   <script src="./runtime/facebook-poster.js"></script>
@@ -61,7 +54,9 @@ new = '''  <div id="fb-loading" role="status" aria-label="Loading game"><span ar
   <script src="./runtime/facebook-config.js"></script>
   <script src="./runtime/facebook-client.js"></script>
   <script src="./runtime/facebook-startup.js"></script>'''
-index = one(index, old, new)
+start = index.index('  <div id="yt-loading"')
+end = index.index('  <script src="./runtime/game.js', start)
+index = index[:start] + new + '\n' + index[end:]
 index = index.replace('ASMR Barber: Fade Master', 'Barber Simulator: ASMR Haircut')
 (out / 'index.html').write_text(index)
 
