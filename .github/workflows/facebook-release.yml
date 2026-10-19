@@ -32,8 +32,9 @@ jobs:
           assert config['instant_games']['orientation']=='PORTRAIT'
           text='\n'.join(p.read_text(errors='ignore') for p in root.rglob('*') if p.is_file())
           assert 'fbinstant.8.0.js' in text
-          assert 'FBInstant.initializeAsync' in text
-          assert 'FBInstant.startGameAsync' in text
+          assert 'const sdk = globalThis.FBInstant' in text
+          assert 'sdk.initializeAsync' in text
+          assert 'sdk.startGameAsync' in text
           assert 'getRewardedVideoAsync' in text and 'getInterstitialAdAsync' in text
           assert 'getDataAsync' in text and 'setDataAsync' in text and 'flushDataAsync' in text
           assert 'playgama.com' not in text and 'ytgame' not in text and 'youtube.com/game_api' not in text
