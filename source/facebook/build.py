@@ -76,7 +76,10 @@ for path in out.rglob('*'):
     if path.is_file():
         data = path.read_bytes()
         if b'playgama.com' in data or b'Playgama' in data:
-            raise AssertionError(f'Playgama residue in {path.relative_to(out)}')
+            marker = b'playgama.com' if b'playgama.com' in data else b'Playgama'
+            at = data.index(marker)
+            context = data[max(0, at - 140):at + len(marker) + 140].decode(errors='replace')
+            raise AssertionError(f'Playgama residue in {path.relative_to(out)}: {context}')
         if b'youtube.com/game_api' in data or b'ytgame' in data:
             raise AssertionError(f'YouTube SDK residue in {path.relative_to(out)}')
 print('facebook-build-ok')
