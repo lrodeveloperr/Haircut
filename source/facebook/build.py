@@ -56,7 +56,8 @@ new = '''  <div id="fb-loading" role="status" aria-label="Loading game"><span ar
   <script src="./runtime/facebook-geo.js"></script>
   <script src="./runtime/facebook-config.js"></script>
   <script src="./runtime/facebook-client.js"></script>
-  <script src="./runtime/facebook-startup.js"></script>'''
+  <script src="./runtime/facebook-startup.js"></script>
+  <script src="./runtime/customers.js"></script>'''
 start = index.index('  <div id="yt-loading"')
 end = index.index('  <script src="./runtime/game.js', start)
 index = index[:start] + new + '\n' + index[end:]
