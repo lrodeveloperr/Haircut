@@ -75,6 +75,8 @@ notices = (out / 'THIRD-PARTY-NOTICES.md').read_text().replace(
 for path in out.rglob('*'):
     if path.is_file():
         data = path.read_bytes()
-        assert b'playgama.com' not in data and b'Playgama' not in data
-        assert b'youtube.com/game_api' not in data and b'ytgame' not in data
+        if b'playgama.com' in data or b'Playgama' in data:
+            raise AssertionError(f'Playgama residue in {path.relative_to(out)}')
+        if b'youtube.com/game_api' in data or b'ytgame' in data:
+            raise AssertionError(f'YouTube SDK residue in {path.relative_to(out)}')
 print('facebook-build-ok')
