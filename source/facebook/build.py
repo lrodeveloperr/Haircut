@@ -17,6 +17,9 @@ def one(text, old, new):
 for rel in ['runtime/game.js', 'runtime/customers.js']:
     path = out / rel
     text = path.read_text()
+    text = text.replace(
+        '/* Playgama Bridge contract retained by this bundle: platform.language; storage.get; storage.set. */',
+        '/* Platform client contract retained by this bundle: locale, progress load, save, and ads. */')
     text = text.replace('youtubeClientPromise', 'facebookClientPromise')
     text = text.replace('whenYouTubeResumed', 'whenFacebookResumed')
     text = text.replace('youtubeModulesReady', 'facebookModulesReady')
