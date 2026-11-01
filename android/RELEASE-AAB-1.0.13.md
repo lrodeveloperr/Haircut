@@ -7,4 +7,4 @@ Release bundle, lint, release unit tests, completion-flow checks and bundletool 
 
 SHA-256: c4e18323dcd787c79203c9cd3b9806bd519f7dc62021a6a4cc65f81528c54f69
 
-Play submission pending.
+Play Console verified production 14 (1.0.13) in review on 1 November 2026. Managed publishing is off. Customer-facing en-US notes saved as: “Refinements to the between-customer experience.”
