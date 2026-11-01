@@ -2,6 +2,7 @@ package com.worksbien.barbersimulatorasmr;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 
@@ -17,14 +18,16 @@ final class HostBridge {
     private static final String ENVELOPE = "android-envelope-v1";
     private final MainActivity activity;
     private final AdsController ads;
+    private final ReviewController reviews;
     private final WebView web;
     private final SharedPreferences prefs;
     private final ExecutorService storage = Executors.newSingleThreadExecutor();
     private volatile boolean destroyed;
 
-    HostBridge(MainActivity activity, AdsController ads, WebView web) {
+    HostBridge(MainActivity activity, AdsController ads, ReviewController reviews, WebView web) {
         this.activity = activity;
         this.ads = ads;
+        this.reviews = reviews;
         this.web = web;
         this.prefs = activity.getSharedPreferences("game-saves", Context.MODE_PRIVATE);
     }
@@ -78,6 +81,13 @@ final class HostBridge {
     }
 
     @JavascriptInterface
+    public void reviewMoment(int completed, int qualifiedForInterstitial, long activeMs) {
+        activity.runOnUiThread(() -> {
+            if (!destroyed) reviews.onCustomerCompleted(completed, qualifiedForInterstitial, activeMs);
+        });
+    }
+
+    @JavascriptInterface
     public void gameReady() {
         activity.onGameReady();
         activity.runOnUiThread(() -> { if (!destroyed) ads.publishPrivacyOptions(); });
@@ -91,6 +101,15 @@ final class HostBridge {
     @JavascriptInterface
     public void openPrivacy() {
         activity.runOnUiThread(() -> { if (!destroyed) activity.openPrivacy(); });
+    }
+
+    @JavascriptInterface
+    public void shareGame(String dataUrl) {
+        if (destroyed) return;
+        storage.execute(() -> {
+            Uri image = destroyed ? null : activity.createShareImage(dataUrl);
+            activity.runOnUiThread(() -> { if (!destroyed) activity.openShareSheet(image); });
+        });
     }
 
     void destroy() {

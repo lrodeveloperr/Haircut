@@ -40,9 +40,16 @@ final class AdsController {
     private InterstitialAd interstitial;
     private boolean loadingRewarded, loadingInterstitial, rewardedWanted, showing, destroyed;
     private boolean privacyOptionsShowing;
+    private boolean sdkReady, interstitialWanted;
     private int consentGeneration;
     private final Runnable rewardedTimeout = () -> {
         if (rewardedWanted) { rewardedWanted = false; emit("rewarded", "failed"); }
+    };
+    private final Runnable interstitialTimeout = () -> {
+        if (interstitialWanted) {
+            interstitialWanted = false;
+            emit("interstitial", "failed");
+        }
     };
 
     AdsController(Activity activity, WebView web) {
@@ -73,7 +80,7 @@ final class AdsController {
     }
 
     void showPrivacyOptions() {
-        if (destroyed || showing || rewardedWanted || privacyOptionsShowing || consent == null
+        if (destroyed || showing || rewardedWanted || interstitialWanted || privacyOptionsShowing || consent == null
                 || consent.getPrivacyOptionsRequirementStatus()
                     != ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED) return;
         privacyOptionsShowing = true;
@@ -87,7 +94,9 @@ final class AdsController {
             privacyOptionsShowing = false;
             publishPrivacyOptions();
             if (!canRequestAds()) return;
-            if (initialized.get()) { loadRewarded(); loadInterstitial(); } else initAds();
+            if (initialized.get()) {
+                loadRewarded(); loadInterstitial();
+            } else initAds();
         });
     }
 
@@ -98,6 +107,8 @@ final class AdsController {
     private void initAds() {
         if (!canRequestAds() || initialized.getAndSet(true)) return;
         new Thread(() -> MobileAds.initialize(activity, status -> ui.post(() -> {
+            if (destroyed) return;
+            sdkReady = true;
             loadRewarded();
             loadInterstitial();
         }))).start();
@@ -135,12 +146,22 @@ final class AdsController {
                 if (destroyed || generation != consentGeneration) return;
                 loadingInterstitial = false;
                 interstitial = ad;
+                if (interstitialWanted) {
+                    interstitialWanted = false;
+                    ui.removeCallbacks(interstitialTimeout);
+                    presentInterstitial();
+                }
             }
 
             @Override
             public void onAdFailedToLoad(@NonNull LoadAdError error) {
                 if (destroyed || generation != consentGeneration) return;
                 loadingInterstitial = false;
+                if (interstitialWanted) {
+                    interstitialWanted = false;
+                    ui.removeCallbacks(interstitialTimeout);
+                    emit("interstitial", "failed");
+                }
             }
         });
     }
@@ -173,8 +194,22 @@ final class AdsController {
     }
 
     void showInterstitial(String placement) {
-        // the next customer never waits for an interstitial: none ready means none shown
-        if (destroyed || privacyOptionsShowing || showing || interstitial == null || !canRequestAds()) { emit("interstitial", "failed"); loadInterstitial(); return; }
+        if (destroyed || privacyOptionsShowing || showing || rewardedWanted || interstitialWanted || !canRequestAds()) {
+            emit("interstitial", "failed");
+            return;
+        }
+        initAds();
+        if (interstitial != null) { presentInterstitial(); return; }
+        // This opportunity expires immediately; loading only prepares a future completion.
+        emit("interstitial", "failed");
+        loadInterstitial();
+    }
+
+    private void presentInterstitial() {
+        if (destroyed || activity.isFinishing() || activity.isDestroyed() || !activity.hasWindowFocus()) {
+            emit("interstitial", "failed");
+            return;
+        }
         InterstitialAd ad = interstitial;
         interstitial = null;
         showing = true;
@@ -190,6 +225,21 @@ final class AdsController {
         });
         ad.show(activity);
     }
+
+    boolean isFullScreenBusy() {
+        return privacyOptionsShowing || rewardedWanted || interstitialWanted || showing;
+    }
+
+    void resume() {}
+
+    void pause() {
+        if (interstitialWanted && !showing) {
+            interstitialWanted = false;
+            ui.removeCallbacks(interstitialTimeout);
+            emit("interstitial", "failed");
+        }
+    }
+
 
     private void finished(String kind, String state) {
         showing = false;

@@ -119,6 +119,7 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:no
 }
 /* ---------- portrait: Finish top right; clipper + guard arc bottom right ---------- */
 @media (orientation:portrait){
+ .guard-arc{right:max(4px,env(safe-area-inset-right))}
  .ui,.ui[data-status=reveal]{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "play" "bar"}
  .ui[data-status=cutting] .bar{grid-area:auto;position:absolute;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));display:block}
  .ui[data-status=cutting] .controls{width:auto;height:auto;padding:0 0 5px}

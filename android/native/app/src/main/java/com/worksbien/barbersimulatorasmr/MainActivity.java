@@ -2,11 +2,13 @@ package com.worksbien.barbersimulatorasmr;
 
 import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.Base64;
 import android.view.ViewGroup;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -16,6 +18,7 @@ import android.widget.FrameLayout;
 
 import androidx.activity.ComponentActivity;
 import androidx.activity.OnBackPressedCallback;
+import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
 import androidx.core.splashscreen.SplashScreen;
 import androidx.core.view.ViewCompat;
@@ -26,6 +29,9 @@ import androidx.webkit.WebViewAssetLoader;
 import androidx.webkit.WebViewClientCompat;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 /**
  * Hosts the game's web build (bundled in assets/game, served offline from the app's own origin) in a
@@ -34,9 +40,11 @@ import java.io.ByteArrayInputStream;
 public class MainActivity extends ComponentActivity {
     static final String ORIGIN = "https://appassets.androidplatform.net";
     private static final String GAME_URL = ORIGIN + "/assets/game/index.html";
+    private static final String PLAY_URL = "https://play.google.com/store/apps/details?id=com.worksbien.barbersimulatorasmr";
     private static final long SPLASH_MAX_MS = 6000;
 
     private WebView web;
+    private ReviewController reviews;
     private AdsController ads;
     private HostBridge host;
     private volatile boolean gameReady;
@@ -101,7 +109,8 @@ public class MainActivity extends ComponentActivity {
         });
 
         ads = new AdsController(this, web);
-        host = new HostBridge(this, ads, web);
+        reviews = new ReviewController(this, web, ads);
+        host = new HostBridge(this, ads, reviews, web);
         web.addJavascriptInterface(host, "AndroidHost");
         web.loadUrl(GAME_URL);
         ads.start();
@@ -121,6 +130,44 @@ public class MainActivity extends ComponentActivity {
     void openPrivacy() {
         // Policy text is maintained on the website, never bundled or displayed inside the game.
         openExternal(Uri.parse("https://worksbienstudios.com/apps/barber-simulator-asmr/privacy/"));
+    }
+
+    Uri createShareImage(String dataUrl) {
+        final String prefix = "data:image/jpeg;base64,";
+        if (dataUrl == null || !dataUrl.startsWith(prefix)) return null;
+        String encoded = dataUrl.substring(prefix.length());
+        if (encoded.length() == 0 || encoded.length() > 8 * 1024 * 1024) return null;
+        try {
+            byte[] bytes = Base64.decode(encoded, Base64.DEFAULT);
+            if (bytes.length == 0 || bytes.length > 6 * 1024 * 1024) return null;
+            File directory = new File(getCacheDir(), "shared");
+            if (!directory.exists() && !directory.mkdirs()) return null;
+            File file = new File(directory, "haircut-share.jpg");
+            try (FileOutputStream stream = new FileOutputStream(file, false)) {
+                stream.write(bytes);
+            }
+            return FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", file);
+        } catch (IllegalArgumentException | IOException ignored) {
+            return null;
+        }
+    }
+
+    void openShareSheet(Uri image) {
+        // Android supplies and localizes the native Sharesheet. The image is the current finished haircut;
+        // the Play Store URL travels with it for apps that accept both media and a caption.
+        Intent send = new Intent(Intent.ACTION_SEND)
+                .setType(image == null ? "text/plain" : "image/jpeg")
+                .putExtra(Intent.EXTRA_TITLE, getString(R.string.app_name))
+                .putExtra(Intent.EXTRA_TEXT, PLAY_URL);
+        if (image != null) {
+            send.putExtra(Intent.EXTRA_STREAM, image);
+            send.setClipData(ClipData.newRawUri(getString(R.string.app_name), image));
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
+        try {
+            startActivity(Intent.createChooser(send, null));
+        } catch (ActivityNotFoundException ignored) {
+        }
     }
 
     void openExternal(Uri url) {
@@ -148,6 +195,7 @@ public class MainActivity extends ComponentActivity {
         // tell the game first (it stops sound and the timer), then freeze the page
         web.evaluateJavascript("window.__androidHost && window.__androidHost.pause(true)", null);
         web.onPause();
+        if (ads != null) ads.pause();
         super.onPause();
     }
 
@@ -155,6 +203,7 @@ public class MainActivity extends ComponentActivity {
     protected void onResume() {
         super.onResume();
         web.onResume();
+        if (ads != null) ads.resume();
         web.evaluateJavascript("window.__androidHost && window.__androidHost.pause(false)", null);
         hideSystemBars();
     }
@@ -162,6 +211,7 @@ public class MainActivity extends ComponentActivity {
     @Override
     protected void onDestroy() {
         host.destroy();
+        reviews.destroy();
         ads.destroy();
         web.destroy();
         super.onDestroy();

@@ -18,6 +18,15 @@ def replace(text, old, new):
 # Keep the working renderer and adapt only Android touch targeting. A finger holds
 # a bounded projected-grip target instead of using the former 24/72px extremes.
 game = (out / 'runtime/game.js').read_text()
+default_startup = '''  const visible=Zt.clone(false);
+  // Only what the first frame draws. The hidden clipper compiles right after (warmClipper).
+  visible.traverse=visit=>Zt.traverseVisible(visit);
+  await t.compileAsync(visible,ze,Zt);
+  await HSC.whenYouTubeResumed();'''
+game = replace(game, default_startup, (root / 'android/adreno-startup.js').read_text().strip())
+game = replace(game,
+               'await n.waitForFirstFrame();HSC.startupTiming.gpuReady=performance.now();HSC.dismissLoading();',
+               'await n.waitForFirstFrame();HSC.startupTiming.gpuReady=performance.now();HSC.startupTiming.firstFrameConfirmed=performance.now();console.info("[HSC_STARTUP] first_frame_gpu_ready");HSC.dismissLoading();')
 game = replace(game, 'let ae=ue=>{ue.preventDefault();k=true;',
                (root / 'android/clipper-input.js').read_text() + '\nlet ae=ue=>{ue.preventDefault();k=true;')
 game = replace(game, 'raycast:j,getYaw()', 'raycast:j,touchTarget:androidTouchTarget,resetTouchTarget:androidResetTouchTarget,clipperScreen:androidClipperScreen,getYaw()')
@@ -29,6 +38,14 @@ game = replace(game, 'let ae=j.clientY-(j.pointerType==="touch"?Math.min(ur.touc
 # Guard arc anchors are local design units; pointer events are viewport pixels.
 game = replace(game, 'C=w.left+ds-p.clientX,x=w.top+ds-p.clientY',
                'C=w.left+ds*(w.width/i.current.offsetWidth)-p.clientX,x=w.top+ds*(w.height/i.current.offsetHeight)-p.clientY')
+# The completion ad owns the reveal-to-next transition. Lock Next in the same
+# JavaScript turn as reveal completion, before the HUD can publish an enabled button.
+game = replace(game, 'async function Ee(){',
+               (root / 'android/completion-interstitial.js').read_text() + '\nasync function Ee(){')
+game = replace(game, 'fe===1&&(x=!0,Z())',
+               'fe===1&&(x=!0,androidCompletionInterstitial())')
+old_next_ad = 'let j=Cc(l);if(j.showInterstitial&&!y&&!(HSC.recentReward&&HSC.recentReward()))try{await $(!0);let ae=await t.showInterstitial("next-customer",{onDisplay:ie});t.lastInterstitialRequestAccepted&&(l=j.adSession),t.sendAnalytics("interstitial_outcome",{opened:ae,nextClick:s.jobId})}catch(ae){}'
+game = replace(game, old_next_ad, '')
 (out / 'runtime/game.js').write_text(game)
 
 client = (out / 'runtime/local-preview-client.js').read_text()
@@ -44,7 +61,6 @@ client = replace(client, '    async function load() {', '''    cleanup.push(HSC.
 client = replace(client, '    async function advertisement() { return false; }', '''    async function advertisement(kind, placement) {
       if (kind === 'interstitial') interstitialAccepted = false;
       if (disposed || adPending || state().executionPaused) return false;
-      if (kind === 'interstitial' && performance.now() - lastAttempt < 60000) return false;
       adPending = true;
       let result = false;
       try {
@@ -72,9 +88,13 @@ shutil.copy2(root / 'android/native-transport.js', out / 'runtime/android-transp
 shutil.copy2(root / 'android/viewport-compat.js', out / 'runtime/android-viewport.js')
 shutil.copy2(root / 'android/privacy.js', out / 'runtime/android-privacy.js')
 shutil.copy2(root / 'android/ad-options.js', out / 'runtime/android-ad-options.js')
+shutil.copy2(root / 'android/share.js', out / 'runtime/android-share.js')
+shutil.copy2(root / 'android/review.js', out / 'runtime/android-review.js')
 html = (out / 'index.html').read_text().replace('local-preview-client.js', 'android-client.js').replace('local-preview-startup.js', 'android-startup.js')
 html = replace(html, '  <script src="./runtime/android-client.js', '  <script src="./runtime/android-viewport.js"></script>\n  <script src="./runtime/android-transport.js"></script>\n  <script src="./runtime/android-client.js')
 html = replace(html, '  <script src="./runtime/game.js', '  <script src="./runtime/android-privacy.js"></script>\n  <script src="./runtime/android-ad-options.js"></script>\n  <script src="./runtime/game.js')
+html = replace(html, '  <script src="./runtime/game.js', '  <script src="./runtime/android-share.js"></script>\n  <script src="./runtime/game.js')
+html = replace(html, '  <script src="./runtime/game.js', '  <script src="./runtime/android-review.js"></script>\n  <script src="./runtime/game.js')
 (out / 'index.html').write_text(html)
 spec = importlib.util.spec_from_file_location('android_policy', root / 'android/patch-runtime.py')
 policy = importlib.util.module_from_spec(spec)
