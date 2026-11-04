@@ -13,8 +13,9 @@
   // The game's own thumbnail() renders the head with any hair grid. For a snapshot the next customer is
   // put on the head for one synchronous render, then the current customer is put back.
   const shots = new Map();
-  function snapshot(person, profileId) {
-    const key = JSON.stringify([person.seed, !!person.vip, person.beard.style, profileId]);
+  // reg: a returning regular's grown-out hair and beard (state.js regularOf), drawn instead of the walk-in cut
+  function snapshot(person, profileId, reg) {
+    const key = JSON.stringify([person.seed, !!person.vip, person.beard.style, profileId, reg ? person.regular || 1 : 0]);
     if (shots.has(key)) return shots.get(key);
     const v = HSC.view, g = globalThis.skinFadeStudio, W = HSC.walkIns;
     if (!v || !v.thumbnail || !g || !W) return null;
@@ -24,10 +25,10 @@
     HSC.snapshotting = true;
     try {
       HSC.setPerson(person);
-      HSC.setBeard(HSC.beardStartFor(person));
+      HSC.setBeard(reg ? reg.beard : HSC.beardStartFor(person));
       // their own hair colour (the game sets it only for the customer in the chair)
       if (v.setAppearance) v.setAppearance(person.hair.colour);
-      url = v.thumbnail(W.build(prof), 160, 4, { size: 240, headOnly: true });
+      url = v.thumbnail(reg ? reg.hair : W.build(prof), 160, 4, { size: 240, headOnly: true });
     } catch (e) {
       console.error('customers: snapshot failed', e);
     } finally {
@@ -109,6 +110,7 @@
     tick: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     star: '<svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="#ffc83d" stroke="#2a1d15" stroke-width="2" stroke-linejoin="round"/></svg>',
     flame: '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z" fill="#ff8a3d" stroke="#2a1d15" stroke-width="2" stroke-linejoin="round"/></svg>',
+    heart: '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 20.5S3 15 3 8.8A4.6 4.6 0 0 1 12 6.6a4.6 4.6 0 0 1 9 2.2C21 15 12 20.5 12 20.5z" fill="#ff5d73" stroke="#2a1d15" stroke-width="2" stroke-linejoin="round"/></svg>',
     crown: '<svg viewBox="0 0 24 24" width="30" height="30"><path d="M3 18l1.5-11 5 5L12 4l2.5 8 5-5L21 18z" fill="#ffc83d" stroke="#2a1d15" stroke-width="2" stroke-linejoin="round"/></svg>',
     chev: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
     spark: '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 1.5l2.2 7.3 7.3 2.2-7.3 2.2L12 20.5l-2.2-7.3L2.5 11l7.3-2.2z" fill="#fff6e6" stroke="#2a1d15" stroke-width="1.8" stroke-linejoin="round"/></svg>',
@@ -131,6 +133,7 @@
 @keyframes hsc-spin{to{transform:rotate(360deg)}}
 .hsc-flag{position:absolute;left:-8px;top:-10px}
 .hsc-crown{position:absolute;left:50%;top:-20px;transform:translateX(-50%) rotate(-6deg)}
+.hsc-reg{position:absolute;left:-10px;bottom:-10px;animation:hsc-pop 1.6s ease-in-out infinite}
 /* replay this customer: the cream of the next row with an ink outline; the video badge in the next
    button's yellow marks that it plays a video. The arrow is centred in its own box. */
 .hsc-replay{position:absolute;width:76px;height:76px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;background:#fff6e6;color:${INK};border:3px solid ${INK};box-shadow:0 4px 0 ${INK};cursor:pointer;animation:hsc-rbreathe 1.3s ease-in-out infinite}
@@ -227,11 +230,14 @@ body.hsc-reveal .ui .top{visibility:hidden}
     const q = d.queue && st.round.info && d.queue.job === st.round.info.job ? d.queue.person : null;
     st.el.next.hidden = !q;
     if (q) {
-      const want = st.round.shown || st.round.ready, url = want ? snapshot(q, d.queue.profile) : null;
+      const reg = q.regular && HSC.regularOf ? HSC.regularOf({ jobId: d.queue.job }, q) : null;
+      const want = st.round.shown || st.round.ready, url = want ? snapshot(q, d.queue.profile, reg) : null;
       if (url) st.el.nextImg.src = url;
       // no picture (the render failed): no card, never an older customer's picture
       else if (want) { st.el.next.hidden = true; return; }
-      st.el.next.querySelectorAll('.hsc-new,.hsc-flag,.hsc-crown').forEach((n) => n.remove());
+      st.el.next.querySelectorAll('.hsc-new,.hsc-flag,.hsc-crown,.hsc-reg').forEach((n) => n.remove());
+      // a regular coming back: a heart on the card
+      if (reg) st.el.next.insertAdjacentHTML('beforeend', `<span class="hsc-reg">${ICON.heart}</span>`);
       if (q.vip) st.el.next.insertAdjacentHTML('beforeend', `<span class="hsc-crown">${ICON.crown}</span>`);
       const isNew = st.round.info.levelUp || q.daily;
       if (isNew) st.el.next.insertAdjacentHTML('beforeend', `<span class="hsc-new">${ICON.spark}</span>`);

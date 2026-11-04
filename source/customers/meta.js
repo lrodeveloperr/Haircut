@@ -158,7 +158,7 @@
   const hash = (str) => { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
 
   function fresh() {
-    return { v: 1, cuts: 0, streak: 0, lastDay: null, firstDay: dayKey(), dailyDay: null, queue: null, trial: null, declines: 0, pauseLeft: 0, offerTurn: 0, seen: {}, deck: {}, last: {} };
+    return { v: 1, cuts: 0, streak: 0, lastDay: null, firstDay: dayKey(), dailyDay: null, queue: null, trial: null, declines: 0, pauseLeft: 0, offerTurn: 0, seen: {}, deck: {}, last: {}, regulars: [], sinceReg: 0 };
   }
   const okTok = (v) => (typeof v === 'string' && v.length < 16) || (Number.isInteger(v) && v >= 0 && v < 8);
   function cleanDecks(o) {
@@ -176,18 +176,66 @@
     if (o && typeof o === 'object') for (const k of ['loss', 'beard']) if (Array.isArray(o[k]) && o[k].length === 2 && o[k].every((v) => Number.isInteger(v) && v >= 0 && v <= 9)) out[k] = o[k].slice();
     return out;
   }
+  // ---- regulars (Android, extras.js) ----
+  // Customers the player has really cut may become regulars (about 3 in 5): the last 6 are kept with the cut
+  // they left with. From the next day, or 10 customers later, one may walk back in with that cut grown out
+  // (1-2 weeks of growth) and his beard grown back toward his usual style. Never two regulars close together.
+  const REG = !!(HSC.PHENOTYPES && HSC.gridPack);
+  const MAX_REG = 6;
+  const gridOk = (s, max) => !!HSC.gridUnpack && !!HSC.gridUnpack(s, max);
+  const dayOk = (v) => typeof v === 'string' && /^\d{4}-\d\d-\d\d$/.test(v);
+  function cleanRegulars(a) {
+    if (!REG || !Array.isArray(a)) return [];
+    const top = HSC.BEARD_MM.length - 1;
+    return a.slice(-64).filter((r) => r && typeof r === 'object' && HSC.validPerson(r.p) && gridOk(r.h, 5) && gridOk(r.b, top) && gridOk(r.u, top) &&
+      (r.pr === null || (typeof r.pr === 'string' && r.pr.length < 40)) && dayOk(r.day) && Number.isSafeInteger(r.cuts) && r.cuts >= 0 && Number.isSafeInteger(r.n) && r.n >= 1 && r.n < 1000)
+      .slice(-MAX_REG).map((r) => ({ p: r.p, h: r.h, b: r.b, u: r.u, pr: r.pr, day: r.day, cuts: r.cuts, n: r.n }));
+  }
+  const keepsComing = (seed) => ((Math.imul((seed >>> 0) ^ 0x1b873593, 0x9e3779b1) >>> 0) % 5) < 3;
+  // a finished customer joins the regulars (his record without the visit's own flags)
+  function rememberRegular(state) {
+    const d = M.data, p = state && state.look && state.look.person;
+    if (!REG || !d || !p || !HSC.validPerson(p) || p.first || state.cutStrokeCount < 3 || !keepsComing(p.seed)) return;
+    if (!Array.isArray(state.hair) || state.hair.length !== 8192 || !Array.isArray(state.beard) || !Array.isArray(state.startBeard)) return;
+    // a returning regular keeps his usual beard (the queue still holds this visit's entry)
+    const q = d.queue && d.queue.job === state.jobId && d.queue.person && d.queue.person.seed === p.seed ? d.queue.regular : null;
+    const h = HSC.gridPack(state.hair), b = HSC.gridPack(state.beard), u = q && q.u ? q.u : HSC.gridPack(state.startBeard);
+    if (h.length + b.length + u.length > 16000) return; // a very ragged cut is not kept (save size)
+    const n = Math.min(999, (Number.isSafeInteger(p.regular) ? p.regular : 0) + 1);
+    const rec = Object.assign({}, p);
+    for (const k of ['job', 'vip', 'daily', 'first', 'regular']) delete rec[k];
+    const prof = state.look && typeof state.look.profile === 'string' ? state.look.profile : null;
+    d.regulars = d.regulars.filter((r) => r.p.seed !== p.seed).concat([{ p: rec, h, b, u, pr: prof, day: dayKey(), cuts: d.cuts, n }]).slice(-MAX_REG);
+  }
+  // the regular who walks in next, or null
+  function regularDue(level, seed) {
+    const d = M.data;
+    if (!REG || level < 2 || !d.regulars.length || (d.sinceReg || 0) < 3) return null;
+    const today = dayKey(), R = HSC.rng(((seed >>> 0) ^ 0x68e31da4) >>> 0 || 1);
+    const due = d.regulars.filter((r) => r.day < today || d.cuts - r.cuts >= 10);
+    if (!due.length || R.next() >= 0.3) return null;
+    const r = due[0], top = HSC.BEARD_MM.length - 1;
+    const hair = HSC.gridUnpack(r.h, 5), beard = HSC.gridUnpack(r.b, top), usual = HSC.gridUnpack(r.u, top);
+    if (!hair || !beard || !usual) return null;
+    const g = HSC.regularGrow(hair, beard, usual, R.next() < 0.55 ? 1 : 2);
+    d.regulars = d.regulars.filter((x) => x !== r);
+    return { person: Object.assign({}, r.p, { regular: r.n }), profile: r.pr, regular: { h: HSC.gridPack(g.hair), b: HSC.gridPack(g.beard), u: r.u } };
+  }
   function sanitize(d) {
     const f = fresh();
     if (!d || typeof d !== 'object' || d.v !== 1) return f;
     const int = (v, dflt) => (Number.isSafeInteger(v) && v >= 0 ? v : dflt);
     const str = (v) => (typeof v === 'string' && /^\d{4}-\d\d-\d\d$/.test(v) ? v : null);
     const q = d.queue && Number.isSafeInteger(d.queue.job) && HSC.validPerson(d.queue.person) ? { job: d.queue.job, person: d.queue.person, profile: typeof d.queue.profile === 'string' ? d.queue.profile : null } : null;
+    // a regular in the queue keeps his grown-out hair and beard only when both unpack cleanly
+    const qr = d.queue && d.queue.regular, top = HSC.BEARD_MM ? HSC.BEARD_MM.length - 1 : 0;
+    if (q && REG && qr && gridOk(qr.h, 5) && gridOk(qr.b, top) && gridOk(qr.u, top)) q.regular = { h: qr.h, b: qr.b, u: qr.u };
     const t = d.trial && Number.isSafeInteger(d.trial.job) && typeof d.trial.key === 'string' ? d.trial : null;
     return {
       v: 1, cuts: int(d.cuts, 0), streak: int(d.streak, 0), lastDay: str(d.lastDay), firstDay: str(d.firstDay) || f.firstDay,
       dailyDay: str(d.dailyDay), queue: q, trial: t, declines: int(d.declines, 0), pauseLeft: int(d.pauseLeft, 0),
       offerTurn: int(d.offerTurn, 0), seen: d.seen && typeof d.seen === 'object' ? d.seen : {},
-      deck: cleanDecks(d.deck), last: cleanLast(d.last), sinceVip: int(d.sinceVip, 9), runs: cleanRuns(d.runs),
+      deck: cleanDecks(d.deck), last: cleanLast(d.last), sinceVip: int(d.sinceVip, 9), runs: cleanRuns(d.runs), regulars: cleanRegulars(d.regulars), sinceReg: int(d.sinceReg, 0),
     };
   }
   M.save = function () {
@@ -285,6 +333,7 @@
     // finishing without a single cut is not a haircut: no level, no streak (the next customer still comes)
     const counted = state.cutStrokeCount > 0;
     if (counted) d.cuts += 1;
+    if (counted) rememberRegular(state);
     const level = levelOf(d.cuts);
     const today = dayKey();
     if (counted && d.lastDay !== today) d.streak = d.lastDay === yesterday() ? d.streak + 1 : 1;
@@ -298,7 +347,7 @@
       return { levelUp: level > before, level, before, job };
     }
     const seed = (((state.seed >>> 0) ^ Math.imul(job + 1, 0x9e3779b1)) >>> 0) || 1;
-    let person;
+    let person, reg = null;
     const FEATURE = { 2: 'beard', 3: 'old', 4: 'loss' };
     // a VIP (full hair, a big beard) waits a customer when it would make a fourth of a kind in a row
     const vipFits = !streak('loss', false) && (level < 2 || !streak('beard', true));
@@ -309,12 +358,18 @@
       d.dailyDay = today;
     } else if (level > before && level === 5 && vipFits) {
       person = generate(seed, level, { vip: true });
+    } else if ((reg = regularDue(level, seed))) {
+      // a regular comes back with his last cut grown out
+      person = reg.person;
+      note('loss', person.bald.norwood !== '1' || person.bald.type !== 'none');
+      note('beard', person.beard.style !== 'clean');
     } else {
       // VIPs walk in now and then, never two close together
       person = generate(seed, level, level >= 5 && vipFits && (d.sinceVip || 0) >= 4 && HSC.rng(seed).next() < 0.18 ? { vip: true } : {});
     }
     d.sinceVip = person.vip ? 0 : (d.sinceVip || 0) + 1;
-    d.queue = { job, person, profile: M.profileFor(person, state.recentLooks) };
+    if (REG) d.sinceReg = reg ? 0 : (d.sinceReg || 0) + 1;
+    d.queue = reg ? { job, person, profile: reg.profile, regular: reg.regular } : { job, person, profile: M.profileFor(person, state.recentLooks) };
     M.save();
     return { levelUp: level > before, level, before, job };
   };

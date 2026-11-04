@@ -59,6 +59,7 @@
       st.scalpC = new Float32Array(st.coarseBase.length / 3);
       for (let v = 0; v < st.scalpC.length; v++) st.scalpC[v] = c.Na(st.coarseBase[v * 3], st.coarseBase[v * 3 + 1], st.coarseBase[v * 3 + 2]);
       prepareShapes();
+      try { prepareExtras(c); } catch (err) { console.error('customers: extras attach failed', err); st.extras = null; }
 
       // beard length grid texture
       st.beardData = new Uint8Array(8192);
@@ -253,6 +254,177 @@
     }
   }
 
+  // ---- Android details and accessories (extras.js) ----
+  // Places are found once on the coarse head (its vertices come first in the drawn head, in order): skin where a
+  // mole may sit, both earlobes and the bowl of both ears. Skin details live in the un-morphed head space the skin
+  // shader draws in; accessories follow the morphed ear.
+  function prepareExtras(c) {
+    st.extras = null;
+    if (!HSC.skinDetailsOf || !HSC.accessoriesOf) return;
+    const CB = st.coarseBase, nv = CB.length / 3, T = c.T;
+    const at = (v) => [CB[v * 3], CB[v * 3 + 1], CB[v * 3 + 2]];
+    const moleAt = [];
+    for (let v = 0; v < nv; v++) {
+      const [x, y, z] = at(v), ax = Math.abs(x);
+      if (st.scalpC[v] > 0.005 || z < -0.3 || y < -1.2 || y > 2.75 || ax > 1.45) continue;
+      if (Math.hypot(ax - 0.628, y - 1.624, z - 1.627) < 0.48) continue; // eyes
+      if (ax < 0.72 && y > -0.25 && y < 0.5 && z > 1.5) continue; // lips
+      if (y > 1.78 && y < 2.2 && ax > 0.22 && ax < 1.15 && z > 1.1) continue; // brows
+      if (Math.hypot(ax - 0.21, y - 0.6, z - 2.36) < 0.16) continue; // nostrils
+      moleAt.push(v);
+    }
+    // per side (+1 the customer's left, -1 the right): earlobe (outer face) and ear bowl (deepest point)
+    const best = (test, score) => { let b = -1, bs = -1e9; for (let v = 0; v < nv; v++) { const p = at(v); if (test(p) && score(p) > bs) { bs = score(p); b = v; } } return b; };
+    const lobe = {}, bowl = {};
+    for (const sd of [-1, 1]) {
+      lobe[sd] = best(([x, y, z]) => sd * x > 1.5 && y > 0.66 && y < 0.8 && z > -0.12 && z < 0.08, ([x]) => sd * x);
+      bowl[sd] = best(([x, y, z]) => sd * x > 1.38 && sd * x < 1.62 && y > 1.0 && y < 1.2 && z > -0.15 && z < 0.05, ([x]) => -sd * x);
+    }
+    // small meshes, built here (the game exposes no sphere or torus geometry to us); T.af is the instanced
+    // geometry class, so these use the head's own plain geometry class
+    const Geo = c.Pt.constructor;
+    const geo = (pos, nrm, idx) => { const g = new Geo(); g.setAttribute('position', new T.mt(pos, 3)); g.setAttribute('normal', new T.mt(nrm, 3)); g.setIndex(idx); return g; };
+    const sphere = (ws, hs) => {
+      const pos = [], idx = [];
+      for (let j = 0; j <= hs; j++) for (let i = 0; i <= ws; i++) { const th = (j / hs) * Math.PI, ph = (i / ws) * 2 * Math.PI; pos.push(Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph)); }
+      for (let j = 0; j < hs; j++) for (let i = 0; i < ws; i++) { const a = j * (ws + 1) + i, b = a + ws + 1; idx.push(a, a + 1, b, b, a + 1, b + 1); }
+      return geo(pos, pos.slice(), idx);
+    };
+    const torus = (R, r, ts, rs) => {
+      const pos = [], nrm = [], idx = [];
+      for (let j = 0; j <= rs; j++) for (let i = 0; i <= ts; i++) {
+        const u = (i / ts) * 2 * Math.PI, w = (j / rs) * 2 * Math.PI, cx = Math.cos(u), cy = Math.sin(u);
+        nrm.push(Math.cos(w) * cx, Math.cos(w) * cy, Math.sin(w));
+        pos.push((R + r * Math.cos(w)) * cx, (R + r * Math.cos(w)) * cy, r * Math.sin(w));
+      }
+      for (let j = 0; j < rs; j++) for (let i = 0; i < ts; i++) { const a = j * (ts + 1) + i, b = a + ts + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+      return geo(pos, nrm, idx);
+    };
+    const Mat = c.Gi && c.Gi.constructor;
+    if (!Mat) return;
+    const mat = (o) => new Mat(Object.assign({ metalness: 0, roughness: 0.4 }, o));
+    const mats = {
+      silver: mat({ color: '#d6d8dc', metalness: 1, roughness: 0.22 }), gold: mat({ color: '#e2b65a', metalness: 1, roughness: 0.25 }),
+      black: mat({ color: '#1c1c20', metalness: 0.5, roughness: 0.3 }), gem: mat({ color: '#f3f6ff', metalness: 1, roughness: 0.04, envMapIntensity: 2.2 }),
+      beige: mat({ color: '#d8b898', roughness: 0.38, clearcoat: 0.6 }), brown: mat({ color: '#6a4935', roughness: 0.38, clearcoat: 0.6 }), grey: mat({ color: '#8c9095', roughness: 0.38, clearcoat: 0.6 }),
+    };
+    const ball = sphere(16, 12), ring = torus(1, 0.15, 32, 8), group = new c.vt.constructor();
+    // the game stops updating world matrices after its first frame: each accessory takes the head's own
+    // world matrix just before it is drawn
+    const make = (g) => {
+      const m = new T.Ze(g, mats.silver);
+      m.visible = false; m.frustumCulled = false; m.matrixAutoUpdate = false;
+      m.onBeforeRender = () => m.matrixWorld.multiplyMatrices(c.vt.matrixWorld, m.matrix);
+      group.add(m);
+      return m;
+    };
+    const meshes = { stud: { 1: make(ball), [-1]: make(ball) }, hoop: { 1: make(ring), [-1]: make(ring) }, aid: { 1: make(ball), [-1]: make(ball) } };
+    c.vt.add(group);
+    st.extras = { moleAt, lobe, bowl, mats, meshes, group };
+  }
+  // the nearest place on the front of the (un-morphed) head to (x, y), or null
+  function frontPoint(x, y, r = 0.07) {
+    const CB = st.coarseBase;
+    let b = null;
+    for (let v = 0; v < CB.length / 3; v++) {
+      const px = CB[v * 3], py = CB[v * 3 + 1], pz = CB[v * 3 + 2];
+      if (pz > 0.5 && Math.hypot(px - x, py - y) < r && (!b || pz > b[2])) b = [px, py, pz];
+    }
+    return b;
+  }
+  // the outermost place on one side of the neck at (y, z), or null
+  function sidePoint(sd, y, z, r = 0.1) {
+    const CB = st.coarseBase;
+    let b = null;
+    for (let v = 0; v < CB.length / 3; v++) {
+      const px = CB[v * 3], py = CB[v * 3 + 1], pz = CB[v * 3 + 2];
+      if (sd * px > 0.5 && Math.hypot(py - y, pz - z) < r && (!b || sd * px > sd * b[0])) b = [px, py, pz];
+    }
+    return b;
+  }
+  function setSkinDetails(person, ft) {
+    const U = HSC.U, X = st.extras, d = X && HSC.skinDetailsOf(person);
+    const mole = U.uMole.value, scar = U.uScar.value;
+    mole.fill(0); scar.fill(0);
+    U.uTatA.value = [0, 0, 0, 0]; U.uTatB.value = [0, 0, 0, 0];
+    if (!d) return;
+    d.moles.slice(0, 3).forEach((m, i) => {
+      if (!X.moleAt.length) return;
+      const v = X.moleAt[Math.min(X.moleAt.length - 1, Math.floor(m.at * X.moleAt.length))], CB = st.coarseBase;
+      mole.set([CB[v * 3], CB[v * 3 + 1], CB[v * 3 + 2], m.raised ? -m.r : m.r], i * 4);
+    });
+    const sc = d.scar;
+    if (sc) {
+      // a centre, a direction (0 = straight up) and a half length per kind
+      let cx, cy, ang, half, w = 0.038;
+      if (sc.kind === 'brow') {
+        // across the brow line at this customer's brow height (glsl.js browShape)
+        const ax = 0.45 + 0.4 * sc.at, t = (ax - 0.3) / 0.8, arch = ft ? ft.brow[0] : 0.08, tilt = ft ? ft.brow[1] : 0;
+        const rs = smooth(0, 0.45, t), fl = smooth(0.45, 1, t);
+        cx = sc.side * ax; cy = 1.939 + arch * rs * (1 - 0.75 * fl) + tilt * (t - 0.4); ang = sc.side * sc.tilt * 0.6; half = 0.13 * sc.len;
+      } else if (sc.kind === 'chin') {
+        cx = sc.side * 0.3 * sc.at; cy = -0.42; ang = Math.PI / 2 + sc.tilt; half = 0.12 * sc.len; w = 0.04;
+      } else {
+        cx = sc.side * (0.75 + 0.3 * sc.at); cy = 0.55 + 0.35 * sc.at; ang = sc.side * sc.tilt; half = 0.14 * sc.len;
+      }
+      const dx = Math.sin(ang) * half, dy = Math.cos(ang) * half;
+      const a = frontPoint(cx - dx, cy - dy), b = frontPoint(cx + dx, cy + dy);
+      if (a && b) scar.set([...a, w, ...b, sc.s]);
+    }
+    const tat = HSC.accessoriesOf(person).tattoo;
+    if (tat) {
+      // below and behind the ear, its lower part under the gown collar
+      const c = sidePoint(tat.side, -0.6, -0.5);
+      if (c) {
+        U.uTatA.value = [c[0], c[1], c[2], 0.46 * tat.size];
+        U.uTatB.value = [HSC.TATTOOS.indexOf(tat.kind) + 1, tat.fade, tat.rot, 0];
+      }
+    }
+    U.uSkinB.value = [U.uSkinB.value[0], U.uSkinB.value[1], d.acne, d.bumps];
+  }
+  // earrings and hearing aids on the morphed ears (P, N: the drawn head's positions and normals)
+  function placeAccessories(person, P, N) {
+    const X = st.extras;
+    if (!X) return;
+    const acc = HSC.accessoriesOf(person) || {};
+    for (const k of Object.keys(X.meshes)) for (const sd of [-1, 1]) X.meshes[k][sd].visible = false;
+    const V = (x, y, z) => X.group.position.clone().set(x, y, z);
+    const where = (v, sd) => {
+      if (v < 0) return null;
+      const n = V(N[v * 3], N[v * 3 + 1], N[v * 3 + 2]);
+      if (n.x * sd < 0.2) n.set(sd, 0, 0); // a normal pointing into the head: use the plain outward direction
+      return { p: V(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]), n: n.normalize() };
+    };
+    const show = (m, material, pos, n, scale) => {
+      m.material = material;
+      m.position.copy(pos);
+      m.quaternion.setFromUnitVectors(V(0, 0, 1), n);
+      m.scale.set(scale[0], scale[1], scale[2]);
+      m.updateMatrix();
+      m.visible = true;
+    };
+    if (acc.ear) for (const sd of acc.ear.sides) {
+      const at = where(X.lobe[sd], sd);
+      if (!at) continue;
+      const m = X.mats[acc.ear.metal] || X.mats.silver;
+      if (acc.ear.kind === 'stud') {
+        const r = acc.ear.metal === 'gem' ? 0.048 : 0.04;
+        show(X.meshes.stud[sd], m, at.p.clone().addScaledVector(at.n, 0.012), at.n, [r, r, r * 0.55]);
+      } else {
+        // a small hoop through the lobe, hanging in the plane of the lobe's outward direction and the vertical
+        const R = 0.085, axis = V(0, 1, 0).cross(at.n).normalize();
+        const c = at.p.clone().addScaledVector(at.n, -0.025).add(V(0, -R, 0));
+        show(X.meshes.hoop[sd], m, c, axis, [R, R, R]);
+      }
+    }
+    if (acc.aid) for (const sd of acc.aid.sides) {
+      const at = where(X.bowl[sd], sd);
+      if (!at) continue;
+      // an in-the-ear aid filling the bowl of the ear
+      show(X.meshes.aid[sd], X.mats[acc.aid.colour] || X.mats.beige, at.p.clone().addScaledVector(at.n, 0.035), at.n, [0.085, 0.11, 0.06]);
+    }
+  }
+
   // ---- face-shape morph (and head shape) applied to the smooth mesh and the coarse picking mesh ----
   function applyMorph(person) {
     const Pt = ctx.Pt;
@@ -306,6 +478,7 @@
     Pt.attributes.normal.needsUpdate = true;
     Pt.computeBoundingSphere();
     updateRoots(P, N);
+    try { placeAccessories(person, P, N); } catch (err) { console.error('customers: accessories failed', err); }
     st.beardCells = HSC.beardCellPositions(st.surface, P);
     HSC.beardSurface = st.beardCells;
   }
@@ -421,6 +594,7 @@
     U.uBrowA.value[2] = ft ? ft.tail : 0;
     U.uSkinB.value = ft ? ft.skin : [0, 0, 0, 0];
     U.uBaldC.value = ft ? ft.hairline : [0, 0, 0, 0];
+    try { setSkinDetails(person, ft); } catch (err) { console.error('customers: skin details failed', err); }
     U.uBeardGreyB.value = { chin: [1.1, 0, 0.4, 0.4], sides: [0, 1.1, 0, 0.35], even: [0, 0, 0, 0] }[person.beard.greyPattern || 'chin'] || [1.1, 0, 0.4, 0.4];
     // alopecia areata patches
     const ar = new Float32Array(12);

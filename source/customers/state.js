@@ -68,12 +68,27 @@
     for (let i = 0; i < list.length; i++) if ((r -= weights[i]) <= 0) return list[i];
     return list[list.length - 1];
   };
+  // the queued regular's grown-out hair and beard for this job, or null
+  function regularOf(s, person) {
+    const q = HSC.meta && HSC.meta.data && HSC.meta.data.queue;
+    if (!q || q.job !== s.jobId || !q.regular || !person || !q.person || q.person.seed !== person.seed || !HSC.gridUnpack || !HSC.walkIns) return null;
+    const hair = HSC.gridUnpack(q.regular.h, 5), beard = HSC.gridUnpack(q.regular.b, LEVELS() - 1);
+    return hair && beard ? { hair, beard } : null;
+  }
+  HSC.regularOf = regularOf;
   function walkIn(s, person) {
     if (s.status !== 'cutting' || s.cutStrokeCount || !s.look || s.look.visit !== 'walk-in') return null;
     if (!Array.isArray(s.hair) || !Array.isArray(s.startHair) || s.hair.some((v, i) => v !== s.startHair[i])) return null;
     const recent = Array.isArray(s.recentLooks) ? s.recentLooks.slice(0, -1) : [];
     // VIPs and the very first customer come in with a full, even head of hair: the most to cut
     const q = HSC.meta && HSC.meta.data && HSC.meta.data.queue;
+    // a regular (meta.js) walks in with his last cut grown out
+    const reg = regularOf(s, person);
+    if (reg) {
+      const prof = q.profile && HSC.walkIns.list.some((w) => w.id === q.profile) ? q.profile : s.look.profile;
+      const recentLooks = Array.isArray(s.recentLooks) && s.recentLooks.length ? [...s.recentLooks.slice(0, -1), prof] : [prof];
+      return { hair: reg.hair, startHair: reg.hair.slice(), recentLooks, profile: prof };
+    }
     const queued = q && q.job === s.jobId && q.profile && HSC.walkIns && HSC.walkIns.list.find((w) => w.id === q.profile);
     const p = queued || (person.vip || person.first ? HSC.walkIns && HSC.walkIns.list.find((w) => w.contour === 'even') : HSC.pickWalkIn(person, recent));
     if (!p) return null;
@@ -99,7 +114,8 @@
     }
     let beard = s.beard, startBeard = s.startBeard;
     if (fresh || forced || !okBeard(beard) || !okBeard(startBeard) || beard.some((v, i) => v > startBeard[i])) {
-      startBeard = HSC.beardStartFor(person);
+      const reg = fresh && !forced ? regularOf(s, person) : null;
+      startBeard = reg ? reg.beard : HSC.beardStartFor(person);
       beard = startBeard.slice();
       checked.add(startBeard);
       checked.add(beard);

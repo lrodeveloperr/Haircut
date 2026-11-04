@@ -12,7 +12,13 @@
     uBrowA: { value: [1, 1, 0, 0] }, // brow thickness, brow density, outer-tail thinning, -
     uBrowB: { value: [0.08, 0, 1, 0] }, // brow arch, tilt (rising), thickness factor, unibrow
     uBaldC: { value: [0, 0, 0, 0] }, // hairline: mature set-back, M-shaped temples, round, widow's peak
-    uSkinB: { value: [0, 0, 0, 0] }, // freckles, dark facial papules (DPN), -, -
+    uSkinB: { value: [0, 0, 0, 0] }, // freckles, dark facial papules (DPN), acne, razor bumps
+    // Android (extras.js): up to 3 moles (centre xyz, radius; a negative radius is a raised mole), a scar
+    // (end a xyz + width, end b xyz + strength), a neck tattoo (centre xyz + size; design, fade, turn, -)
+    uMole: { value: new Float32Array(12) },
+    uScar: { value: new Float32Array(8) },
+    uTatA: { value: [0, 0, 0, 0] },
+    uTatB: { value: [0, 0, 0, 0] },
     uBeard: { value: null }, // beard length grid (mm / 50)
     uSkinA: { value: [0.66, 0.385, 0.3, 0] }, // base albedo, darkness 0..1
     uLip: { value: [1.06, 0.78, 0.93] }, // lip colour relative to skin
@@ -175,8 +181,123 @@ float beardZoneS(vec3 p, float soft){
 float beardZone(vec3 p){ return beardZoneS(p, 1.0); }
 `;
 
+
+  // ---- Android skin details (extras.js); injected into the skin shader only when extras.js is in the build ----
+  const EX_PRELUDE = `uniform vec4 uMole[3], uScar[2], uTatA, uTatB;
+float moleMask(vec3 P, vec4 m){
+  float r = abs(m.w);
+  if (r < .001) return 0.0;
+  return 1.0 - smoothstep(r * .55, r, distance(P, m.xyz) + (n3(P * 90.0) - .5) * r * .35);
+}
+// a healed scar: a thin pale line, widest in the middle
+float scarMask(vec3 P){
+  if (uScar[1].w < .001) return 0.0;
+  vec3 a = uScar[0].xyz, pa = P - a, ba = uScar[1].xyz - a;
+  float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+  float w = uScar[0].w * (.3 + .7 * sin(h * 3.14159)) * (.8 + .4 * n3(P * 40.0));
+  return (1.0 - smoothstep(w * .45, w, length(pa - ba * h))) * uScar[1].w;
+}
+// neck tattoo designs, drawn as ink coverage in the design's own 2D space (about -1..1); pictures only
+float tatStroke(float d, float w, float aa){ return 1.0 - smoothstep(w - aa, w + aa, abs(d)); }
+float tatFill(float d, float aa){ return 1.0 - smoothstep(-aa, aa, d); }
+float sdStar5(vec2 p, float r, float rf){
+  const vec2 k1 = vec2(.809016994, -.587785252), k2 = vec2(-.809016994, -.587785252);
+  p.x = abs(p.x);
+  p -= 2.0 * max(dot(k1, p), 0.0) * k1;
+  p -= 2.0 * max(dot(k2, p), 0.0) * k2;
+  p.x = abs(p.x);
+  p.y -= r;
+  vec2 ba = rf * vec2(-k1.y, k1.x) - vec2(0.0, 1.0);
+  float h = clamp(dot(p, ba) / dot(ba, ba), 0.0, r);
+  return length(p - ba * h) * sign(p.y * ba.x - p.x * ba.y);
+}
+float sdTri(vec2 p, float r){
+  const float k = 1.7320508;
+  p.x = abs(p.x) - r; p.y = p.y + r / k;
+  if (p.x + k * p.y > 0.0) p = vec2(p.x - k * p.y, -k * p.x - p.y) / 2.0;
+  p.x -= clamp(p.x, -2.0 * r, 0.0);
+  return -length(p) * sign(p.y);
+}
+float segD(vec2 p, vec2 a, vec2 b){ vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
+float tattooInk(vec2 q, float kind, float aa){
+  float ink = 0.0;
+  if (kind < 1.5) {
+    // nautical star: outline, alternate points filled
+    float d = sdStar5(q, .9, .45);
+    ink = max(tatStroke(d, .045, aa), tatFill(d, aa) * step(0.0, q.x) * .9);
+  } else if (kind < 2.5) {
+    // rose: a spiral bloom, its outline, a stem and two leaves
+    vec2 b = q - vec2(0.0, .32);
+    float r = length(b), a = atan(b.y, b.x);
+    float spiral = abs(fract(a / 6.2832 - r * 2.3 + .5) - .5) / 2.3;
+    ink = tatStroke(spiral, .022, aa) * (1.0 - smoothstep(.4, .44, r));
+    ink = max(ink, tatStroke(r - .46 - .035 * sin(a * 5.0), .04, aa));
+    ink = max(ink, tatFill(r - .44, aa) * .18);
+    ink = max(ink, tatStroke(segD(q, vec2(0.0, -.14), vec2(.06, -.95)), .03, aa));
+    vec2 l1 = (q - vec2(.24, -.5)) * mat2(.8, .6, -.6, .8), l2 = (q - vec2(-.2, -.66)) * mat2(.8, -.6, .6, .8);
+    ink = max(ink, tatStroke(length(l1 * vec2(1.0, 2.4)) - .2, .035, aa));
+    ink = max(ink, tatStroke(length(l2 * vec2(1.0, 2.4)) - .17, .035, aa));
+  } else if (kind < 3.5) {
+    // tribal: three solid, tapering blades sweeping up the neck
+    for (int i = 0; i < 3; i++) {
+      float fi = float(i), u = q.x * .9 + .15 * fi;
+      float c = (fi - 1.0) * .5 + .38 * sin(u * 1.9 + fi * .9) + .25 * u;
+      float w = .14 * (1.0 - smoothstep(-.2, 1.0, abs(u + .1 - .1 * fi)));
+      ink = max(ink, tatFill(abs(q.y - c) - w, aa) * (1.0 - smoothstep(.9, 1.0, abs(q.x))));
+    }
+  } else {
+    // geometric: a triangle through a circle, a centre dot and dots round the circle
+    ink = max(tatStroke(sdTri(q, .78), .035, aa), tatStroke(length(q) - .52, .03, aa));
+    ink = max(ink, tatFill(length(q) - .09, aa));
+    float a = atan(q.y, q.x), seg = 6.2832 / 12.0;
+    vec2 dp = vec2(cos(floor(a / seg + .5) * seg), sin(floor(a / seg + .5) * seg)) * .7;
+    ink = max(ink, tatFill(length(q - dp) - .035, aa));
+  }
+  return ink * (1.0 - smoothstep(1.0, 1.15, length(q)));
+}
+`;
+  const EX_DETAILS = `      {
+        vec3 moleC = mix(vec3(.42, .30, .25), vec3(.55, .47, .43), dark);
+        float m0 = moleMask(P, uMole[0]), m1 = moleMask(P, uMole[1]), m2 = moleMask(P, uMole[2]);
+        tone *= mix(vec3(1.0), moleC, max(m0, max(m1, m2)) * .9);
+        moleB = m0 * step(uMole[0].w, 0.0) + m1 * step(uMole[1].w, 0.0) + m2 * step(uMole[2].w, 0.0);
+      }
+      tone = mix(tone, tone * mix(vec3(1.22, 1.06, 1.03), vec3(1.45, 1.34, 1.26), dark), scarM);
+      if (uSkinB.z > .001) {
+        float az = smoothstep(1.2, 1.8, P.z) * smoothstep(-.8, -.5, P.y) * (1.0 - smoothstep(2.6, 2.9, P.y)) * (1.0 - smoothstep(1.15, 1.45, aX));
+        az *= clamp(1.0 - eyesock * 1.6, 0.0, 1.0) * (1.0 - lipsM);
+        // sparse round spots, a few clustered where the noise is high (forehead, cheeks, chin)
+        vec3 ac = floor(P * 13.0 + uBaldB.z), af = fract(P * 13.0 + uBaldB.z);
+        vec3 aj = .3 + .4 * vec3(hsh(ac + 7.0), hsh(ac + 23.0), hsh(ac + 59.0));
+        float ar = .16 + .14 * hsh(ac + 91.0);
+        float keepA = step(.74 - .3 * smoothstep(.35, .75, n3(P * 3.0 + uBaldB.z)), hsh(ac + 3.0));
+        acneM = (1.0 - smoothstep(ar * .5, ar, length(af - aj))) * keepA * az * uSkinB.z;
+        tone *= mix(vec3(1.0), mix(vec3(1.1, .7, .68), vec3(.76, .68, .66), dark), clamp(acneM, 0.0, 1.0));
+      }
+      if (uTatA.w > .001) {
+        float sd = sign(uTatA.x);
+        vec2 q = vec2(P.z - uTatA.z, P.y - uTatA.y) / uTatA.w;
+        float cr = cos(uTatB.z), sr = sin(uTatB.z);
+        q = vec2(cr * q.x - sr * q.y, sr * q.x + cr * q.y);
+        float aa = max(fwidth(q.x) + fwidth(q.y), .015) * (1.0 + 2.0 * uTatB.y);
+        float side = smoothstep(abs(uTatA.x) - .45, abs(uTatA.x) - .2, sd * P.x);
+        float ink = length(q) < 1.2 ? tattooInk(q, uTatB.x, aa) * side : 0.0;
+        tone = mix(tone, tone * mix(vec3(.15, .16, .22), vec3(.36, .42, .42), uTatB.y), ink * (.92 - .3 * uTatB.y));
+      }
+`;
+  const EX_RAZOR = `      if (uSkinB.w > .001) {
+        vec3 rc = floor(P * 30.0), rf = fract(P * 30.0);
+        vec3 rj = .3 + .4 * vec3(hsh(rc + 3.0), hsh(rc + 41.0), hsh(rc + 77.0));
+        float pap = (1.0 - smoothstep(.14, .3, length(rf - rj))) * step(.68, hsh(rc + 13.0));
+        razor = pap * bz * (1.0 - smoothstep(-.2, .45, P.y)) * (1.0 - smoothstep(1.5, 4.0, bmm)) * uSkinB.w;
+        tone *= mix(vec3(1.0), mix(vec3(1.02, .84, .82), vec3(.72, .66, .64), dark), razor);
+      }
+`;
+
   // ---- skin material (replaces the game's onBeforeCompile for the head) ----
   HSC.skinCompile = function (e, ctx) {
+    // Android only (extras.js present): moles, scars, acne, razor bumps, neck tattoos; other builds keep the original shader
+    const EX = !!HSC.skinDetailsOf;
     Object.assign(e.uniforms, { uGrid: ctx.uGrid, uHairTint: ctx.uHairTint, uDensity: ctx.uDensity }, HSC.U);
     e.vertexShader = e.vertexShader
       .replace('#include <common>', `#include <common>
@@ -190,7 +311,7 @@ varying vec3 vObj;
 ${ctx.Ql}
 uniform vec4 uSkinA, uCast, uAgeA, uBeardGrey, uSkinB;
 uniform vec3 uLip, uHairDark, uBeardDark, uBrowTint;
-#ifdef HSC_LOW
+${EX ? EX_PRELUDE : ''}#ifdef HSC_LOW
 float skinBump(vec3 P){ return n3(P * 62.0); }
 #else
 float skinBump(vec3 P){ return .55 * n3(P * 62.0) + .30 * n3(P * 118.0) + .15 * n3(P * 36.0); }
@@ -274,7 +395,8 @@ float wrinkles(vec3 P, float age){
       float circ = (1.0 - smoothstep(.0, .3, length(vec2((aX - .62) / 1.3, P.y - 1.36)))) * smoothstep(1.8, 2.1, P.z);
       tone *= 1.0 - circ * (.06 + .1 * age) * vec3(.8, 1.0, 1.0);
       // eyebrows
-      float bm = browShape(P) * uBrowA.y;
+      float scarM = ${EX ? 'scarMask(P)' : '0.0'};
+      float bm = browShape(P) * uBrowA.y * (1.0 - clamp(scarM * 1.6, 0.0, 1.0));
       float browHair = .72 + .5 * n3(P * vec3(95.0, 230.0, 95.0));
       tone = mix(tone, uBrowTint * browHair, clamp(bm * 1.25, 0.0, .94));
       // age spots on the sun-exposed upper face and scalp
@@ -293,10 +415,12 @@ float wrinkles(vec3 P, float age){
         float dd = smoothstep(.83, .88, n3(P * 34.0 + 11.0));
         tone *= 1.0 - clamp(dd * dz, 0.0, 1.0) * uSkinB.y * .45;
       }
-      // beard area: shaved-follicle cast, follicle dots, and the stubble itself
+      // Android skin details (extras.js): moles, a scar, light acne, a neck tattoo; razor bumps follow below
+      float moleB = 0.0, acneM = 0.0, razor = 0.0;
+${EX ? EX_DETAILS : ''}      // beard area: shaved-follicle cast, follicle dots, and the stubble itself
       float bz = beardZone(P) * areataKeep(P);
       float bmm = beardMM(P) * bz;
-      #ifdef HSC_LOW
+${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
       // low detail: follicles only as their average tone
       float fol = 0.0, folAA = 0.0;
       #else
@@ -357,6 +481,7 @@ float wrinkles(vec3 P, float age){
         float hb = skinBump(vObj) * (1.0 + .6 * age);
         hb -= .25 * (st + bzs) * fol * folAA;
         hb -= 1.6 * wr;
+        ${EX ? 'hb += 1.4 * moleB + .9 * acneM + 1.1 * razor + .35 * scarM;' : ''}
         vec2 dh = vec2(dFdx(hb), dFdy(hb));
         vec3 q0 = dFdx(-vViewPosition), q1 = dFdy(-vViewPosition);
         vec3 R1 = cross(q1, normal), R2 = cross(normal, q0);
