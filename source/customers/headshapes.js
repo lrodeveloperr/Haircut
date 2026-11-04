@@ -23,9 +23,11 @@
     const ids = HSC.HEAD_SHAPE_IDS;
     if (!ids || !ids.length || !person) return -1;
     const her = (HSC.HERITAGE && HSC.HERITAGE[person.heritage] && HSC.HERITAGE[person.heritage].id) || person.heritage;
-    const groups = GROUPS_BY_HERITAGE[her] || GROUPS_BY_HERITAGE.white;
     let h = (person.seed >>> 0) ^ 0x9e3779b9;
     h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
+    // a phenotype group (phenotypes.js) wears its own shapes; the original four classes draw from three groups
+    const own = ids.some((id) => id.startsWith(her + '/'));
+    const groups = own ? [her, her, her] : GROUPS_BY_HERITAGE[her] || GROUPS_BY_HERITAGE.white;
     return ids.indexOf(groups[h % 3] + '/' + OUTLINES[(h >>> 8) % 3]);
   };
 })(globalThis.HSC || (globalThis.HSC = {}));

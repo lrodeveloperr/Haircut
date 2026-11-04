@@ -50,11 +50,17 @@
   };
   // hair texture and natural colour: one deck per heritage, in its real proportions (UK Biobank for White
   // hair colour: mostly browns, about 1 in 8 blond, 1 in 20 red; Black hair coily, sometimes tightly curly)
+  const PH = HSC.PHENOTYPES;
   (HSC.HERITAGE || []).forEach((h, i) => {
-    DECKS['tex' + i] = deckFrom(h.tex, 10);
+    DECKS['tex' + i] = deckFrom(h.tex, PH ? 30 : 10);
     const pal = HSC.HAIR_BY_CLASS && HSC.HAIR_BY_CLASS[h.id];
     if (pal) DECKS['col' + i] = deckFrom(pal.base, 30);
   });
+  // Android: 12 phenotype groups dealt in their spawn shares, coarse ages and facial hair in real shares
+  if (PH) {
+    DECKS.her = deckFrom(Object.fromEntries((HSC.HERITAGE || []).map((h, i) => [i, h.w])), 40).map(Number);
+    Object.assign(DECKS, PH.decks);
+  }
   // draw the first allowed card (on the variety decks, one that differs from the last); refill (shuffled) when
   // none is left. The realism decks (texture, colour, hair loss, beard) may repeat: two straight-haired East
   // Asian customers in a row is normal; every card still comes round in each pass through the deck.
@@ -109,7 +115,8 @@
     }
     // facial hair: the age deck, East Asian men shave more often, then a style with its real odds
     let beard = level >= 2 ? deal('beard' + o.age, R) : 'clean';
-    if (cls === 'east-asian' && beard === 'style' && R.next() < 0.45) beard = 'clean';
+    const shave = H.shave != null ? H.shave : cls === 'east-asian' ? 0.45 : 0;
+    if (shave && beard === 'style' && R.next() < shave) beard = 'clean';
     if (level >= 2 && streak('beard', beard !== 'clean')) beard = beard === 'clean' ? (o.age === 'young' ? 'stubble' : 'style') : 'clean';
     o.beard = beard === 'style' ? beardStyle(o.age, cls, R) : beard;
     return o;

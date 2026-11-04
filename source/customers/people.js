@@ -90,6 +90,8 @@
     lbrown: ['#b38a5a', '#7d5631', '#5a3b1f', '#33200f'],
     brown: ['#8a6038', '#5a3a1e', '#3d2612', '#22150a'],
     dbrown: ['#5a3c22', '#3a2412', '#26170b', '#140c06'],
+    amber: ['#d2a75e', '#a8752e', '#7a501c', '#45290d'],
+    lblue: ['#cfe1ee', '#94bcd8', '#5b8fb6', '#2f5575'],
   };
 
   // morph keys, each in [-1, 1]; see faces.js for what they do
@@ -240,6 +242,19 @@
     black: { boxed: 1.3, goatee: 1.4, chinstrap: 1.8, vandyke: 1.2, long: 0.6, walrus: 0.6, stubble: 1.1 },
   };
 
+  // Android: 12 phenotype groups and 7 adult age bands (customers/phenotypes.js). The four original classes
+  // stay in every table so customers saved with them still render the same.
+  const P = HSC.PHENOTYPES;
+  if (P) {
+    HERITAGE.splice(0, HERITAGE.length, ...P.groups);
+    Object.assign(HAIR_BY_CLASS, P.hair);
+    Object.assign(GREY_BY_CLASS, P.grey);
+    Object.assign(BALD_BY_CLASS, P.bald);
+    Object.assign(BEARD_CLASS_MULT, P.beardMult);
+    Object.assign(AREATA_BY_AGE, P.areata);
+  }
+  const TEX_FAMILY = { 1: 'straight', 2: 'wavy', 3: 'curly', 4: 'coily' };
+
   function makePerson(seed, opts = {}) {
     const R = rng(seed);
     const weights = {};
@@ -249,14 +264,27 @@
 
     const ageBand = opts.age || R.pick(Object.fromEntries(Object.entries(AGE_BANDS).map(([k, v]) => [k, v.w])));
     const [y0, y1] = AGE_BANDS[ageBand].years;
-    const years = R.int(y0, y1);
+    let years = R.int(y0, y1);
+    if (P) {
+      const yw = {};
+      for (let y = y0; y <= y1; y++) { const b = P.ages.find((a) => y >= a.years[0] && y <= a.years[1]) || P.ages[P.ages.length - 1]; yw[y] = b.w / (b.years[1] - b.years[0] + 1); }
+      years = +R.pick(yw);
+    }
+    const band = P ? P.bandOf(years) : null;
     const age01 = clamp((years - 18) / (80 - 18), 0, 1);
 
-    const skinT = R.range(her.skin[0], her.skin[1]);
+    const skinT = Array.isArray(her.skin) ? R.range(her.skin[0], her.skin[1]) : clamp(+R.pick(her.skin) - 1 + R.range(-0.45, 0.45), 0, 9.4);
     const under = R.pick(her.under);
-    const texture = opts.texture || R.pick(her.tex);
+    let texture = opts.texture || R.pick(her.tex), hairType = null;
+    if (P && /^[1-4][abc]$/.test(texture)) { hairType = texture; texture = TEX_FAMILY[texture[0]]; }
+    else if (P && !TEX_FAMILY[texture] && her.tex && Object.keys(her.tex)[0].length === 2) {
+      // a family dealt from an older save's deck: a type within it, with this group's odds
+      const fam = Object.keys(TEX_FAMILY).find((k) => TEX_FAMILY[k] === texture);
+      const w = Object.fromEntries(Object.entries(her.tex).filter(([k]) => k[0] === fam));
+      if (Object.keys(w).length) hairType = R.pick(w);
+    }
     // curl tightness inside the texture family (e.g. 3a..3c, 4a..4c)
-    let curl = R.next();
+    let curl = hairType ? ('abc'.indexOf(hairType[1]) + 0.2 + 0.6 * R.next()) / 3 : R.next();
     if (cls === 'black' && texture === 'curly') curl = 0.4 + 0.6 * curl; // 3b-3c
     if (cls === 'east-asian' && texture === 'wavy') curl *= 0.6; // 2a-2b
 
@@ -276,14 +304,14 @@
     const greyPattern = opts.greyPattern || R.pick(GREY_PATTERNS);
     const greyTone = R.pick(Object.assign({}, GREY_TONES, { white: GREY_TONES.white * (0.6 + age01) }));
     // the beard usually greys ahead of the scalp, sometimes level with it, occasionally behind
-    const lead = R.pick({ ahead: 70, level: 20, behind: 10 });
+    const lead = R.pick(P ? P.beardLead : { ahead: 70, level: 20, behind: 10 });
     let beardGrey = lead === 'ahead' ? (grey > 0.005 || years > onset - 3 ? Math.min(1, grey * 1.3 + 0.05) : 0) : lead === 'level' ? grey : grey * 0.7;
     if (opts.beardGrey != null) beardGrey = opts.beardGrey;
     const beardGreyPattern = R.pick(BEARD_GREY_PATTERNS);
 
     // hair loss
     const bc = BALD_BY_CLASS[cls] || BALD_BY_CLASS.white;
-    const nwTable = Object.assign({}, NORWOOD[ageBand]);
+    const nwTable = Object.assign({}, P ? P.norwood[band] : NORWOOD[ageBand]);
     for (const k of Object.keys(nwTable)) if (k !== '1') nwTable[k] *= bc.prevalence;
     // opts.noLoss: a full head of hair (no pattern loss, thinning or patches)
     let norwood = opts.noLoss ? '1' : opts.norwood != null ? String(opts.norwood) : R.pick(nwTable);
@@ -327,7 +355,7 @@
     if (opts.morph) Object.assign(morph, opts.morph);
 
     const eyes = R.pick(her.eyes);
-    const brow = { thick: +clamp(R.range(0.82, 1.18) + 0.18 * age01, 0.7, 1.45).toFixed(3), grey: +clamp(grey * 0.65, 0, 1).toFixed(3) };
+    const brow = { thick: +clamp(R.range(0.82, 1.18) * (her.brow || 1) + 0.18 * age01, 0.7, 1.45).toFixed(3), grey: +clamp(grey * 0.65, 0, 1).toFixed(3) };
 
     return {
       v: PERSON_VERSION,
@@ -337,7 +365,7 @@
       years,
       skin: { tone: +skinT.toFixed(3), under },
       hair: {
-        texture, type: { straight: '1', wavy: '2', curly: '3', coily: '4' }[texture] + 'abc'[Math.min(2, Math.floor(curl * 3))],
+        texture, type: hairType || { straight: '1', wavy: '2', curly: '3', coily: '4' }[texture] + 'abc'[Math.min(2, Math.floor(curl * 3))],
         curl: +curl.toFixed(3), colour: hairColour, grey: +grey.toFixed(3), greyPattern, greyTone,
       },
       bald: { type: baldType, norwood, diffuse: +diffuse.toFixed(3), edge: +R.range(0, 1).toFixed(3), patches },

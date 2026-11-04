@@ -315,7 +315,10 @@
     const e = cv.getContext('2d');
     const R = HSC.rng(person.seed ^ 0x51ed);
     const stops = HSC.EYES[person.eyes] || HSC.EYES.blue;
-    const old = person.years >= 60;
+    // Android: the grey ring at the iris edge (arcus) by age band, for that share of men; otherwise from 60
+    const PH = HSC.PHENOTYPES;
+    let old = person.years >= 60;
+    if (PH) { let h = Math.imul((person.seed >>> 0) ^ 0xa3c59ac3, 0x9e3779b1) >>> 0; old = (h % 1000) / 1000 < PH.arcus[PH.bandOf(person.years)]; }
     e.setTransform(1, 0, 0, 1, 0, 0);
     e.scale(0.5, 0.5);
     e.fillStyle = old ? '#ebe1d0' : '#efe7e0';
@@ -394,8 +397,12 @@
     U.uCast.value = [...lerp([0.7, 0.73, 0.8], [0.8, 0.79, 0.8], dark), clamp(castStrength, 0.1, 1)];
     U.uAgeA.value = [age, smooth(0.5, 1, age) * (1 - 0.6 * dark), 1, age * 0.6];
     // hair texture
-    const ss = STRAND_STYLE[person.hair.texture](person.hair.curl);
-    U.uStyleA.value = ss.A; U.uStyleB.value = ss.B; U.uStyleC.value = ss.C;
+    // Android: one strand preset per hair type 1A-4C, thicker strands for coarse-haired groups
+    const PH = HSC.PHENOTYPES, tp = PH && PH.hairTypes[person.hair.type];
+    const ss = tp || STRAND_STYLE[person.hair.texture](person.hair.curl);
+    const grp = PH && PH.groups.find((g) => g.id === person.heritage);
+    U.uStyleA.value = ss.A; U.uStyleB.value = ss.B;
+    U.uStyleC.value = tp && grp && grp.coarse !== 1 ? [ss.C[0], ss.C[1], ss.C[2], ss.C[3] * grp.coarse] : ss.C;
     const bs = BEARD_STYLE[person.hair.texture];
     U.uBStyleA.value = bs.A; U.uBStyleB.value = bs.B;
     // grey hair reads silver, pewter or white
