@@ -308,6 +308,21 @@
         const ax = Math.abs(x), jawY = -0.92 + 0.42 * smooth(0.5, 1.5, Math.atan2(ax, z - 0.25));
         if (ax > 0.46 && ax < 0.74 && y < 0.3 && y > jawY - 0.02 && z > 1.2) region = 'moustache';
       }
+      // circle: the moustache runs round the mouth corners down to the chin, nothing further out
+      if (style.circle && region) {
+        const ax = Math.abs(x), jawY = -0.92 + 0.42 * smooth(0.5, 1.5, Math.atan2(ax, z - 0.25));
+        if ((region === 'cheeks' || region === 'jaw') && ax < 0.62 && y < 0.3 && y > jawY + 0.05 && z > 1.2) region = 'chin';
+        else if (region !== 'moustache' && region !== 'chin') region = null;
+      }
+      // balbo / anchor: the chin beard follows the jawline a little way, no sideburns or cheeks
+      if ((style.balbo || style.anchor) && region) {
+        const ax = Math.abs(x), jawY = -0.92 + 0.42 * smooth(0.5, 1.5, Math.atan2(ax, z - 0.25));
+        if (region === 'cheeks' || region === 'neck') region = null;
+        else if (region === 'jaw' && (ax > (style.anchor ? 0.72 : 0.88) || (style.anchor && Math.abs(y - jawY) > 0.1))) region = null;
+        if (style.anchor && region === 'chin' && ax > 0.42) region = null;
+      }
+      // soul patch: a small tuft just under the lower lip
+      if (style.soul && region && (region !== 'chin' || Math.abs(x) > 0.16 || y < -0.34)) region = null;
       if (!region) continue;
       // pencil: a thin line just above the lip
       if (style.pencil && region === 'moustache' && (y > 0.37 || Math.abs(x) > 0.62)) continue;

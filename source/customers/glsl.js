@@ -9,7 +9,10 @@
   HSC.U = {
     uBaldA: { value: [0, 0, 0, 0] }, // front recession, temple recession, crown radius, bridge loss
     uBaldB: { value: [0, 0, 0, 0] }, // horseshoe fringe drop, diffuse thinning, pattern seed, -
-    uBrowA: { value: [1, 1, 0, 0] }, // brow thickness, brow density
+    uBrowA: { value: [1, 1, 0, 0] }, // brow thickness, brow density, outer-tail thinning, -
+    uBrowB: { value: [0.08, 0, 1, 0] }, // brow arch, tilt (rising), thickness factor, unibrow
+    uBaldC: { value: [0, 0, 0, 0] }, // hairline: mature set-back, M-shaped temples, round, widow's peak
+    uSkinB: { value: [0, 0, 0, 0] }, // freckles, dark facial papules (DPN), -, -
     uBeard: { value: null }, // beard length grid (mm / 50)
     uSkinA: { value: [0.66, 0.385, 0.3, 0] }, // base albedo, darkness 0..1
     uLip: { value: [1.06, 0.78, 0.93] }, // lip colour relative to skin
@@ -70,8 +73,26 @@
     return source;
   }
   HSC.glsl.decls = `
-uniform vec4 uBaldA, uBaldB, uBrowA;
+uniform vec4 uBaldA, uBaldB, uBrowA, uBrowB, uBaldC;
 uniform vec4 uAreata[3];
+// eyebrows: the original brow (arch .08, no tilt, thickness 1) with a customer's arch, rising tilt,
+// thickness and an optional unibrow across the bridge; the outer tail thins with age
+float browShape(vec3 p){
+  float ax = abs(p.x);
+  float t = clamp((ax - 0.30) / 0.80, 0.0, 1.0);
+  float rs = smoothstep(0.0, 0.450, t), fl = smoothstep(0.450, 1.0, t);
+  float yb = 1.624 + 0.315 + uBrowB.x * rs * (1.0 - 0.750 * fl) + uBrowB.y * (t - 0.4);
+  float th = mix(0.140, 0.058, smoothstep(0.25, 1.0, t)) * mix(0.45, 1.0, smoothstep(0.0, 0.22, t)) * uBrowB.z;
+  th *= 1.0 - uBrowA.z * smoothstep(0.55, 1.0, t);
+  float along = smoothstep(0.27, 0.36, ax) * (1.0 - smoothstep(1.00, 1.12, ax));
+  float across = 1.0 - smoothstep(0.3, 1.0, abs(p.y - yb) / max(th, 0.001));
+  float m = along * across * smoothstep(0.9, 1.5, p.z);
+  if (uBrowB.w > 0.001) {
+    float uni = (1.0 - smoothstep(0.12, 0.36, ax)) * (1.0 - smoothstep(0.25, 1.0, abs(p.y - (1.939 - 0.4 * uBrowB.y)) / 0.1)) * smoothstep(0.9, 1.5, p.z);
+    m = max(m, uni * uBrowB.w * (.45 + .55 * n3(p * vec3(70.0, 150.0, 70.0))));
+  }
+  return m;
+}
 // alopecia areata: round, smooth patches (scalp or beard) with a slightly irregular edge
 float areataPatch(vec3 p, vec4 a, float i){
   float keep = 1.0;
@@ -91,7 +112,7 @@ uniform float uDebug;
 // Pattern baldness (Hamilton-Norwood): 1 where hair grows, 0 where it is gone, a soft thinning band between.
 float baldDensity(vec3 p){
   float density = 1.0;
-  if (uBaldA.x + uBaldA.y + uBaldA.z + uBaldB.x + uBaldB.y >= .001) {
+  if (uBaldA.x + uBaldA.y + uBaldA.z + uBaldB.x + uBaldB.y + uBaldC.x + uBaldC.y + uBaldC.z >= .001) {
   vec3 q = vec3(p.x, p.y - 2.1, p.z + .13);
   float th = atan(q.z, q.y);                  // 0 on top, + toward the face, - toward the nape
   float ph = atan(p.x, length(q.yz));         // left / right
@@ -100,7 +121,10 @@ float baldDensity(vec3 p){
   // frontal and temporal recession: the hairline moves back from its natural line
   float templeOffset = (aph - .58) / .22;
   float templ = exp(-templeOffset * templeOffset);
-  float rec = uBaldA.x + uBaldA.y * templ;
+  // the natural hairline's shape: a mature set-back, M-shaped temples or a round line, and a widow's peak
+  // (a narrow centre point that keeps its hair as the line around it moves back)
+  float rec = uBaldA.x + uBaldC.x + (uBaldA.y + uBaldC.y) * templ + uBaldC.z * (1.0 - .6 * templ);
+  rec *= 1.0 - uBaldC.w * max(0.0, 1.0 - aph / .3);
   float hairline = 1.13 - rec + wob;
   float front = smoothstep(hairline - .07, hairline + .1, th) * step(.001, rec) * smoothstep(2.35, 2.7, p.y);
   // crown (vertex) bald spot
@@ -164,7 +188,7 @@ vObj = hsBase;`);
       .replace('#include <common>', `#include <common>
 varying vec3 vObj;
 ${ctx.Ql}
-uniform vec4 uSkinA, uCast, uAgeA, uBeardGrey;
+uniform vec4 uSkinA, uCast, uAgeA, uBeardGrey, uSkinB;
 uniform vec3 uLip, uHairDark, uBeardDark, uBrowTint;
 #ifdef HSC_LOW
 float skinBump(vec3 P){ return n3(P * 62.0); }
@@ -250,13 +274,25 @@ float wrinkles(vec3 P, float age){
       float circ = (1.0 - smoothstep(.0, .3, length(vec2((aX - .62) / 1.3, P.y - 1.36)))) * smoothstep(1.8, 2.1, P.z);
       tone *= 1.0 - circ * (.06 + .1 * age) * vec3(.8, 1.0, 1.0);
       // eyebrows
-      float bm = browMask(P) * uBrowA.y;
+      float bm = browShape(P) * uBrowA.y;
       float browHair = .72 + .5 * n3(P * vec3(95.0, 230.0, 95.0));
       tone = mix(tone, uBrowTint * browHair, clamp(bm * 1.25, 0.0, .94));
       // age spots on the sun-exposed upper face and scalp
       float sunlit = smoothstep(1.9, 2.6, P.y) * (smoothstep(1.2, 2.0, P.z) + smoothstep(3.0, 3.6, P.y)) + smoothstep(1.4, 1.75, aX) * smoothstep(1.3, 2.0, P.y) * .5;
       float spots = smoothstep(.76, .82, n3(P * 11.0 + 19.0)) * (.5 + .5 * n3(P * 37.0));
       tone *= mix(vec3(1.0), vec3(.9, .82, .74), clamp(spots * sunlit, 0.0, 1.0) * uAgeA.y);
+      // freckles over the nose, cheeks and forehead
+      if (uSkinB.x > .001) {
+        float fz = smoothstep(1.3, 1.9, P.z) * smoothstep(.55, 1.0, P.y) * (1.0 - smoothstep(2.4, 2.9, P.y)) * (1.0 - smoothstep(1.1, 1.5, aX));
+        float fr = smoothstep(.70, .78, n3(P * 24.0 + 5.0)) * (.55 + .45 * n3(P * 63.0 + 2.0));
+        tone *= mix(vec3(1.0), vec3(.8, .66, .54), clamp(fr * fz, 0.0, 1.0) * uSkinB.x * .85);
+      }
+      // dark facial papules (dermatosis papulosa nigra) on deep skin: small dark dots on the cheekbones
+      if (uSkinB.y > .001) {
+        float dz = smoothstep(1.4, 1.9, P.z) * smoothstep(.9, 1.3, P.y) * (1.0 - smoothstep(1.9, 2.3, P.y)) * smoothstep(.35, .6, aX) * (1.0 - smoothstep(1.1, 1.4, aX));
+        float dd = smoothstep(.83, .88, n3(P * 34.0 + 11.0));
+        tone *= 1.0 - clamp(dd * dz, 0.0, 1.0) * uSkinB.y * .45;
+      }
       // beard area: shaved-follicle cast, follicle dots, and the stubble itself
       float bz = beardZone(P) * areataKeep(P);
       float bmm = beardMM(P) * bz;

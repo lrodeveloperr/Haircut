@@ -10,6 +10,8 @@
   const TINTS = [
     [0.3, 0.32, 0.38], [0.48, 0.48, 0.52], [0.72, 0.68, 0.64], [1, 1, 1], [1.55, 1.36, 1.16], [2.3, 1.95, 1.55],
     [3.1, 2.65, 1.95], [4, 3.35, 2.05], [5.1, 4.45, 3.1], [2.4, 1.25, 0.8], [4, 1.8, 0.75], [2.1, 3.15, 5.2],
+    // Android colours (phenotypes.js): strawberry blond, ash brown, golden brown, ash blond, copper, blue-black
+    [4.4, 2.6, 1.35], [1.4, 1.36, 1.32], [2.5, 1.9, 1.2], [3, 2.85, 2.5], [3.2, 1.55, 0.8], [0.26, 0.3, 0.42],
   ];
   const STRAND_STYLE = {
     straight: (c) => ({ A: [0.22, 0.56, 0.56, 0.5], B: [0.16, 0.1, 0.02, 1], C: [0, 0, 1, 1] }),
@@ -411,7 +413,14 @@
     U.uGreyB.value = { temples: [1.2, 0, 0, 0.4], front: [0, 1.2, 0, 0.35], crown: [0, 0, 1.2, 0.35], even: [0, 0, 0, 0] }[person.hair.greyPattern || 'temples'] || [1.2, 0, 0, 0.4];
     U.uBeardGrey.value = [person.beard.grey, Math.min(0.85, toneB + 0.04), person.beard.patchy, 0];
     // how far a moustache hangs over the upper lip (never past the mouth line)
-    U.uBeardLip.value = { walrus: 0.95, moustache: 0.45, horseshoe: 0.45, pencil: 0, full: 0.4, long: 0.5, boxed: 0.3, goatee: 0.3, vandyke: 0.3 }[person.beard.style] ?? 0.3;
+    U.uBeardLip.value = { walrus: 0.95, moustache: 0.45, horseshoe: 0.45, pencil: 0, full: 0.4, long: 0.5, boxed: 0.3, goatee: 0.3, vandyke: 0.3,
+      handlebar: 0.6, anchor: 0, balbo: 0.3, circle: 0.35, ducktail: 0.4, garibaldi: 0.5 }[person.beard.style] ?? 0.3;
+    // Android: brow shape, freckles and dark papules, hairline shape (phenotypes.js); defaults keep the original look
+    const ft = HSC.featuresOf ? HSC.featuresOf(person) : null;
+    U.uBrowB.value = ft ? ft.brow : [0.08, 0, 1, 0];
+    U.uBrowA.value[2] = ft ? ft.tail : 0;
+    U.uSkinB.value = ft ? ft.skin : [0, 0, 0, 0];
+    U.uBaldC.value = ft ? ft.hairline : [0, 0, 0, 0];
     U.uBeardGreyB.value = { chin: [1.1, 0, 0.4, 0.4], sides: [0, 1.1, 0, 0.35], even: [0, 0, 0, 0] }[person.beard.greyPattern || 'chin'] || [1.1, 0, 0.4, 0.4];
     // alopecia areata patches
     const ar = new Float32Array(12);

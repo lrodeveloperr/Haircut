@@ -74,12 +74,15 @@
   // ---- hair colour: index into the game's 12 colour presets ----
   const HAIR = {
     jet: 0, softBlack: 1, vdb: 2, db: 3, mb: 4, lb: 5, dblonde: 6, gblonde: 7, lblonde: 8, auburn: 9, ginger: 10, silver: 11,
+    // Android only (phenotypes.js supplies their tints)
+    strawberry: 12, ashBrown: 13, goldenBrown: 14, ashBlond: 15, copper: 16, blueBlack: 17,
   };
   // stubble / brow tint per preset (dark-end colour of the hair, linear)
   const HAIR_DARK = [
     [0.012, 0.011, 0.012], [0.018, 0.016, 0.016], [0.026, 0.019, 0.014], [0.035, 0.024, 0.018], [0.05, 0.034, 0.022],
     [0.075, 0.052, 0.033], [0.1, 0.075, 0.045], [0.14, 0.1, 0.05], [0.2, 0.16, 0.1], [0.08, 0.035, 0.018],
     [0.13, 0.05, 0.02], [0.18, 0.18, 0.18],
+    [0.16, 0.08, 0.035], [0.045, 0.038, 0.032], [0.08, 0.055, 0.03], [0.11, 0.095, 0.07], [0.11, 0.045, 0.018], [0.01, 0.011, 0.015],
   ];
 
   const EYES = {
@@ -223,6 +226,16 @@
     full: { moustache: [10, 16], chin: [13, 22], cheeks: [10, 16], jaw: [13, 22], neck: [8, 13] },
     long: { moustache: [13, 20], chin: [30, 50], cheeks: [16, 25], jaw: [25, 40], neck: [16, 25] },
     mutton: { cheeks: [10, 16], jaw: [8, 13] },
+    // Android (phenotypes.js deals them): shadow and heavy stubble, and the styles faces.js shapes by flag
+    stubble1: { moustache: [0.4, 0.8], chin: [0.4, 0.8], cheeks: [0.4, 0.8], neck: [0.3, 0.6], jaw: [0.4, 0.8] },
+    stubble5: { moustache: [3.5, 5.5], chin: [3.5, 5.5], cheeks: [3, 5], neck: [2, 4], jaw: [3.5, 5.5] },
+    balbo: { moustache: [6, 10], chin: [8, 14], jaw: [6, 10], balbo: true }, // floating moustache, chin beard along the jaw
+    anchor: { moustache: [2, 4], chin: [8, 14], jaw: [5, 8], anchor: true, pencil: true }, // pointed chin and a thin moustache
+    circle: { moustache: [6, 10], chin: [8, 12], circle: true }, // moustache joined round the mouth to the chin
+    soulpatch: { chin: [5, 9], soul: true }, // a small tuft under the lower lip
+    handlebar: { moustache: [16, 24] }, // a long, wide moustache (its tips stay straight)
+    ducktail: { moustache: [10, 14], chin: [24, 34], cheeks: [8, 12], jaw: [13, 20], neck: [6, 10] }, // full, pointed at the chin
+    garibaldi: { moustache: [12, 18], chin: [30, 40], cheeks: [16, 22], jaw: [26, 36], neck: [14, 20] }, // wide, rounded and full
   };
   // Baseline by age (UK YouGov): ~46% clean-shaven; beard + moustache 34%, stubble 13%, beard only 4%,
   // moustache only 2%. Young men lean to stubble, middle-aged men to beards, most men over 60 shave,
@@ -252,6 +265,7 @@
     Object.assign(BALD_BY_CLASS, P.bald);
     Object.assign(BEARD_CLASS_MULT, P.beardMult);
     Object.assign(AREATA_BY_AGE, P.areata);
+    for (const [age, w] of Object.entries(P.beardByAge || {})) Object.assign(BEARD_BY_AGE[age], w);
   }
   const TEX_FAMILY = { 1: 'straight', 2: 'wavy', 3: 'curly', 4: 'coily' };
 

@@ -163,7 +163,84 @@
     '4c': { A: [0.02, 0.04, 0.92, 0.96], B: [0.42, 0, 0, 1], C: [0.24, 5.5, 0.42, 1.4] },
   };
 
-  HSC.PHENOTYPES = { groups, hair, grey, bald, beardMult, ages, norwood, arcus, decks, hairTypes,
+  // ---- Phase B: per-customer features derived from seed, group and age (never saved) ----
+  // brows: shape (straight 40 / soft angle 35 / arched 15 / rising 10), thickness level, unibrow;
+  // freckles; dark facial papules (DPN) on deep skin from 40; hairline: mature (from ~25), linear / M /
+  // round shape (46 / 43 / 11), widow's peak
+  const FEAT = {
+    'north-european': { thick: 0.2, uni: 0.04, freckle: 0.3, peak: 0.3 },
+    mediterranean: { thick: 0.35, uni: 0.07, freckle: 0.05, peak: 0.32 },
+    mena: { thick: 0.45, uni: 0.13, freckle: 0.015, peak: 0.35 },
+    'west-african': { thick: 0.25, uni: 0.03, freckle: 0.005, peak: 0.15 },
+    'east-african': { thick: 0.25, uni: 0.03, freckle: 0.005, peak: 0.15 },
+    'east-asian': { thick: 0.15, uni: 0.015, freckle: 0.01, peak: 0.33, straight: 1.6 },
+    'southeast-asian': { thick: 0.18, uni: 0.02, freckle: 0.01, peak: 0.3, straight: 1.4 },
+    'south-asian': { thick: 0.45, uni: 0.12, freckle: 0.01, peak: 0.46 },
+    latino: { thick: 0.3, uni: 0.05, freckle: 0.02, peak: 0.3 },
+    'indigenous-american': { thick: 0.18, uni: 0.015, freckle: 0.01, peak: 0.25, straight: 1.4 },
+    'pacific-islander': { thick: 0.25, uni: 0.03, freckle: 0.01, peak: 0.25 },
+    mixed: { thick: 0.28, uni: 0.05, freckle: 0.03, peak: 0.3 },
+  };
+  const LEGACY = { white: 'north-european', black: 'west-african', 'east-asian': 'east-asian', 'south-asian': 'south-asian' };
+  const REDS = [9, 10, 12, 16]; // auburn, ginger, strawberry blond, copper
+  const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const featCache = new Map();
+  HSC.featuresOf = function (person) {
+    if (!person || !HSC.rng) return null;
+    const key = person.seed + ':' + person.years + ':' + person.heritage + ':' + person.hair.colour + ':' + person.skin.tone;
+    if (featCache.has(key)) return featCache.get(key);
+    const f = FEAT[person.heritage] || FEAT[LEGACY[person.heritage]] || FEAT.mixed, y = person.years;
+    const R = HSC.rng(((person.seed >>> 0) ^ 0xb40f1ce5) >>> 0 || 1);
+    const shape = R.pick({ straight: 40 * (f.straight || 1), soft: 35, arched: 15, rising: 10 });
+    const arch = { straight: 0.025, soft: 0.08, arched: 0.13, rising: 0.045 }[shape] + R.range(-0.01, 0.01);
+    const tilt = shape === 'rising' ? R.range(0.05, 0.08) : R.range(-0.01, 0.015);
+    const lv = R.next(), thick = (lv < f.thick ? 1.22 : lv > 0.8 ? 0.84 : 1) * (1 + 0.15 * sm(45, 70, y));
+    const unibrow = R.next() < f.uni ? R.range(0.55, 1) : 0;
+    const tail = 0.45 * sm(58, 80, y);
+    const freckles = R.next() < (REDS.includes(person.hair.colour) ? 0.75 : f.freckle) ? R.range(0.5, 1) * (1 - 0.4 * sm(50, 75, y)) : 0;
+    const dpn = person.skin.tone >= 6.5 && R.next() < 0.6 * sm(40, 65, y) ? R.range(0.4, 1) : 0;
+    const hl = R.pick({ linear: 46, M: 43, round: 11 });
+    let mature = y < 25 ? 0 : R.range(0.012, 0.03) * sm(24, 34, y);
+    const mDepth = hl === 'M' ? 0.015 + R.range(0.03, 0.07) * sm(20, 35, y) : 0;
+    const round = hl === 'round' ? R.range(0.015, 0.03) : 0;
+    const peak = R.next() < f.peak ? R.range(0.5, 1) : 0;
+    if (peak && mature < 0.025) mature = 0.025; // a peak shows as a V against a set-back line
+    const out = { brow: [arch, tilt, thick, unibrow], tail, skin: [freckles, dpn, 0, 0], hairline: [mature, mDepth, round, peak], shape, hl };
+    if (featCache.size > 64) featCache.delete(featCache.keys().next().value);
+    featCache.set(key, out);
+    return out;
+  };
+
+  // new beard styles join the age odds (people.js BEARD_BY_AGE), and stubble comes in three lengths
+  const beardByAge = {
+    young: { balbo: 2, anchor: 1.5, circle: 3, soulpatch: 1, handlebar: 0.3, ducktail: 1, garibaldi: 0.5 },
+    middle: { balbo: 3, anchor: 2, circle: 3.5, soulpatch: 0.5, handlebar: 1, ducktail: 2, garibaldi: 1.5 },
+    old: { balbo: 1.5, anchor: 1, circle: 2, soulpatch: 0.2, handlebar: 1.5, ducktail: 1.5, garibaldi: 1.5 },
+  };
+  const stubble = { stubble1: 30, stubble: 45, stubble5: 25 };
+
+  // hair colours: the game's 12 presets plus strawberry blond, ash brown, golden brown, ash blond, copper and
+  // blue-black (tints for the engine's hair shader; HAIR_DARK in people.js holds their skin-level tint)
+  const tints = [
+    [0.3, 0.32, 0.38], [0.48, 0.48, 0.52], [0.72, 0.68, 0.64], [1, 1, 1], [1.55, 1.36, 1.16], [2.3, 1.95, 1.55],
+    [3.1, 2.65, 1.95], [4, 3.35, 2.05], [5.1, 4.45, 3.1], [2.4, 1.25, 0.8], [4, 1.8, 0.75], [2.1, 3.15, 5.2],
+    [4.4, 2.6, 1.35], [1.4, 1.36, 1.32], [2.5, 1.9, 1.2], [3, 2.85, 2.5], [3.2, 1.55, 0.8], [0.26, 0.3, 0.42],
+  ];
+  const sheen = [0.94, 0.96, 0.98, 1, 0.98, 0.97, 0.96, 0.95, 0.94, 0.96, 0.94, 0.92, 0.95, 0.97, 0.97, 0.95, 0.95, 0.93];
+  HSC.HAIR_TINTS = tints;
+  HSC.HAIR_SHEEN = sheen;
+  // the new colours in the groups that have them (moved from their nearest existing colour)
+  const add = (g, w) => Object.assign(hair[g].base, w);
+  add('north-european', { strawberry: 2, ashBrown: 6, goldenBrown: 5, ashBlond: 4, copper: 1 });
+  add('mediterranean', { ashBrown: 3, goldenBrown: 3, copper: 0.3 });
+  add('mena', { ashBrown: 1, goldenBrown: 2 });
+  add('east-asian', { blueBlack: 25 });
+  add('southeast-asian', { blueBlack: 12 });
+  add('indigenous-american', { blueBlack: 15 });
+  add('latino', { goldenBrown: 3, ashBrown: 2 });
+  add('mixed', { goldenBrown: 3, ashBrown: 2, strawberry: 0.5, copper: 0.5 });
+
+  HSC.PHENOTYPES = { groups, hair, grey, bald, beardMult, ages, norwood, arcus, decks, hairTypes, beardByAge, stubble,
     areata: { young: 0.006, middle: 0.004, old: 0.003 }, beardLead: { ahead: 40, level: 40, behind: 20 },
     bandOf: (years) => (ages.find((a) => years <= a.years[1]) || ages[ages.length - 1]).id };
 })(globalThis.HSC || (globalThis.HSC = {}));

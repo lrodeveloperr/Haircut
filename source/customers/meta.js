@@ -86,7 +86,7 @@
     const w = {};
     for (const [k, v] of Object.entries(base)) {
       if (k === 'clean' || k === 'stubble' || recent.includes(k)) continue;
-      if (big && !['full', 'long', 'boxed', 'shenandoah', 'mutton'].includes(k)) continue;
+      if (big && !['full', 'long', 'boxed', 'shenandoah', 'mutton', 'ducktail', 'garibaldi'].includes(k)) continue;
       w[k] = v * (mult[k] || 1);
     }
     const style = Object.keys(w).length ? R.pick(w) : 'boxed';
@@ -118,7 +118,7 @@
     const shave = H.shave != null ? H.shave : cls === 'east-asian' ? 0.45 : 0;
     if (shave && beard === 'style' && R.next() < shave) beard = 'clean';
     if (level >= 2 && streak('beard', beard !== 'clean')) beard = beard === 'clean' ? (o.age === 'young' ? 'stubble' : 'style') : 'clean';
-    o.beard = beard === 'style' ? beardStyle(o.age, cls, R) : beard;
+    o.beard = beard === 'style' ? beardStyle(o.age, cls, R) : beard === 'stubble' && PH && PH.stubble ? R.pick(PH.stubble) : beard;
     return o;
   }
   // no more than three in a row of the same kind (bearded / clean-shaven, hair loss / none): `kind` says
