@@ -226,6 +226,24 @@
         st.sg[v] = g * fade;
       }
       st.shapes = shapes;
+      // face-feature targets (facegen.js): sparse [scale f32][n u16][idx u16 x n][int8 x 3n] each
+      st.faces = null;
+      if (HSC.FACE_TARGETS_B64 && HSC.faceOf) {
+        const fb = atob(HSC.FACE_TARGETS_B64), fr = new Uint8Array(fb.length);
+        for (let i = 0; i < fb.length; i++) fr[i] = fb.charCodeAt(i);
+        const fv = new DataView(fr.buffer), fn = fv.getUint16(0, true);
+        if (fv.getUint32(2, true) === nv) {
+          const faces = [];
+          for (let k = 0, o = 6; k < fn; k++) {
+            const sc = fv.getFloat32(o, true), m = fv.getUint16(o + 4, true), idx = new Uint16Array(m);
+            for (let j = 0; j < m; j++) idx[j] = fv.getUint16(o + 6 + j * 2, true);
+            faces.push({ sc, idx, q: new Int8Array(fr.buffer, o + 6 + m * 2, m * 3) });
+            o += 6 + m * 5;
+          }
+          st.faces = faces;
+        } else console.error('customers: face targets do not match the head');
+      }
+      st.D = new Float32Array(nv * 3);
       if (HSC.startupTiming) { HSC.startupTiming.headShapesMs = Math.round(performance.now() - t0); HSC.startupTiming.headShapesDecodeMs = Math.round(tDecode); }
     } catch (err) {
       console.error('customers: head shapes failed', err);
@@ -240,19 +258,31 @@
     const age = clamp((person.years - 18) / 62, 0, 1);
     const m = person.morph;
     let moved = false;
+    // head shape + face features as one delta per coarse vertex, then guarded and carried to the drawn head
     const shp = st.shapes ? st.shapes[HSC.headShapeOf(person)] : null;
-    const sdC = (i, a) => (shp ? shp.q[i * 3 + a] * shp.sc * st.sgC[i] : 0);
+    const face = st.faces && HSC.faceOf ? HSC.faceOf(person) : [];
+    const D = st.D, shaped = !!(shp || face.length);
+    if (shaped) {
+      if (shp) for (let i = 0; i < D.length; i++) D[i] = shp.q[i] * shp.sc; else D.fill(0);
+      for (const [t, w] of face) {
+        const f = st.faces[t];
+        if (!f) continue;
+        const k = w * f.sc;
+        for (let j = 0; j < f.idx.length; j++) { const i = f.idx[j] * 3; D[i] += k * f.q[j * 3]; D[i + 1] += k * f.q[j * 3 + 1]; D[i + 2] += k * f.q[j * 3 + 2]; }
+      }
+    }
+    const sdC = (i, a) => (shaped ? D[i * 3 + a] * st.sgC[i] : 0);
     const sd = (v, a) => {
-      if (!shp || !(st.sg[v] > 0)) return 0;
+      if (!shaped || !(st.sg[v] > 0)) return 0;
       let t = 0;
-      for (let k = 0; k < 3; k++) { const i = st.nbr[v * 3 + k]; if (i >= 0) t += st.nbw[v * 3 + k] * shp.q[i * 3 + a]; }
-      return t * shp.sc * st.sg[v];
+      for (let k = 0; k < 3; k++) { const i = st.nbr[v * 3 + k]; if (i >= 0) t += st.nbw[v * 3 + k] * D[i * 3 + a]; }
+      return t * st.sg[v];
     };
     for (let v = 0; v < P.length / 3; v++) {
       const x = st.base[v * 3], y = st.base[v * 3 + 1], z = st.base[v * 3 + 2];
       const d = HSC.morphDelta(x, y, z, m, age, st.scalp[v]);
       P[v * 3] = x + (d ? d[0] : 0) + sd(v, 0); P[v * 3 + 1] = y + (d ? d[1] : 0) + sd(v, 1); P[v * 3 + 2] = z + (d ? d[2] : 0) + sd(v, 2);
-      if (d || (shp && st.sg[v] > 0)) moved = true;
+      if (d || (shaped && st.sg[v] > 0)) moved = true;
     }
     const C = st.coarse.pos;
     for (let v = 0; v < C.length / 3; v++) {

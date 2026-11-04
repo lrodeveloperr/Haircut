@@ -33,7 +33,7 @@ python3 patch12.py build/runtime/game.js
 python3 patch13.py build/runtime/game.js
 python3 patch14.py build/runtime/game.js
 { echo "/* Haircut Studio customers: generated people, skin, hair textures, baldness, trimmable beards, face shapes. */"
-  SHAPES=""; [ "${HEAD_SHAPES:-0}" = 1 ] && SHAPES="headshapes-data headshapes"
+  SHAPES=""; [ "${HEAD_SHAPES:-0}" = 1 ] && SHAPES="headshapes-data headshapes faces-data facegen"
   for f in "$DETAIL" people glsl faces $SHAPES render state meta catalog patterns wardrobe hub clippings; do cat customers/$f.js; echo; done; } > build/runtime/customers.js
 python3 - <<'PY'
 p='build/index.html'; s=open('src/index.html').read()
