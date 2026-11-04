@@ -34,6 +34,7 @@ python3 patch13.py build/runtime/game.js
 python3 patch14.py build/runtime/game.js
 [ "${HEAD_SHAPES:-0}" = 1 ] && python3 patch15.py build/runtime/game.js
 [ "${HEAD_SHAPES:-0}" = 1 ] && python3 patch16.py build/runtime/game.js
+[ "${HEAD_SHAPES:-0}" = 1 ] && python3 patch17.py build/runtime/game.js
 { echo "/* Haircut Studio customers: generated people, skin, hair textures, baldness, trimmable beards, face shapes. */"
   SHAPES=""; PHENO=""; EXTRAS=""; [ "${HEAD_SHAPES:-0}" = 1 ] && SHAPES="headshapes-data headshapes faces-data facegen" && PHENO="phenotypes" && EXTRAS="extras"
   for f in "$DETAIL" $PHENO people $EXTRAS glsl faces $SHAPES render state meta catalog patterns wardrobe hub clippings; do cat customers/$f.js; echo; done; } > build/runtime/customers.js

@@ -41,7 +41,32 @@
     uBeardGrey: { value: [0, 0.62, 0.3, 0] }, // grey fraction, grey brightness, patchiness, -
     uLift: { value: 0 }, // extra sheen and rim light on the hair (0..1), the same for every customer
     uDebug: { value: 0 },
+    // Android hair (owner's pick, prototype C): realistic shading, locks + flyaways, crown swirl, strand variation
+    uHairQ: { value: HSC.PHENOTYPES ? [1, 1, 1, 1] : [0, 0, 0, 0] },
+    uWhorl: { value: [0.12, -0.55, 1, 0] }, // crown swirl centre x, z (head space), turn direction, -
   };
+  // Android only: the hair upgrades are compiled in when phenotypes.js is in the build
+  const EXH = () => !!HSC.PHENOTYPES;
+  const HAIR_SHADE = `if(uHairQ.x>.001){
+   // two highlights as in real hair (Marschner): a sharp white reflection shifted toward the root, and a broader,
+   // sparkling one tinted by the hair's own colour shifted toward the tip; darker deeper in the hair and at roots
+   vec3 hn=normalize(vN);
+   vec3 hb=base;
+   hb*=mix(vec3(1.0),mix(vec3(1.06,1.0,.93),vec3(.93,.98,1.05),vSeed.y)*(.86+.28*vSeed.x),uHairQ.w);
+   hb*=1.0+.22*uHairQ.w*smoothstep(.55,1.0,vAlong)*step(.6,fract(vSeed.y*7.13));
+   vec3 t1=normalize(tangent+hn*(-.09+.05*(vSeed.y-.5))),t2=normalize(tangent+hn*.13);
+   float c1=dot(t1,halfA),c2=dot(t2,halfA),c3=dot(t1,halfB);
+   float s1=pow(sqrt(max(0.0,1.0-c1*c1)),120.0)*.07+pow(sqrt(max(0.0,1.0-c3*c3)),80.0)*.025;
+   float s2=pow(sqrt(max(0.0,1.0-c2*c2)),22.0)*.2*(.75+.5*fract(vSeed.x*31.7+vAlong*2.3));
+   vec3 tintN=clamp(hb/max(dot(hb,vec3(.3,.59,.11)),.012),0.0,4.0)*.32;
+   float occ=mix(.55,1.0,smoothstep(.0,.9,vAlong))*mix(.8,1.0,vSeed.y);
+   // light hair passes light through: its depth shading is softer
+   occ=mix(occ,1.0,.6*smoothstep(.04,.2,dot(base,vec3(.3,.59,.11))));
+   occ=mix(1.0,occ,smoothstep(.06,.3,vLength));
+   float tip=smoothstep(.05,.6,vAlong);
+   vec3 nl=hb*light*occ*(1.0+2.2*lf)+(vec3(1.0,.9,.78)*s1+tintN*s2*(1.0-.5*vGrey))*tip*(.4+.6*occ)*(1.0+.5*lf)+vec3(1.0,.86,.66)*rim*tip*.7;
+   lit=mix(lit,nl,uHairQ.x);
+  }`;
 
   // Beard grid: a 128 x 64 map of the lower face, projected from a point inside the mouth.
   const BC = [0, 0.3, 0.3], AZR = 1.85, EL0 = -1.45, ELR = 2.25;
@@ -501,6 +526,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
  uniform vec3 uBeardTint;
  uniform float uLift;
  varying vec3 vTip,vTangent,vSeed;varying float vAlong,vEdge,vLength,vGrey;
+ ${EXH() ? 'uniform vec4 uHairQ;varying vec3 vN;' : ''}
  void main(){
   if(vLength<.0001||vSeed.z>uDensity)discard;
   float edge=abs(vEdge),aa=max(fwidth(edge),.03);if(edge>1.0-aa*.25)discard;
@@ -521,16 +547,18 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
   float rim=pow(sqrt(max(0.0,1.0-tangentHalfB*tangentHalfB)),mix(45.0,32.0,lf))*.04*(1.0+1.5*lf);
   // the hair's own colour is lifted (a warm brown-black, not white highlights, which read as grey)
   vec3 lit=base*light*(1.0+2.2*lf)+vec3(1.0,.86,.66)*(glint+rim)*smoothstep(.05,.6,vAlong);
+  ${EXH() ? HAIR_SHADE : ''}
   gl_FragColor=vec4(lit,1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
  }`;
 
-  HSC.glsl.strandVert = (t) => vertexPrelude(t, ['gridValue', 'hairMask']) + `
+  HSC.glsl.strandVert = (t) => vertexPrelude(t, EXH() ? ['gridValue', 'hairMask', 'hsh'] : ['gridValue', 'hairMask']) + `
  attribute vec3 aRoot,aNormal,aSeed;
  uniform vec3 cam;uniform float uWidth;
  uniform vec4 uStyleA,uStyleB,uStyleC,uGreyA,uGreyB;
  varying vec3 vTip,vTangent,vSeed;varying float vAlong,vEdge,vLength,vGrey;
+ ${EXH() ? 'uniform vec4 uHairQ,uWhorl;varying vec3 vN;' : ''}
  void main(){
   float HANG=uStyleA.x,FWD=uStyleA.y,LIFT=uStyleA.z,TOPLIFT=uStyleA.w,SPREAD=uStyleB.x,SAG=uStyleB.y,WAVE=uStyleB.z,WAVEF=uStyleB.w;
   vec3 n=normalize(aNormal);
@@ -542,6 +570,12 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
   // combed flow: the top lies forward, the back and sides fall down; strands scatter where the two meet
   float topW=smoothstep(3.05,3.75,aRoot.y)*smoothstep(-1.1,.2,aRoot.z);
   vec3 flow=normalize(mix(down,fwd,topW)+vec3(.0001));
+  ${EXH() ? `if(uHairQ.z>.001){
+   // the crown swirl: hair spirals out from one point, clockwise or anticlockwise, placed per customer
+   vec3 wc=vec3(uWhorl.x,3.62,uWhorl.y),wr=aRoot-wc;wr-=n*dot(wr,n);
+   vec3 sw=normalize(cross(n,wr)*uWhorl.z+wr*.45+vec3(.0001));
+   flow=normalize(mix(flow,sw,(1.0-smoothstep(.12,.8,length(wr)))*uHairQ.z)+vec3(.0001));
+  }` : ''}
   vec3 tA=normalize(cross(n,flow)+vec3(.0001));
   float g=gridValue(aRoot),hm=hairMask(aRoot);
   float stock=smoothstep(.80,1.0,g);
@@ -551,6 +585,8 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
   float jitter=1.0+(aSeed.x-.5)*mix(.08,.24,stock);
   float ragged=mix(.72+.38*aSeed.y,1.0,smoothstep(.55,.98,hm));
   float L=g*L0*hm*mix(1.0,jitter*ragged,stock)*uStyleC.z;
+  ${EXH() ? `float hFly=uHairQ.y*step(.988,aSeed.y)*smoothstep(.3,.6,g);
+  L*=(1.0+(aSeed.z-.5)*.14*uHairQ.w)*(1.0+.15*hFly);` : ''}
   float shortHair=1.0-smoothstep(.10,.45,g);
   float hang=(1.0-smoothstep(2.7,3.65,aRoot.y))*HANG;
   flow=normalize(mix(flow,down,hang));
@@ -565,11 +601,18 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
   tA=normalize(cross(n,flow)+vec3(.0001));
   lift=mix(lift,.42,max(crown,scatter)*.7*(1.0-smoothstep(.0,.15,uStyleC.x)));
   vec3 dir=normalize(n*lift+flow*(1.0-lift*.75)+tA*(aSeed.z-.5)*SPREAD+flow*(aSeed.y-.5)*SPREAD*.6);
+  ${EXH() ? `// locks: neighbouring strands share a direction and their tips gather; a few flyaways stray out
+  vec3 hCi=floor(aRoot*15.0),hCs=vec3(hsh(hCi),hsh(hCi+11.0),hsh(hCi+37.0));
+  vec3 hToC=(hCi+.5+(hCs-.5)*.7)/15.0-aRoot;hToC-=n*dot(hToC,n);
+  float hClump=uHairQ.y*smoothstep(.15,.5,g)*(1.0-.5*smoothstep(.0,.15,uStyleC.x))*(1.0-hFly);
+  dir=normalize(mix(dir,normalize(n*lift+flow*(1.0-lift*.75)+tA*(hCs.z-.5)*SPREAD*1.4),hClump*.8));
+  dir=normalize(dir+(n*.25+tA*(aSeed.x-.5)*.8)*hFly);` : ''}
   float t=position.y;
   float sag=SAG*t*clamp(L/L0,0.0,1.6);
   vec3 curve=normalize(dir+flow*(.10*t)+down*sag);
   float wave=sin(t*6.2831*WAVEF+aSeed.x*6.2831)*WAVE*t;
   vec3 p=aRoot+n*.002+curve*(t*L)+tA*wave*L;
+  ${EXH() ? 'p+=hToC*hClump*.85*smoothstep(.0,1.0,t);' : ''}
   // coils: a helix around the strand's path, opening up from the root
   vec3 b2=normalize(cross(curve,tA)+vec3(.0001));
   float coilR=uStyleC.x*L*(.75+.5*aSeed.z)*smoothstep(.0,.18,t);
@@ -579,6 +622,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
   vec3 view=normalize(cam-p),side=cross(tang,view);
   if(dot(side,side)<.00001)side=cross(tang,vec3(0.0,1.0,.001));side=normalize(side);
   float radius=.0062*uWidth*uStyleC.w*(.82+.36*aSeed.y)*mix(1.0,.28,pow(t,2.0));
+  ${EXH() ? 'radius*=mix(1.0,(.8+.4*aSeed.x)*mix(1.0,.4,pow(t,1.5)),uHairQ.w);' : ''}
   float facing=abs(dot(n,normalize(cam-aRoot)));
   radius*=mix(1.0,smoothstep(.04,.40,facing),shortHair);
   p+=side*position.x*radius;
@@ -591,6 +635,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
   float gf=clamp(uGreyA.x*(1.0+gBias*(1.0-uGreyA.x)*1.6),0.0,1.0);
   vGrey=step(fract(aSeed.z*7.31+aSeed.x*3.17),gf);
   vTip=p;vTangent=tang;vSeed=aSeed;vAlong=t;vEdge=position.x;vLength=L;
+  ${EXH() ? 'vN=n;' : ''}
   gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);
  }`;
   HSC.glsl.strandFrag = (t) => strandFrag(t, 'uHairTint', 'uGreyA.z');
@@ -601,6 +646,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
  uniform vec4 uBStyleA,uBStyleB,uBeardGrey,uBeardGreyB;
  uniform float uBeardLip;
  varying vec3 vTip,vTangent,vSeed;varying float vAlong,vEdge,vLength,vGrey;
+ ${EXH() ? 'varying vec3 vN;' : ''}
  void main(){
   vec3 n=normalize(aNormal);
   vec3 B=aBase;float ax=abs(B.x);
@@ -675,6 +721,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
   float bgf=clamp(uBeardGrey.x*(1.0+bBias*(1.0-uBeardGrey.x)*1.6),0.0,1.0);
   vGrey=step(fract(aSeed.z*7.31+aSeed.x*3.17),bgf);
   vTip=p;vTangent=tang;vSeed=aSeed;vAlong=t;vEdge=position.x;vLength=L;
+  ${EXH() ? 'vN=n;' : ''}
   gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);
  }`;
   HSC.glsl.beardFrag = (t) => strandFrag(t, 'uHairTint*uBeardTint', 'uBeardGrey.y');

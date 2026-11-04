@@ -6,7 +6,9 @@
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
   'use strict';
-  const MAX = 4000, SEG = 6;
+  // Android (prototypes): room for 12,000 pieces; other builds keep 4,000
+  const MAX = HSC.PHENOTYPES ? 12000 : 4000, SEG = 6;
+  const EXC = !!HSC.PHENOTYPES;
   const G = 98; // gravity in world units / s^2
   const K = {
     pos: new Float32Array(MAX * 3), vel: new Float32Array(MAX * 3), dir: new Float32Array(MAX * 3), axis: new Float32Array(MAX * 3),
@@ -17,6 +19,7 @@
     count: 0, next: 0, last: 0, moving: 0,
   };
   let mesh = null, geo = null, attrs = null, ctx = null, field = null, Rng = HSC.rng(4242);
+  const CLIPQ = { value: 0 };
 
   const VERT = `
 attribute vec4 iPos;   // xyz centre, w length
@@ -24,6 +27,7 @@ attribute vec3 iDir;   // unit direction of the piece
 attribute vec4 iCurl;  // curl radius (x length), turns, phase, width
 attribute vec3 iCol;
 varying vec3 vCol; varying float vShade; varying float vEdge;
+${EXC ? 'uniform float uClipQ; varying float vSpec;' : ''}
 void main(){
   float t=position.y-.5;
   vec3 d=normalize(iDir);
@@ -39,13 +43,18 @@ void main(){
   vCol=iCol; vEdge=position.x;
   float tangentLight=dot(tang,normalize(vec3(-.3,.8,.5)));
   vShade=.62+.5*sqrt(max(0.0,1.0-tangentLight*tangentLight));
+  ${EXC ? `// prototype: the scalp hair's sharp highlight, and a little darker where a piece faces away
+  vec3 hh=normalize(view+normalize(vec3(-.3,.8,.5)));float th=dot(tang,hh);
+  vSpec=pow(sqrt(max(0.0,1.0-th*th)),48.0)*uClipQ;
+  vShade=mix(vShade,.5+.62*sqrt(max(0.0,1.0-tangentLight*tangentLight)),uClipQ);` : ''}
   gl_Position=projectionMatrix*viewMatrix*vec4(p,1.0);
 }`;
   const FRAG = `
 varying vec3 vCol; varying float vShade; varying float vEdge;
+${EXC ? 'varying float vSpec;' : ''}
 void main(){
   if(abs(vEdge)>.98)discard;
-  gl_FragColor=vec4(vCol*vShade,1.0);
+  gl_FragColor=vec4(vCol*vShade${EXC ? '+vec3(1.0,.93,.84)*vSpec*.22' : ''},1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }`;
@@ -67,7 +76,7 @@ void main(){
     };
     for (const [k, a] of Object.entries(attrs)) { a.setUsage && a.setUsage(35048); geo.setAttribute(k, a); }
     geo.instanceCount = 0;
-    mesh = new T.Ze(geo, new T.fr({ vertexShader: VERT, fragmentShader: FRAG, side: T.$t }));
+    mesh = new T.Ze(geo, new T.fr({ vertexShader: VERT, fragmentShader: FRAG, side: T.$t, uniforms: EXC ? { uClipQ: CLIPQ } : {} }));
     mesh.frustumCulled = false;
     mesh.renderOrder = 2;
     c.scene.add(mesh);
@@ -143,6 +152,9 @@ void main(){
     const curl = HSC.U.uStyleC.value, bcurl = HSC.U.uBStyleB.value;
     const isBeard = cut.kind === 'beard';
     const now = performance.now();
+    const proto = EXC ? HSC.clipProto || 0 : 0;
+    CLIPQ.value = proto ? 1 : 0;
+    if (proto) return emitTufts(hit, cut, mmEach, rate, isBeard ? bcurl : curl, cut.kind, now);
     for (let k = 0; k < n; k++) {
       const i = alloc();
       const s = (Rng.next() - 0.5) * 0.23;
@@ -177,7 +189,103 @@ void main(){
     K.dirty = true;
     return true;
   };
-  const cap = () => Math.min(MAX, (HSC.detail && HSC.detail.clipMax) || MAX);
+  // prototype: clipped hair leaves the blade as tufts of near-parallel pieces that hold together for a moment and
+  // then drift apart (each piece's drag differs a little), with fine dust from short guards and a few loose pieces
+  function litColour(c) {
+    const lum = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2], lift = (HSC.U.uLift ? HSC.U.uLift.value : 0) * (1 - HSC.smooth(0.03, 0.14, lum));
+    return c.map((v) => v * (1 + 2.2 * lift) * 1.15);
+  }
+  function emitTufts(hit, cut, mmEach, rate, cr, kind, now) {
+    const across = hit.bladeAcross || [1, 0, 0], nrm = hit.normal;
+    const pieces = Math.min(Math.ceil(90 * rate), Math.ceil((cut.cells * 1.1 + cut.removed / 25) * rate));
+    let made = 0;
+    while (made < pieces) {
+      const short = mmEach < 2.5, size = short ? 1 : 3 + Math.floor(Rng.next() * 10);
+      const s = (Rng.next() - 0.5) * 0.23, out = 0.35 + 0.8 * Rng.next();
+      const c0 = [hit.point.x + across[0] * s + nrm.x * 0.008, hit.point.y + across[1] * s + nrm.y * 0.008, hit.point.z + across[2] * s + nrm.z * 0.008];
+      const v0 = [nrm.x * out + (Rng.next() - 0.5) * 0.8, nrm.y * out + (Rng.next() - 0.2) * 0.7, nrm.z * out + (Rng.next() - 0.5) * 0.8];
+      const d = [Rng.next() - 0.5, Rng.next() - 0.5, Rng.next() - 0.5], dl = Math.hypot(...d) || 1;
+      const ax = [Rng.next() - 0.5, Rng.next() - 0.5, Rng.next() - 0.5], al = Math.hypot(...ax) || 1;
+      const spin = (3 + 8 * Rng.next()) * (Rng.next() < 0.5 ? -1 : 1), L0 = Math.max(0.003, mmEach * (0.6 + 0.6 * Rng.next()) * 0.01024);
+      // the same brightening the scalp strands get under the ring light, so cut hair matches the head
+      const col = litColour(hairColour(kind));
+      for (let m = 0; m < size && made < pieces; m++, made++) {
+        const i = alloc(), o = i * 3, j = () => (Rng.next() - 0.5);
+        // dust: very short bits, lighter and slower; tuft members sit side by side, almost parallel
+        const L = short ? Math.max(0.002, L0 * (0.4 + 0.8 * Rng.next())) : L0 * (0.85 + 0.3 * Rng.next());
+        K.pos[o] = c0[0] + j() * 0.012; K.pos[o + 1] = c0[1] + j() * 0.012; K.pos[o + 2] = c0[2] + j() * 0.012;
+        K.vel[o] = v0[0] + j() * 0.12; K.vel[o + 1] = v0[1] + j() * 0.12; K.vel[o + 2] = v0[2] + j() * 0.12;
+        const dd = [d[0] / dl + j() * 0.18, d[1] / dl + j() * 0.18, d[2] / dl + j() * 0.18], ddl = Math.hypot(...dd) || 1;
+        K.dir.set(dd.map((v) => v / ddl), o);
+        K.axis.set(ax.map((v) => v / al), o);
+        K.spin[i] = spin * (0.85 + 0.3 * Rng.next());
+        K.len[i] = L;
+        K.drag[i] = (short ? 26 + 22 * Rng.next() : 8 + 16 * (1 - Math.min(1, L / 0.12))) * (0.85 + 0.3 * Rng.next());
+        K.phase[i] = Rng.next() * 6.28;
+        K.state[i] = 1;
+        K.swept[i] = 0;
+        K.born[i] = now;
+        const shade = 0.9 + 0.2 * Rng.next();
+        K.col.set(col.map((v) => v * shade), o);
+        K.curl.set([cr[0] * 0.8, Math.max(0.3, cr[1] * Math.min(1, L / 0.15)), Rng.next() * 6.28, (short ? 0.0011 : 0.0014) * (cr[3] || 1)], i * 4);
+      }
+    }
+    K.moving += made;
+    K.dirty = true;
+    return true;
+  }
+  // prototype "landing": pieces that touch bare skin below the hairline (neck, nape, ears, jaw) catch there about
+  // 3 in 5 times, as clipped hair clings to a real customer, until the barber brushes off at the reveal. Contact is
+  // tested against the customer's own (morphed) head mesh through a small grid of its skin vertices.
+  let skin = null;
+  function skinGrid() {
+    if (skin) return skin;
+    const Pt = ctx && ctx.Pt, st = HSC.debugState;
+    if (!Pt || !st || !st.scalp) return null;
+    const P = Pt.attributes.position.array, N = Pt.attributes.normal.array, cells = new Map(), C = 0.2;
+    for (let v = 0; v < P.length / 3; v++) {
+      const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2];
+      if (st.scalp[v] > 0.05 || y < -1.6 || y > 1.4 || (z > 0.9 && Math.abs(x) < 1.2)) continue;
+      const k = Math.floor(x / C) + ',' + Math.floor(y / C) + ',' + Math.floor(z / C);
+      if (!cells.has(k)) cells.set(k, []);
+      cells.get(k).push(v);
+    }
+    return (skin = { P, N, cells, C });
+  }
+  function neckCatch(i, o) {
+    const vt = ctx && ctx.vt, g = skinGrid();
+    if (!vt || !g) return false;
+    const sc = vt.scale.x || 1, hx = (K.pos[o] - vt.position.x) / sc, hy = (K.pos[o + 1] - vt.position.y) / sc, hz = (K.pos[o + 2] - vt.position.z) / sc;
+    if (hy < -1.7 || hy > 1.5 || Math.abs(hx) > 2.2 || hz < -2.2 || hz > 2.0) return false;
+    const { P, N, cells, C } = g, cx = Math.floor(hx / C), cy = Math.floor(hy / C), cz = Math.floor(hz / C);
+    let best = -1, bd = 0.045 * 0.045;
+    for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (let c = -1; c <= 1; c++) {
+      const L = cells.get((cx + a) + ',' + (cy + b) + ',' + (cz + c));
+      if (L) for (const v of L) { const dx = P[v * 3] - hx, dy = P[v * 3 + 1] - hy, dz = P[v * 3 + 2] - hz, d = dx * dx + dy * dy + dz * dz; if (d < bd) { bd = d; best = v; } }
+    }
+    if (best < 0) return false;
+    const nx = N[best * 3], ny = N[best * 3 + 1], nz = N[best * 3 + 2];
+    const sticks = ((Math.imul(i + 1, 0x9e3779b1) >>> 0) % 10) < 6;
+    if (sticks) {
+      // lies on the skin along its surface
+      K.pos[o] = vt.position.x + (P[best * 3] + nx * 0.012) * sc;
+      K.pos[o + 1] = vt.position.y + (P[best * 3 + 1] + ny * 0.012) * sc;
+      K.pos[o + 2] = vt.position.z + (P[best * 3 + 2] + nz * 0.012) * sc;
+      const d = [K.dir[o], K.dir[o + 1], K.dir[o + 2]], dn = d[0] * nx + d[1] * ny + d[2] * nz;
+      d[0] -= dn * nx; d[1] -= dn * ny; d[2] -= dn * nz;
+      const l = Math.hypot(...d) || 1;
+      K.dir[o] = d[0] / l; K.dir[o + 1] = d[1] / l; K.dir[o + 2] = d[2] / l;
+      K.vel[o] = K.vel[o + 1] = K.vel[o + 2] = 0;
+      K.state[i] = 3;
+      return true;
+    }
+    // glances off the skin and keeps falling
+    const vn = K.vel[o] * nx + K.vel[o + 1] * ny + K.vel[o + 2] * nz;
+    if (vn < 0) { K.vel[o] -= 1.6 * vn * nx; K.vel[o + 1] -= 1.6 * vn * ny; K.vel[o + 2] -= 1.6 * vn * nz; }
+    return false;
+  }
+  // Android: the falling-hair prototype sets the cap (12,000 for tufts and dust); other builds keep the detail profile's
+  const cap = () => Math.min(MAX, EXC && HSC.CLIP_PROTOS ? HSC.CLIP_PROTOS[HSC.clipProto || 0].cap : (HSC.detail && HSC.detail.clipMax) || MAX);
   function alloc() {
     if (K.count < cap()) return K.count++;
     // reuse the oldest piece
@@ -189,7 +297,7 @@ void main(){
     if (K.count > cap()) { K.count = cap(); K.next = 0; K.dirty = true; }
   };
 
-  HSC.clearClippings = function () { K.count = 0; K.next = 0; K.moving = 0; K.dirty = false; if (geo) geo.instanceCount = 0; };
+  HSC.clearClippings = function () { skin = null; K.count = 0; K.next = 0; K.moving = 0; K.dirty = false; if (geo) geo.instanceCount = 0; };
   HSC.clippingsActive = () => K.moving > 0;
   // counts by state (for tests): free, falling, sliding, resting
   HSC.clippingsStats = () => { const c = [0, 0, 0, 0]; let gone = 0, swept = 0; for (let i = 0; i < K.count; i++) { if (K.len[i] <= 0) gone++; else { c[K.state[i]]++; if (K.swept[i]) swept++; } } return { count: K.count, onShow: K.count - gone, falling: c[1], sliding: c[2], resting: c[3], swept, gone }; };
@@ -264,6 +372,12 @@ void main(){
         vx *= Math.exp(-6 * dt); vz *= Math.exp(-6 * dt);
       }
       x += vx * dt; y += vy * dt; z += vz * dt;
+      if (EXC && HSC.clipProto === 2 && st === 1 && !K.swept[i]) {
+        K.pos[o] = x; K.pos[o + 1] = y; K.pos[o + 2] = z; K.vel[o] = vx; K.vel[o + 1] = vy; K.vel[o + 2] = vz;
+        const caught = neckCatch(i, o);
+        x = K.pos[o]; y = K.pos[o + 1]; z = K.pos[o + 2]; vx = K.vel[o]; vy = K.vel[o + 1]; vz = K.vel[o + 2];
+        if (caught) continue;
+      }
       const ground = K.swept[i] ? -1e9 : heightAt(x, z);
       if (y < ground + 0.004) {
         const e = 0.05;

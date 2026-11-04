@@ -74,6 +74,49 @@
     return remember(cache, key, { ear, aid, tattoo });
   };
 
+  // ---- hair and falling-hair prototypes ----
+  // The owner picked hair C and falling hair 3 (5 November 2026): they are the Android game's look. The other
+  // prototypes stay reachable for QA only, through ?hair=0..4 and ?clip=0..2 on the page URL.
+  //   hair: [shading, locks + flyaways, crown swirl, strand variation] and the scalp strand count
+  HSC.HAIR_PROTOS = [
+    { id: 'today', q: [0, 0, 0, 0], n: 30000 },
+    { id: 'shading', q: [1, 0, 0, 1], n: 30000 },
+    { id: 'locks', q: [1, 1, 1, 1], n: 30000 },
+    { id: 'dense', q: [1, 1, 1, 1], n: 60000 },
+    { id: 'max', q: [1, 1, 1, 1], n: 100000 },
+  ];
+  HSC.CLIP_PROTOS = [{ id: 'today', cap: 4000 }, { id: 'tufts', cap: 12000 }, { id: 'landing', cap: 12000 }];
+  const qa = (() => { try { return new URLSearchParams(globalThis.location.search); } catch (e) { return null; } })();
+  // a QA page asking for prototypes builds enough strand roots for the densest one (the game keeps 30,000)
+  if (qa && (qa.has('hair') || qa.has('hairqa'))) HSC.HAIR_MAX = 100000;
+  HSC.HAIR_DEFAULT = 2;
+  HSC.clipProto = 2;
+  HSC.setHairProto = function (i) {
+    const p = HSC.HAIR_PROTOS[i];
+    if (!p || !HSC.U || !HSC.U.uHairQ || !HSC.detail) return false;
+    HSC.U.uHairQ.value = p.q.slice();
+    const n = Math.min(p.n, HSC.HAIR_MAX || 30000);
+    HSC.detail.maxStrands = HSC.detail.minStrands = n;
+    if (HSC.detailBudget) HSC.detailBudget();
+    HSC.hairProto = i;
+    return n === p.n;
+  };
+  HSC.setClipProto = function (i) {
+    const p = HSC.CLIP_PROTOS[i];
+    if (!p || !HSC.detail) return false;
+    HSC.clipProto = i;
+    HSC.clipCap && HSC.clipCap();
+    return true;
+  };
+  if (qa && (qa.has('hair') || qa.has('clip'))) {
+    const t0 = Date.now();
+    (function apply() {
+      if (!HSC.detailBudget || !HSC.ready) { if (Date.now() - t0 < 60000) setTimeout(apply, 250); return; }
+      if (qa.has('hair')) HSC.setHairProto(+qa.get('hair') || 0);
+      if (qa.has('clip')) HSC.setClipProto(+qa.get('clip') || 0);
+    })();
+  }
+
   // ---- regulars: their last haircut, packed for saving ----
   // run-length text: a capital letter per level (A = 0 .. Q = 16), then the run length in base 36
   const LV = 'ABCDEFGHIJKLMNOPQ';

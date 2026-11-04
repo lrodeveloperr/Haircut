@@ -626,6 +626,11 @@
     U.uSkinB.value = ft ? ft.skin : [0, 0, 0, 0];
     U.uBaldC.value = ft ? ft.hairline : [0, 0, 0, 0];
     try { setSkinDetails(person, ft); } catch (err) { console.error('customers: skin details failed', err); }
+    // Android hair: where the crown swirl sits and which way it turns (about 2 in 3 clockwise)
+    if (U.uWhorl && HSC.PHENOTYPES) {
+      const W = HSC.rng(((person.seed >>> 0) ^ 0x2545f491) >>> 0 || 1);
+      U.uWhorl.value = [W.range(-0.2, 0.2), -0.55 + W.range(-0.18, 0.18), W.next() < 0.65 ? 1 : -1, 0];
+    }
     U.uBeardGreyB.value = { chin: [1.1, 0, 0.4, 0.4], sides: [0, 1.1, 0, 0.35], even: [0, 0, 0, 0] }[person.beard.greyPattern || 'chin'] || [1.1, 0, 0.4, 0.4];
     // alopecia areata patches
     const ar = new Float32Array(12);
