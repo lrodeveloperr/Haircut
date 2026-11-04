@@ -32,7 +32,13 @@
     middle: { low: 1.2, mid: 1, high: 0.7, drop: 0.8, taper: 1.2, even: 1 },
     old: { low: 1.3, mid: 0.8, high: 0.4, drop: 0.5, taper: 1.5, even: 1 },
   };
-  const familyOf = (w) => (w.contour === 'even' ? (w.top === 5 ? 'full' : w.top === 1 ? 'shaved' : 'buzz') : w.side === 1 && w.top === 5 ? 'tight' : w.top === 5 ? 'long' : 'crop');
+  // Android cuts (patch16): burst / temple / skin fades, the classic side part and crew, faux hawk, undercut
+  const NEW_FAMILY = { burst: 'fade', temple: 'fade', hawk: 'hawk', undercut: 'undercut', part: 'classic', crew: 'classic' };
+  const familyOf = (w) => (NEW_FAMILY[w.contour] ? NEW_FAMILY[w.contour] : w.contour === 'even' ? (w.top === 5 ? 'full' : w.top === 1 ? 'shaved' : 'buzz')
+    : w.side === 1 && w.top === 5 ? (['low', 'drop', 'taper'].includes(w.contour) ? 'fade' : 'tight') : w.top === 5 ? 'long' : 'crop');
+  const PH = HSC.PHENOTYPES;
+  if (PH && PH.families) for (const [age, w] of Object.entries(PH.families)) Object.assign(FAMILY_BY_AGE[age], w);
+  if (PH && PH.families) for (const k of ['fade', 'classic', 'hawk', 'undercut']) { FAMILY_BY_LOSS.light[k] = { fade: 1, classic: 1, hawk: 0.8, undercut: 0.8 }[k]; FAMILY_BY_LOSS.heavy[k] = { fade: 0.6, classic: 0.4, hawk: 0.2, undercut: 0.2 }[k]; }
   const lossOf = (person) => {
     const b = person.bald || {};
     const stage = { 1: 0, 2: 1, 3: 2, '3v': 2.5, 4: 3, 5: 4, 6: 5, 7: 6 }[b.norwood] || 0;
@@ -54,7 +60,10 @@
     const cw = CONTOUR_BY_AGE[age];
     let list = W.list.filter((p) => familyOf(p) === fam && !last.includes(p.id));
     if (!list.length) list = W.list.filter((p) => familyOf(p) === fam);
-    const weights = list.map((p) => cw[p.contour] || 1);
+    // Android: cut shapes suit hair types (a temple taper is a coily-hair cut; a hard side part needs straight or wavy hair)
+    const coily = person.hair && /^(3c|4)/.test(person.hair.type), straight = person.hair && /^[12]/.test(person.hair.type);
+    const tex = (c) => (!PH ? 1 : c === 'temple' ? (coily ? 3 : 0.4) : c === 'burst' ? (coily ? 1.4 : 1) : c === 'part' || c === 'crew' ? (straight ? 1 : 0.15) : 1);
+    const weights = list.map((p) => (cw[p.contour] || 1) * tex(p.contour));
     let r = R.next() * weights.reduce((a, b) => a + b, 0);
     for (let i = 0; i < list.length; i++) if ((r -= weights[i]) <= 0) return list[i];
     return list[list.length - 1];

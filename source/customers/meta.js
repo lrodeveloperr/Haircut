@@ -141,7 +141,14 @@
     const b = person.bald || {};
     const heavy = ['4', '5', '6', '7'].includes(b.norwood) || b.type === 'diffuse';
     if (person.vip || person.first) return person.first ? 'full' : deal('fam', R, (f) => f === 'long' || f === 'full' || f === 'tight');
-    return deal('fam', R, (f) => (!heavy || f === 'crop' || f === 'buzz' || f === 'shaved') && !(f === 'tight' && person.age === 'old'));
+    // Android families: a hard side part / crew needs straight or wavy hair, an undercut up to loose curls;
+    // faux hawks and undercuts are young men's cuts
+    const ty = (person.hair && person.hair.type) || '1b';
+    // age leaning (barber trend estimates): fades and textured cuts skew young, the classic side part / crew older
+    const keep = PH ? ({ young: { classic: 0.45, shaved: 0.6 }, middle: { hawk: 0.4, undercut: 0.6 }, old: { fade: 0.3, long: 0.6, tight: 0 } }[person.age] || {}) : {};
+    const lean = (f) => keep[f] == null || ((Math.imul((person.seed >>> 0) ^ (f.charCodeAt(0) * 2654435761 + f.length), 0x9e3779b1) >>> 8) / 16777216) < keep[f];
+    const suits = (f) => (f === 'classic' ? ty[0] <= '2' : f === 'undercut' ? ty <= '3a' : true) && !((f === 'hawk' || f === 'undercut') && person.age === 'old') && lean(f);
+    return deal('fam', R, (f) => (!heavy || f === 'crop' || f === 'buzz' || f === 'shaved') && !(f === 'tight' && person.age === 'old') && suits(f));
   }
 
   const M = (HSC.meta = { data: null, client: null, levelOf, cutsFor });

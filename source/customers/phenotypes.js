@@ -240,7 +240,16 @@
   add('latino', { goldenBrown: 3, ashBrown: 2 });
   add('mixed', { goldenBrown: 3, ashBrown: 2, strawberry: 0.5, copper: 0.5 });
 
-  HSC.PHENOTYPES = { groups, hair, grey, bald, beardMult, ages, norwood, arcus, decks, hairTypes, beardByAge, stubble,
+  // ---- Phase C: walk-in cut families (patch16) by coarse age (barber trend estimates), and the director's deck ----
+  const families = {
+    young: { fade: 30, classic: 6, hawk: 7, undercut: 6 },
+    middle: { fade: 18, classic: 16, hawk: 2, undercut: 3 },
+    old: { fade: 6, classic: 26, hawk: 0, undercut: 0 },
+  };
+  decks.fam = ['long', 'long', 'long', 'long', 'crop', 'crop', 'crop', 'crop', 'fade', 'fade', 'fade', 'fade', 'fade', 'classic', 'classic', 'classic',
+    'buzz', 'buzz', 'tight', 'full', 'full', 'shaved', 'shaved', 'hawk', 'undercut'];
+
+  HSC.PHENOTYPES = { groups, hair, grey, bald, beardMult, ages, norwood, arcus, decks, hairTypes, beardByAge, stubble, families,
     areata: { young: 0.006, middle: 0.004, old: 0.003 }, beardLead: { ahead: 40, level: 40, behind: 20 },
     bandOf: (years) => (ages.find((a) => years <= a.years[1]) || ages[ages.length - 1]).id };
 })(globalThis.HSC || (globalThis.HSC = {}));
