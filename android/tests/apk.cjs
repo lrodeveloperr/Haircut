@@ -8,7 +8,10 @@ const {execFileSync}=require('node:child_process');
 const app='com.worksbien.barbersimulatorasmr.debug',activity=app+'/com.worksbien.barbersimulatorasmr.MainActivity';
 const out=path.resolve('qa/results');fs.mkdirSync(out,{recursive:true});
 const adbPath=path.join(process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT,'platform-tools/adb');
-const adb=(...args)=>{console.log('adb',...args);return execFileSync(adbPath,args,{encoding:'utf8',timeout:30000,maxBuffer:8*1024*1024}).trim();};
+// Large software-rendered tablet profiles can take longer than 30 seconds to
+// relaunch after a synthetic display-size change. Give Android's own commands
+// enough time to finish so emulator scheduling is not mistaken for an app fault.
+const adb=(...args)=>{console.log('adb',...args);return execFileSync(adbPath,args,{encoding:'utf8',timeout:120000,maxBuffer:8*1024*1024}).trim();};
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const lifecycleOnly=process.env.ANDROID_APK_LIFECYCLE_ONLY==='1';
 const privacyFollowUp=process.env.ANDROID_APK_PRIVACY_FOLLOWUP==='1';
@@ -158,7 +161,21 @@ async function privacy(layout) {
   // Network is disabled in this emulator. Verify the actual external intent here;
   // deployment/content availability is verified separately on the public website.
   adb('shell','am','start','-W','-n',activity);
+  // `am start -W` can return before the activity is top-resumed on slower tablet
+  // profiles. Do not send the Close tap until Android confirms the game owns the
+  // resumed window; otherwise the test can drop a correct tap into the browser's
+  // outgoing surface and misreport a pause regression.
+  let returnedActivities='',gameResumed=false;
+  for(let attempt=0;attempt<20;attempt++) {
+    returnedActivities=adb('shell','dumpsys','activity','activities');
+    gameResumed=returnedActivities.split('\n').some(line=>
+      /(?:mResumedActivity|topResumedActivity)/.test(line)&&line.includes(app));
+    if(gameResumed) break;
+    await pause(250);
+  }
+  assert(gameResumed,'game activity must be top-resumed before testing the returned privacy panel');
   await page.waitForFunction(()=>document.querySelector('#hsc-panel.open')&&skinFadeStudio.getView().paused);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),before,'returning from the external policy preserves haircut');
   await tap('.hsc-head .hsc-x:not(.hsc-privacy)');
   await page.waitForFunction(()=>!skinFadeStudio.getView().paused);

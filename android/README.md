@@ -13,7 +13,7 @@ Google Play app record: `com.worksbien.barbersimulatorasmr`. All ten localized l
 - Package the current validated game for Android, preserving its gameplay, graphics and controls.
 - Position the release as a small-download ASMR barber / haircut game; measure the final Android download before publishing a numeric size claim.
 - Use the locked English title **Barber Simulator: ASMR Haircut**. Supporting copy covers 3D freehand cutting, fades, barber shop gameplay and clipper sounds. Complete non-media listings for ten languages are in store-listing/.
-- Daily clipper and cape unlocks require **two completed rewarded videos per item** on Android. The existing partial-credit UI and saved progress are reused. See [Android runtime adaptation](RUNTIME.md).
+- Daily clipper and cape unlocks require **one completed rewarded video per item** on Android. Existing saved progress is reused. See [Android runtime adaptation](RUNTIME.md).
 - Adapt platform services for Android, including AdMob and persistent saves.
 
 ## Historical v3.82 full-detail archive

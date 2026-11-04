@@ -56,4 +56,4 @@ Google review and publication are pending. No further edits or resubmission are 
 
 The final artifact matches [PRIVACY-RELEASE-CONFIG.md](../PRIVACY-RELEASE-CONFIG.md): local game saves, no account/backend, AdMob/UMP for eligible adults, TLS, no extra telemetry or mediation, no legacy host SDKs, and the unchanged direct external privacy shield. Advertising ID/manifest, all four SDK data categories and purposes were reviewed live against official Google documentation. The local age band never leaves the device and is excluded from backup/transfer. No live ad requests or clicks were used for testing.
 
-Daily wardrobe items remain two completed, optional, separately initiated rewarded videos per item; ad availability varies by age and region. Preserve the existing app and the owner-approved renderer, controls and reward rules.
+Daily wardrobe items require one completed, optional, separately initiated rewarded video per item; ad availability varies by age and region. Preserve the existing app and the owner-approved renderer, controls and reward rules.

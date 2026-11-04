@@ -4,7 +4,7 @@ Android name: **Barber Simulator: ASMR Haircut**.
 
 ## Daily wardrobe unlocks
 
-- Each daily clipper design or cape requires **two completed rewarded videos**.
+- Each daily clipper design or cape requires **one completed rewarded video**.
 - Each video is a separate optional, player-initiated request. Completing the first does not automatically start another ad.
 - The first earned reward saves 1/2 progress and keeps the item locked. The second unlocks and equips that item.
 - Cancelling an ad, no fill or an error gives no credit and retains an already earned first credit.
@@ -17,7 +17,7 @@ Android name: **Barber Simulator: ASMR Haircut**.
 
 `TARGET=full bash source/buildall.sh` builds the complete working YouTube/Sites engine, then `android/build-runtime.py` adapts native services, Android reward/title policy and the reviewed clipper-grip touch targeting. Shader preparation, first-frame readiness, model construction, camera, resize and context recovery are the same engine code used by the working web build. The generated engine is checked byte-for-byte against that web engine after reversing the explicit Android touch and guard-anchor adaptations. Camera, shaders, quality, geometry and drawing-loop behavior are unchanged.
 
-`android/native-transport.js` sends asynchronous requests to the native private-storage worker. Successful save acknowledgements are delivered only after disk commit. Existing flat game-key saves are migrated into the same versioned envelope used by the working web client. Native AdMob earned callbacks remain the only reward source. The reward patch retains two completed videos per daily item and the locked Android title.
+`android/native-transport.js` sends asynchronous requests to the native private-storage worker. Successful save acknowledgements are delivered only after disk commit. Existing flat game-key saves are migrated into the same versioned envelope used by the working web client. Native AdMob earned callbacks remain the only reward source. The reward patch requires one completed video per daily item and retains the locked Android title.
 The default Playgama/Playables build and the direct YouTube builder do not call this adaptation. Shared source files and historical release ZIPs retain their existing naming and reward rule.
 
 ## Fixed Sites High graphics and clipper-grip touch mapping

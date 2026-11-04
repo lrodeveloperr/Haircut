@@ -7,6 +7,24 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '../..');
 const game = fs.readFileSync(path.join(root, 'source/build/runtime/game.js'), 'utf8');
 const customers = fs.readFileSync(path.join(root, 'source/build/runtime/customers.js'), 'utf8');
+const styles = fs.readFileSync(path.join(root, 'source/build/styles.css'), 'utf8');
+const androidStartup = fs.readFileSync(path.join(root, 'android/adreno-startup.js'), 'utf8').trim();
+const defaultStartup = `  const visible=Zt.clone(false);
+  // Only what the first frame draws. The hidden clipper compiles right after (warmClipper).
+  visible.traverse=visit=>Zt.traverseVisible(visit);
+  await t.compileAsync(visible,ze,Zt);
+  await HSC.whenYouTubeResumed();`;
+const firstFrameDiagnostic = 'await n.waitForFirstFrame();HSC.startupTiming.gpuReady=performance.now();HSC.startupTiming.firstFrameConfirmed=performance.now();console.info("[HSC_STARTUP] first_frame_gpu_ready");HSC.dismissLoading();';
+const defaultFirstFrame = 'await n.waitForFirstFrame();HSC.startupTiming.gpuReady=performance.now();HSC.dismissLoading();';
+assert(game.includes(androidStartup), 'Android uses staged full-detail startup compilation');
+assert(game.includes(firstFrameDiagnostic), 'Android records confirmed GPU first-frame completion');
+assert.match(androidStartup, /t\.compileAsync\(stage,ze,Zt\)/, 'each Android startup stage compiles the unchanged scene/camera');
+assert.match(androidStartup, /t\.getContext\(\)\.isContextLost\(\)/, 'each stage detects a lost graphics context');
+assert(!androidStartup.includes('setPixelRatio') && !androidStartup.includes('setSize') && !androidStartup.includes('setCount'),
+  'startup compatibility code cannot change resolution or geometry detail');
+assert.match(styles, /\.guard-arc\{[^}]*right:max\(12px,env\(safe-area-inset-right\)\)/, 'default and landscape guard placement remains unchanged');
+assert.match(styles, /@media \(orientation:portrait\)\{\s*\.guard-arc\{right:max\(4px,env\(safe-area-inset-right\)\)\}/, 'portrait guard numbers move 8 CSS px right while respecting the safe area');
+assert.match(styles, /\.ui \.clip-toggle\{[^}]*right:max\(12px,env\(safe-area-inset-right\)\)/, 'clipper toggle placement remains unchanged');
 const profile = customers.slice(customers.indexOf('(function (HSC) {'), customers.indexOf('// ---------------------------------------------------------------------------------------------'));
 const sitesProfile = fs.readFileSync(path.join(root, 'source/customers/detail-youtube.js'), 'utf8');
 const sitesGame = fs.readFileSync(path.join(root, 'source/src/runtime/game.js'), 'utf8');
@@ -95,13 +113,19 @@ for (const height of [320, 400, 600, 844, 1280]) for (const type of ['touch', 'm
   assert.equal(strokes[0][0], hit, 'the actual cutter must use that same hit');
   passed++;
 }
-let original=game.replace(fs.readFileSync(path.join(root,'android/clipper-input.js'),'utf8')+'\n','')
+let original=game.replace(androidStartup,defaultStartup).replace(firstFrameDiagnostic,defaultFirstFrame)
+  .replace(fs.readFileSync(path.join(root,'android/clipper-input.js'),'utf8')+'\n','')
   .replace('raycast:j,touchTarget:androidTouchTarget,resetTouchTarget:androidResetTouchTarget,clipperScreen:androidClipperScreen,getYaw()', 'raycast:j,getYaw()')
   .replace('f=null,o.stop(),n.resetTouchTarget(),n.setClipper(!1)', 'f=null,o.stop(),n.setClipper(!1)')
   .replace('let target=n.touchTarget(j),ae=target.x,fe=target.y,ue=n.raycast(ae,fe);', 'let ae=j.clientX,fe=j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0),ue=n.raycast(ae,fe);')
   .replace('let target=n.touchTarget(j),ae=target.y,fe=j.pointerType==="touch"?22:12;', 'let ae=j.clientY-(j.pointerType==="touch"?Math.min(ur.touchOffsetPx,a.clientHeight*.12):0),fe=j.pointerType==="touch"?22:12;')
   .replace('C=w.left+ds*(w.width/i.current.offsetWidth)-p.clientX,x=w.top+ds*(w.height/i.current.offsetHeight)-p.clientY', 'C=w.left+ds-p.clientX,x=w.top+ds-p.clientY');
-assert.equal(original, fs.readFileSync(path.join(root, 'source/build-youtube/runtime/game.js'), 'utf8'), 'working engine unchanged outside reviewed touch adaptation');
+// Strip only the explicitly authorised Android completion-ad adaptation as well.
+original=original
+  .replace(fs.readFileSync(path.join(root,'android/completion-interstitial.js'),'utf8')+'\n','')
+  .replace('fe===1&&(x=!0,androidCompletionInterstitial())','fe===1&&(x=!0,Z())')
+  .replace('Z();try{return C?!1:', 'Z();try{let j=Cc(l);if(j.showInterstitial&&!y&&!(HSC.recentReward&&HSC.recentReward()))try{await $(!0);let ae=await t.showInterstitial("next-customer",{onDisplay:ie});t.lastInterstitialRequestAccepted&&(l=j.adSession),t.sendAnalytics("interstitial_outcome",{opened:ae,nextClick:s.jobId})}catch(ae){}return C?!1:');
+assert.equal(original, fs.readFileSync(path.join(root, 'source/build-youtube/runtime/game.js'), 'utf8'), 'working engine unchanged outside reviewed touch/startup/completion-ad adaptations');
 assert.equal(game.split('n.touchTarget(j)').length-1,2,'cut and proximity share one touch helper');
 assert(!game.includes('touchOffsetPx:0'));
 assert(!game.includes('Ue>24&&te>HSC.detail.minStrands'));

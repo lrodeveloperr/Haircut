@@ -63,44 +63,40 @@ function harness(code, saved = null) {
     execFileSync('python3', [path.join(root, 'android/patch-runtime.py'), temp]);
     const adapted = fs.readFileSync(path.join(temp, 'runtime/customers.js'), 'utf8');
     const h = harness(adapted);
-    assert.equal(h.H.catalog.VIDEOS(h.d), 2);
-    assert.equal(h.H.catalog.VIDEOS(h.cape), 2);
-    assert.equal((h.H.__test.videoBadge(h.d).match(/<svg/g) || []).length, 2);
+    assert.equal(h.H.catalog.VIDEOS(h.d), 1);
+    assert.equal(h.H.catalog.VIDEOS(h.cape), 1);
+    assert.equal((h.H.__test.videoBadge(h.d).match(/<svg/g) || []).length, 1);
     tests++;
 
     await h.ui.take(h.d);
-    assert.equal(h.H.rewards.owns(h.d.key), false, 'first completed video must not unlock');
-    assert.equal(h.W.data.progress[h.d.key], 1);
-    assert.equal(h.W.data.look.clipper, '0', 'first credit must not equip');
-    assert.equal((h.H.__test.videoBadge(h.d).match(/class="done"/g) || []).length, 1);
-    assert.ok(h.saves.some(s => s.progress[h.d.key] === 1), 'first credit must be saved');
+    assert.equal(h.H.rewards.owns(h.d.key), true, 'one completed video unlocks the daily clipper');
+    assert.equal(h.W.data.look.clipper, h.d.id);
+    assert.equal(h.W.data.progress[h.d.key], undefined);
+    assert.equal(h.events.filter(e => e.name === 'rewards_unlock').length, 1);
+    await h.ui.take(h.d);
+    assert.equal(h.events.filter(e => e.name === 'rewards_unlock').length, 1, 'no duplicate grant');
     tests++;
 
-    h.receipt(false);
-    await h.ui.take(h.d);
-    assert.equal(h.W.data.progress[h.d.key], 1, 'cancellation/no fill keeps first credit');
-    assert.equal(h.H.rewards.owns(h.d.key), false);
-    assert.equal(h.button.disabled, false);
-    h.receipt(new Error('ad failed'));
-    await h.ui.take(h.d);
-    assert.equal(h.W.data.progress[h.d.key], 1, 'error grants no second credit');
+    const denied = harness(adapted);
+    denied.receipt(false);
+    await denied.ui.take(denied.d);
+    assert.equal(denied.H.rewards.owns(denied.d.key), false, 'cancellation/no fill grants nothing');
+    assert.equal(denied.W.data.progress[denied.d.key], undefined);
+    assert.equal(denied.button.disabled, false);
+    denied.receipt(new Error('ad failed'));
+    await denied.ui.take(denied.d);
+    assert.equal(denied.H.rewards.owns(denied.d.key), false, 'error grants nothing');
     tests++;
 
-    const resumed = harness(adapted, JSON.parse(JSON.stringify(h.W.data)));
-    assert.equal(resumed.W.data.progress[h.d.key], 1, 'credit survives reload');
-    await resumed.ui.take(resumed.d);
-    assert.equal(resumed.H.rewards.owns(resumed.d.key), true);
-    assert.equal(resumed.W.data.look.clipper, resumed.d.id);
+    const legacySave = JSON.parse(JSON.stringify(denied.W.data));
+    legacySave.progress[denied.d.key] = 1;
+    const resumed = harness(adapted, legacySave);
+    assert.equal(resumed.H.rewards.owns(resumed.d.key), true, 'one old partial credit migrates to ownership');
     assert.equal(resumed.W.data.progress[resumed.d.key], undefined);
-    assert.equal(resumed.events.filter(e => e.name === 'rewards_unlock').length, 1);
-    await resumed.ui.take(resumed.d);
-    assert.equal(resumed.events.filter(e => e.name === 'rewards_unlock').length, 1, 'no duplicate grant');
     tests++;
 
     await resumed.ui.take(resumed.cape);
-    assert.equal(resumed.H.rewards.owns(resumed.cape.key), false, 'cape needs its own two videos');
-    await resumed.ui.take(resumed.cape);
-    assert.equal(resumed.H.rewards.owns(resumed.cape.key), true);
+    assert.equal(resumed.H.rewards.owns(resumed.cape.key), true, 'cape needs its own one video');
     assert.equal(resumed.W.data.look.gown, resumed.cape.id);
     tests++;
 
@@ -111,8 +107,8 @@ function harness(code, saved = null) {
     await concurrent.ui.take(concurrent.d);
     finish(true);
     await first;
-    assert.equal(concurrent.W.data.progress[concurrent.d.key], 1, 'double tap cannot count as two videos');
-    assert.equal(concurrent.H.rewards.owns(concurrent.d.key), false);
+    assert.equal(concurrent.H.rewards.owns(concurrent.d.key), true, 'double tap still produces one unlock');
+    assert.equal(concurrent.events.filter(e => e.name === 'rewards_unlock').length, 1);
     tests++;
 
     const ordinary = harness(raw);
@@ -124,9 +120,8 @@ function harness(code, saved = null) {
     const html = fs.readFileSync(path.join(temp, 'index.html'), 'utf8');
     assert.ok(html.includes('<title>Barber Simulator: ASMR Haircut</title>'));
     assert.ok(html.includes('aria-label="Barber Simulator: ASMR Haircut"'));
-    assert.ok(adapted.includes('" rewarded video" + ((need - done) === 1 ? "" : "s")'));
     tests++;
-    console.log(`PASS: ${tests} Android reward cases (two credits, cancellation/error, reload, cape, duplicate input, legacy isolation, title).`);
+    console.log(`PASS: ${tests} Android reward cases (one video per item, cancellation/error, old-credit migration, cape, duplicate input, platform parity, title).`);
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
   }

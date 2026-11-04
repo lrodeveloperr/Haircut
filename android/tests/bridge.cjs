@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, '../..'), build = path.join(root, 'source/b
 const placementReport=path.join(root,'qa/results',process.env.ANDROID_LAST_LAYOUT==='1'?'android-browser-placement-last-layout-report.json':'android-browser-placement-report.json');
 const types = {'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp','.json':'application/json'};
 function fakeHost() {
-  window.__native = {ready:0, outcome:'reward', delay:10, failWrites:false, ads:[]};
+  window.__native = {ready:0, outcome:'reward', delay:10, failWrites:false, ads:[], shares:0};
   window.AndroidHost = {
     request(id, op, payload) {
       setTimeout(() => {
@@ -24,6 +24,7 @@ function fakeHost() {
         .forEach((s,i)=>setTimeout(()=>__androidHost.ad('rewarded',s),120*(i+1)));
     },
     showInterstitial(){setTimeout(()=>__androidHost.ad('interstitial','failed'),20);},
+    shareGame(){__native.shares++;},
   };
 }
 (async()=>{
@@ -73,8 +74,18 @@ function fakeHost() {
       console.log('DOM-RELEASE',JSON.stringify(await page.evaluate(()=>__placementRelease)));
     };
     await boot();
+    const startup=await page.evaluate(()=>HSC.startupTiming);
+    assert(startup.adrenoStages>0,'Android startup identifies visible full-detail renderables');
+    assert.equal(startup.adrenoStagesComplete,startup.adrenoStages,'all staged shader submissions complete');
+    assert(startup.stagedCompileReady&&startup.firstFrameConfirmed&&startup.firstPlayable>=startup.firstFrameConfirmed,
+      'Android confirms staged compilation and the GPU first frame before becoming playable');
     assert.equal(await page.evaluate(async()=>(await HSC.youtubeClientPromise).platformId),'android');
-    assert.deepEqual(external,[]);passed++;
+    assert.deepEqual(external,[]);
+    assert.equal(await page.locator('.hsc-native-share').count(),1,'one wordless native share control is installed');
+    assert.equal(await page.locator('.hsc-native-share').textContent(),'','share control contains no translatable visible text');
+    assert.equal(await page.locator('.hsc-native-share').evaluate(button=>getComputedStyle(button).visibility),'hidden',
+      'share control stays hidden until the finished haircut is ready');
+    passed++;
     for(const [width,height]of(process.env.ANDROID_LAST_LAYOUT==='1'?[[1280,800]]:[[390,844],[844,390],[800,1280],[1280,800]])){
       await page.setViewportSize({width,height});await buffer();
       assert.deepEqual(await page.evaluate(()=>[HSC.detail.level,HSC.detail.minStrands,HSC.detail.segments,HSC.detail.antialias]),['high',30000,8,true]);
@@ -221,21 +232,19 @@ function fakeHost() {
     await page.evaluate(()=>{__native.failWrites=true;});
     await assert.rejects(page.evaluate(async()=>(await HSC.youtubeClientPromise).saveProgress('probe',{ok:false})),/write failed/);
     await page.evaluate(()=>{__native.failWrites=false;});passed++;
-    // Reward receipts are real-earned only, and the two-credit policy persists.
+    // Reward receipts are real-earned only, and one earned ad unlocks the selected daily item.
     const key=await page.evaluate(()=>HSC.wardrobe.data.pick.clipper);
-    await page.locator('#hsc-hud .hsc-rw').click();
-    await page.locator('.hsc-vbtn').click();
-    await page.waitForFunction(k=>HSC.wardrobe.data.progress[k]===1,key);
-    await page.evaluate(async()=>(await HSC.youtubeClientPromise).flushProgress());
-    await boot();assert.equal(await page.evaluate(k=>HSC.wardrobe.data.progress[k],key),1);passed++;
     await page.locator('#hsc-hud .hsc-rw').click();
     for(const outcome of['dismiss','fail']){
       await page.evaluate(o=>{__native.outcome=o;},outcome);await page.locator('.hsc-vbtn').click();
       await page.waitForFunction(()=>!document.querySelector('.hsc-vbtn').disabled&&!document.body.inert);
-      assert.equal(await page.evaluate(k=>HSC.wardrobe.data.progress[k],key),1);
+      assert.equal(await page.evaluate(k=>HSC.rewards.owns(k),key),false);
     }passed++;
     await page.evaluate(()=>{__native.outcome='reward';});await page.locator('.hsc-vbtn').click();
-    await page.waitForFunction(k=>HSC.rewards.owns(k),key);passed++;
+    await page.waitForFunction(k=>HSC.rewards.owns(k),key);
+    await page.evaluate(async()=>(await HSC.youtubeClientPromise).flushProgress());
+    await boot();assert.equal(await page.evaluate(k=>HSC.rewards.owns(k),key),true);passed++;
+    await page.locator('#hsc-hud .hsc-rw').click();
     assert.equal(await page.evaluate(()=>__androidHost.back()),true);
     await page.locator('#hsc-panel.open').waitFor({state:'hidden'});passed++;
     await page.evaluate(()=>__androidHost.pause(true));assert.equal(await page.evaluate(()=>skinFadeStudio.getView().paused),true);

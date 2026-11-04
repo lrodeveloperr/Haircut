@@ -94,7 +94,7 @@ Work with different hair textures, natural colors, face shapes and ages. Each ne
 CUSTOMIZE YOUR BARBER SETUP
 Choose clipper designs and barber capes from the wardrobe.
 
-Daily clipper designs and capes are optional unlocks. Finish two rewarded videos to unlock each daily item.
+Daily clipper designs and capes are optional unlocks. Finish one rewarded video to unlock each daily item.
 
 Finish the haircut, watch the reveal and move on to your next customer. A hands-on hair cutting simulator for anyone who enjoys fades, close-up detail and creative barber games.
 
@@ -119,24 +119,24 @@ There is no Apple-style hidden keyword field in this Google Play pack. The keywo
 
 Complete non-media copy is supplied for **English, Latin American Spanish, Brazilian Portuguese, French, German, Arabic, Japanese, Korean, Indonesian and Hindi**. These are ten priority Google Play languages for this global launch, not a statistical claim about the world's ten largest languages.
 
-Each locale has a selected title, short description and full description in its own folder. All include ASMR in the title and the same product promises, including **two completed rewarded videos per optional daily item**. metadata.json holds the identical copy and character counts.
+Each locale has a selected title, short description and full description in its own folder. All include ASMR in the title and the same product promises, including **one completed rewarded video per optional daily item**. metadata.json holds the identical copy and character counts.
 
 | Locale | Selected local title | Title characters | Short characters | Full characters |
 |---|---|---:|---:|---:|
-| en-US | Barber Simulator: ASMR Haircut | 30 | 71 | 1185 |
-| es-419 | Barbero ASMR: Corte de Cabello | 30 | 80 | 1181 |
-| pt-BR | Barbeiro ASMR: Corte de Cabelo | 30 | 73 | 1135 |
-| fr-FR | Barbier ASMR : Coupe & Dégradé | 30 | 77 | 1231 |
-| de-DE | Barbier ASMR: Haare schneiden | 29 | 77 | 1256 |
-| ar | حلاق ASMR: لعبة قص الشعر | 24 | 69 | 882 |
+| en-US | Barber Simulator: ASMR Haircut | 30 | 71 | 1184 |
+| es-419 | Barbero ASMR: Corte de Cabello | 30 | 80 | 1179 |
+| pt-BR | Barbeiro ASMR: Corte de Cabelo | 30 | 73 | 1132 |
+| fr-FR | Barbier ASMR : Coupe & Dégradé | 30 | 77 | 1228 |
+| de-DE | Barbier ASMR: Haare schneiden | 29 | 77 | 1255 |
+| ar | حلاق ASMR: لعبة قص الشعر | 24 | 69 | 887 |
 | ja-JP | ASMR理容室：ヘアカットシミュレーター | 20 | 41 | 562 |
 | ko-KR | ASMR 이발소: 헤어컷 시뮬레이터 | 19 | 51 | 681 |
-| id | ASMR Barber: Potong Rambut | 26 | 65 | 1183 |
+| id | ASMR Barber: Potong Rambut | 26 | 65 | 1184 |
 | hi-IN | ASMR नाई: बाल काटने का गेम | 26 | 68 | 1049 |
 
 Wording is adapted to local usage: Brazilian degradê; Spanish degradado; French dégradé; German Aufsätze and Übergänge; Arabic قصات متدرجة; Japanese フェードカット and バリカン; Korean 페이드컷 and 바리캉; Indonesian potong rambut; and Hindi बाल काटने. This is an editorial language pass, not a claim of independent native-speaker certification.
 
-The English version is the product-control text. Each translated full description retains freehand cuts, 360-degree rotation, clipper sound, customer variety, wardrobe customization and the optional two-video daily unlock. No localized listing invents offline support, a measured download size or an ad-free experience. Verify the final game's visible language before publication; localized metadata does not assert that in-game text is translated.
+The English version is the product-control text. Each translated full description retains freehand cuts, 360-degree rotation, clipper sound, customer variety, wardrobe customization and the optional one-video daily unlock. No localized listing invents offline support, a measured download size or an ad-free experience. Verify the final game's visible language before publication; localized metadata does not assert that in-game text is translated.
 
 ## 7. Conversion assets
 
