@@ -56,6 +56,7 @@
       for (let v = 0; v < st.scalp.length; v++) st.scalp[v] = c.Na(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]);
       st.scalpC = new Float32Array(st.coarseBase.length / 3);
       for (let v = 0; v < st.scalpC.length; v++) st.scalpC[v] = c.Na(st.coarseBase[v * 3], st.coarseBase[v * 3 + 1], st.coarseBase[v * 3 + 2]);
+      prepareShapes();
 
       // beard length grid texture
       st.beardData = new Uint8Array(8192);
@@ -136,24 +137,128 @@
     }
   }
 
-  // ---- face-shape morph applied to the smooth mesh and the coarse picking mesh ----
+  // ---- head shapes (headshapes.js): decoded once, per vertex of the coarse head ----
+  // The drawn head is a refinement of the coarse head (smooth.js), so each drawn vertex takes the deltas at
+  // its place in the coarse triangle it came from. Every delta is faded out on and near the scalp (hair and
+  // cutting keep the original head), around the eyeballs and down the neck (the robe).
+  function prepareShapes() {
+    st.shapes = null;
+    if (!HSC.HEAD_SHAPES_B64 || !HSC.headShapeOf) return;
+    const t0 = performance.now();
+    try {
+      const bin = atob(HSC.HEAD_SHAPES_B64), raw = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) raw[i] = bin.charCodeAt(i);
+      const tDecode = performance.now() - t0;
+      const dv = new DataView(raw.buffer), n = dv.getUint16(0, true), nv = dv.getUint32(2, true);
+      const CB = st.coarseBase, CI = st.coarse.idx, org = ctx.Pt.userData.org, SI = ctx.Pt.index.array, B = st.base;
+      const ns = B.length / 3;
+      // the drawn head keeps the coarse vertices first, in order (smooth.js only appends split points)
+      let same = !!(n && CI && org && nv * 3 === CB.length && ns >= nv);
+      for (let i = 0; same && i < nv * 3; i++) if (Math.abs(B[i] - CB[i]) > 1e-5) same = false;
+      if (!same) { console.error('customers: head shapes do not match the head'); return; }
+      const shapes = [];
+      for (let k = 0, o = 6; k < n; k++, o += 4 + nv * 3) shapes.push({ sc: dv.getFloat32(o, true), q: new Int8Array(raw.buffer, o + 4, nv * 3) });
+
+      // where a shape may act: off the scalp, the eyeballs and the lower neck (as the face-shape morph)
+      const eye = [0.628, 1.624, 1.627];
+      const zone = (x, y, z, scalp) =>
+        (1 - smooth(0.0, 0.03, scalp)) * smooth(0.37, 0.5, Math.hypot(Math.abs(x) - eye[0], y - eye[1], z - eye[2])) * smooth(-1.9, -1.3, y);
+
+      // distance over the head's surface to the hair-bearing scalp; shapes fade out over the last 0.9 units
+      // before the hairline, so skin never rises over the hair roots or the short hair lying on the temples
+      const canon = new Int32Array(nv), ids = new Map();
+      for (let i = 0; i < nv; i++) {
+        const k = (Math.round(CB[i * 3] * 1e4) + 1e5) * 4e10 + (Math.round(CB[i * 3 + 1] * 1e4) + 1e5) * 2e5 + Math.round(CB[i * 3 + 2] * 1e4) + 1e5;
+        let c = ids.get(k);
+        if (c === undefined) { c = ids.size; ids.set(k, c); }
+        canon[i] = c;
+      }
+      const nc = ids.size, dist = new Float32Array(nc).fill(1);
+      for (let i = 0; i < nv; i++) if (st.scalpC[i] > 0.02) dist[canon[i]] = 0;
+      const E = [];
+      for (let t = 0; t < CI.length; t += 3) for (let j = 0; j < 3; j++) {
+        const a = CI[t + j], b = CI[t + (j + 1) % 3];
+        E.push(canon[a], canon[b], Math.hypot(CB[a * 3] - CB[b * 3], CB[a * 3 + 1] - CB[b * 3 + 1], CB[a * 3 + 2] - CB[b * 3 + 2]));
+      }
+      for (let pass = 0, changed = true; changed && pass < 80; pass++) {
+        changed = false;
+        for (let e = 0; e < E.length; e += 3) {
+          const a = E[e], b = E[e + 1], l = E[e + 2];
+          if (dist[a] + l < dist[b]) { dist[b] = dist[a] + l; changed = true; } else if (dist[b] + l < dist[a]) { dist[a] = dist[b] + l; changed = true; }
+        }
+      }
+      const fadeC = new Float32Array(nv);
+      st.sgC = new Float32Array(nv);
+      for (let i = 0; i < nv; i++) {
+        fadeC[i] = smooth(0.1, 0.9, dist[canon[i]]);
+        st.sgC[i] = zone(CB[i * 3], CB[i * 3 + 1], CB[i * 3 + 2], st.scalpC[i]) * fadeC[i];
+      }
+
+      // each drawn vertex: itself (a coarse vertex) or its barycentric place in the coarse triangle it came from
+      const K = 3;
+      st.nbr = new Int32Array(ns * K).fill(-1);
+      st.nbw = new Float32Array(ns * K);
+      for (let v = 0; v < nv; v++) { st.nbr[v * K] = v; st.nbw[v * K] = 1; }
+      for (let t = 0; t < org.length; t++) {
+        const c = org[t] * 3, i0 = CI[c], i1 = CI[c + 1], i2 = CI[c + 2];
+        const ax = CB[i0 * 3], ay = CB[i0 * 3 + 1], az = CB[i0 * 3 + 2];
+        const ux = CB[i1 * 3] - ax, uy = CB[i1 * 3 + 1] - ay, uz = CB[i1 * 3 + 2] - az;
+        const wx = CB[i2 * 3] - ax, wy = CB[i2 * 3 + 1] - ay, wz = CB[i2 * 3 + 2] - az;
+        const uu = ux * ux + uy * uy + uz * uz, uw = ux * wx + uy * wy + uz * wz, ww = wx * wx + wy * wy + wz * wz, den = uu * ww - uw * uw || 1e-12;
+        for (let j = 0; j < 3; j++) {
+          const v = SI[t * 3 + j];
+          if (st.nbr[v * K] >= 0) continue;
+          const px = B[v * 3] - ax, py = B[v * 3 + 1] - ay, pz = B[v * 3 + 2] - az;
+          const pu = px * ux + py * uy + pz * uz, pw = px * wx + py * wy + pz * wz;
+          let b1 = Math.max(0, (ww * pu - uw * pw) / den), b2 = Math.max(0, (uu * pw - uw * pu) / den), b0 = Math.max(0, 1 - b1 - b2);
+          const sum = b0 + b1 + b2 || 1;
+          st.nbr[v * K] = i0; st.nbw[v * K] = b0 / sum;
+          st.nbr[v * K + 1] = i1; st.nbw[v * K + 1] = b1 / sum;
+          st.nbr[v * K + 2] = i2; st.nbw[v * K + 2] = b2 / sum;
+        }
+      }
+      st.sg = new Float32Array(ns);
+      for (let v = 0; v < ns; v++) {
+        const g = zone(B[v * 3], B[v * 3 + 1], B[v * 3 + 2], st.scalp[v]);
+        if (g <= 0) continue;
+        let fade = 0;
+        for (let k = 0; k < K; k++) { const i = st.nbr[v * K + k]; if (i >= 0) fade += st.nbw[v * K + k] * fadeC[i]; }
+        st.sg[v] = g * fade;
+      }
+      st.shapes = shapes;
+      if (HSC.startupTiming) { HSC.startupTiming.headShapesMs = Math.round(performance.now() - t0); HSC.startupTiming.headShapesDecodeMs = Math.round(tDecode); }
+    } catch (err) {
+      console.error('customers: head shapes failed', err);
+      st.shapes = null;
+    }
+  }
+
+  // ---- face-shape morph (and head shape) applied to the smooth mesh and the coarse picking mesh ----
   function applyMorph(person) {
     const Pt = ctx.Pt;
     const P = Pt.attributes.position.array, N = Pt.attributes.normal.array, I = Pt.index.array;
     const age = clamp((person.years - 18) / 62, 0, 1);
     const m = person.morph;
     let moved = false;
+    const shp = st.shapes ? st.shapes[HSC.headShapeOf(person)] : null;
+    const sdC = (i, a) => (shp ? shp.q[i * 3 + a] * shp.sc * st.sgC[i] : 0);
+    const sd = (v, a) => {
+      if (!shp || !(st.sg[v] > 0)) return 0;
+      let t = 0;
+      for (let k = 0; k < 3; k++) { const i = st.nbr[v * 3 + k]; if (i >= 0) t += st.nbw[v * 3 + k] * shp.q[i * 3 + a]; }
+      return t * shp.sc * st.sg[v];
+    };
     for (let v = 0; v < P.length / 3; v++) {
       const x = st.base[v * 3], y = st.base[v * 3 + 1], z = st.base[v * 3 + 2];
       const d = HSC.morphDelta(x, y, z, m, age, st.scalp[v]);
-      P[v * 3] = x + (d ? d[0] : 0); P[v * 3 + 1] = y + (d ? d[1] : 0); P[v * 3 + 2] = z + (d ? d[2] : 0);
-      if (d) moved = true;
+      P[v * 3] = x + (d ? d[0] : 0) + sd(v, 0); P[v * 3 + 1] = y + (d ? d[1] : 0) + sd(v, 1); P[v * 3 + 2] = z + (d ? d[2] : 0) + sd(v, 2);
+      if (d || (shp && st.sg[v] > 0)) moved = true;
     }
     const C = st.coarse.pos;
     for (let v = 0; v < C.length / 3; v++) {
       const x = st.coarseBase[v * 3], y = st.coarseBase[v * 3 + 1], z = st.coarseBase[v * 3 + 2];
       const d = HSC.morphDelta(x, y, z, m, age, st.scalpC[v]);
-      C[v * 3] = x + (d ? d[0] : 0); C[v * 3 + 1] = y + (d ? d[1] : 0); C[v * 3 + 2] = z + (d ? d[2] : 0);
+      C[v * 3] = x + (d ? d[0] : 0) + sdC(v, 0); C[v * 3 + 1] = y + (d ? d[1] : 0) + sdC(v, 1); C[v * 3 + 2] = z + (d ? d[2] : 0) + sdC(v, 2);
     }
     // normals: the original (artist) normals plus the change the morph makes to the geometric normals
     if (moved) {

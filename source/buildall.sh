@@ -2,7 +2,8 @@ set -e
 cd "$(dirname "$0")"
 if [ "${TARGET:-playables}" = full ]; then
   python3 -c 'import shutil; shutil.rmtree("build", ignore_errors=True)'
-  TARGET=youtube bash buildall.sh
+  # Android only: the 36 MakeHuman CC0 head shapes (customers/headshapes-data.js)
+  HEAD_SHAPES=1 TARGET=youtube bash buildall.sh
   python3 youtube/build.py
   python3 ../android/build-runtime.py
   exit
@@ -32,7 +33,8 @@ python3 patch12.py build/runtime/game.js
 python3 patch13.py build/runtime/game.js
 python3 patch14.py build/runtime/game.js
 { echo "/* Haircut Studio customers: generated people, skin, hair textures, baldness, trimmable beards, face shapes. */"
-  for f in "$DETAIL" people glsl faces render state meta catalog patterns wardrobe hub clippings; do cat customers/$f.js; echo; done; } > build/runtime/customers.js
+  SHAPES=""; [ "${HEAD_SHAPES:-0}" = 1 ] && SHAPES="headshapes-data headshapes"
+  for f in "$DETAIL" people glsl faces $SHAPES render state meta catalog patterns wardrobe hub clippings; do cat customers/$f.js; echo; done; } > build/runtime/customers.js
 python3 - <<'PY'
 p='build/index.html'; s=open('src/index.html').read()
 a='  <script src="./runtime/game.js?entry=src/main.js"></script>'

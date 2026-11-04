@@ -39,6 +39,12 @@ the AdMob client remain separate from this web-runtime build.
   - `catalog.js`, `patterns.js`, `wardrobe.js` the 1,000 clipper and 600 robe designs, the wardrobe and daily picks
   - `hub.js` completion screen (next customer, replay), UI scale, tutorial layout
   - `clippings.js` falling hair and the brush-off at the reveal
+  - `headshapes.js` + `headshapes-data.js` (Android build only): 36 customer head shapes, 12 phenotype groups x
+    oval / broad / angular outlines, from MakeHuman CC0 targets. Each customer's shape follows from their seed and
+    heritage (never saved). `render.js` applies the shape to the face, jaw, cheeks, forehead and upper neck only:
+    it fades out over the last 0.9 units before the hairline and is zero on the scalp, around the eyeballs and on
+    the lower neck, so hair, cutting and the robe use the original head. Regenerate the data with
+    `node tools/head-shapes/bake.mjs` (needs MakeHuman data: `MAKEHUMAN_DATA`, else the MPFB 2 Blender extension).
 - `buildall.sh` builds `build/`; `release.sh` builds and packages; `mkplay.py` makes the single-file playable.
 - `tools/gen-designs.js` generated the frozen design list in `customers/catalog.js` (run once; kept for reference).
 - `tests/` Playwright checks used during development. Serve the build first, then run them from `source/`:
