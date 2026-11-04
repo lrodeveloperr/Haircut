@@ -7,7 +7,7 @@
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
   'use strict';
-  const OWN = 0.45; // individual variation, as a share of each slider's spread
+  const OWN = 0.3; // individual variation, as a share of each slider's spread
   const cache = new Map();
   let bases = null;
   const baseTable = () => {

@@ -71,7 +71,9 @@ for (let i = 0; i < g.nv; i++) {
 }
 
 // phenotype groups: MakeHuman's ethnic bone-structure mix (relative to the neutral) plus a few group traits
-const E = (af, as, ca) => [['macrodetails/african-male-young', af], ['macrodetails/asian-male-young', as], ['macrodetails/caucasian-male-young', ca - 1]];
+// ethnic structure at 75%: full-strength macro targets exaggerate group features toward caricature
+const ETH = 0.75;
+const E = (af, as, ca) => [['macrodetails/african-male-young', af * ETH], ['macrodetails/asian-male-young', as * ETH], ['macrodetails/caucasian-male-young', (ca - 1) * ETH]];
 const cheeks = (w) => [['cheek/l-cheek-bones-incr', w], ['cheek/r-cheek-bones-incr', w]];
 export const GROUPS = [
   ['north-european', E(0, 0, 1), [['forehead/forehead-scale-vert-incr', 0.3]]],
@@ -84,12 +86,12 @@ export const GROUPS = [
   ['south-asian', E(0.22, 0.2, 0.58), []],
   ['latino', E(0.12, 0.3, 0.58), cheeks(0.2)],
   ['indigenous-american', E(0, 0.8, 0.2), [['chin/chin-width-incr', 0.3], ['forehead/forehead-temple-incr', 0.2]]],
-  ['pacific-islander', E(0.3, 0.5, 0.2), [['head/head-fat-incr', 0.35], ['chin/chin-width-incr', 0.3]]],
+  ['pacific-islander', E(0.3, 0.5, 0.2), [['head/head-fat-incr', 0.12], ['chin/chin-width-incr', 0.3]]],
   ['mixed', E(1 / 3, 1 / 3, 1 / 3), []],
 ];
 const OUTLINES = [
   ['oval', [['head/head-oval', 0.7], ['head/head-scale-vert-incr', 0.25], ['chin/chin-height-incr', 0.2]]],
-  ['broad', [['head/head-round', 0.55], ['head/head-square', 0.25], ['head/head-fat-incr', 0.3], ['chin/chin-width-incr', 0.35], ...cheeks(0.25)]],
+  ['broad', [['head/head-round', 0.45], ['head/head-square', 0.3], ['head/head-fat-incr', 0.1], ['chin/chin-width-incr', 0.25], ...cheeks(0.25)]],
   ['angular', [['head/head-rectangular', 0.45], ['head/head-diamond', 0.3], ['chin/chin-prominent-incr', 0.35], ['chin/chin-bones-incr', 0.4], ...cheeks(0.35)]],
 ];
 

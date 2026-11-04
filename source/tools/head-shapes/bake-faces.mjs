@@ -81,9 +81,12 @@ const tgt = (k) => { if (!tIndex.has(k)) { tIndex.set(k, targets.length); target
 // spread per feature (slider standard deviation); translations, rotations and the forehead stay subtle
 const SPREAD = (id) =>
   /mouth-angles|laugh-lines|dimples|lip-middle/.test(id) ? 0.15 : // these read as expressions, not features
+  // lip protrusion, depth and fullness: stronger values read as a pout or a caricature
+  /mouth-(trans|scale-depth)|lip-ext|lip-volume|lip-height|philtrum|cupidsbow/.test(id) ? 0.12 :
+  /mouth-scale/.test(id) ? 0.2 :
   // fine nose detail: on the game's lower-resolution head several of these together make ridges
   /nose-(greek|hump|compression|curve|septumangle|nostrils-angle|point-width|width[123])/.test(id) ? 0.14 :
-  /volume/.test(id) ? 0.3 :
+  /volume/.test(id) ? 0.2 :
   /forehead/.test(id) ? 0.25 : /trans|rot/.test(id) ? 0.2 : /^ears\//.test(id) ? 0.35 : /^eyebrows\//.test(id) ? 0.3 : 0.42;
 const out = sliders.map((s) => ({ id: s.id, neg: s.neg ? tgt(s.neg) : -1, pos: tgt(s.pos), sd: SPREAD(s.id) }));
 
@@ -104,14 +107,14 @@ GROUPS.forEach((gid, gi) => {
   for (let c = 0; c < CANDIDATES; c++) {
     cand.push(out.map((s) => {
       if (r() > 0.65) { gauss(r, 1); return 0; }
-      const v = Math.max(-0.75, Math.min(0.75, gauss(r, s.sd * 1.1)));
+      const v = Math.max(-0.6, Math.min(0.6, gauss(r, s.sd * 1.0)));
       return s.neg < 0 ? Math.max(0, v) : v;
     }));
   }
   const vis = (rec) => rec.map((v, i) => v * (v < 0 ? impact[i][0] : impact[i][1]));
-  // coherence: keep the less exaggerated half of the candidates (total visible change), then spread them apart
+  // coherence: keep the least exaggerated third of the candidates (total visible change), then spread them apart
   let V2 = cand.map(vis);
-  const mag = V2.map((x) => Math.hypot(...x)), cut = mag.slice().sort((a, b) => a - b)[Math.floor(mag.length * 0.5)];
+  const mag = V2.map((x) => Math.hypot(...x)), cut = mag.slice().sort((a, b) => a - b)[Math.floor(mag.length * 0.35)];
   const keep = cand.map((_, c) => c).filter((c) => mag[c] <= cut);
   cand.splice(0, cand.length, ...keep.map((c) => cand[c])); V2 = keep.map((c) => V2[c]);
   const pick = [0], dmin = V2.map((x) => x.reduce((a, y, i) => a + (y - V2[0][i]) ** 2, 0));

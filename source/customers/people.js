@@ -62,6 +62,7 @@
     [0.225, 0.128, 0.082],
     [0.155, 0.088, 0.058],
     [0.105, 0.06, 0.042],
+    [0.068, 0.039, 0.029], // Android: the deepest tone (Monk 10), only reached by phenotypes.js weights
   ];
   const UNDERTONES = {
     pink: [1.03, 0.97, 1.0],
@@ -287,7 +288,11 @@
     const band = P ? P.bandOf(years) : null;
     const age01 = clamp((years - 18) / (80 - 18), 0, 1);
 
-    const skinT = Array.isArray(her.skin) ? R.range(her.skin[0], her.skin[1]) : clamp(+R.pick(her.skin) - 1 + R.range(-0.45, 0.45), 0, 9.4);
+    // Monk Skin Tone 1-10 -> the game's 10 tones (tones 4-6 read light under the barber's bright ring light);
+    // calibrated by eye against rendered tones: game tone 6 reads as Monk 5, 7 as Monk 6-7, 8 as Monk 7-8, 9.4 as
+    // Monk 8-9; Android adds a deeper tone 10 for Monk 10
+    const MONK_TONE = [[0, 0.4], [0.3, 0.9], [0.8, 1.6], [1.5, 2.8], [2.6, 4.6], [4.6, 6.6], [6.8, 7.8], [7.8, 8.7], [8.7, 9.5], [9.5, 10.3]];
+    const skinT = Array.isArray(her.skin) ? R.range(her.skin[0], her.skin[1]) : R.range(...MONK_TONE[+R.pick(her.skin) - 1]);
     const under = R.pick(her.under);
     let texture = opts.texture || R.pick(her.tex), hairType = null;
     if (P && /^[1-4][abc]$/.test(texture)) { hairType = texture; texture = TEX_FAMILY[texture[0]]; }
@@ -365,7 +370,7 @@
 
     // face shape: group tendency (subtle) + individual variation (larger)
     const morph = {};
-    for (const k of MORPHS) morph[k] = +clamp(0.55 * (her.morph[k] || 0) + R.gauss(0.42), -1, 1).toFixed(3);
+    for (const k of MORPHS) morph[k] = +clamp(P ? R.gauss(0.15) : 0.55 * (her.morph[k] || 0) + R.gauss(0.42), -1, 1).toFixed(3);
     if (opts.morph) Object.assign(morph, opts.morph);
 
     const eyes = R.pick(her.eyes);

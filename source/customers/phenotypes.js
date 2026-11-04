@@ -8,10 +8,11 @@
 (function (HSC) {
   'use strict';
   // skin: Monk Skin Tone 1-10 weights (rendered on the game's 10 tones, fair to deep)
-  const monk = (a, b, c, d, e) => ({ 1: a / 2, 2: a / 2, 3: b / 2, 4: b / 2, 5: c / 2, 6: c / 2, 7: d / 2, 8: d / 2, 9: e / 2, 10: e / 2 });
+  // each pair leans to its darker tone (inside a band, deeper shades are the more common)
+  const monk = (a, b, c, d, e) => ({ 1: a * 0.4, 2: a * 0.6, 3: b * 0.4, 4: b * 0.6, 5: c * 0.4, 6: c * 0.6, 7: d * 0.4, 8: d * 0.6, 9: e * 0.4, 10: e * 0.6 });
   // hair texture 1A-4C weights
   const tex = (s) => Object.fromEntries(s.split(' ').map((p) => { const [k, v] = p.split(':'); return [k, +v]; }));
-  const DARK = { dbrown: 85, brown: 13, lbrown: 1, amber: 1 };
+  const DARK = { dbrown: 85, brown: 14, lbrown: 1 };
   const AFRICAN_BEARD = { boxed: 1.3, goatee: 1.4, chinstrap: 1.8, vandyke: 1.2, long: 0.6, walrus: 0.6, stubble: 1.1 };
   const SPARSE_BEARD = { clean: 1.8, stubble: 1.1, full: 0.35, boxed: 0.45, long: 0.3, mutton: 0.3, shenandoah: 0.3, goatee: 1.3, moustache: 1.3, pencil: 1.5, walrus: 0.4 };
 
@@ -23,27 +24,27 @@
       tex: tex('1a:25 1b:30 1c:12 2a:15 2b:10 2c:4 3a:3 3b:1'),
       eyes: { dbrown: 3, brown: 12, lbrown: 3, amber: 2, hazel: 12, green: 10, grey: 8, blue: 35, lblue: 15 },
       patchy: 0.08, brow: 0.97, coarse: 1, morph: { noseW: -0.2, noseBridge: 0.35, noseTip: 0.12, lips: -0.15, jaw: 0.1, chin: 0.12, cheek: -0.05, brow: 0.3 } },
-    { id: 'mediterranean', w: 9, skin: monk(10, 55, 33, 2, 0), under: { olive: 4, neutral: 3, golden: 1, pink: 1 },
+    { id: 'mediterranean', w: 9, skin: monk(10, 57, 33, 0, 0), under: { olive: 4, neutral: 3, golden: 1, pink: 1 },
       tex: tex('1a:8 1b:20 1c:15 2a:15 2b:17 2c:12 3a:8 3b:4 3c:1'),
       eyes: { dbrown: 15, brown: 35, lbrown: 6, amber: 4, hazel: 18, green: 8, grey: 3, blue: 9, lblue: 2 },
       patchy: 0.07, brow: 1.06, coarse: 1, morph: { noseW: -0.05, noseBridge: 0.3, noseTip: 0.05, lips: 0, jaw: 0.1, chin: 0.1, cheek: 0, brow: 0.25 } },
-    { id: 'mena', w: 10, skin: monk(3, 37, 50, 10, 0), under: { olive: 4, neutral: 3, golden: 2 },
+    { id: 'mena', w: 10, skin: monk(3, 39, 52, 6, 0), under: { olive: 4, neutral: 3, golden: 2 },
       tex: tex('1a:5 1b:15 1c:15 2a:12 2b:18 2c:15 3a:12 3b:6 3c:2'),
       eyes: { dbrown: 35, brown: 35, lbrown: 5, amber: 3, hazel: 12, green: 5, grey: 1, blue: 3, lblue: 1 },
       patchy: 0.06, brow: 1.12, coarse: 1.12, shave: 0, morph: { noseW: 0.05, noseBridge: 0.4, noseTip: 0.1, lips: 0.05, jaw: 0.1, chin: 0.05, cheek: 0.05, brow: 0.3 } },
-    { id: 'west-african', w: 9, skin: monk(0, 0, 3, 37, 60), under: { neutral: 3, red: 2, golden: 1 },
+    { id: 'west-african', w: 9, skin: monk(0, 0, 1, 36, 63), under: { neutral: 3, red: 2, golden: 1 },
       tex: tex('3c:2 4a:15 4b:38 4c:45'), eyes: DARK,
       patchy: 0.15, brow: 1, coarse: 1, morph: { noseW: 0.5, noseBridge: -0.2, noseTip: -0.08, lips: 0.55, jaw: 0.1, chin: 0, cheek: 0.2, brow: 0.1 } },
-    { id: 'east-african', w: 4, skin: monk(0, 0, 8, 52, 40), under: { neutral: 3, red: 2, golden: 1 },
+    { id: 'east-african', w: 4, skin: monk(0, 0, 5, 52, 43), under: { neutral: 3, red: 2, golden: 1 },
       tex: tex('3b:5 3c:20 4a:35 4b:30 4c:10'), eyes: DARK,
       patchy: 0.15, brow: 1, coarse: 1, morph: { noseW: 0.2, noseBridge: 0.05, noseTip: 0, lips: 0.35, jaw: 0, chin: 0.05, cheek: 0.15, brow: 0.1 } },
     { id: 'east-asian', w: 6, skin: monk(15, 60, 25, 0, 0), under: { golden: 4, neutral: 2, olive: 1 },
       tex: tex('1a:55 1b:30 1c:8 2a:5 2b:2'), eyes: DARK,
       patchy: 0.45, brow: 0.92, coarse: 1.15, shave: 0.45, morph: { noseW: 0.15, noseBridge: -0.5, noseTip: -0.2, lips: 0.1, jaw: 0.2, chin: -0.1, cheek: 0.4, brow: -0.4 } },
-    { id: 'southeast-asian', w: 9, skin: monk(0, 15, 60, 25, 0), under: { golden: 4, olive: 2, neutral: 1 },
+    { id: 'southeast-asian', w: 9, skin: monk(0, 18, 67, 15, 0), under: { golden: 4, olive: 2, neutral: 1 },
       tex: tex('1a:35 1b:30 1c:12 2a:12 2b:7 2c:3 3a:1'), eyes: DARK,
       patchy: 0.4, brow: 0.95, coarse: 1.1, shave: 0.4, morph: { noseW: 0.25, noseBridge: -0.4, noseTip: -0.15, lips: 0.2, jaw: 0.1, chin: -0.1, cheek: 0.3, brow: -0.3 } },
-    { id: 'south-asian', w: 11, skin: monk(0, 8, 42, 40, 10), under: { golden: 3, olive: 2, neutral: 2 },
+    { id: 'south-asian', w: 11, skin: monk(0, 10, 50, 37, 3), under: { golden: 3, olive: 2, neutral: 2 },
       tex: tex('1a:10 1b:20 1c:20 2a:18 2b:15 2c:10 3a:5 3b:2'),
       eyes: { dbrown: 60, brown: 28, lbrown: 3, amber: 2, hazel: 5, green: 1.5, blue: 0.5 },
       patchy: 0.12, brow: 1.12, coarse: 1, morph: { noseW: 0.2, noseBridge: 0.15, noseTip: 0.1, lips: 0.2, jaw: 0, chin: -0.05, cheek: 0.1, brow: 0.1 } },
@@ -51,7 +52,7 @@
       tex: tex('1a:18 1b:23 1c:14 2a:12 2b:9 2c:7 3a:5 3b:3 3c:3 4a:3 4b:2 4c:1'),
       eyes: { dbrown: 45, brown: 30, lbrown: 5, amber: 3, hazel: 9, green: 4, grey: 1, blue: 2, lblue: 1 },
       patchy: 0.15, brow: 1.02, coarse: 1.05, morph: {} },
-    { id: 'indigenous-american', w: 4, skin: monk(0, 10, 55, 33, 2), under: { golden: 3, red: 2, olive: 2 },
+    { id: 'indigenous-american', w: 4, skin: monk(0, 15, 63, 21, 1), under: { golden: 3, red: 2, olive: 2 },
       tex: tex('1a:60 1b:28 1c:10 2a:2'), eyes: DARK,
       patchy: 0.5, brow: 0.95, coarse: 1.15, shave: 0.5, morph: { noseW: 0.1, noseBridge: 0.1, noseTip: 0, lips: 0.05, jaw: 0.15, chin: 0, cheek: 0.35, brow: -0.1 } },
     { id: 'pacific-islander', w: 3, skin: monk(0, 5, 45, 45, 5), under: { golden: 3, neutral: 2, red: 2 },
