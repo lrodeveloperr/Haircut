@@ -275,9 +275,31 @@
     }
     // per side (+1 the customer's left, -1 the right): earlobe (outer face) and ear bowl (deepest point)
     const best = (test, score) => { let b = -1, bs = -1e9; for (let v = 0; v < nv; v++) { const p = at(v); if (test(p) && score(p) > bs) { bs = score(p); b = v; } } return b; };
+    // the earlobe (on the drawn head; it is joined to the head, so only its outer face exists): its bottom edge,
+    // and the piercing in the visual centre of the soft lobe pad, about 5-6 mm (0.11 units) above that edge
+    const B = st.base, N0 = st.N0;
+    const lobeOf = (sd) => {
+      const ear = [];
+      for (let v = 0; v < B.length / 3; v++) {
+        const x = sd * B[v * 3], y = B[v * 3 + 1], z = B[v * 3 + 2];
+        if (x > 1.58 && y > 0.55 && y < 1.0 && z > -0.3 && z < 0.2) ear.push(v);
+      }
+      if (!ear.length) return null;
+      const yB = Math.min(...ear.map((v) => B[v * 3 + 1]));
+      const pad = ear.filter((v) => B[v * 3 + 1] < yB + 0.2), zs = pad.map((v) => B[v * 3 + 2]).sort((a, b) => a - b);
+      const zc = zs[zs.length >> 1], yc = yB + 0.11;
+      let h = -1, hd = 1e9, b = -1, bd = 1e9;
+      for (const v of ear) {
+        const y = B[v * 3 + 1], z = B[v * 3 + 2];
+        if (sd * N0[v * 3] > 0.5) { const d = Math.hypot(y - yc, z - zc); if (d < hd) { hd = d; h = v; } }
+        const e = (y - yB) * 4 + Math.abs(z - zc); // the lowest point of the edge below the pad centre
+        if (e < bd) { bd = e; b = v; }
+      }
+      return h >= 0 && b >= 0 ? { h, b } : null;
+    };
     const lobe = {}, bowl = {};
     for (const sd of [-1, 1]) {
-      lobe[sd] = best(([x, y, z]) => sd * x > 1.5 && y > 0.66 && y < 0.8 && z > -0.12 && z < 0.08, ([x]) => sd * x);
+      lobe[sd] = lobeOf(sd);
       bowl[sd] = best(([x, y, z]) => sd * x > 1.38 && sd * x < 1.62 && y > 1.0 && y < 1.2 && z > -0.15 && z < 0.05, ([x]) => -sd * x);
     }
     // small meshes, built here (the game exposes no sphere or torus geometry to us); T.af is the instanced
@@ -308,7 +330,7 @@
       black: mat({ color: '#1c1c20', metalness: 0.5, roughness: 0.3 }), gem: mat({ color: '#f3f6ff', metalness: 1, roughness: 0.04, envMapIntensity: 2.2 }),
       beige: mat({ color: '#d8b898', roughness: 0.38, clearcoat: 0.6 }), brown: mat({ color: '#6a4935', roughness: 0.38, clearcoat: 0.6 }), grey: mat({ color: '#8c9095', roughness: 0.38, clearcoat: 0.6 }),
     };
-    const ball = sphere(16, 12), ring = torus(1, 0.15, 32, 8), group = new c.vt.constructor();
+    const ball = sphere(16, 12), ring = torus(1, 0.17, 40, 10), group = new c.vt.constructor();
     // the game stops updating world matrices after its first frame: each accessory takes the head's own
     // world matrix just before it is drawn
     const make = (g) => {
@@ -404,17 +426,26 @@
       m.visible = true;
     };
     if (acc.ear) for (const sd of acc.ear.sides) {
-      const at = where(X.lobe[sd], sd);
+      const L = X.lobe[sd], at = L && where(L.h, sd);
       if (!at) continue;
       const m = X.mats[acc.ear.metal] || X.mats.silver;
       if (acc.ear.kind === 'stud') {
-        const r = acc.ear.metal === 'gem' ? 0.048 : 0.04;
-        show(X.meshes.stud[sd], m, at.p.clone().addScaledVector(at.n, 0.012), at.n, [r, r, r * 0.55]);
+        // the stud's front sits flat on the lobe at the piercing (a 4-5 mm head)
+        const r = acc.ear.metal === 'gem' ? 0.048 : 0.042;
+        show(X.meshes.stud[sd], m, at.p.clone().addScaledVector(at.n, 0.008), at.n, [r, r, r * 0.5]);
       } else {
-        // a small hoop through the lobe, hanging in the plane of the lobe's outward direction and the vertical
-        const R = 0.085, axis = V(0, 1, 0).cross(at.n).normalize();
-        const c = at.p.clone().addScaledVector(at.n, -0.025).add(V(0, -R, 0));
-        show(X.meshes.hoop[sd], m, c, axis, [R, R, R]);
+        // a huggie hoop: in through the piercing (mid-lobe, 2 mm behind its face) and round the lobe's bottom
+        // edge, in the plane of the hole and the lobe below it; its inner diameter is the hole-to-edge distance
+        // plus about 1 mm, as hoops are sized
+        const edge = V(P[L.b * 3], P[L.b * 3 + 1], P[L.b * 3 + 2]);
+        const down = edge.sub(at.p), drop = down.clone().addScaledVector(at.n, -down.dot(at.n));
+        const len = drop.length();
+        if (len < 0.03) continue;
+        drop.normalize();
+        const hole = at.p.clone().addScaledVector(at.n, -0.04);
+        const R = Math.max(0.075, Math.min(0.13, (len + 0.05) / 2 + 0.008));
+        const axis = at.n.clone().cross(drop).normalize();
+        show(X.meshes.hoop[sd], m, hole.addScaledVector(drop, R), axis, [R, R, R]);
       }
     }
     if (acc.aid) for (const sd of acc.aid.sides) {
