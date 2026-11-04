@@ -15,6 +15,8 @@
     spin: new Float32Array(MAX), len: new Float32Array(MAX), drag: new Float32Array(MAX), phase: new Float32Array(MAX),
     state: new Uint8Array(MAX), // 0 free, 1 falling, 2 sliding, 3 resting
     swept: new Uint8Array(MAX), // brushed off at the reveal: falls past the gown and out of sight
+    through: new Uint8Array(MAX), // over a hole in the gown: 1 falls past it out of sight, 2 lands on the collar (land), 3 no collar found
+    land: new Float32Array(MAX * 3),
     born: new Float64Array(MAX), col: new Float32Array(MAX * 3), curl: new Float32Array(MAX * 4),
     count: 0, next: 0, last: 0, moving: 0,
   };
@@ -85,7 +87,8 @@ void main(){
   // heightfield of the gown's top surface (world space), rebuilt when the gown is attached / changed
   let robeRef = null;
   HSC.clippingsCape = function (robe) { if (robe) { robeRef = robe; field = null; } };
-  function buildField(robe) {
+  // Playables / YouTube: the original gown surface (from vertices, gaps filled), unchanged
+  function buildFieldWeb(robe) {
     try {
       robe.updateWorldMatrix(true, true);
       const pts = [];
@@ -117,6 +120,84 @@ void main(){
       }
       field = { N, h, x0, x1, z0, z1 };
     } catch (e) { console.error('customers: clippings field failed', e); }
+  }
+  // Android: the gown's top surface, rasterised from its triangles: each cell takes the highest gown surface over its centre.
+  // Real holes stay holes (the neck opening, past the hem), so cut hair falls into the collar or off the gown instead
+  // of resting on an invisible lid; only one-cell cracks between triangles are filled.
+  function buildField(robe) {
+    if (!EXC) return buildFieldWeb(robe);
+    try {
+      robe.updateWorldMatrix(true, true);
+      const tris = [];
+      let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+      robe.traverse((o) => {
+        if (!o.isMesh) return;
+        const p = o.geometry.attributes.position, ix = o.geometry.index, m = o.matrixWorld.elements;
+        const W = (i) => { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); return [m[0] * x + m[4] * y + m[8] * z + m[12], m[1] * x + m[5] * y + m[9] * z + m[13], m[2] * x + m[6] * y + m[10] * z + m[14]]; };
+        const n = ix ? ix.count : p.count;
+        for (let t = 0; t + 2 < n; t += 3) {
+          const tr = [W(ix ? ix.getX(t) : t), W(ix ? ix.getX(t + 1) : t + 1), W(ix ? ix.getX(t + 2) : t + 2)];
+          for (const v of tr) { x0 = Math.min(x0, v[0]); x1 = Math.max(x1, v[0]); z0 = Math.min(z0, v[2]); z1 = Math.max(z1, v[2]); }
+          tris.push(tr);
+        }
+      });
+      if (!tris.length) return;
+      const N = 192, h = new Float32Array(N * N).fill(-1e9), sx = (x1 - x0) / N, sz = (z1 - z0) / N;
+      const put = (cx, cz, y) => { if (cx >= 0 && cz >= 0 && cx < N && cz < N && y > h[cz * N + cx]) h[cz * N + cx] = y; };
+      for (const [a, b, c] of tris) {
+        const d = (b[2] - c[2]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[2] - c[2]);
+        // triangles smaller than a cell still mark the cells their corners fall in; steep walls (the collar band's
+        // sides) do not, so their top edge does not become a ledge a cell wide
+        const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+        const ny = u[2] * w[0] - u[0] * w[2], nn = Math.hypot(u[1] * w[2] - u[2] * w[1], ny, u[0] * w[1] - u[1] * w[0]) || 1;
+        if (Math.abs(ny) / nn > 0.3) for (const v of [a, b, c]) put(Math.floor((v[0] - x0) / sx), Math.floor((v[2] - z0) / sz), v[1]);
+        if (Math.abs(d) < 1e-12) continue;
+        const ax = Math.floor((Math.min(a[0], b[0], c[0]) - x0) / sx), bx = Math.floor((Math.max(a[0], b[0], c[0]) - x0) / sx);
+        const az = Math.floor((Math.min(a[2], b[2], c[2]) - z0) / sz), bz = Math.floor((Math.max(a[2], b[2], c[2]) - z0) / sz);
+        for (let cz = az; cz <= bz; cz++) for (let cx = ax; cx <= bx; cx++) {
+          const x = x0 + (cx + 0.5) * sx, z = z0 + (cz + 0.5) * sz;
+          const l1 = ((b[2] - c[2]) * (x - c[0]) + (c[0] - b[0]) * (z - c[2])) / d, l2 = ((c[2] - a[2]) * (x - c[0]) + (a[0] - c[0]) * (z - c[2])) / d, l3 = 1 - l1 - l2;
+          if (l1 >= -1e-6 && l2 >= -1e-6 && l3 >= -1e-6) put(cx, cz, l1 * a[1] + l2 * b[1] + l3 * c[1]);
+        }
+      }
+      // one-cell cracks: an empty cell with gown on at least 6 of its 8 neighbours
+      const src = h.slice();
+      for (let z = 1; z < N - 1; z++) for (let x = 1; x < N - 1; x++) {
+        if (src[z * N + x] > -1e8) continue;
+        let s = 0, n = 0;
+        for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const v = src[(z + dz) * N + x + dx]; if (v > -1e8) { s += v; n++; } }
+        if (n >= 6) h[z * N + x] = s / n;
+      }
+      // the triangles too, bucketed over the gown, so a piece that comes to rest sits on the exact cloth surface
+      const TB = 48, tb = new Map(), tx = (x1 - x0) / TB, tz = (z1 - z0) / TB;
+      for (const t of tris) {
+        const ax = Math.floor((Math.min(t[0][0], t[1][0], t[2][0]) - x0) / tx), bx = Math.floor((Math.max(t[0][0], t[1][0], t[2][0]) - x0) / tx);
+        const az = Math.floor((Math.min(t[0][2], t[1][2], t[2][2]) - z0) / tz), bz = Math.floor((Math.max(t[0][2], t[1][2], t[2][2]) - z0) / tz);
+        for (let cz = az; cz <= bz; cz++) for (let cx = ax; cx <= bx; cx++) { const k = cz * TB + cx; if (!tb.has(k)) tb.set(k, []); tb.get(k).push(t); }
+      }
+      field = { N, h, x0, x1, z0, z1, TB, tb, tx, tz };
+    } catch (e) { console.error('customers: clippings field failed', e); }
+  }
+  // the highest gown surface at (x, z) not far above y, and its upward normal, or null
+  function clothAt(x, y, z) {
+    if (!field || !field.tb) return null;
+    const L = field.tb.get(Math.floor((z - field.z0) / field.tz) * field.TB + Math.floor((x - field.x0) / field.tx));
+    if (!L) return null;
+    let best = null, bh = -1e9;
+    for (const [a, b, c] of L) {
+      const d = (b[2] - c[2]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[2] - c[2]);
+      if (Math.abs(d) < 1e-12) continue;
+      const l1 = ((b[2] - c[2]) * (x - c[0]) + (c[0] - b[0]) * (z - c[2])) / d, l2 = ((c[2] - a[2]) * (x - c[0]) + (a[0] - c[0]) * (z - c[2])) / d, l3 = 1 - l1 - l2;
+      if (l1 < -1e-6 || l2 < -1e-6 || l3 < -1e-6) continue;
+      const hy = l1 * a[1] + l2 * b[1] + l3 * c[1];
+      if (hy > bh && hy < y + 0.05) { bh = hy; best = [a, b, c]; }
+    }
+    if (!best) return null;
+    const [a, b, c] = best, u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    if (n[1] < 0) n = n.map((q) => -q);
+    const nl = Math.hypot(...n) || 1;
+    return { y: bh, n: n.map((q) => q / nl) };
   }
   function heightAt(x, z) {
     if (!field) return -1e9;
@@ -179,7 +260,7 @@ void main(){
       K.drag[i] = 9 + 22 * (1 - Math.min(1, L / 0.12));
       K.phase[i] = Rng.next() * 6.28;
       K.state[i] = 1;
-      K.swept[i] = 0;
+      K.swept[i] = 0; K.through[i] = 0;
       K.born[i] = now;
       K.col.set(hairColour(cut.kind), o);
       const cr = isBeard ? bcurl : curl;
@@ -223,7 +304,7 @@ void main(){
         K.drag[i] = (short ? 26 + 22 * Rng.next() : 8 + 16 * (1 - Math.min(1, L / 0.12))) * (0.85 + 0.3 * Rng.next());
         K.phase[i] = Rng.next() * 6.28;
         K.state[i] = 1;
-        K.swept[i] = 0;
+        K.swept[i] = 0; K.through[i] = 0;
         K.born[i] = now;
         const shade = 0.9 + 0.2 * Rng.next();
         K.col.set(col.map((v) => v * shade), o);
@@ -299,6 +380,8 @@ void main(){
 
   HSC.clearClippings = function () { skin = null; K.count = 0; K.next = 0; K.moving = 0; K.dirty = false; if (geo) geo.instanceCount = 0; };
   HSC.clippingsActive = () => K.moving > 0;
+  // QA: the pieces and the gown they rest on (read only)
+  HSC.clippingsDebug = () => ({ K, robe: robeRef, field });
   // counts by state (for tests): free, falling, sliding, resting
   HSC.clippingsStats = () => { const c = [0, 0, 0, 0]; let gone = 0, swept = 0; for (let i = 0; i < K.count; i++) { if (K.len[i] <= 0) gone++; else { c[K.state[i]]++; if (K.swept[i]) swept++; } } return { count: K.count, onShow: K.count - gone, falling: c[1], sliding: c[2], resting: c[3], swept, gone }; };
 
@@ -367,10 +450,50 @@ void main(){
         const c = Math.cos(ang), s = Math.sin(ang), dot = a[0] * d[0] + a[1] * d[1] + a[2] * d[2];
         const cr = [a[1] * d[2] - a[2] * d[1], a[2] * d[0] - a[0] * d[2], a[0] * d[1] - a[1] * d[0]];
         for (let q = 0; q < 3; q++) K.dir[o + q] = d[q] * c + cr[q] * s + a[q] * dot * (1 - c);
-      } else {
-        // sliding down a steep fold of the gown
-        vx *= Math.exp(-6 * dt); vz *= Math.exp(-6 * dt);
       }
+      if (!EXC) {
+        // Playables / YouTube: the original landing, unchanged
+        if (st !== 1) {
+          // sliding down a steep fold of the gown
+          vx *= Math.exp(-6 * dt); vz *= Math.exp(-6 * dt);
+        }
+        x += vx * dt; y += vy * dt; z += vz * dt;
+        if (EXC && HSC.clipProto === 2 && st === 1 && !K.swept[i]) {
+          K.pos[o] = x; K.pos[o + 1] = y; K.pos[o + 2] = z; K.vel[o] = vx; K.vel[o + 1] = vy; K.vel[o + 2] = vz;
+          const caught = neckCatch(i, o);
+          x = K.pos[o]; y = K.pos[o + 1]; z = K.pos[o + 2]; vx = K.vel[o]; vy = K.vel[o + 1]; vz = K.vel[o + 2];
+          if (caught) continue;
+        }
+        const ground = K.swept[i] ? -1e9 : heightAt(x, z);
+        if (y < ground + 0.004) {
+          const e = 0.05;
+          const gx = (heightAt(x + e, z) - heightAt(x - e, z)) / (2 * e), gz = (heightAt(x, z + e) - heightAt(x, z - e)) / (2 * e);
+          const slope = Math.hypot(gx, gz);
+          y = ground + 0.004;
+          if (slope > 1.1 && Number.isFinite(slope) && slope < 50) {
+            K.state[i] = 2;
+            const sp = 0.9;
+            vx = (-gx / slope) * sp; vz = (-gz / slope) * sp; vy = 0;
+          } else {
+            K.state[i] = 3;
+            vx = vy = vz = 0;
+            // lie flat on the cloth
+            K.dir[o + 1] *= 0.15;
+            const l = Math.hypot(K.dir[o], K.dir[o + 1], K.dir[o + 2]) || 1;
+            K.dir[o] /= l; K.dir[o + 1] /= l; K.dir[o + 2] /= l;
+          }
+        }
+        if (y < -4 || (!K.swept[i] && now - K.born[i] > 20000)) { K.state[i] = 3; vx = vy = vz = 0; if (y < -4) K.len[i] = 0; }
+      } else {
+      if (st !== 1) {
+          // sliding down a steep fold of the gown: pulled downhill, slowed by the cloth
+          const e = 0.03, gx = (heightAt(x + e, z) - heightAt(x - e, z)) / (2 * e), gz = (heightAt(x, z + e) - heightAt(x, z - e)) / (2 * e);
+          if (Number.isFinite(gx) && Number.isFinite(gz) && Math.abs(gx) < 50 && Math.abs(gz) < 50) {
+            const sl = Math.hypot(gx, gz) || 1, acc = G * 0.35 * Math.min(1, sl) / Math.sqrt(1 + sl * sl);
+            vx += (-gx / sl) * acc * dt; vz += (-gz / sl) * acc * dt;
+          }
+          vx *= Math.exp(-4 * dt); vz *= Math.exp(-4 * dt); vy = 0;
+        }
       x += vx * dt; y += vy * dt; z += vz * dt;
       if (EXC && HSC.clipProto === 2 && st === 1 && !K.swept[i]) {
         K.pos[o] = x; K.pos[o + 1] = y; K.pos[o + 2] = z; K.vel[o] = vx; K.vel[o + 1] = vy; K.vel[o + 2] = vz;
@@ -378,26 +501,82 @@ void main(){
         x = K.pos[o]; y = K.pos[o + 1]; z = K.pos[o + 2]; vx = K.vel[o]; vy = K.vel[o + 1]; vz = K.vel[o + 2];
         if (caught) continue;
       }
-      const ground = K.swept[i] ? -1e9 : heightAt(x, z);
-      if (y < ground + 0.004) {
-        const e = 0.05;
+      const ground = K.swept[i] || K.through[i] === 1 ? -1e9 : heightAt(x, z);
+      // over the neck opening a falling piece meets the neck and slides down it onto the collar: it is given the
+      // nearest cloth outward from the neck once, and settles there when it falls to that height
+      if (st === 1 && !K.swept[i] && ground < -1e8 && (K.through[i] === 0 || K.through[i] === 2) && ctx && ctx.vt && field && field.tb) {
+        const vt = ctx.vt, sc = vt.scale.x || 1;
+        const hy = (y - vt.position.y) / sc;
+        // looked for once the piece has fallen to about chin height (the collar is below the jaw)
+        if (!K.through[i] && hy < -0.3) {
+          K.through[i] = 3;
+          const ax = vt.position.x, az = vt.position.z - 0.15 * sc;
+          let rx = x - ax, rz = z - az;
+          const rl = Math.hypot(rx, rz);
+          if (rl > 1e-4 && rl < 1.6 * sc && hy > -2.6) {
+            rx /= rl; rz /= rl;
+            for (let step = 0.006; step < 0.35; step += 0.006) {
+              const c2 = clothAt(x + rx * step, y + 0.4, z + rz * step);
+              if (c2 && c2.y < y + 0.05) { K.through[i] = 2; K.land.set([x + rx * (step + 0.004), c2.y, z + rz * (step + 0.004)], o); break; }
+            }
+          }
+        }
+        if (K.through[i] === 2 && y <= K.land[o + 1] + 0.003) {
+          x = K.land[o]; z = K.land[o + 2];
+          const cl = clothAt(x, K.land[o + 1] + 0.02, z);
+          y = (cl ? cl.y : K.land[o + 1]) + 0.003;
+          vx = vy = vz = 0;
+          K.state[i] = 3;
+          K.through[i] = 0;
+          const n = cl ? cl.n : [0, 1, 0], d = [K.dir[o], K.dir[o + 1], K.dir[o + 2]], dn = d[0] * n[0] + d[1] * n[1] + d[2] * n[2];
+          d[0] -= dn * n[0]; d[1] -= dn * n[1]; d[2] -= dn * n[2];
+          const l = Math.hypot(d[0], d[1], d[2]) || 1;
+          K.dir[o] = d[0] / l; K.dir[o + 1] = d[1] / l; K.dir[o + 2] = d[2] / l;
+          K.pos[o] = x; K.pos[o + 1] = y; K.pos[o + 2] = z; K.vel[o] = K.vel[o + 1] = K.vel[o + 2] = 0;
+          continue;
+        }
+      }
+      if (st === 2 && !(y < ground + 0.03)) {
+        // slid off the edge of a fold (or into the neck opening): it falls again
+        K.state[i] = 1;
+        K.drag[i] = Math.max(K.drag[i], 6);
+      } else if (y < ground + 0.004 || st === 2) {
+        const e = 0.03;
         const gx = (heightAt(x + e, z) - heightAt(x - e, z)) / (2 * e), gz = (heightAt(x, z + e) - heightAt(x, z - e)) / (2 * e);
-        const slope = Math.hypot(gx, gz);
+        const slope = Math.hypot(gx, gz), ok = Number.isFinite(slope) && slope < 50;
         y = ground + 0.004;
-        if (slope > 1.1 && Number.isFinite(slope) && slope < 50) {
-          K.state[i] = 2;
-          const sp = 0.9;
-          vx = (-gx / slope) * sp; vz = (-gz / slope) * sp; vy = 0;
+        const speed = Math.hypot(vx, vz);
+        if (ok && slope > 1.1 && !(st === 2 && speed < 0.05)) {
+          if (st !== 2) { K.state[i] = 2; vx = (-gx / slope) * 0.6; vz = (-gz / slope) * 0.6; }
+          vy = 0;
         } else {
           K.state[i] = 3;
           vx = vy = vz = 0;
-          // lie flat on the cloth
-          K.dir[o + 1] *= 0.15;
-          const l = Math.hypot(K.dir[o], K.dir[o + 1], K.dir[o + 2]) || 1;
-          K.dir[o] /= l; K.dir[o + 1] /= l; K.dir[o + 2] /= l;
+          // lie on the exact cloth under it, along the surface (no part of its direction across the surface)
+          const cl = clothAt(x, y, z);
+          let n = ok ? [-gx, 1, -gz] : [0, 1, 0];
+          if (cl) { y = cl.y + 0.003; n = cl.n; }
+          else if (field && field.tb) {
+            // no cloth anywhere under it (the neck opening, just past a collar edge): it falls on through, out of
+            // sight, never resting in the air
+            K.state[i] = 1;
+            K.through[i] = 1;
+            vx = (Rng.next() - 0.5) * 0.2; vz = (Rng.next() - 0.5) * 0.2; vy = -0.2;
+            K.pos[o] = x; K.pos[o + 1] = y; K.pos[o + 2] = z; K.vel[o] = vx; K.vel[o + 1] = vy; K.vel[o + 2] = vz;
+            moving++;
+            continue;
+          }
+          const nl2 = n[0] * n[0] + n[1] * n[1] + n[2] * n[2];
+          const d = [K.dir[o], K.dir[o + 1], K.dir[o + 2]], dn = (d[0] * n[0] + d[1] * n[1] + d[2] * n[2]) / nl2;
+          d[0] -= dn * n[0]; d[1] -= dn * n[1]; d[2] -= dn * n[2];
+          const l = Math.hypot(d[0], d[1], d[2]) || 1;
+          K.dir[o] = d[0] / l; K.dir[o + 1] = d[1] / l; K.dir[o + 2] = d[2] / l;
         }
       }
-      if (y < -4 || (!K.swept[i] && now - K.born[i] > 20000)) { K.state[i] = 3; vx = vy = vz = 0; if (y < -4) K.len[i] = 0; }
+      if (y < -4) { K.state[i] = 3; vx = vy = vz = 0; K.len[i] = 0; }
+      // a piece still moving long after it was cut has fallen away out of sight: stop it (never mid-air on show)
+      else if (!K.swept[i] && now - K.born[i] > 20000 && K.state[i] !== 3) { K.state[i] = 3; vx = vy = vz = 0; K.len[i] = 0; }
+      }
       K.pos[o] = x; K.pos[o + 1] = y; K.pos[o + 2] = z;
       K.vel[o] = vx; K.vel[o + 1] = vy; K.vel[o + 2] = vz;
       if (K.state[i] !== 3) moving++;
