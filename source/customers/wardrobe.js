@@ -205,6 +205,22 @@
   }
   // a rewarded video in the last minute: the next interstitial is skipped
   HSC.watchVideo = watchVideo;
+  // for progress.js (Android): award a design outright (the unlock bar, the calendar chest), wear it, draw it
+  HSC.wardrobeApi = {
+    owns: (key) => owns(key),
+    picture: (d, size) => picture(d, size),
+    todays: () => { const p = picks(); return [p.clipper, p.gown]; },
+    wear: (key) => { const d = C().byKey.get(key); if (d && owns(key)) equip(d.tool, d.id); },
+    award(key, via) {
+      const d = C().byKey.get(key);
+      if (!d || owns(key)) return false;
+      setOwned(key);
+      W.data.recent = W.data.recent.filter((k) => k !== key).concat(key);
+      track('rewards_unlock', { item: key, via });
+      save();
+      return true;
+    },
+  };
   HSC.nope = (el) => { el.classList.remove('hsc-nope'); void el.offsetWidth; el.classList.add('hsc-nope'); setTimeout(() => el.classList.remove('hsc-nope'), 500); };
   HSC.canVideo = canVideo;
   HSC.recentReward = () => !!HSC.lastRewardAt && Date.now() - HSC.lastRewardAt < 60000;
