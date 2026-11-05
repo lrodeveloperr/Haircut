@@ -15,6 +15,8 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.view.View;
 
 import androidx.activity.ComponentActivity;
 import androidx.activity.OnBackPressedCallback;
@@ -44,6 +46,7 @@ public class MainActivity extends ComponentActivity {
     private static final long SPLASH_MAX_MS = 6000;
 
     private WebView web;
+    private FrameLayout bannerSlot;
     private ReviewController reviews;
     private AdsController ads;
     private HostBridge host;
@@ -69,9 +72,24 @@ public class MainActivity extends ComponentActivity {
             return WindowInsetsCompat.CONSUMED;
         });
 
+        // The game on top; below it a reserved banner strip: a 16dp gap that takes and ignores every touch (so a tap
+        // meant for the game's bottom controls can never land on the ad), then the adaptive banner at a fixed height
+        // that never changes while an ad loads, fails or refreshes.
+        LinearLayout column = new LinearLayout(this);
+        column.setOrientation(LinearLayout.VERTICAL);
         web = new WebView(this);
         web.setBackgroundColor(Color.parseColor("#2b1e17"));
-        root.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        column.addView(web, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        View gap = new View(this);
+        gap.setBackgroundColor(Color.parseColor("#1e1510"));
+        gap.setClickable(true);
+        gap.setOnTouchListener((v, e) -> true);
+        gap.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        column.addView(gap, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Math.round(16 * getResources().getDisplayMetrics().density)));
+        bannerSlot = new FrameLayout(this);
+        bannerSlot.setBackgroundColor(Color.parseColor("#1e1510"));
+        column.addView(bannerSlot, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0));
+        root.addView(column, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
         hideSystemBars();
 
@@ -108,7 +126,7 @@ public class MainActivity extends ComponentActivity {
             }
         });
 
-        ads = new AdsController(this, web);
+        ads = new AdsController(this, web, bannerSlot);
         reviews = new ReviewController(this, web, ads);
         host = new HostBridge(this, ads, reviews, web);
         web.addJavascriptInterface(host, "AndroidHost");

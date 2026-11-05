@@ -18,6 +18,7 @@ val productionAds = Properties().apply {
 val testAppId = "ca-app-pub-3940256099942544~3347511713"
 val testRewardedId = "ca-app-pub-3940256099942544/5224354917"
 val testInterstitialId = "ca-app-pub-3940256099942544/1033173712"
+val testBannerId = "ca-app-pub-3940256099942544/9214589741" // Google's adaptive banner test unit
 
 android {
     namespace = "com.worksbien.barbersimulatorasmr"
@@ -48,6 +49,7 @@ android {
             manifestPlaceholders["admobAppId"] = testAppId
             buildConfigField("String", "ADMOB_REWARDED_ID", "\"$testRewardedId\"")
             buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"$testInterstitialId\"")
+            buildConfigField("String", "ADMOB_BANNER_ID", "\"$testBannerId\"")
         }
         release {
             isMinifyEnabled = true
@@ -56,6 +58,7 @@ android {
             manifestPlaceholders["admobAppId"] = productionAds.getProperty("admobAppId", "")
             buildConfigField("String", "ADMOB_REWARDED_ID", "\"${productionAds.getProperty("admobRewardedId", "")}\"")
             buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"${productionAds.getProperty("admobInterstitialId", "")}\"")
+            buildConfigField("String", "ADMOB_BANNER_ID", "\"${productionAds.getProperty("admobBannerId", "")}\"")
             signingConfigs.findByName("upload")?.let { signingConfig = it }
         }
     }
@@ -109,10 +112,11 @@ gradle.taskGraph.whenReady {
             "admobAppId" to Regex("ca-app-pub-$publisher~[0-9]{10}"),
             "admobRewardedId" to Regex("ca-app-pub-$publisher/[0-9]{10}"),
             "admobInterstitialId" to Regex("ca-app-pub-$publisher/[0-9]{10}"),
+            "admobBannerId" to Regex("ca-app-pub-$publisher/[0-9]{10}"),
         )
         if (expected.any { (key, format) -> !format.matches(productionAds.getProperty(key, "")) }
-                || listOf("admobRewardedId", "admobInterstitialId").map { productionAds.getProperty(it) }.distinct().size != 2) {
-            throw GradleException("Release tasks require this publisher's distinct production rewarded/interstitial IDs and app ID in android/native/admob-production.properties; test IDs are forbidden")
+                || listOf("admobRewardedId", "admobInterstitialId", "admobBannerId").map { productionAds.getProperty(it) }.distinct().size != 3) {
+            throw GradleException("Release tasks require this publisher's distinct production rewarded/interstitial/banner IDs and app ID in android/native/admob-production.properties; test IDs are forbidden")
         }
     }
 }

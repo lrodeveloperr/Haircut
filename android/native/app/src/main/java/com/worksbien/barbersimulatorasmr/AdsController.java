@@ -1,6 +1,10 @@
 package com.worksbien.barbersimulatorasmr;
 
 import android.app.Activity;
+import android.util.DisplayMetrics;
+import android.view.Gravity;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.os.Handler;
 import android.os.Looper;
 import android.webkit.WebView;
@@ -8,7 +12,10 @@ import android.webkit.WebView;
 import androidx.annotation.NonNull;
 
 import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdSize;
+import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
@@ -33,6 +40,9 @@ final class AdsController {
 
     private final Activity activity;
     private final WebView web;
+    private final FrameLayout bannerSlot;
+    private AdView banner;
+    private int bannerWidthDp = -1;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private ConsentInformation consent;
@@ -52,9 +62,43 @@ final class AdsController {
         }
     };
 
-    AdsController(Activity activity, WebView web) {
+    AdsController(Activity activity, WebView web, FrameLayout bannerSlot) {
         this.activity = activity;
         this.web = web;
+        this.bannerSlot = bannerSlot;
+        // the strip is sized for the adaptive banner straight away (and on every width change), before any ad loads
+        bannerSlot.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> { if (r - l != or - ol) ui.post(this::sizeBanner); });
+        ui.post(this::sizeBanner);
+    }
+
+    // ---- the bottom banner: an anchored adaptive banner in a strip of fixed height; AdMob refreshes it on the
+    // ad unit's refresh rate (set in the AdMob console). Nothing is requested before consent allows it. ----
+    private AdSize bannerSize() {
+        DisplayMetrics m = activity.getResources().getDisplayMetrics();
+        int widthPx = bannerSlot.getWidth() > 0 ? bannerSlot.getWidth() : m.widthPixels;
+        return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(activity, Math.max(320, Math.round(widthPx / m.density)));
+    }
+    private void sizeBanner() {
+        if (destroyed) return;
+        AdSize size = bannerSize();
+        ViewGroup.LayoutParams lp = bannerSlot.getLayoutParams();
+        int h = size.getHeightInPixels(activity);
+        if (lp != null && lp.height != h) { lp.height = h; bannerSlot.setLayoutParams(lp); }
+        if (sdkReady && size.getWidth() != bannerWidthDp) loadBanner();
+    }
+    private void loadBanner() {
+        if (destroyed || !sdkReady || !canRequestAds() || BuildConfig.ADMOB_BANNER_ID.isEmpty()) return;
+        AdSize size = bannerSize();
+        if (banner != null) { bannerSlot.removeView(banner); banner.destroy(); banner = null; }
+        bannerWidthDp = size.getWidth();
+        banner = new AdView(activity);
+        banner.setAdUnitId(BuildConfig.ADMOB_BANNER_ID);
+        banner.setAdSize(size);
+        banner.setAdListener(new AdListener() {
+            @Override public void onAdFailedToLoad(@NonNull LoadAdError error) { /* the strip keeps its height; AdMob retries on refresh */ }
+        });
+        bannerSlot.addView(banner, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+        banner.loadAd(new AdRequest.Builder().build());
     }
 
     void start() {
@@ -89,13 +133,14 @@ final class AdsController {
         rewarded = null;
         interstitial = null;
         loadingRewarded = loadingInterstitial = false;
+        if (banner != null) { bannerSlot.removeView(banner); banner.destroy(); banner = null; bannerWidthDp = -1; }
         UserMessagingPlatform.showPrivacyOptionsForm(activity, formError -> {
             if (destroyed) return;
             privacyOptionsShowing = false;
             publishPrivacyOptions();
             if (!canRequestAds()) return;
             if (initialized.get()) {
-                loadRewarded(); loadInterstitial();
+                loadRewarded(); loadInterstitial(); loadBanner();
             } else initAds();
         });
     }
@@ -111,6 +156,7 @@ final class AdsController {
             sdkReady = true;
             loadRewarded();
             loadInterstitial();
+            loadBanner();
         }))).start();
     }
 
@@ -230,9 +276,10 @@ final class AdsController {
         return privacyOptionsShowing || rewardedWanted || interstitialWanted || showing;
     }
 
-    void resume() {}
+    void resume() { if (banner != null) banner.resume(); }
 
     void pause() {
+        if (banner != null) banner.pause();
         if (interstitialWanted && !showing) {
             interstitialWanted = false;
             ui.removeCallbacks(interstitialTimeout);
@@ -254,6 +301,7 @@ final class AdsController {
 
     void destroy() {
         destroyed = true;
+        if (banner != null) { banner.destroy(); banner = null; }
         ui.removeCallbacksAndMessages(null);
     }
 }

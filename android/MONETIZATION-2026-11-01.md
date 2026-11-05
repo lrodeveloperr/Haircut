@@ -22,6 +22,14 @@ The game area will be shorter by the reserved banner strip. Players finishing on
 
 The existing version 1.0.12 (13) was submitted for review earlier today. Prepare and verify a separate next-version candidate; this request does not require discarding that release or submitting another production rollout. Record exact verification and remaining mediation requirements before delivery.
 
+## Banner implementation (5 November 2026)
+
+- `MainActivity`: the WebView sits in a vertical column above a 16dp gap view that consumes every touch, then a banner slot. The slot is sized to the anchored adaptive banner's height for the current width before any ad loads, and keeps that height on no fill, failure and refresh. The system/cutout insets on the root are unchanged.
+- `AdsController`: an `AdView` loads only after UMP allows ads and the SDK is initialized. It reloads when the width changes (rotation, folding, resize) and is torn down when consent changes. It pauses, resumes and is destroyed with the activity. Refresh follows the ad unit's refresh rate in the AdMob console.
+- `build.gradle.kts`: debug uses Google's adaptive-banner test unit `ca-app-pub-3940256099942544/9214589741`. Release reads `admobBannerId` from `admob-production.properties`, and release tasks now require three distinct production unit IDs: rewarded, interstitial and banner.
+
 ## Verification
 
-Pending implementation, debug-ad verification and candidate build.
+- Local: `compileDebugJavaWithJavac`, `testDebugUnitTest` and `lintDebug` pass with 0 lint errors.
+- Not done: the local emulator did not finish booting (cold boot timed out with both software and host GPU), so the banner has not been seen on a device. The `Android APK` workflow (`workflow_dispatch`) or a physical-device test should confirm placement and no-fill height on phone and tablet before a candidate build.
+- Live ads were not requested.
