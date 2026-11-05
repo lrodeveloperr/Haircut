@@ -116,6 +116,9 @@
     const n = a >= 0.999 ? i : Math.max(0, Math.min(1, (i - a) / (1 - a)));
     return n >= 0.85 ? 3 : n >= 0.6 ? 2 : 1;
   }
+  // the services a customer asks for on a job (services.js), kept for the job
+  const wantCache = { job: null, list: [] };
+  function wanted(s) { if (wantCache.job !== s.jobId) { wantCache.job = s.jobId; wantCache.list = HSC.servicesWanted && s.look && s.look.person && !s.look.person.first ? HSC.servicesWanted(s.look.person, s.jobId) : []; } return wantCache.list; }
   const tipsFor = (p, stars) => (stars ? (10 + 5 * stars + (p && p.regular ? 5 : 0)) * (p && p.vip ? 2 : 1) : 0);
 
   // ---- coins ----
@@ -140,7 +143,8 @@
     if (!d || !s) return;
     const stars = starsFor(s), p = s.look && s.look.person;
     const last = d.lastRound && d.lastRound.job === s.jobId ? d.lastRound : null;
-    const tips = tipsFor(p, stars);
+    const svc = HSC.serviceTips ? HSC.serviceTips(s.jobId, wanted(s)) : { coins: 0, done: [] };
+    const tips = tipsFor(p, stars) + (stars ? svc.coins : 0);
     if (!last) {
       d.lastRound = { job: s.jobId, stars, tips, paid: tips, tripled: false };
       addCoins(tips);
@@ -150,6 +154,7 @@
       addCoins(Math.max(0, extra) * (last.tripled ? 3 : 1));
     }
     d.lastRound.shownStars = stars;
+    ui.svcDone = svc.done;
     ui.round = { job: s.jobId, stars };
     M().save();
   }
@@ -194,7 +199,7 @@
     if (!g || e.button > 0) return;
     const s = g.getState();
     if (s.status !== 'cutting') return;
-    undo.snap = { job: s.jobId, hair: s.hair, beard: s.beard };
+    undo.snap = { job: s.jobId, hair: s.hair, beard: s.beard, brow: s.brow };
   }
   function onUp() {
     const g = G(), snap = undo.snap;
@@ -202,9 +207,9 @@
     if (!g || !snap) return;
     const s = g.getState();
     if (s.status !== 'cutting' || s.jobId !== snap.job) return;
-    if (s.hair !== snap.hair || s.beard !== snap.beard) {
+    if (s.hair !== snap.hair || s.beard !== snap.beard || s.brow !== snap.brow) {
       if (undo.job !== s.jobId) { undo.job = s.jobId; undo.stack = []; }
-      undo.stack.push({ hair: snap.hair, beard: snap.beard });
+      undo.stack.push({ hair: snap.hair, beard: snap.beard, brow: snap.brow });
       if (undo.stack.length > 20) undo.stack.shift();
       ui.undoButton();
     }
@@ -222,7 +227,7 @@
         const prev = undo.stack.pop();
         // the game can stay paused for a moment after the video: retry until it takes the restore
         let back = false;
-        for (let k = 0; k < 40 && !back; k++) { back = g.restore ? await g.restore(prev.hair, prev.beard) : false; if (!back) await new Promise((r) => setTimeout(r, 150)); }
+        for (let k = 0; k < 40 && !back; k++) { back = g.restore ? await g.restore(prev.hair, prev.beard, prev.brow) : false; if (!back) await new Promise((r) => setTimeout(r, 150)); }
         if (!back) undo.stack.push(prev);
       } else if (!ok) HSC.nope && HSC.nope(ui.el.undo);
     } finally {
@@ -255,6 +260,13 @@
 #hsc-req,#hsc-undo,#hsc-score{zoom:var(--hsc-s,1);font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color:${INK};-webkit-user-select:none;user-select:none}
 #hsc-req{position:fixed;z-index:20;top:calc(env(safe-area-inset-top) + 72px);left:50%;transform:translateX(-50%);pointer-events:auto;cursor:pointer;
   display:flex;gap:4px;padding:6px;border-radius:22px;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};transition:transform .25s}
+#hsc-req .svc{position:absolute;left:50%;bottom:-20px;transform:translateX(-50%);display:flex;gap:4px}
+#hsc-req .svc span{width:34px;height:34px;border-radius:50%;background:#fff6e6;border:2.5px solid #2a1d15;display:flex;align-items:center;justify-content:center}
+#hsc-req .svc span svg{width:24px;height:24px}
+#hsc-req .svc span.ok{background:#d8efd0}
+#hsc-score .svc{display:flex;gap:6px}
+#hsc-score .svc span{width:40px;height:40px;border-radius:50%;background:#fff6e6;border:3px solid #2a1d15;display:flex;align-items:center;justify-content:center}
+#hsc-score .svc span svg{width:28px;height:28px}
 #hsc-req img{width:66px;height:66px;border-radius:15px;display:block;background:radial-gradient(circle at 50% 35%,#fff,#e4d2b4)}
 #hsc-req::after,#hsc-req::before{content:"";position:absolute;border-radius:50%;background:#fff6e6;border:3px solid ${INK}}
 #hsc-req::after{width:14px;height:14px;left:calc(50% - 6px);bottom:-24px}
@@ -292,14 +304,14 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
       this.built = true;
       const style = document.createElement('style'); style.textContent = CSS; document.head.appendChild(style);
       const reqEl = document.createElement('div'); reqEl.id = 'hsc-req'; reqEl.hidden = true; reqEl.setAttribute('aria-hidden', 'true');
-      reqEl.innerHTML = '<img alt=""><img alt="">';
+      reqEl.innerHTML = '<img alt=""><img alt=""><div class="svc"></div>';
       reqEl.addEventListener('click', () => { reqEl.classList.toggle('big'); clearTimeout(this.bigT); if (reqEl.classList.contains('big')) this.bigT = setTimeout(() => reqEl.classList.remove('big'), 2600); });
       const undoEl = document.createElement('button'); undoEl.id = 'hsc-undo'; undoEl.type = 'button'; undoEl.hidden = true;
       undoEl.setAttribute('aria-label', 'Watch a video to undo the last stroke');
       undoEl.innerHTML = `${UNDO}<span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}</span>`;
       undoEl.addEventListener('click', doUndo);
       const score = document.createElement('div'); score.id = 'hsc-score'; score.hidden = true;
-      score.innerHTML = `<div class="stars"></div><div class="row"><div class="tip">${COIN(28)}<span></span></div>
+      score.innerHTML = `<div class="stars"></div><div class="svc"></div><div class="row"><div class="tip">${COIN(28)}<span></span></div>
         <button class="x3" type="button" aria-label="Watch a video to triple the tips">${COIN(30)}<span>×3</span><span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}</span></button></div>`;
       score.querySelector('.x3').addEventListener('click', triple);
       document.body.append(reqEl, undoEl, score);
@@ -371,10 +383,16 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
         if (!a || !b) { el.hidden = true; this.reqKey = null; return; }
         const imgs = el.querySelectorAll('img');
         imgs[0].src = a; imgs[1].src = b;
+        // the services he asks for, under the cut
+        const want = wanted(s);
+        el.querySelector('.svc').innerHTML = want.map((k) => `<span data-k="${k}">${(HSC.SERVICE_ICON || {})[k] || ''}</span>`).join('');
         el.hidden = false;
         el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
         el.classList.add('big'); clearTimeout(this.bigT); this.bigT = setTimeout(() => el.classList.remove('big'), 2600);
       } else el.hidden = false;
+      // services already done get a tick colour
+      const done = HSC.servicesDone ? HSC.servicesDone(s.jobId) : [];
+      el.querySelectorAll('.svc span').forEach((sp) => sp.classList.toggle('ok', done.includes(sp.dataset.k)));
       // just below the top buttons (the coins and streak sit in that row)
       const row = document.querySelector('#hsc-hud .hsc-row'), top = document.querySelector('.ui .top'), S = HSC.S || 1;
       const b = Math.max(row ? row.getBoundingClientRect().bottom : 0, top ? top.getBoundingClientRect().bottom : 0);
@@ -392,6 +410,8 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
         this.el.stars.innerHTML = [1, 2, 3].map((n) => STAR(n <= stars)).join('');
       }
       this.el.tip.textContent = '+' + last.paid * (last.tripled ? 3 : 1);
+      const sv = this.el.score.querySelector('.svc'), key2 = (this.svcDone || []).join();
+      if (sv.dataset.k !== key2) { sv.dataset.k = key2; sv.innerHTML = (this.svcDone || []).map((k) => `<span>${(HSC.SERVICE_ICON || {})[k] || ''}</span>`).join(''); }
       const canX = !last.tripled && last.paid > 0 && !!(HSC.canVideo && HSC.canVideo());
       this.el.x3.hidden = !canX && !last.tripled;
       this.el.x3.disabled = !canX;

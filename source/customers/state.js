@@ -113,6 +113,10 @@
       person = HSC.debugOverride;
     }
     let beard = s.beard, startBeard = s.startBeard;
+    // Android: the brows start full for every new customer (and after a replay)
+    const BN = HSC.BROW_N, okBrow = (a) => !BN || (Array.isArray(a) && a.length === BN && a.every((v) => v === 0 || v === 1 || v === 2));
+    let brow = s.brow;
+    if (BN && (fresh || forced || !okBrow(brow))) brow = new Array(BN).fill(2);
     if (fresh || forced || !okBeard(beard) || !okBeard(startBeard) || beard.some((v, i) => v > startBeard[i])) {
       const reg = fresh && !forced ? regularOf(s, person) : null;
       startBeard = reg ? reg.beard : HSC.beardStartFor(person);
@@ -121,20 +125,62 @@
       checked.add(beard);
     }
     const w = fresh ? walkIn(s, person) : null;
-    if (!w && !fresh && !forced && beard === s.beard && startBeard === s.startBeard && s.look.colour === person.hair.colour) return s;
+    if (HSC.setBrow) HSC.setBrow(BN ? brow : null);
+    if (!w && !fresh && !forced && beard === s.beard && startBeard === s.startBeard && brow === s.brow && s.look.colour === person.hair.colour) return s;
     const look = Object.assign({}, s.look, { person, colour: person.hair.colour }, w ? { profile: w.profile } : null);
-    const out = Object.assign({}, s, { look, beard, startBeard });
+    const out = Object.assign({}, s, { look, beard, startBeard }, BN ? { brow } : null);
     if (w) Object.assign(out, { hair: w.hair, startHair: w.startHair, recentLooks: w.recentLooks });
     return out;
+  };
+
+  // Android: a stroke on a brow. The razor, the trimmer and the clipper on guard 0 shave it (a slit, a clean arch);
+  // the scissors, the beard trimmer and a clipper guard trim it short (thinner and lighter). Cells: 2 full, 1 short, 0 shaved.
+  HSC.cutBrow = function (s, points) {
+    const none = { state: s, changed: false, changedCells: 0, removedLength: 0, intensity: 0 };
+    const cells = HSC.browCells && HSC.browCells();
+    if (!s || s.status !== 'cutting' || s.interactionMode !== 'cut' || !cells || !Array.isArray(s.brow) || !Array.isArray(points)) return none;
+    const tool = HSC.tool ? HSC.tool() : 'clipper';
+    if (HSC.isRitual && HSC.isRitual()) return none;
+    const to = tool === 'razor' || tool === 'trimmer' || (tool === 'clipper' && s.selectedGuard === 0) ? 0 : 1;
+    // on a brow a barber works with the blade's corner: a razor or trimmer slit is 2-3 mm wide. Brows face forward,
+    // so the stroke is a brush of that width along the drag, in the brow grid's own x / y (cells are about 1 mm)
+    const R = { razor: 0.03, trimmer: 0.04, scissors: 0.11, beard: 0.09, clipper: 0.14 }[tool] || 0.14;
+    const next = s.brow.slice();
+    let n = 0;
+    const xy = (p) => (Number.isFinite(p.u) && Number.isFinite(p.v) ? [(p.u < 0.5 ? -1 : 1) * (0.2 + Math.abs(p.u - 0.5) * 2), 1.7 + p.v * 0.6] : null);
+    const pts = points.map(xy).filter(Boolean);
+    if (!pts.length) return none;
+    const segs = pts.length === 1 ? [[pts[0], pts[0]]] : pts.slice(1).map((b, i) => [pts[i], b]);
+    for (const [a, b] of segs) {
+      // a stroke never jumps from one brow to the other
+      if (Math.sign(a[0]) !== Math.sign(b[0])) continue;
+      const x0 = Math.min(a[0], b[0]) - R, x1 = Math.max(a[0], b[0]) + R, y0 = Math.min(a[1], b[1]) - R, y1 = Math.max(a[1], b[1]) + R;
+      const dx = b[0] - a[0], dy = b[1] - a[1], ll = dx * dx + dy * dy || 1e-9;
+      for (let row = Math.max(0, Math.floor((y0 - 1.7) / 0.6 * 32)); row <= Math.min(31, Math.floor((y1 - 1.7) / 0.6 * 32)); row++) {
+        const cy = 1.7 + (row + 0.5) / 32 * 0.6;
+        for (let col = 0; col < 128; col++) {
+          const u = (col + 0.5) / 128, cx = (u < 0.5 ? -1 : 1) * (0.2 + Math.abs(u - 0.5) * 2);
+          if (cx < x0 || cx > x1) continue;
+          const t = Math.max(0, Math.min(1, ((cx - a[0]) * dx + (cy - a[1]) * dy) / ll));
+          if (Math.hypot(cx - a[0] - dx * t, cy - a[1] - dy * t) > R) continue;
+          const c = row * 128 + col;
+          if (next[c] > to) { next[c] = to; n++; }
+        }
+      }
+    }
+    if (!n) return none;
+    HSC.setBrow && HSC.setBrow(next);
+    return { state: Object.assign({}, s, { brow: next, cutStrokeCount: s.cutStrokeCount + 1 }), changed: true, changedCells: n, removedLength: n * 0.4, intensity: Math.min(1, n / 60) };
   };
 
   // a clipper stroke on the beard: every cell under the blade is cut down to the guard length
   HSC.cutBeard = function (s, points, surface) {
     const none = { state: s, changed: false, changedCells: 0, removedLength: 0, intensity: 0 };
     if (!s || s.status !== 'cutting' || s.interactionMode !== 'cut' || !surface || !Array.isArray(points) || !points.length) return none;
-    const guard = HSC.GUARD_LEVEL[s.selectedGuard];
+    // Android tools (tools.js) may set their own beard length and blade width
+    const guard = HSC.toolBeard ? HSC.toolBeard(s.selectedGuard) : HSC.GUARD_LEVEL[s.selectedGuard];
     if (guard == null || !okBeard(s.beard)) return none;
-    const BLADE_W = 0.56, BLADE_D = 0.1;
+    const BLADE_W = HSC.bladeWidth ? HSC.bladeWidth() : 0.56, BLADE_D = 0.1;
     // walk from the previous blade position to the current one in small steps
     const steps = [];
     const valid = points.filter((p) => p && Array.isArray(p.position) && Array.isArray(p.normal));

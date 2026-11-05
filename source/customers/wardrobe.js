@@ -69,6 +69,7 @@
 
   // ---------------- 3D ----------------
   HSC.attachClipper = function (group) {
+    HSC.clipperGroup = group; // tools.js (Android) adds its tools to the same hand
     // the game's clipper model; tell its parts apart by their original colours
     const parts = { body: new Set(), accent: new Set(), light: new Set(), dark: new Set() };
     const hex = (m) => (m && m.color ? m.color.getHexString() : '');

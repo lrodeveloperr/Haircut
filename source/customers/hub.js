@@ -26,13 +26,14 @@
     try {
       HSC.setPerson(person);
       HSC.setBeard(reg ? reg.beard : HSC.beardStartFor(person));
+      if (HSC.setBrow) HSC.setBrow(null); // the next customer has full brows
       // their own hair colour (the game sets it only for the customer in the chair)
       if (v.setAppearance) v.setAppearance(person.hair.colour);
       url = v.thumbnail(reg ? reg.hair : W.build(prof), 160, 4, { size: 240, headOnly: true });
     } catch (e) {
       console.error('customers: snapshot failed', e);
     } finally {
-      try { HSC.setPerson(s.look.person); HSC.setBeard(s.beard); if (v.setAppearance) v.setAppearance(s.look.colour != null ? s.look.colour : 1); } catch (e) {}
+      try { HSC.setPerson(s.look.person); HSC.setBeard(s.beard); if (HSC.setBrow) HSC.setBrow(s.brow || null); if (v.setAppearance) v.setAppearance(s.look.colour != null ? s.look.colour : 1); } catch (e) {}
       HSC.snapshotting = false;
     }
     if (url) shots.set(key, url);

@@ -34,6 +34,7 @@
   HSC.attach = function (c) {
     try {
       ctx = c;
+      HSC.ctx = c; // turkish.js adds its tools and effects to the same head
       const T = c.T, Pt = c.Pt;
       const P = Pt.attributes.position.array;
       st.base = Float32Array.from(P);
@@ -68,6 +69,17 @@
       tex.needsUpdate = true;
       st.beardTex = tex;
       HSC.U.uBeard.value = tex;
+      // Android: the brows' trim mask (128 x 32 over both brows), and each cell's place on the brow skin
+      if (HSC.U.uBrowMask) {
+        st.browData = new Uint8Array(BROW_N).fill(255);
+        const bt = new T.uu(st.browData, 128, 32, T.Jn, T.cr);
+        bt.minFilter = bt.magFilter = T.or; bt.needsUpdate = true;
+        st.browTex = bt; HSC.U.uBrowMask.value = bt;
+        // the shaving lather, on the beard grid
+        st.foamData = new Uint8Array(8192); const ft = new T.uu(st.foamData, 128, 64, T.Jn, T.cr); ft.minFilter = ft.magFilter = T.or; ft.needsUpdate = true; st.foamTex = ft; HSC.U.uFoam.value = ft;
+        st.browCells = browCells(st.base);
+        try { st.browMesh = makeBrowMesh(c); c.vt.add(st.browMesh); } catch (err) { console.error('customers: brow strands failed', err); }
+      }
 
       // beard surface + strands
       st.surface = model.surface;
@@ -485,6 +497,127 @@
     }
   }
 
+  // ---- eyebrows (Android): a 128 x 32 grid over both brows, x -1.2..1.2, y 1.7..2.3 (glsl.js browKeep) ----
+  const BROW_N = 128 * 32;
+  const browCell = (x, y) => {
+    const un = (Math.abs(x) - 0.2) / 1.0, v = (y - 1.7) / 0.6;
+    if (un < 0 || un > 1 || v < 0 || v > 1) return -1;
+    const u = x < 0 ? 0.5 - un * 0.5 : 0.5 + un * 0.5;
+    return Math.min(31, Math.floor(v * 32)) * 128 + Math.min(127, Math.floor(u * 128));
+  };
+  // each cell's point on the front of the (un-morphed) head
+  function browCells(B) {
+    const pos = new Float32Array(BROW_N * 3), has = new Uint8Array(BROW_N), best = new Float32Array(BROW_N).fill(1e9);
+    for (let v = 0; v < B.length / 3; v++) {
+      const x = B[v * 3], y = B[v * 3 + 1], z = B[v * 3 + 2];
+      if (z < 1.0) continue;
+      const c = browCell(x, y);
+      if (c < 0) continue;
+      // the cell centre, and the vertex closest to it
+      const col = c % 128, row = Math.floor(c / 128), u = (col + 0.5) / 128, vv = (row + 0.5) / 32;
+      const cx = (u < 0.5 ? -1 : 1) * (0.2 + Math.abs(u - 0.5) * 2), cy = 1.7 + vv * 0.6;
+      const d = Math.hypot(x - cx, y - cy);
+      if (d < best[c]) { best[c] = d; pos.set([cx, cy, z], c * 3); has[c] = 1; }
+    }
+    // cells no vertex fell in take their neighbour's depth
+    for (let pass = 0; pass < 4; pass++) for (let c = 0; c < BROW_N; c++) if (!has[c]) {
+      for (const n of [c - 1, c + 1, c - 128, c + 128]) if (n >= 0 && n < BROW_N && has[n] && Math.floor(n / 128) === Math.floor(c / 128) || (n === c - 128 || n === c + 128) && n >= 0 && n < BROW_N && has[n]) {
+        const col = c % 128, row = Math.floor(c / 128), u = (col + 0.5) / 128, vv = (row + 0.5) / 32;
+        pos.set([(u < 0.5 ? -1 : 1) * (0.2 + Math.abs(u - 0.5) * 2), 1.7 + vv * 0.6, pos[n * 3 + 2]], c * 3); has[c] = 2; break;
+      }
+    }
+    return { pos, has };
+  }
+  // the customer's brow shape at a point, as glsl.js browShape draws it
+  function browShapeAt(x, y, z) {
+    const U = HSC.U, B = U.uBrowB.value, A = U.uBrowA.value, ax = Math.abs(x);
+    const t = clamp((ax - 0.3) / 0.8, 0, 1), rs = smooth(0, 0.45, t), fl = smooth(0.45, 1, t);
+    const yb = 1.624 + 0.315 + B[0] * rs * (1 - 0.75 * fl) + B[1] * (t - 0.4);
+    let th = (0.14 + (0.058 - 0.14) * smooth(0.25, 1, t)) * (0.45 + 0.55 * smooth(0, 0.22, t)) * B[2];
+    th *= 1 - A[2] * smooth(0.55, 1, t);
+    const along = smooth(0.27, 0.36, ax) * (1 - smooth(1, 1.12, ax));
+    const across = 1 - smooth(0.3, 1, Math.abs(y - yb) / Math.max(th, 0.001));
+    return along * across * smooth(0.9, 1.5, z);
+  }
+  // brow strands: roots spread over the brow area of the un-morphed head (the shader grows only those inside the
+  // customer's own brow shape); kept on the morphed face like the beard roots
+  function makeBrowMesh(c) {
+    const T = c.T, B = st.base, I = c.Pt.index.array, tris = [], cum = [];
+    let area = 0;
+    for (let t = 0; t < I.length; t += 3) {
+      const a = I[t] * 3, b = I[t + 1] * 3, d = I[t + 2] * 3;
+      const cx = (B[a] + B[b] + B[d]) / 3, cy = (B[a + 1] + B[b + 1] + B[d + 1]) / 3, cz = (B[a + 2] + B[b + 2] + B[d + 2]) / 3;
+      if (cz < 1.05 || Math.abs(cx) < 0.24 || Math.abs(cx) > 1.16 || cy < 1.76 || cy > 2.28) continue;
+      const ux = B[b] - B[a], uy = B[b + 1] - B[a + 1], uz = B[b + 2] - B[a + 2], wx = B[d] - B[a], wy = B[d + 1] - B[a + 1], wz = B[d + 2] - B[a + 2];
+      const ar = 0.5 * Math.hypot(uy * wz - uz * wy, uz * wx - ux * wz, ux * wy - uy * wx);
+      if (ar <= 0) continue;
+      area += ar; tris.push(t); cum.push(area);
+    }
+    const n = 9000, R = HSC.rng(0xb20a5), tri = new Int32Array(n * 3), bary = new Float32Array(n * 3), base = new Float32Array(n * 3), seeds = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      let lo = 0, hi = cum.length - 1; const x = R.next() * area;
+      while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < x) lo = m + 1; else hi = m; }
+      const t = tris[lo], r1 = Math.sqrt(R.next()), r2 = R.next(), w = [1 - r1, r1 * (1 - r2), r1 * r2];
+      for (let j = 0; j < 3; j++) { tri[i * 3 + j] = I[t + j]; bary[i * 3 + j] = w[j]; }
+      for (let k = 0; k < 3; k++) base[i * 3 + k] = w[0] * B[I[t] * 3 + k] + w[1] * B[I[t + 1] * 3 + k] + w[2] * B[I[t + 2] * 3 + k];
+      seeds[i * 3] = R.next(); seeds[i * 3 + 1] = R.next(); seeds[i * 3 + 2] = R.next();
+    }
+    st.browRoots = { count: n, tri, bary };
+    const g = new T.af(), pos = [], idx = [], SEG = 5;
+    for (let s = 0; s <= SEG; s++) { pos.push(-1, s / SEG, 0, 1, s / SEG, 0); if (s < SEG) { const u = s * 2; idx.push(u, u + 1, u + 2, u + 1, u + 3, u + 2); } }
+    g.setAttribute('position', new T.mt(pos, 3)); g.setIndex(idx);
+    st.bRoot = new Float32Array(n * 3); st.bNormal = new Float32Array(n * 3);
+    g.setAttribute('aRoot', new T.Ra(st.bRoot, 3)); g.setAttribute('aNormal', new T.Ra(st.bNormal, 3));
+    g.setAttribute('aBase', new T.Ra(base, 3)); g.setAttribute('aSeed', new T.Ra(seeds, 3));
+    g.instanceCount = n;
+    const mat = new T.fr({ vertexShader: HSC.glsl.browVert(c.Ql), fragmentShader: HSC.glsl.browFrag(c.Ql),
+      uniforms: Object.assign({ uGrid: c.uGrid, uHairTint: c.uHairTint, uDensity: c.uDensity, uWidth: { value: 1 } }, c.light, HSC.U), side: T.$t });
+    const mesh = new T.Ze(g, mat);
+    mesh.frustumCulled = false; mesh.renderOrder = 1;
+    st.browGeo = g;
+    updateBrowRoots(st.base, st.N0);
+    return mesh;
+  }
+  function updateBrowRoots(P, N) {
+    const r = st.browRoots;
+    if (!r) return;
+    for (let i = 0; i < r.count; i++) {
+      let x = 0, y = 0, z = 0, nx = 0, ny = 0, nz = 0;
+      for (let j = 0; j < 3; j++) { const v = r.tri[i * 3 + j] * 3, w = r.bary[i * 3 + j]; x += P[v] * w; y += P[v + 1] * w; z += P[v + 2] * w; nx += N[v] * w; ny += N[v + 1] * w; nz += N[v + 2] * w; }
+      const l = Math.hypot(nx, ny, nz) || 1;
+      st.bRoot.set([x, y, z], i * 3); st.bNormal.set([nx / l, ny / l, nz / l], i * 3);
+    }
+    st.browGeo.attributes.aRoot.needsUpdate = true; st.browGeo.attributes.aNormal.needsUpdate = true;
+  }
+  // a head hit (morphed, coarse triangle) back on the un-morphed head: { p, tri } -> [x, y, z]
+  HSC.toBase = function (hit) {
+    if (!hit || !hit.tri || !st.coarse) return null;
+    const C = st.coarse.pos, B = st.coarseBase, [i0, i1, i2] = hit.tri.map((v) => v * 3), p = hit.p;
+    const v0 = [C[i1] - C[i0], C[i1 + 1] - C[i0 + 1], C[i1 + 2] - C[i0 + 2]], v1 = [C[i2] - C[i0], C[i2 + 1] - C[i0 + 1], C[i2 + 2] - C[i0 + 2]], v2 = [p[0] - C[i0], p[1] - C[i0 + 1], p[2] - C[i0 + 2]];
+    const d = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], d00 = d(v0, v0), d01 = d(v0, v1), d11 = d(v1, v1), d20 = d(v2, v0), d21 = d(v2, v1), den = d00 * d11 - d01 * d01 || 1;
+    const b = (d11 * d20 - d01 * d21) / den, c = (d00 * d21 - d01 * d20) / den, a = 1 - b - c;
+    return [0, 1, 2].map((k) => B[i0 + k] * a + B[i1 + k] * b + B[i2 + k] * c);
+  };
+  // the ear bowls (extras.js), for the ear hair and the flame
+  HSC.foam = { data: () => st.foamData, update: () => { if (st.foamTex) st.foamTex.needsUpdate = true; } };
+  HSC.earBowls = () => (st.extras ? st.extras.bowl : null);
+  HSC.BROW_N = BROW_N;
+  HSC.browCells = () => st.browCells;
+  // a clipper hit on a brow (un-morphed head coordinates), or null
+  HSC.browHit = function (x, y, z) {
+    if (!st.browCells || z < 1.0) return null;
+    const c = browCell(x, y);
+    if (c < 0 || browShapeAt(x, y, z) < 0.12) return null;
+    return { kind: 'brow', u: (c % 128 + 0.5) / 128, v: (Math.floor(c / 128) + 0.5) / 32 };
+  };
+  HSC.setBrow = function (levels) {
+    if (!st.browTex) return;
+    if (st.browLevels === levels) return;
+    st.browLevels = levels;
+    for (let c = 0; c < BROW_N; c++) st.browData[c] = levels && levels.length === BROW_N ? [0, 128, 255][levels[c]] : 255;
+    st.browTex.needsUpdate = true;
+  };
+
   // ---- face-shape morph (and head shape) applied to the smooth mesh and the coarse picking mesh ----
   function applyMorph(person) {
     const Pt = ctx.Pt;
@@ -560,6 +693,8 @@
     Pt.attributes.normal.needsUpdate = true;
     Pt.computeBoundingSphere();
     updateRoots(P, N);
+    if (st.browRoots) updateBrowRoots(P, N);
+    if (HSC.onMorph) try { HSC.onMorph(P, N, person); } catch (err) { console.error('customers: morph hook failed', err); }
     try { placeAccessories(person, P, N); } catch (err) { console.error('customers: accessories failed', err); }
     st.beardCells = HSC.beardCellPositions(st.surface, P);
     HSC.beardSurface = st.beardCells;
@@ -647,6 +782,16 @@
     U.uBeardTint.value = beardTint;
     U.uBeardDark.value = lerp(mul(mul([0.035, 0.024, 0.018], tint), beardTint), greyCol, person.beard.grey * 0.85);
     U.uBrowTint.value = lerp(mul([0.085, 0.055, 0.04], tint), [0.36, 0.35, 0.33], person.brow.grey);
+    if (U.uBrowHair) {
+      // phenotype leanings (photographic brow studies; mild): South Asian brows longer and denser, African brows a little
+      // less dense, East Asian brows straighter; older men grow a few long wiry hairs
+      const g = person.heritage, dens = { 'south-asian': 1.15, mena: 1.12, mediterranean: 1.05, 'west-african': 0.86, 'east-african': 0.86, mixed: 0.95 }[g] || 1;
+      const len = { 'south-asian': 1.12, mena: 1.08, 'west-african': 0.92, 'east-african': 0.92 }[g] || 1;
+      const wiry = 0.03 * smooth(50, 78, person.years);
+      U.uBrowHair.value = [person.brow.grey, clamp(person.brow.thick, 0.7, 1.4) * len, clamp(person.brow.thick, 0.75, 1.3) * dens, wiry];
+      // brows read a shade darker than light scalp hair
+      U.uBrowDark.value = [6, 7, 8, 12, 15].includes(person.hair.colour) ? 0.68 : [4, 5, 14].includes(person.hair.colour) ? 0.85 : 1;
+    }
     U.uBrowA.value = [person.brow.thick, clamp(0.9 + 0.15 * age, 0, 1.2), 0, 0];
     // how strongly shaved follicles show through: dark hair on light skin shows most, grey hair least
     const hairLum = 0.2126 * hairDark[0] + 0.7152 * hairDark[1] + 0.0722 * hairDark[2];
@@ -739,7 +884,7 @@
       const B = st.base;
       bx = B[a] * wa + B[b] * wb + B[c] * wc; by = B[a + 1] * wa + B[b + 1] * wb + B[c + 1] * wc; bz = B[a + 2] * wa + B[b + 2] * wb + B[c + 2] * wc;
     }
-    if (HSC.beardZone(bx, by, bz) < 0.2) return null;
+    if (HSC.beardZone(bx, by, bz) < 0.2) return HSC.browHit ? HSC.browHit(bx, by, bz) : null;
     const cell = HSC.beardCell(bx, by, bz);
     if (cell < 0 || !st.beardCells.has[cell]) return null;
     const [u, v] = HSC.beardUV(bx, by, bz);

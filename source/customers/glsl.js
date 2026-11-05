@@ -19,7 +19,12 @@
     uScar: { value: new Float32Array(8) },
     uTatA: { value: [0, 0, 0, 0] },
     uTatB: { value: [0, 0, 0, 0] },
-    uSmileA: { value: [0, 0, 0, 0] }, // smile lines: strength (nasolabial folds, crow's feet, under-eye bulge), -, -, -
+    uSmileA: { value: [0, 0, 0, 0] },
+    uBrowMask: { value: null },
+    uBrowHair: { value: [0, 1, 1, 0] }, // brow strands: grey fraction, length factor, density, share of long wiry hairs
+    uBrowDark: { value: 1 },
+    uFoam: { value: null },
+    uHairShine: { value: 0 }, // Android: styling product worked into the hair (pomade), 0..1 // Android: shaving lather on the beard grid (turkish.js), 0..1 // brow colour relative to the scalp hair (a little darker on light hair) // Android: what is left of the brows, 128 x 32 over both brows (1 full, .5 trimmed short, 0 shaved) // smile lines: strength (nasolabial folds, crow's feet, under-eye bulge), -, -, -
     uBeard: { value: null }, // beard length grid (mm / 50)
     uSkinA: { value: [0.66, 0.385, 0.3, 0] }, // base albedo, darkness 0..1
     uLip: { value: [1.06, 0.78, 0.93] }, // lip colour relative to skin
@@ -66,6 +71,8 @@
    occ=mix(1.0,occ,smoothstep(.06,.3,vLength));
    float tip=smoothstep(.05,.6,vAlong);
    vec3 nl=hb*light*occ*(1.0+2.2*lf)+(vec3(1.0,.9,.78)*s1+tintN*s2*(1.0-.5*vGrey))*tip*(.4+.6*occ)*(1.0+.5*lf)+vec3(1.0,.86,.66)*rim*tip*.7;
+   // styling product: a wetter, glossier look (darker body, stronger and sharper highlights)
+   nl=mix(nl,hb*light*occ*.82+(vec3(1.0,.95,.88)*s1*3.0+tintN*s2*1.6)*tip,uHairShine*.8);
    lit=mix(lit,nl,uHairQ.x);
   }`;
 
@@ -210,6 +217,14 @@ float beardZone(vec3 p){ return beardZoneS(p, 1.0); }
 
   // ---- Android skin details (extras.js); injected into the skin shader only when extras.js is in the build ----
   const EX_PRELUDE = `uniform vec4 uMole[3], uScar[2], uTatA, uTatB, uSmileA;
+uniform sampler2D uBrowMask, uFoam;
+// shaving lather: thick white foam with fine bubbles
+float foamAt(vec3 P){ return texture2D(uFoam, beardUV(P)).r * smoothstep(.05, .3, beardZoneS(P, 3.0)); }
+// both brows on one strip: x -1.2..1.2 (left brow on the left half), y 1.7..2.3
+float browKeep(vec3 P){
+  float un = clamp((abs(P.x) - .2) / 1.0, 0.0, 1.0);
+  return texture2D(uBrowMask, vec2(P.x < 0.0 ? .5 - un * .5 : .5 + un * .5, clamp((P.y - 1.7) / .6, 0.0, 1.0))).r;
+}
 float moleMask(vec3 P, vec4 m){
   float r = abs(m.w);
   if (r < .001) return 0.0;
@@ -438,8 +453,10 @@ float wrinkles(vec3 P, float age){
       // eyebrows
       float scarM = ${EX ? 'scarMask(P)' : '0.0'};
       float bm = browShape(P) * uBrowA.y * (1.0 - clamp(scarM * 1.6, 0.0, 1.0));
+      ${EX ? 'float bk = browKeep(P), bm0 = bm; bm *= smoothstep(.05, .45, bk) * mix(.5, 1.0, smoothstep(.55, .95, bk)) * .6; // the strands carry the brow; this is the roots under them' : ''}
       float browHair = .72 + .5 * n3(P * vec3(95.0, 230.0, 95.0));
       tone = mix(tone, uBrowTint * browHair, clamp(bm * 1.25, 0.0, .94));
+      ${EX ? '// a shaved part of a brow keeps a faint shadow of the roots\n      tone = mix(tone, tone * vec3(.86, .85, .88), bm0 * (1.0 - smoothstep(.05, .45, bk)) * .7);' : ''}
       // age spots on the sun-exposed upper face and scalp
       float sunlit = smoothstep(1.9, 2.6, P.y) * (smoothstep(1.2, 2.0, P.z) + smoothstep(3.0, 3.6, P.y)) + smoothstep(1.4, 1.75, aX) * smoothstep(1.3, 2.0, P.y) * .5;
       float spots = smoothstep(.76, .82, n3(P * 11.0 + 19.0)) * (.5 + .5 * n3(P * 37.0));
@@ -481,6 +498,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
       // even shadow of short stubble, fuller as it grows; only a soft, low-frequency variation
       float bcov = smoothstep(.1, 1.2, bmm) * mix(.72, .95, smoothstep(1.5, 5.0, bmm));
       tone = mix(tone, uBeardDark * (.85 + .3 * n3(P * 38.0)), bz * bcov * bedge * mix(.82 + .18 * n3(P * 14.0), 1.0, smoothstep(2.0, 6.0, bmm)));
+      ${EX ? 'float foamM = foamAt(P); if (foamM > .01) { float fb = .55 * n3(P * 70.0) + .45 * n3(P * 160.0); tone = mix(tone, vec3(.86, .87, .9) * (.82 + .3 * fb), smoothstep(.0, .5, foamM) * .97); }' : 'float foamM = 0.0;'}
       // scalp / fade skin
       float Lh = hairLen(P);
       float hm = hairMask(P);
@@ -523,7 +541,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
         float hb = skinBump(vObj) * (1.0 + .6 * age);
         hb -= .25 * (st + bzs) * fol * folAA;
         hb -= 1.6 * wr;
-        ${EX ? 'hb += 1.4 * moleB + .9 * acneM + 1.1 * razor + .35 * scarM;' : ''}
+        ${EX ? 'hb += 1.4 * moleB + .9 * acneM + 1.1 * razor + .35 * scarM + foamM * (2.2 * n3(vObj * 70.0) + 1.2 * n3(vObj * 150.0));' : ''}
         vec2 dh = vec2(dFdx(hb), dFdy(hb));
         vec3 q0 = dFdx(-vViewPosition), q1 = dFdy(-vViewPosition);
         vec3 R1 = cross(q1, normal), R2 = cross(normal, q0);
@@ -543,7 +561,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
  uniform vec3 uBeardTint;
  uniform float uLift;
  varying vec3 vTip,vTangent,vSeed;varying float vAlong,vEdge,vLength,vGrey;
- ${EXH() ? 'uniform vec4 uHairQ;varying vec3 vN;' : ''}
+ ${EXH() ? 'uniform vec4 uHairQ;uniform float uHairShine;varying vec3 vN;' : ''}
  void main(){
   if(vLength<.0001||vSeed.z>uDensity)discard;
   float edge=abs(vEdge),aa=max(fwidth(edge),.03);if(edge>1.0-aa*.25)discard;
@@ -663,7 +681,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
  uniform vec4 uBStyleA,uBStyleB,uBeardGrey,uBeardGreyB;
  uniform float uBeardLip;
  varying vec3 vTip,vTangent,vSeed;varying float vAlong,vEdge,vLength,vGrey;
- ${EXH() ? 'varying vec3 vN;' : ''}
+ ${EXH() ? 'varying vec3 vN;uniform sampler2D uFoam;' : ''}
  void main(){
   vec3 n=normalize(aNormal);
   vec3 B=aBase;float ax=abs(B.x);
@@ -673,6 +691,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
   float ptch=smoothstep(uBeardGrey.z-.15,uBeardGrey.z+.15,n3(B*3.4+aSeed.z*.3)+(1.0-cheekW)*.35);
   float keep=mix(1.0,ptch,uBeardGrey.z>.01?1.0:0.0)*areataKeep(B);
   float L=mm/42.0*(.82+.36*aSeed.x)*uBStyleB.z*keep;
+  ${EXH() ? 'L*=1.0-.9*texture2D(uFoam,beardUV(B)).r;' : ''}
   // growth direction: down the face; outward on the moustache; down the neck under the jaw
   vec3 down=vec3(0.0,-1.0,0.0);down-=n*dot(down,n);
   vec3 outw=vec3(sign(B.x),-.9,.0);outw-=n*dot(outw,n);
@@ -742,4 +761,53 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
   gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);
  }`;
   HSC.glsl.beardFrag = (t) => strandFrag(t, 'uHairTint*uBeardTint', 'uBeardGrey.y');
+  // Android: eyebrow hair as strands (render.js makeBrowMesh), trimmed through the brow mask like the beard grid.
+  // Brow hair grows upward at the inner end, outward along the brow and a little downward at the tail, and lies flat.
+  HSC.glsl.browVert = (t) => vertexPrelude(t, ['browShape', 'n3']) + `
+ attribute vec3 aRoot,aNormal,aSeed,aBase;
+ uniform vec3 cam;uniform float uWidth;uniform sampler2D uBrowMask;uniform vec4 uBrowHair,uBStyleB;
+ varying vec3 vTip,vTangent,vSeed;varying float vAlong,vEdge,vLength,vGrey;varying vec3 vN;
+ void main(){
+  vec3 n=normalize(aNormal),B=aBase;float ax=abs(B.x),sx=B.x<0.0?-1.0:1.0;
+  float sh=browShape(B);
+  float un=clamp((ax-.2)/1.0,0.0,1.0);
+  float k=texture2D(uBrowMask,vec2(B.x<0.0?.5-un*.5:.5+un*.5,clamp((B.y-1.7)/.6,0.0,1.0))).r;
+  float tb=clamp((ax-.3)/.8,0.0,1.0);
+  // full brow hair: about 5 mm at the inner end, 8 mm along the body, 5-6 mm at the tail; trimmed short about
+  // 2.5 mm; shaved, a 0.3 mm stubble
+  float full=mix(5.0,8.0,smoothstep(.0,.3,tb))*mix(1.0,.7,smoothstep(.6,1.0,tb))*(.75+.5*aSeed.x)*uBrowHair.y;
+  float mm=mix(mix(.3,2.5,smoothstep(.1,.5,k)),full,smoothstep(.55,.95,k));
+  // the tail is the sparsest part of a brow, with the finest hairs; density follows the customer
+  float tail=smoothstep(.62,1.0,tb);
+  float L=mm/42.0*smoothstep(.1,.35,sh)*step(aSeed.z,(.25+.75*smoothstep(.1,.6,sh))*uBrowHair.z*mix(1.0,.55,tail));
+  // older men: a few long, coarse, wiry hairs
+  float wiry=step(1.0-uBrowHair.w,fract(aSeed.x*17.3+aSeed.y*5.1))*smoothstep(.3,.55,k);
+  L*=1.0+.75*wiry;
+  vec3 up=vec3(0.0,1.0,0.0);up-=n*dot(up,n);up=normalize(up+vec3(.0001));
+  vec3 ou=vec3(sx,0.0,0.0);ou-=n*dot(ou,n);ou=normalize(ou+vec3(.0001));
+  vec3 body=normalize(ou+up*mix(.3,-.3,smoothstep(.45,1.0,tb))+vec3(.0001));
+  vec3 inner=normalize(up+ou*.45+vec3(.0001));
+  vec3 flow=normalize(mix(inner,body,smoothstep(.04,.28,tb))+vec3(.0001));
+  vec3 tA=normalize(cross(n,flow)+vec3(.0001));
+  float spin=(aSeed.y-.5)*(.5+.6*wiry);
+  flow=normalize(flow*cos(spin)+tA*sin(spin));tA=normalize(cross(n,flow)+vec3(.0001));
+  float lift=mix(mix(.55,.07,smoothstep(1.0,4.0,mm)),.2,wiry);
+  vec3 dir=normalize(n*lift+flow*(1.0-lift*.7));
+  float t=position.y;
+  vec3 curve=normalize(dir-n*.5*t*smoothstep(2.0,6.0,mm));
+  vec3 p=aRoot+n*.002+curve*(t*L);
+  // curly and coily hair types grow slightly curly brow hair (straight in straight-haired groups)
+  vec3 b2=normalize(cross(curve,tA)+vec3(.0001));
+  float ph=t*(1.2+uBStyleB.y*.35)*6.2831+aSeed.x*6.2831, cr=uBStyleB.x*.4*L*smoothstep(.0,.3,t)*(1.0-.6*wiry);
+  p+=(tA*cos(ph)+b2*sin(ph))*cr;
+  vec3 tang=normalize(curve*L+(-tA*sin(ph)+b2*cos(ph))*cr*6.2831+vec3(.00001));
+  vec3 view=normalize(cam-p),side=cross(tang,view);
+  if(dot(side,side)<.00001)side=cross(tang,vec3(0.0,1.0,.001));side=normalize(side);
+  float radius=.0044*uWidth*(.8+.4*aSeed.y)*mix(1.0,.25,pow(t,2.0))*mix(1.0,.72,tail)*(1.0+.35*wiry);
+  p+=side*position.x*radius;
+  vGrey=step(fract(aSeed.z*7.31+aSeed.x*3.17),uBrowHair.x);
+  vTip=p;vTangent=tang;vSeed=aSeed;vAlong=t;vEdge=position.x;vLength=L;vN=n;
+  gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);
+ }`;
+  HSC.glsl.browFrag = (t) => strandFrag(t, 'uHairTint*uBrowDark', 'uGreyA.z').replace(' uniform vec3 uHairTint;', ' uniform vec3 uHairTint;\n uniform float uBrowDark;');
 })(globalThis.HSC || (globalThis.HSC = {}));
