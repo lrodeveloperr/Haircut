@@ -15,6 +15,11 @@
 //
 // Customers sometimes ask for services (icons under the cut in their thought bubble); a service done pays tips,
 // more when it was asked for. Rituals cut nothing and never change the haircut's score.
+//
+// A service is done only when it really changed the customer (docs/TOOL-PHYSICS-AND-EFFECT-CONTRACT.md 7.2):
+// coverage is measured on unique cells of an eligible area frozen at the service's first touch, in basis points,
+// and an empty eligible area can never complete. The nose trimmer stays out of the tray until nose hair exists
+// as real state (section 7.2, anatomy contract section 3).
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
   'use strict';
@@ -23,9 +28,12 @@
   const G = () => globalThis.skinFadeStudio, M = () => HSC.meta;
   const SERVICES = {
     aftershave: { level: 1 }, towel: { level: 2 }, massage: { level: 3 }, talc: { level: 3 }, pomade: { level: 4 },
-    threading: { level: 4 }, singe: { level: 5 }, nose: { level: 5 }, lather: { level: 9 },
+    threading: { level: 4 }, singe: { level: 5 }, nose: { level: 5, off: true }, lather: { level: 9 },
   };
-  const S = { job: null, done: new Set(), ear: [0, 0], earLen: 0, foamCells: 0, foamPeak: 0, shine: 0, talc: 0, nose: 0, busy: null };
+  const S = { job: null, done: new Set(), ear: [0, 0], earLen: 0, foamCells: 0, foamPeak: 0, shine: 0, talc: 0, nose: 0, busy: null, att: {}, heat: 0, moist: 0 };
+  // the attempt of a service on this customer: its frozen eligible set and what has been covered
+  const att = (k) => S.att[k] || (S.att[k] = { elig: null, cov: new Set(), ms: { L: 0, R: 0, C: 0, all: 0 }, removed: 0, avail: -1, shaved: 0 });
+  const bp = (n, d) => (d > 0 ? Math.floor((10000 * n) / d) : 0); // basis points, integer
   HSC.servicesDone = (job) => (S.job === job ? [...S.done] : []);
 
   // ---------------- three.js classes (from the head, the skin and the clipper) ----------------
@@ -303,8 +311,9 @@
   // how much ear hair a customer has: none before about 35, growing with age (more in South Asian men)
   function earHairOf(p) {
     if (!p) return [0, 0];
-    const R = HSC.rng(((p.seed >>> 0) ^ 0xea7a17) >>> 0 || 1), k = p.heritage === 'south-asian' ? 1.3 : 1;
-    const has = R.next() < Math.min(0.85, HSC.smooth(35, 70, p.years) * 0.8 * k);
+    // by age only: service and grooming frequency never follow heritage (customer invariants section 3)
+    const R = HSC.rng(((p.seed >>> 0) ^ 0xea7a17) >>> 0 || 1);
+    const has = R.next() < Math.min(0.85, HSC.smooth(35, 70, p.years) * 0.8);
     return has ? [(0.06 + 0.12 * HSC.smooth(40, 80, p.years)) * (0.7 + 0.6 * R.next()), 0.35 + 0.55 * HSC.smooth(40, 80, p.years)] : [0, 0];
   }
   HSC.onMorph = (P, N) => placeEar(P, N);
@@ -321,7 +330,7 @@
     nose: `<svg viewBox="0 0 24 24" width="30" height="30"><path d="M9.5 9h5l.8 12h-6.6z" fill="#1b1c1e" stroke="${INK}" stroke-width="1.5"/><path d="M10.5 3h3l1 6h-5z" fill="#d7dce0" stroke="${INK}" stroke-width="1.5"/><path d="M11 5h2M11 7h2" stroke="${INK}" stroke-width="1"/></svg>`,
     lather: `<svg viewBox="0 0 24 24" width="30" height="30"><path d="M8 9c0-4 2-6 4-6s4 2 4 6z" fill="#efe9e0" stroke="${INK}" stroke-width="1.5"/><path d="M9.5 9h5l-.6 12h-3.8z" fill="#141414" stroke="${INK}" stroke-width="1.5"/><circle cx="7" cy="4" r="2" fill="#fff" stroke="#ccc"/><circle cx="17.5" cy="5" r="1.5" fill="#fff" stroke="#ccc"/></svg>`,
   };
-  for (const [k, d] of Object.entries(SERVICES)) HSC.addTool && HSC.addTool(k, { level: d.level }, I[k]);
+  for (const [k, d] of Object.entries(SERVICES)) if (!d.off) HSC.addTool && HSC.addTool(k, { level: d.level }, I[k]);
   HSC.SERVICE_ICON = I;
   HSC.onTool = (k) => { for (const [n, m] of Object.entries(MODEL)) if (m) m.visible = false; S.held = SERVICES[k] ? k : null; };
 
@@ -337,8 +346,8 @@
   }
   const active = () => { const g = G(); if (!g || !S.held) return false; const s = g.getState(); return s.status === 'cutting'; };
   const any = { down: false, x: 0, y: 0 };
-  addEventListener('pointerdown', (e) => { any.down = true; any.x = e.clientX; any.y = e.clientY; }, true);
-  addEventListener('pointermove', (e) => { any.x = e.clientX; any.y = e.clientY; }, true);
+  addEventListener('pointerdown', (e) => { any.down = true; any.x = e.clientX; any.y = e.clientY; any.e = e; }, true);
+  addEventListener('pointermove', (e) => { any.x = e.clientX; any.y = e.clientY; any.e = e; ptr.moved = performance.now(); }, true);
   for (const ev of ['pointerup', 'pointercancel']) addEventListener(ev, () => { any.down = false; }, true);
   addEventListener('pointerdown', (e) => { if (!active() || e.target.closest('button,#hsc-tools,#hsc-menu,#hsc-panel')) return; ptr.down = true; ptr.x0 = ptr.x = e.clientX; ptr.y0 = ptr.y = e.clientY; ptr.t0 = ptr.last = performance.now(); hit = headHitAt(e); if (hit) begin(hit); }, true);
   addEventListener('pointermove', (e) => { if (!ptr.down || !active()) return; ptr.x = e.clientX; ptr.y = e.clientY; ptr.last = performance.now(); hit = headHitAt(e); if (hit) drag(hit); }, true);
@@ -382,16 +391,67 @@
     }
     if (m) hold(m, h.p, h.n, k === 'singe' ? 0.28 : k === 'threading' ? 0.02 : 0.03, k === 'threading' ? Math.atan2(h.n[0], h.n[2]) : 0);
     if (k === 'talc') { for (let i = 0; i < 3; i++) fxN.add({ p: h.p.map((v, j) => v + h.n[j] * 0.1 + (Math.random() - 0.5) * 0.2), v: h.n.map((v) => v * 0.3 + (Math.random() - 0.5) * 0.4), size: 0.06, grow: 0.25, life: 1.2, col: [1, 1, 1, 0.35], drag: 2 }); }
-    if (k === 'pomade' && b[1] > 2.4) { S.shine = Math.min(1, S.shine + 0.012); HSC.U.uHairShine && (HSC.U.uHairShine.value = S.shine); }
+    if (k === 'pomade') pomadeAt(b);
     if (k === 'lather') {
       const F = HSC.foam && HSC.foam.data();
       if (F) { const n = paintBeard(h, 5, (c, d) => { const v = Math.max(F[c], Math.round(255 * (1 - d * d) * 1.2) | 0); if (v > F[c]) { F[c] = Math.min(255, v); return true; } return false; }); if (n) { HSC.foam.update(); countFoam(); } }
     }
     if (k === 'threading') threadAt(h, b);
   }
+  // ---- eligible areas ----
+  const st = () => HSC.debugState;
+  // pomade: the top of the head where there is scalp (coarse head vertices), frozen at the first touch
+  function pomadeAt(b) {
+    const a = att('pomade'), D = st();
+    if (!a.elig) {
+      a.elig = new Set();
+      const B = D && D.coarseBase, sc = D && D.scalpC;
+      if (B && sc) for (let v = 0; v < sc.length; v++) if (sc[v] > 0.5 && B[v * 3 + 1] > 2.4) a.elig.add(v);
+    }
+    if (!a.elig.size || b[1] < 2.2) return;
+    const B = D.coarseBase;
+    for (const v of a.elig) if (!a.cov.has(v) && Math.hypot(B[v * 3] - b[0], B[v * 3 + 1] - b[1], B[v * 3 + 2] - b[2]) < 0.32) a.cov.add(v);
+    S.shine = Math.min(1, a.cov.size / a.elig.size);
+    HSC.U.uHairShine && (HSC.U.uHairShine.value = S.shine);
+    if (bp(a.cov.size, a.elig.size) >= 5000) finish('pomade');
+  }
+  // the beard cells shortened this visit to skin-close (the shaved area aftershave treats)
+  function shavedCells() {
+    const g = G(), s = g && g.getState(), out = new Set();
+    if (!s || !Array.isArray(s.beard) || !Array.isArray(s.startBeard) || !HSC.BEARD_MM) return out;
+    for (let c = 0; c < s.beard.length; c++) if (s.beard[c] < s.startBeard[c] && HSC.BEARD_MM[s.beard[c]] <= 1) out.add(c);
+    return out;
+  }
+  // threading: the cheek line, beard cells at the top edge of the beard on the cheeks (empty skin above them),
+  // frozen when the thread first touches; the beard's body and the brows are never threaded
+  function cheekLine() {
+    const g = G(), s = g && g.getState(), D = st(), out = new Set();
+    const P = D && D.surface && D.surface.positions;
+    if (!s || !Array.isArray(s.beard) || !P) return out;
+    const B = s.beard;
+    for (let c = 0; c < B.length; c++) {
+      if (!(B[c] > 0) || Math.abs(P[c * 3]) < 0.45) continue;
+      const row = Math.floor(c / 128), col = c % 128;
+      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const r2 = row + dr, c2 = col + dc;
+        if (r2 < 0 || r2 > 63 || c2 < 0 || c2 > 127) continue;
+        const n = r2 * 128 + c2;
+        if (B[n] === 0 && P[n * 3 + 1] > P[c * 3 + 1]) { out.add(c); break; }
+      }
+    }
+    return out;
+  }
+  // talc / neck duster: available loose clippings when the brush first touches
+  function dustAt(b) {
+    const a = att('talc');
+    if (a.avail < 0) { const cs = HSC.clippingsStats ? HSC.clippingsStats() : null; a.avail = cs ? Math.max(0, cs.onShow - cs.swept) : 0; }
+    if (!a.avail || !HSC.dustClippings) return;
+    // the bristle footprint: a band across the gown under the brush (head x -1.6..1.6 maps onto the gown)
+    a.removed += HSC.dustClippings((b[0] + 1.6) / 3.2, 0.14);
+    if (bp(a.removed, a.avail) >= 7000) finish('talc');
+  }
   function end() {
     const k = S.held;
-    if (k === 'massage' && held.t > 2.2 && !S.done.has('massage')) { finish('massage'); SND.crack(); }
     if (k === 'massage' || k === 'towel') face({}, 0);
     if (MODEL.massage) MODEL.massage.visible = false;
   }
@@ -403,7 +463,12 @@
     for (let i = 0; i < 12; i++) fxA.add({ p: h.p.map((v) => v + (Math.random() - 0.5) * 0.5), v: [0, 0.2, 0], size: 0.03, life: 0.8, col: [1, 1, 0.85, 0.7] });
     SND.splash();
     face({ close: 0.9, smile: 0.4, cheekUp: 0.3 }, 1); setTimeout(() => face({}, 0), 1100);
-    finish('aftershave');
+    // the splash treats the freshly shaved skin it lands on; 60% of the shaved area completes it
+    const a = att('aftershave');
+    if (!a.elig) a.elig = shavedCells();
+    if (!a.elig.size) { a.elig = null; return; } // nothing shaved yet: the splash is only a splash
+    paintBeard(h, 11, (c) => { if (a.elig.has(c) && !a.cov.has(c)) { a.cov.add(c); return true; } return false; });
+    if (bp(a.cov.size, a.elig.size) >= 6000) finish('aftershave');
   }
   // the hot towel: it settles over the face, steams, and is lifted off after a few seconds
   function wrapTowel() {
@@ -415,21 +480,20 @@
       const drop = t < 0.15 ? 1 - t / 0.15 : t > 0.88 ? (t - 0.88) / 0.12 : 0;
       tw.position.set(0, drop * 1.2, drop * 0.4); tw.scale.set(1, 1, 1);
       if (Math.random() < 0.5) fxN.add({ p: [(Math.random() - 0.5) * 2.4, -0.5 + Math.random() * 2.6, 2.1 + Math.random() * 0.2], v: [(Math.random() - 0.5) * 0.1, 0.45 + Math.random() * 0.3, 0.12], size: 0.08, grow: 0.35, life: 1.6, col: [1, 1, 1, 0.22], drag: 0.6 });
-      if (t >= 1) { tw.visible = false; face({}, 0); finish('towel'); }
+      // the full wrap is 3.4 s of contact over the whole face: heat and moisture to full, decaying in play
+      if (t >= 1) { tw.visible = false; face({}, 0); S.heat = 10000; S.moist = 10000; finish('towel'); }
     } });
   }
   // threading: the twisted thread plucks the fine hair on the cheek line and stray brow hairs under it
   function threadAt(h, b) {
     const g = G(), s = g.getState();
-    let nb = null, nw = null, n = 0;
-    if (Array.isArray(s.beard)) { const B = s.beard; n += paintBeard(h, 2, (c) => { if (B[c] > 0) { nb = nb || B.slice(); nb[c] = 0; return true; } return false; }); }
-    if (Array.isArray(s.brow) && b[1] > 1.7 && b[1] < 2.3 && HSC.BROW_N) {
-      const un = (Math.abs(b[0]) - 0.2) / 1.0, v = (b[1] - 1.7) / 0.6;
-      if (un >= 0 && un <= 1) { const u = b[0] < 0 ? 0.5 - un * 0.5 : 0.5 + un * 0.5, col0 = Math.floor(u * 128), row0 = Math.floor(v * 32); for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { const c = (row0 + dr) * 128 + col0 + dc; if (c >= 0 && c < HSC.BROW_N && s.brow[c] > 0) { nw = nw || s.brow.slice(); nw[c] = 0; n++; } } }
-    }
+    const a = att('threading');
+    if (!a.elig) a.elig = cheekLine();
+    let nb = null, n = 0;
+    if (Array.isArray(s.beard) && a.elig.size) { const B = s.beard; n += paintBeard(h, 2, (c) => { if (a.elig.has(c) && B[c] > 0) { nb = nb || B.slice(); nb[c] = 0; a.cov.add(c); return true; } return false; }); }
     const now = performance.now();
     if (now - held.zip > 110) { SND.zip(); held.zip = now; }
-    if (n && g.restore) { g.restore(s.hair, nb || s.beard, nw || s.brow); held.cells = (held.cells || 0) + n; if (held.cells > 6) finish('threading'); }
+    if (n && g.restore) { g.restore(s.hair, nb, s.brow); if (bp(a.cov.size, a.elig.size) >= 8000) finish('threading'); }
   }
   function countFoam() { const F = HSC.foam.data(); let n = 0; for (let i = 0; i < F.length; i++) if (F[i] > 60) n++; S.foamCells = n; S.foamPeak = Math.max(S.foamPeak, n); }
 
@@ -446,7 +510,19 @@
     if (ptr.down && active() && hit) {
       held.t += dt;
       const k = S.held;
-      if (k === 'massage') { if (now - (held.rub || 0) > 260) { SND.rub(); held.rub = now; } face({ close: Math.min(1, held.t * 1.5), smile: 0.25 }, 1); drag(hit); }
+      if (k === 'massage') {
+        if (now - (held.rub || 0) > 260) { SND.rub(); held.rub = now; }
+        face({ close: Math.min(1, held.t * 1.5), smile: 0.25 }, 1); drag(hit);
+        // kneading counts while the fingers move, on the temples and the crown (one still point never completes it)
+        const b = baseOf(hit), a = att('massage');
+        if (b && now - (ptr.moved || 0) < 250) {
+          const z = b[1] > 3.0 ? 'C' : b[1] > 1.9 && b[1] < 2.9 && b[0] < -1.0 ? 'L' : b[1] > 1.9 && b[1] < 2.9 && b[0] > 1.0 ? 'R' : null;
+          const ms = dt * 1000;
+          if (z) a.ms[z] += ms;
+          a.ms.all += ms;
+          if (!S.done.has('massage') && a.ms.all >= 2200 && a.ms.L >= 500 && a.ms.R >= 500 && a.ms.C >= 500) { finish('massage'); SND.crack(); }
+        }
+      }
       if (k === 'singe') {
         const m = MODEL.singe, tip = m.localToWorld ? null : null; void tip;
         const p = [m.position.x + 0, m.position.y, m.position.z];
@@ -454,24 +530,32 @@
         if (now - (held.zip || 0) > 330) { SND.fire(); held.zip = now; }
         // near an ear: its hair burns off with a sizzle and a curl of smoke
         const b = baseOf(hit), bowl = HSC.earBowls && HSC.earBowls(), B = HSC.debugState.base;
-        if (b && bowl) for (const [i, sd] of [[0, -1], [1, 1]]) { const v = bowl[sd]; if (v < 0) continue; if (Math.hypot(b[0] - B[v * 3], b[1] - B[v * 3 + 1], b[2] - B[v * 3 + 2]) < 0.5) { S.ear[i] = Math.min(1, S.ear[i] + dt * 0.7); if (Math.random() < 0.3) { SND.sizzle(); fxN.add({ p: hit.p.slice(), v: [0, 0.5, 0], size: 0.05, grow: 0.3, life: 1.4, col: [0.55, 0.55, 0.55, 0.3], drag: 0.8 }); } if (S.ear[i] > 0.85) finish('singe'); } }
+        // only an ear that has hair burns (and sizzles); done when 90% of the ear hair is gone on every ear that had it
+        const hasHair = (S.earLen[0] || 0) > 0;
+        if (b && bowl && hasHair) for (const [i, sd] of [[0, -1], [1, 1]]) { const v = bowl[sd]; if (v < 0) continue; if (Math.hypot(b[0] - B[v * 3], b[1] - B[v * 3 + 1], b[2] - B[v * 3 + 2]) < 0.5 && S.ear[i] < 1) { S.ear[i] = Math.min(1, S.ear[i] + dt * 0.7); if (Math.random() < 0.3) { SND.sizzle(); fxN.add({ p: hit.p.slice(), v: [0, 0.5, 0], size: 0.05, grow: 0.3, life: 1.4, col: [0.55, 0.55, 0.55, 0.3], drag: 0.8 }); } } }
+        if (hasHair && S.ear[0] >= 0.9 && S.ear[1] >= 0.9) finish('singe');
         if (ear) ear.U.uEar.value = [S.earLen[0] || 0, S.earLen[1] || 0, S.ear[0], S.ear[1]];
       }
-      if (k === 'nose') { const b = baseOf(hit); if (now - (held.zip || 0) > 180) { SND.whir(); held.zip = now; } if (b && Math.hypot(b[0], b[1] - 0.6, b[2] - 2.3) < 0.5) { S.nose += dt; if (S.nose > 1.2) finish('nose'); } }
-      if (k === 'talc') { if (now - (held.zip || 0) > 300) { SND.brush(); held.zip = now; } const b = baseOf(hit); if (b && b[1] < 0.2) { S.talc += dt; if (S.talc > 1.6) { finish('talc'); HSC.brushNeck && HSC.brushNeck(); } } }
-      if (k === 'pomade') { if (now - (held.zip || 0) > 280) { SND.squish(); held.zip = now; } if (S.shine > 0.5) finish('pomade'); }
+      if (k === 'talc') { if (now - (held.zip || 0) > 300) { SND.brush(); held.zip = now; } const b = baseOf(hit); if (b && b[1] < 0.6 && now - (ptr.moved || 0) < 250) dustAt(b); }
+      if (k === 'pomade') { if (now - (held.zip || 0) > 280) { SND.squish(); held.zip = now; } }
       if (k === 'lather') { if (now - (held.zip || 0) > 160) { SND.lather(); held.zip = now; } for (let i = 0; i < 2; i++) fxN.add({ p: hit.p.map((v, j) => v + hit.n[j] * 0.03 + (Math.random() - 0.5) * 0.1), v: hit.n.map((v) => v * 0.2), size: 0.015 + Math.random() * 0.02, life: 0.5, col: [1, 1, 1, 0.8] }); }
     }
-    // the razor shaves the lather away where it passes (the beard under it is cut by the razor itself)
+    // the razor shaves the lather away where its blade passes (the projected blade, as the cut uses), and the shave
+    // completes when 70% of the peak lather is gone with a real shortening of the beard under it
     if (any.down && HSC.tool && HSC.tool() === 'razor' && S.foamPeak > 0) {
-      const v = HSC.view, h = v && v.headHit ? v.headHit(any.x, any.y) : null, F = HSC.foam.data();
-      if (h) { const n = paintBeard(h, 2, (c) => { if (F[c]) { F[c] = 0; return true; } return false; }); if (n) { HSC.foam.update(); countFoam(); if (S.foamPeak > 150 && S.foamCells < S.foamPeak * 0.3) finish('lather'); } }
+      const h = any.e ? headHitAt(any.e) : null, F = HSC.foam.data(), cur = s.beard, start = s.startBeard, a = att('lather');
+      if (h) {
+        const n = paintBeard(h, 2, (c) => { if (F[c]) { F[c] = 0; if (Array.isArray(cur) && Array.isArray(start) && cur[c] < start[c]) a.shaved++; return true; } return false; });
+        if (n) { HSC.foam.update(); countFoam(); if (S.foamPeak > 150 && S.foamCells * 10 < S.foamPeak * 3 && a.shaved > 0) finish('lather'); }
+      }
     }
+    // the towel's heat fades over 30 s and its moisture over 60 s of active play
+    if (s.status === 'cutting' && (S.heat || S.moist)) { S.heat = Math.max(0, S.heat - (dt * 10000) / 30); S.moist = Math.max(0, S.moist - (dt * 10000) / 60); }
     for (let i = anim.length - 1; i >= 0; i--) { const a = anim[i]; a.t += dt; a.step(Math.min(1, a.t / a.life)); if (a.t >= a.life) anim.splice(i, 1); }
     fxN.step(dt); fxA.step(dt);
   }
   function newCustomer(s) {
-    S.job = s.jobId; S.done = new Set(); S.ear = [0, 0]; S.foamCells = 0; S.foamPeak = 0; S.shine = 0; S.talc = 0; S.nose = 0;
+    S.job = s.jobId; S.done = new Set(); S.ear = [0, 0]; S.foamCells = 0; S.foamPeak = 0; S.shine = 0; S.talc = 0; S.nose = 0; S.att = {}; S.heat = 0; S.moist = 0;
     const F = HSC.foam && HSC.foam.data(); if (F) { F.fill(0); HSC.foam.update(); }
     if (HSC.U.uHairShine) HSC.U.uHairShine.value = 0;
     const p = s.look && s.look.person, eh = earHairOf(p);
@@ -487,12 +571,25 @@
   HSC.servicesWanted = function (p, job) {
     if (!p) return [];
     const lv = M() && M().data ? M().level() : 1, R = HSC.rng(((p.seed >>> 0) ^ Math.imul((job | 0) + 3, 0x632be5ab)) >>> 0 || 1);
+    // only what this customer can really receive (the eligible before state exists); never by heritage
     const shaved = p.beard && (p.beard.style === 'clean' || /^stubble/.test(p.beard.style));
-    const w = { aftershave: 0.35, towel: 0.15, massage: 0.2 + 0.15 * HSC.smooth(35, 65, p.years), talc: 0.15, pomade: p.hair && /^[12]/.test(p.hair.type) && p.years < 50 ? 0.2 : 0.05,
-      threading: ['mena', 'south-asian', 'mediterranean'].includes(p.heritage) ? 0.2 : 0.07, singe: earHairOf(p)[0] > 0 ? 0.45 : 0, nose: p.years > 45 ? 0.15 : 0, lather: shaved ? 0.3 : 0 };
+    const hasFace = p.beard && p.beard.style !== 'clean'; // stubble or a beard: something to shave, then soothe
+    const styled = p.beard && p.beard.style !== 'clean' && !/^stubble/.test(p.beard.style); // a beard with a cheek line
+    const w = { aftershave: hasFace ? 0.35 : 0, towel: 0.15, massage: 0.2 + 0.15 * HSC.smooth(35, 65, p.years), talc: 0.15, pomade: p.hair && /^[12]/.test(p.hair.type) && p.years < 50 ? 0.2 : 0.05,
+      threading: styled ? 0.1 : 0, singe: earHairOf(p)[0] > 0 ? 0.45 : 0, nose: 0, lather: shaved && hasFace ? 0.3 : 0 };
     const out = [];
-    for (const [k, v] of Object.entries(w)) if (lv >= SERVICES[k].level && R.next() < v * 0.8) out.push(k);
+    for (const [k, v] of Object.entries(w)) if (!SERVICES[k].off && lv >= SERVICES[k].level && R.next() < v * 0.8) out.push(k);
     return out.sort(() => R.next() - 0.5).slice(0, 2);
+  };
+  // whether a ritual can really be done on this customer (the before state its completion needs exists): a lather
+  // shave needs stubble to shave, aftershave in a ritual follows that shave, threading needs a beard's cheek line
+  HSC.serviceFits = function (p, k) {
+    if (!p || !SERVICES[k] || SERVICES[k].off) return false;
+    const st = p.beard && p.beard.style || 'clean', stubble = /^stubble/.test(st);
+    if (k === 'lather' || k === 'aftershave') return stubble;
+    if (k === 'threading') return st !== 'clean' && !stubble;
+    if (k === 'singe') return earHairOf(p)[0] > 0;
+    return true;
   };
   // tips for the services done on a job: 8 for each one asked for, 4 for each other (at most three)
   HSC.serviceTips = function (job, wanted) {
@@ -513,4 +610,7 @@
   boot();
   HSC.brushNeck = () => HSC.brushClippings && HSC.brushClippings();
   HSC.servicesDebug = () => ({ S, held }); // QA
+  // undo (requests.js): a stroke undone also takes back what the services had counted for it
+  HSC.servicesSnapshot = () => ({ job: S.job, done: [...S.done], att: Object.fromEntries(Object.entries(S.att).map(([k, a]) => [k, { elig: a.elig ? new Set(a.elig) : null, cov: new Set(a.cov), ms: Object.assign({}, a.ms), removed: a.removed, avail: a.avail, shaved: a.shaved }])) });
+  HSC.servicesRestore = (snap) => { if (!snap || snap.job !== S.job) return; S.done = new Set(snap.done); S.att = snap.att; };
 })(globalThis.HSC || (globalThis.HSC = {}));

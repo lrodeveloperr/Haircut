@@ -423,6 +423,29 @@ void main(){
     }
   };
 
+  // the neck duster's bristles (services.js talc): flick off only the loose pieces under the brush, in a band
+  // across the gown at `frac` (0 = the customer's left edge of the pieces, 1 = the right), half-width `half`.
+  // Returns how many pieces it removed (each piece counts once).
+  HSC.dustClippings = function (frac, half) {
+    if (!mesh || !K.count) return 0;
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < K.count; i++) if (K.len[i] > 0 && !K.swept[i]) { const x = K.pos[i * 3]; if (x < lo) lo = x; if (x > hi) hi = x; }
+    if (!(hi >= lo)) return 0;
+    const span = Math.max(0.4, hi - lo), x0 = lo + (frac - half) * span, x1 = lo + (frac + half) * span, now = performance.now();
+    let n = 0;
+    for (let i = 0; i < K.count; i++) {
+      const o = i * 3;
+      if (K.len[i] <= 0 || K.swept[i] || K.pos[o] < x0 || K.pos[o] > x1) continue;
+      const wasMoving = K.state[i] !== 3;
+      K.vel[o] = (Rng.next() - 0.5) * 1.2; K.vel[o + 1] = 0.8 + Rng.next(); K.vel[o + 2] = 2.2 + 1.6 * Rng.next();
+      K.pos[o + 1] += 0.02; K.drag[i] = 1 + Rng.next(); K.state[i] = 1; K.swept[i] = 1; K.born[i] = now;
+      if (!wasMoving) K.moving++;
+      n++;
+    }
+    if (n) K.dirty = true;
+    return n;
+  };
+
   HSC.stepClippings = function () {
     if (!mesh) return;
     const now = performance.now();

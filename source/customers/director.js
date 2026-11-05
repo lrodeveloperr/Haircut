@@ -15,8 +15,14 @@
 //   catalog.requests(customer, start, mode, ctx) -> [ { id, family, beardGoal, services, cost: {...}, weight } ]
 //   catalog.validate(contract, ctx)      -> [] or [reason codes]
 //   catalog.baseline(customer, ctx)      -> a standard Orders { start, request } that always exists
+//   catalog.presence(contract)           -> optional 'hair|beard' broad state, e.g. 'short|stubble' (map logic §9)
+//   catalog.timeNeeded(contract)         -> optional seconds a timed job needs (checked against its timer)
 // Every random choice is drawn from streams seeded by purpose, so adding a roll in one place cannot change
 // another (save contract section 5).
+// Fairness (director section 9): fair decks for style families, service sets and regulars give a capped underuse
+// bonus to what has not been offered since the deck last refilled; a fourth customer in a row with the same broad
+// hair presence, or the same facial-hair state, is refused while another customer can be drawn (map logic §9); required progression stays within two bands of
+// the player's recent comfort band (map logic section 8); a timed job must fit its timer with safety margins.
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
   'use strict';
@@ -28,6 +34,10 @@
   const SURPRISE = ['rescue', 'rush', 'visitor', 'vip'];
   const VIP_GAP = 8, REGULAR_GAP = 3;
   const ATTEMPTS = 6; // per relaxation stage: generation never loops indefinitely
+  const PRESENCE_TRIES = 24; // customer draws the normal stage may spend avoiding a fourth same-state customer
+  const UNDERUSE = 2.5; // the capped bonus for a deck card not offered since the deck refilled
+  const DECK_MAX = 48; // bounded deck memory per deck (save contract section 4)
+  const RUSH_LIMIT = 45; // seconds on the Rush clock (modes.js)
 
   // ---- deterministic streams ----
   function rng(seed) {
@@ -47,8 +57,30 @@
 
   // ---- director memory (bounded; save contract section 4) ----
   function fresh() {
-    return { turn: 0, sig: [], lanes: [], last: null, decks: {}, cool: { vip: -99, surprise: [], disasterChapter: -99, chapter: 0 }, regs: {}, band: { adj: 0, recent: [] }, chapterLog: [] };
+    return { turn: 0, sig: [], lanes: [], last: null, decks: {}, cool: { vip: -99, surprise: [], disasterChapter: -99, chapter: 0 }, regs: {}, band: { adj: 0, recent: [], ok: [] }, chapterLog: [], presence: [], used: {} };
   }
+  // an open deck of what has been offered since it last refilled (style families, service sets, regulars): a card
+  // still in the deck gets the underuse bonus; once every candidate's card is used, the deck refills
+  function usedOf(dir, name) { dir.used = dir.used || {}; return (dir.used[name] = Array.isArray(dir.used[name]) ? dir.used[name] : []); }
+  function underuse(dir, name, card, all) {
+    const u = usedOf(dir, name);
+    if (all.every((c) => u.includes(c))) return 1; // the deck is spent for these candidates: no one is favoured
+    return u.includes(card) ? 1 : UNDERUSE;
+  }
+  function useCard(dir, name, card, all) {
+    const u = usedOf(dir, name);
+    if (all.length && all.every((c) => u.includes(c))) u.length = 0; // refill
+    if (!u.includes(card)) u.push(card);
+    if (u.length > DECK_MAX) u.splice(0, u.length - DECK_MAX);
+  }
+  // would this broad state make a fourth in a row (hair presence or facial-hair state, each on its own)?
+  function presenceRepeat(dir, p) {
+    const last = Array.isArray(dir.presence) ? dir.presence.slice(-3) : [];
+    if (!p || last.length < 3 || last.some((x) => !x)) return false;
+    const [h, b] = p.split('|');
+    return last.every((x) => x.split('|')[0] === h) || last.every((x) => x.split('|')[1] === b);
+  }
+  const svcKey = (c) => (c.request.services && c.request.services.length ? c.request.services.slice().sort().join('+') : null);
   // a fair deck: cards are consumed before it refills; an invalid card stays for a later compatible contract
   function deckDraw(dir, name, cards, R, ok) {
     const d = dir.decks[name] && dir.decks[name].left ? dir.decks[name] : (dir.decks[name] = { left: [] });
@@ -66,12 +98,16 @@
     if (pos.licence) { const ch = pos.chapter; lo = 0; hi = Math.min(3, Math.floor((ch - 1) / 2) + 1); }
     else if (core.tour.n === 1) { lo = 2; hi = 5; }
     else { lo = Math.min(9, 3 + Math.floor((core.tour.n - 2) / 2)); hi = 10; }
-    // the preferred band moves with demonstrated mastery, never more than two above the comfort band
+    // the preferred band moves with demonstrated mastery, never more than two above the comfort band: the highest
+    // band of the player's recent good (2-3 star) results, or the tier's floor before there are any
     const base = Math.min(hi, lo + Math.max(0, dir.band.adj));
-    return Math.max(lo, Math.min(hi, base));
+    const ok = Array.isArray(dir.band.ok) ? dir.band.ok : [], comfort = ok.length ? Math.max(...ok) : lo;
+    return Math.max(lo, Math.min(hi, base, comfort + 2));
   }
-  function noteResult(dir, stars, valid) {
+  function noteResult(dir, stars, valid, atBand) {
     const r = dir.band.recent;
+    if (!Array.isArray(dir.band.ok)) dir.band.ok = [];
+    if (valid && stars >= 2 && Number.isSafeInteger(atBand)) { dir.band.ok.push(atBand); if (dir.band.ok.length > 4) dir.band.ok.shift(); }
     r.push(valid ? stars : 0); if (r.length > 4) r.shift();
     const last2 = r.slice(-2);
     if (last2.length === 2 && last2.every((x) => x >= 3)) { dir.band.adj = Math.min(dir.band.adj + 1, 6); r.length = 0; }
@@ -147,7 +183,9 @@
     const C = HSC.career, pos = C.position(core);
     if (!pos) return { error: 'no-position' };
     const dir = JSON.parse(JSON.stringify(dir0 || fresh()));
-    const id = C.contractId(core, pos), seed = C.contractSeed(id, REVISION) + '';
+    // a replaced offer (career-run.js replace) draws again with its replacement count in the seed: same id and slot
+    const reroll = (ctx && ctx.reroll) | 0;
+    const id = C.contractId(core, pos), seed = C.contractSeed(reroll ? id + '~r' + reroll : id, REVISION) + '';
     const R = stream(seed, 'role');
     const chapterModes = dir.chapterLog.filter((e) => e.city === pos.city && e.visit === pos.visit).map((e) => e.mode);
     const chapterLanes = new Set(dir.chapterLog.filter((e) => e.city === pos.city && e.visit === pos.visit).map((e) => e.lane));
@@ -160,7 +198,21 @@
     let source = role.source || 'resident', regular = null;
     if (role.regular) {
       const regs = (ctx.regulars || []).filter((g) => dir.turn - (dir.regs[g.key] == null ? -99 : dir.regs[g.key]) >= REGULAR_GAP && g.lastChapter !== dir.cool.chapter - 1);
-      if (regs.length) { regular = stream(seed, 'regular').pick(regs); source = 'regular'; }
+      // the regulars' fair deck: one not seen since the deck refilled comes first
+      if (regs.length) {
+        const keys = regs.map((g) => g.key), fresh = regs.filter((g) => underuse(dir, 'regular', g.key, keys) > 1);
+        regular = stream(seed, 'regular').pick(fresh.length ? fresh : regs); source = 'regular';
+        useCard(dir, 'regular', regular.key, keys);
+      }
+    }
+
+    // a Trusted regular (four visits) may come for a specialist or service job, a Signature regular (seven) for the
+    // chapter's showcase (director section 12); stages unlock variety only, never reward or easier scoring
+    if (!regular && (pos.role === 'specialist' || pos.role === 'showcase') && ctx.regulars && ctx.regulars.length) {
+      const need = pos.role === 'showcase' ? 7 : 4, fitsMode = (g) => role.mode !== 'beard' || !!(g.person && g.person.beard && g.person.beard.style !== 'clean' && !/^stubble/.test(g.person.beard.style));
+      const pool = ctx.regulars.filter((g) => (g.visits | 0) >= need && fitsMode(g) && dir.turn - (dir.regs[g.key] == null ? -99 : dir.regs[g.key]) >= REGULAR_GAP);
+      const Ro = stream(seed, 'regular-overlay');
+      if (pool.length && Ro.next() < 0.3) { regular = Ro.pick(pool); source = 'regular'; useCard(dir, 'regular', regular.key, pool.map((g) => g.key)); }
     }
 
     // stages relax only soft rules; physical feasibility, tools, cultural rules and timers are never relaxed
@@ -180,7 +232,10 @@
       let mode = role.mode;
       if (st.swapMode && mode !== 'requests') mode = SPECIALIST.find((m) => m !== mode && catalog.modes[m] && (!catalog.modes[m].eligible || catalog.modes[m].eligible(ctx))) || 'requests';
       const b = Math.max(0, prefBand - (st.bandDrop || 0)), budget = BUDGET[b];
-      for (let a = 0; a < ATTEMPTS && !chosen; a++) {
+      // the normal stage may draw more customers, only to avoid a fourth same-state customer in a row
+      const tries = si === 0 ? PRESENCE_TRIES : ATTEMPTS;
+      for (let a = 0; a < tries && !chosen; a++) {
+        if (a >= ATTEMPTS && !(reasons['presence-repeat'] > 0)) break;
         const S = stream(seed, 'stage' + si + 'a' + a);
         const cust = regular ? catalog.customer(regular.seed, Object.assign({}, ctx, { source: 'regular', regular, mode })) : catalog.customer(hash(seed + 'c' + si + a), Object.assign({}, ctx, { source, R: S, mode }));
         if (!cust) { tally(['no-customer']); continue; }
@@ -201,10 +256,16 @@
             if (hard && !st.baselineRequest) { tally([hard]); continue; }
             const v = catalog.validate(c, ctx);
             if (v.length) { tally(v); continue; }
+            // a timed job must fit its clock with animation, tool-switch and accessibility margins (never relaxed)
+            if (mode === 'rush' && catalog.timeNeeded && catalog.timeNeeded(c) > RUSH_LIMIT) { tally(['timer-too-short']); continue; }
+            c.presence = catalog.presence ? catalog.presence(c) : null;
             cands.push(c);
           }
         }
         if (!cands.length) continue;
+        // this customer would be the fourth in a row with the same broad hair presence or facial-hair state: draw
+        // another customer first (the last attempt of a stage accepts him; a regular is who he is)
+        if (!regular && a < tries - 1 && cands.every((c) => presenceRepeat(dir, c.presence))) { tally(['presence-repeat']); continue; }
         // soft weights: city tendency and suitability (from the catalog), underuse, lane rotation, axis change
         const laneAlts = new Set(cands.map((c) => c.lane)).size;
         for (const c of cands) if (dir.last) c.request.altFamilies = new Set(cands.map((x) => x.request.family)).size;
@@ -214,6 +275,8 @@
         // from the third job on, a chapter still short of three lanes takes a lane it has not had when it can
         let pool = cands;
         if (pos.slot >= 2 && chLanes.size < 3) { const fresh = cands.filter((c) => !chLanes.has(c.lane)); if (fresh.length) pool = fresh; }
+        if (!regular) { const other = pool.filter((c) => !presenceRepeat(dir, c.presence)); if (other.length) pool = other; }
+        const fams = [...new Set(pool.map((c) => c.request.family))], svcs = [...new Set(pool.map(svcKey).filter(Boolean))];
         const pick = weighted(S, pool, (c) => {
           let w = c.request.weight == null ? 1 : c.request.weight;
           if (laneOverused(dir, c.lane, laneAlts)) w *= 0.15;
@@ -221,27 +284,35 @@
           if (!chSil.has(c.start.silhouette)) w *= chSil.size < 3 && pos.slot >= 3 ? 8 : 2;
           const ch = changedAxes(dir, c);
           if (ch < 2) w *= 0.2;
+          // underuse (capped): a style family or service set not offered since its deck refilled
+          w *= underuse(dir, 'family', c.request.family, fams);
+          if (svcKey(c)) w *= underuse(dir, 'services', svcKey(c), svcs);
           return w;
         });
-        if (pick) { chosen = pick; stageUsed = st.name; }
+        if (pick && !regular && presenceRepeat(dir, pick.presence)) tally(['presence-forced']);
+        if (pick) { chosen = pick; stageUsed = st.name; useCard(dir, 'family', pick.request.family, fams); if (svcKey(pick)) useCard(dir, 'services', svcKey(pick), svcs); }
       }
     }
     if (!chosen) {
-      // the standard Orders builder always exists (director section 13)
+      // the standard Orders builder always exists (director section 13); it seats a resident, so no regular
+      regular = null;
       const cust = catalog.customer(hash(seed + 'base'), Object.assign({}, ctx, { source: 'resident', R: stream(seed, 'base') }));
       const b = catalog.baseline(cust, ctx);
       chosen = { mode: 'requests', start: b.start, request: b.request, modifier: null, lane: catalog.modes.requests.lane(b.start, b.request), customer: cust, source: 'resident', context: null };
       stageUsed = 'standard-orders';
+      chosen.presence = catalog.presence ? catalog.presence(chosen) : null;
+      if (!regular && presenceRepeat(dir, chosen.presence)) tally(['presence-forced']);
     }
 
     // second validation, then record the job in the director's bounded memory
     const recheck = stageUsed === 'standard-orders' ? [] : catalog.validate(chosen, ctx);
     const contract = {
-      id, seed: +seed, revision: REVISION, tour: pos.tour, city: pos.city, visit: pos.visit, slot: pos.slot, role: pos.role,
+      id, seed: +seed, revision: REVISION, reroll, tour: pos.tour, city: pos.city, visit: pos.visit, slot: pos.slot, role: pos.role,
       licence: !!pos.licence, practice: !!pos.practice, mode: chosen.mode, lane: chosen.lane, source: chosen.source,
       regular: regular ? regular.key : null, context: chosen.context, modifier: chosen.modifier,
       customer: chosen.customer, start: chosen.start, request: chosen.request,
       band: prefBand, stage: stageUsed, validated: recheck.length === 0, reasons,
+      presence: chosen.presence || (catalog.presence ? catalog.presence(chosen) : null),
     };
     commitMemory(dir, contract, pos);
     return { contract, dir, reasons };
@@ -252,6 +323,7 @@
     dir.lanes.push(c.lane); if (dir.lanes.length > LANE_WINDOW) dir.lanes.shift();
     dir.last = { family: c.request.family, axes: axes(c), altFamilies: c.request.altFamilies || 1 };
     dir.chapterLog.push({ city: pos.city, visit: pos.visit, mode: c.mode, lane: c.lane, silhouette: c.start.silhouette });
+    dir.presence = (Array.isArray(dir.presence) ? dir.presence : []).concat([c.customer && c.presence ? c.presence : null]).slice(-4);
     if (dir.chapterLog.length > 10) dir.chapterLog.splice(0, dir.chapterLog.length - 10);
     if (c.source === 'vip') dir.cool.vip = dir.turn;
     if (c.regular) dir.regs[c.regular] = dir.turn;
@@ -267,5 +339,5 @@
     if (keys.length > 64) for (const k of keys.sort((a, b) => dir.regs[a] - dir.regs[b]).slice(0, keys.length - 64)) delete dir.regs[k];
   }
 
-  HSC.director = { REVISION, RING, BUDGET, SPECIALIST, SURPRISE, fresh, generate, noteResult, signature, band };
+  HSC.director = { REVISION, RING, BUDGET, SPECIALIST, SURPRISE, RUSH_LIMIT, fresh, generate, noteResult, signature, band };
 })(globalThis.HSC || (globalThis.HSC = {}));

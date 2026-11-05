@@ -83,17 +83,22 @@
     if (!s || !s.look || !s.look.person || !Array.isArray(s.startHair)) return null;
     if (req.job === s.jobId && req.start === s.startHair) return req.style ? req : null;
     const p = s.look.person;
+    // one practice customer: the next job is ordinary Quick Play again
+    if (practice.job != null && practice.job !== s.jobId) { practice.id = null; practice.job = null; }
     Object.assign(req, { job: s.jobId, start: s.startHair, style: null, target: null, beard: null });
     if (p.first || !HSC.walkIns) return null;
+    // Practice from the lookbook (portfolio contract section 5): Quick Play with the chosen cut as the target;
+    // the first customer it suits asks for it. Practice has no fee, payout, stars, mastery or unlock.
+    if (practice.id && HSC.modes && HSC.modes.current() === 'free') {
+      const want = byId.get(practice.id);
+      if (want && suit(want, p) > 0) { const t = targetFor(want, s.startHair); if (worthCutting(s.startHair, t)) { practice.job = s.jobId; Object.assign(req, { style: want, target: t }); return req; } }
+    }
     // a game mode (modes.js) may decide the request: null for none, or {style, target} / {style, beard}
     const mr = HSC.modes ? HSC.modes.request(s) : undefined;
     if (mr !== undefined) { if (!mr) return null; Object.assign(req, { style: mr.style, target: mr.target || null, beard: mr.beard || null }); return req; }
     const R = HSC.rng(((p.seed >>> 0) ^ Math.imul((s.jobId | 0) + 7, 0x27d4eb2d)) >>> 0 || 1);
     const usual = p.usual && byId.get(p.usual);
     let pick = null;
-    // a cut picked in the lookbook to practise: the first customer it suits asks for it
-    const want = practice.id && byId.get(practice.id);
-    if (want && suit(want, p) > 0) { const t = targetFor(want, s.startHair); if (worthCutting(s.startHair, t)) { pick = { style: want, target: t }; practice.id = null; } }
     if (!pick && usual && suit(usual, p) > 0 && R.next() < 0.75) { const t = targetFor(usual, s.startHair); if (worthCutting(s.startHair, t)) pick = { style: usual, target: t }; }
     if (!pick) {
       const opts = [];
@@ -111,21 +116,21 @@
     req.style = pick.style; req.target = pick.target;
     return req;
   };
-  // practise a cut from the lookbook (collection.js): the customer in the chair asks for it if it suits him and he
-  // has not been cut yet; otherwise the next customer it suits does. Returns 'now', 'next' or null.
-  const practice = { id: null };
+  // practise a cut from the lookbook (collection.js): switches to Quick Play; the customer in the chair practises
+  // it if it suits him and he has not been cut yet, otherwise the next customer it suits does. Returns 'now',
+  // 'next' or null. Nothing a practice job does is paid, scored or recorded (portfolio contract 4.1 and 5).
+  const practice = { id: null, job: null };
   HSC.practise = function (id) {
     const st = byId.get(id), g = G();
-    if (!st || st.fam === 'trim' || !g) return null;
+    if (!st || st.fam === 'trim' || !g || !HSC.modes) return null;
+    practice.id = id; practice.job = null; req.job = null;
     const s = g.getState(), p = s.look && s.look.person;
-    if (s.status === 'cutting' && !(s.cutStrokeCount > 0) && p && !p.first && Array.isArray(s.startHair) && suit(st, p) > 0) {
-      const t = targetFor(st, s.startHair);
-      if (worthCutting(s.startHair, t)) { Object.assign(req, { job: s.jobId, start: s.startHair, style: st, target: t }); practice.id = null; return 'now'; }
-    }
-    practice.id = id;
-    return 'next';
+    const now = s.status === 'cutting' && !(s.cutStrokeCount > 0) && p && !p.first && Array.isArray(s.startHair) && suit(st, p) > 0 && worthCutting(s.startHair, targetFor(st, s.startHair));
+    if (HSC.modes.current() !== 'free') HSC.modes.set('free').then(() => { req.job = null; });
+    return now ? 'now' : 'next';
   };
   HSC.practising = () => practice.id;
+  HSC.practiceJob = (job) => practice.job != null && practice.job === job;
   // the style a customer asked for on a job (meta.js keeps it as a regular's usual)
   HSC.requestStyleFor = (job) => (req.job === job && req.style && byId.has(req.style.id) ? req.style.id : null);
   // for modes.js: the cut catalogue and its rules
@@ -156,8 +161,20 @@
   const EC = () => (HSC.econ && HSC.econ.ready() ? HSC.econ : null);
   const coins = () => (EC() ? EC().balance() : M() && M().data ? M().data.coins || 0 : 0);
   let miscKey = 0;
+  // credits that arrive while the career journal is still loading wait for it (or for its failure), so the
+  // ledger's first mirror cannot overwrite them
+  const waiting = [];
+  function drain() {
+    if (HSC.econ && HSC.econ.starting && HSC.econ.starting()) return setTimeout(drain, 200);
+    for (const w of waiting.splice(0)) addCoins(w[0], w[1], w[2]);
+  }
   function addCoins(n, cat, key) {
     if (!(n > 0)) return;
+    if (!EC() && HSC.econ && HSC.econ.starting && HSC.econ.starting()) {
+      if (!waiting.length) setTimeout(drain, 200);
+      waiting.push([n, cat, key || 'misc:' + Date.now().toString(36) + ':' + (miscKey++)]);
+      return;
+    }
     if (EC()) { EC().earn(key || 'misc:' + Date.now().toString(36) + ':' + (miscKey++), cat || 'misc', Math.round(n)).then(() => ui.coinPill(true)); return; }
     const d = M() && M().data;
     if (!d) return;
@@ -166,7 +183,9 @@
     ui.coinPill(true);
   }
   function spendCoins(price, cat, key) { if (EC()) return EC().spend(key, cat, price).then((ok) => { ui.coinPill(true); return ok; }); const d = M().data; d.coins -= price; M().save(); return Promise.resolve(true); }
-  HSC.coins = { get: coins, add: addCoins, spend: spendCoins };
+  // a purchase that grants an item: atomic in the career journal when it is up (career-run.js buyItem)
+  function buyItem(price, cat, key) { if (EC() && EC().buyItem) return EC().buyItem(key, cat, price).then((ok) => { ui.coinPill(true); return ok; }); return spendCoins(price, cat, key); }
+  HSC.coins = { get: coins, add: addCoins, spend: spendCoins, buyItem };
 
   // a finished haircut: score it and pay (once per customer; a replay with more stars pays the extra stars)
   const done = HSC.onHaircutDone;
@@ -219,7 +238,12 @@
       if (!free && kind !== 'relax') d.combo = combo; // Relax and Freestyle pause the combo
       d.lastRound = { job: s.jobId, key, stars, tips: pay.tip, tip: pay.tip, paid: pay.total, lines: pay.lines, tripled: false, prev, mult: HSC.economy.CONFIG.combo[Math.min(combo, 4)] || 1, free: free || kind === 'free' };
       HSC.lastJob = { key, job, s };
-      if (!careerJob && valid && pay.total) EC().payJob(key, job).then(() => ui.coinPill(true));
+      if (!careerJob && valid && pay.total) EC().payJob(key, job).then((paid) => {
+        if (paid && paid.bill && d.lastRound && d.lastRound.key === key && !d.lastRound.bill) {
+          d.lastRound.bill = paid.bill; d.lastRound.lines = (d.lastRound.lines || []).concat(paid.bill.lines || []); M().save();
+        }
+        ui.coinPill(true);
+      });
     } else if (stars > last.stars && valid) {
       // a replay pays only the positive tip difference, never a second fee
       const extra = pay.tip - (last.tip || 0);
@@ -279,7 +303,7 @@
     if (!g || e.button > 0) return;
     const s = g.getState();
     if (s.status !== 'cutting') return;
-    undo.snap = { job: s.jobId, hair: s.hair, beard: s.beard, brow: s.brow };
+    undo.snap = { job: s.jobId, hair: s.hair, beard: s.beard, brow: s.brow, svc: HSC.servicesSnapshot ? HSC.servicesSnapshot() : null };
   }
   function onUp() {
     const g = G(), snap = undo.snap;
@@ -289,7 +313,7 @@
     if (s.status !== 'cutting' || s.jobId !== snap.job) return;
     if (s.hair !== snap.hair || s.beard !== snap.beard || s.brow !== snap.brow) {
       if (undo.job !== s.jobId) { undo.job = s.jobId; undo.stack = []; }
-      undo.stack.push({ hair: snap.hair, beard: snap.beard, brow: snap.brow });
+      undo.stack.push({ hair: snap.hair, beard: snap.beard, brow: snap.brow, svc: snap.svc });
       if (undo.stack.length > 20) undo.stack.shift();
       ui.undoButton();
     }
@@ -309,6 +333,7 @@
         let back = false;
         for (let k = 0; k < 40 && !back; k++) { back = g.restore ? await g.restore(prev.hair, prev.beard, prev.brow) : false; if (!back) await new Promise((r) => setTimeout(r, 150)); }
         if (!back) undo.stack.push(prev);
+        else if (HSC.servicesRestore) HSC.servicesRestore(prev.svc); // a threaded line put back is no longer threaded
       } else if (!ok) HSC.nope && HSC.nope(ui.el.undo);
     } finally {
       undo.busy = false;
@@ -522,7 +547,7 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
       const sv = this.el.score.querySelector('.svc'), key2 = (this.svcDone || []).join();
       if (sv.dataset.k !== key2) { sv.dataset.k = key2; sv.innerHTML = (this.svcDone || []).map((k) => `<span>${(HSC.SERVICE_ICON || {})[k] || ''}</span>`).join(''); }
       // the exact breakdown (economy): fee, costs, services, tip and bonuses, each with its sign
-      const rk = last.key && last.lines ? last.job + ':' + last.paid + ':' + last.tripled : '';
+      const rk = last.key && last.lines ? last.job + ':' + last.paid + ':' + last.tripled + ':' + (last.bill ? last.bill.key : '') : '';
       if (this.el.rcpt.dataset.k !== rk) {
         this.el.rcpt.dataset.k = rk;
         const IC = { fee: 'salon', services: 'relax', rush: 'rush', demand: 'flame', daily: 'daily', triple: 'video' };

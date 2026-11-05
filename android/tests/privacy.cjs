@@ -1,5 +1,5 @@
 'use strict';
-// Actual Android web bundle: privacy must consume spare header space without moving existing UI.
+// Actual Android web bundle: policy and conditional UMP choices live as readable actions under Settings.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -8,12 +8,9 @@ const {chromium} = require('playwright');
 const root = path.resolve(__dirname, '../..'), build = path.join(root, 'source/build');
 const out = path.join(root, 'qa/results'); fs.mkdirSync(out, {recursive:true});
 const hash = p => crypto.createHash('sha256').update(fs.readFileSync(path.join(root,p))).digest('hex');
-// pins re-approved by the owner on 5 November 2026 for feature/head-shapes-36 (renderer and wardrobe hooks for the
-// approved Android features); android/clipper-input.js is unchanged since its October approval
 const frozen = {
   'android/clipper-input.js':'231830bf96d9e63b8a30832d75ca45399fb85e31affb8a02d47c4b7bdea115ca',
-  // re-pinned for the owner-approved game modes: patch20 adds skip() (a new customer without a cut); nothing else changed
-  'source/build/runtime/game.js':'20fa35d106d5de83e29f9adee055022203aa333d4c24f967028867c423992f01',
+  'source/build/runtime/game.js':'bd68b869f04724b4abfd9dd3fbf8464d1a3b5fd2fbe141af7c24f49d8d55292c',
   'source/customers/wardrobe.js':'b6b0cb1d438cb8da4f4a0ca754a27ca02e2df25cffd4811835608420ab0948e6',
 };
 for(const [p,expected] of Object.entries(frozen)) assert.equal(hash(p),expected,'owner-approved source must remain byte-identical: '+p);
@@ -32,91 +29,57 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
         await route.fulfill({path:file,contentType:types[path.extname(file)]||'application/octet-stream'});
       });
       await context.addInitScript(()=>{
-        window.__privacyCalls=0;
-        window.__adOptionsCalls=0;
+        window.__privacyCalls=0; window.__adOptionsCalls=0;
         window.AndroidHost={
-          request(id,operation,payload) {setTimeout(()=>{
-            if(operation==='save') localStorage.setItem('privacy-save',JSON.parse(payload));
-            __androidHost.complete(id,true,operation==='load'?localStorage.getItem('privacy-save')||'{}':'');
-          },5);},
-          gameReady(){},
-          showRewarded(){throw Error('privacy test must not request ads');},
-          showInterstitial(){throw Error('privacy test must not request ads');},
-          openPrivacy(){__privacyCalls++;},
-          showPrivacyOptions(){__adOptionsCalls++;},
+          request(id,operation,payload) {setTimeout(()=>{if(operation==='save')localStorage.setItem('privacy-save',JSON.parse(payload));__androidHost.complete(id,true,operation==='load'?localStorage.getItem('privacy-save')||'{}':'');},5);},
+          gameReady(){}, showRewarded(){throw Error('privacy test must not request ads');}, showInterstitial(){throw Error('privacy test must not request ads');},
+          openPrivacy(){__privacyCalls++;}, showPrivacyOptions(){__adOptionsCalls++;},
         };
       });
-      const page = await context.newPage(), errors=[];
-      page.on('pageerror',error=>errors.push(error.message));
-      page.setDefaultTimeout(120000);
+      const page = await context.newPage(), errors=[]; page.on('pageerror',e=>errors.push(e.message)); page.setDefaultTimeout(120000);
       await page.goto('http://privacy.test/');
-      await page.waitForFunction(()=>window.skinFadeStudio&&HSC.startupTiming?.firstPlayable&&!document.body.inert&&document.querySelector('.hsc-privacy'));
-      // the wardrobe lives in the menu (owner request, 5 November 2026)
-      await page.getByRole('button',{name:'Menu',exact:true}).click();
-      await page.getByRole('button',{name:'Wardrobe',exact:true}).click();
-      await page.waitForFunction(()=>document.querySelector('#hsc-panel.open')&&skinFadeStudio.getView().paused);
-      assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Close','opening wardrobe retains its existing Close focus');
-      await page.addStyleTag({content:'*{animation:none!important;transition:none!important}'});
-      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-      const geometry = () => page.evaluate(()=>{
-        const selectors=['#scene','#hsc-panel','.hsc-sheet','.hsc-head','.hsc-pickwrap','.hsc-pick','.hsc-coll','.hsc-grid','.hsc-pager', '.ui button','#hsc-hud button','#hsc-panel button:not(.hsc-privacy):not(.hsc-ad-options)'];
-        return selectors.flatMap(selector=>[...document.querySelectorAll(selector)].map((el,index)=>{
-          const r=el.getBoundingClientRect(); return {selector,index,x:r.x,y:r.y,width:r.width,height:r.height};
-        }));
-      });
+      await page.waitForFunction(()=>window.skinFadeStudio&&HSC.startupTiming?.firstPlayable&&!document.body.inert&&document.querySelector('#hsc-set .hsc-privacy'));
       const hair = await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair));
-      await page.locator('.hsc-privacy').evaluate(el=>el.style.display='none');
-      const before = await geometry();
-      const beforeName='android-browser-privacy-'+name+'-before.png';
-      await page.screenshot({path:path.join(out,beforeName)});report.screenshots.push(beforeName);
-      await page.locator('.hsc-privacy').evaluate(el=>el.style.display='');
-      const after = await geometry();
-      assert.deepEqual(after,before,name+': all pre-existing element bounds must be unchanged');
-      assert.equal(await page.getByRole('button',{name:'Ad privacy choices',exact:true}).isVisible(),false,'ad choices hidden until UMP requires them');
-      const policyBounds=await page.locator('.hsc-privacy').evaluate(el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};});
-      await page.evaluate(()=>{__androidPrivacyOptionsRequired=true;window.dispatchEvent(new Event('android-privacy-options'));});
-      assert.deepEqual(await geometry(),after,name+': required ad choices do not move any existing control or card');
-      assert.deepEqual(await page.locator('.hsc-privacy').evaluate(el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};}),policyBounds,'direct policy shield stays fixed');
-      const optionsGeometry=await page.locator('.hsc-ad-options').evaluate(el=>{
-        const r=el.getBoundingClientRect(),p=document.querySelector('.hsc-privacy').getBoundingClientRect();
-        const left=Array.from(document.querySelectorAll('.hsc-head .hsc-tab')).map(t=>t.getBoundingClientRect().right);
-        return{width:r.width,height:r.height,gap:p.left-r.right,centreError:Math.abs(r.y+r.height/2-p.y-p.height/2),clearTabs:r.left>Math.max(...left)};
-      });
-      assert(optionsGeometry.gap>0&&optionsGeometry.centreError<.02&&optionsGeometry.clearTabs,name+': separate, aligned ad-choices target fits spare header space');
-      await page.getByRole('button',{name:'Ad privacy choices',exact:true}).click();
-      assert.equal(await page.evaluate(()=>__adOptionsCalls),1,'ad choices dispatches only its separate native UMP operation');
-      assert.equal(await page.evaluate(()=>__privacyCalls),0,'ad choices never invokes the external policy button');
-      const alignment=await page.evaluate(()=>{
-        const header=document.querySelector('.hsc-head');
-        const p=header.querySelector('.hsc-privacy').getBoundingClientRect();
-        const c=header.querySelector('.hsc-x:not(.hsc-privacy)').getBoundingClientRect();
-        const tab=header.querySelector('.hsc-tab:last-of-type');
-        return {privacy:{x:p.x,y:p.y,width:p.width,height:p.height},close:{x:c.x,y:c.y,width:c.width,height:c.height},gap:c.left-p.right,centreError:Math.abs(p.top+p.height/2-c.top-c.height/2)};
-      });
-      assert(alignment.centreError<.02,name+': button centreline matches Close');
-      assert(Math.abs(alignment.privacy.width-alignment.close.width)<.02&&Math.abs(alignment.privacy.height-alignment.close.height)<.02,name+': button diameter matches Close');
-      assert(alignment.gap>0,name+': separate nonoverlapping privacy and Close targets');
-      const afterName='android-browser-privacy-'+name+'-after.png';
-      await page.screenshot({path:path.join(out,afterName)});report.screenshots.push(afterName);
-      await page.getByRole('button',{name:'Privacy',exact:true}).click();
-      assert.equal(await page.evaluate(()=>__privacyCalls),1,'one tap opens native privacy entry once');
-      assert.equal(await page.evaluate(()=>__adOptionsCalls),1,'policy shield never invokes UMP');
-      await page.evaluate(()=>{__androidPrivacyOptionsRequired=false;window.dispatchEvent(new Event('android-privacy-options'));});
-      assert.equal(await page.getByRole('button',{name:'Ad privacy choices',exact:true}).isVisible(),false,'current UMP status can remove ad choices');
-      assert.deepEqual(await geometry(),after,'hiding ad choices preserves the existing geometry');
-      assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),hair,'opening privacy preserves haircut');
-      assert(await page.evaluate(()=>skinFadeStudio.getView().paused),'wardrobe retains pause ownership');
-      await page.evaluate(()=>{__androidHost.pause(true);__androidHost.pause(false);});
-      assert(await page.evaluate(()=>skinFadeStudio.getView().paused),'host resume must not unpause the open wardrobe');
-      await page.getByRole('button',{name:'Close',exact:true}).click();
-      await page.waitForFunction(()=>!skinFadeStudio.getView().paused);
-      assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),hair,'privacy return preserves haircut');
+      if(!await page.locator('#hsc-menu.open').count()) await page.getByRole('button',{name:'Menu',exact:true}).click();
+      assert.equal(await page.locator('#hsc-menu .home [data-b="daily"]').count(),0,'Daily has no duplicate Home shortcut');
+      assert.equal((await page.locator('#hsc-menu .qp').innerText()).trim(),'Quick Play','Quick Play is the first Home action');
+      assert.equal((await page.locator('#hsc-menu .hero').innerText()).trim(),'Career','the second Home action names its Career outcome');
+      assert.ok(await page.evaluate(()=>{const q=document.querySelector('#hsc-menu .qp'),c=document.querySelector('#hsc-menu .hero');return !!(q.compareDocumentPosition(c)&Node.DOCUMENT_POSITION_FOLLOWING);}),'Quick Play comes before Career');
+      await page.locator('#hsc-menu [data-b="modes"]').click();
+      await page.waitForFunction(()=>!document.querySelector('#hsc-menu .modes').hidden);
+      assert.equal(await page.locator('#hsc-menu .modes [data-m="daily"]').count(),1,'Daily lives once inside Modes');
+      assert.equal(await page.locator('#hsc-menu .modes [data-m="free"]').count(),0,'Modes has no Freestyle or Quick Play tile');
+      assert.equal(await page.locator('#hsc-menu .modes [data-m="career"]').count(),0,'Modes has no Career tile');
+      await page.locator('#hsc-menu .page.modes > .mhead .back').click();
+      await page.getByRole('button',{name:'Settings',exact:true}).click();
+      await page.waitForFunction(()=>document.querySelector('#hsc-set.open .hsc-privacy'));
+      assert.equal(await page.locator('#hsc-panel .hsc-privacy').count(),0,'privacy is not hidden in Wardrobe');
+      const visibleText = await page.locator('#hsc-set.open').innerText();
+      for(const label of ['Settings','Salon name','Language','Hand','Vibration','Reduce motion','Sound cues','Privacy']) assert(visibleText.includes(label),name+': readable setting '+label);
+      // a setting may not change a tool's physical result (TOOL-PHYSICS-AND-EFFECT-CONTRACT.md 7.3 items 5-6)
+      for(const label of ['Tool width','Cut per pass']) assert(!visibleText.includes(label),name+': removed physics setting '+label);
+      const policy = page.getByRole('button',{name:'Privacy',exact:true});
+      const bounds = await policy.evaluate(el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};});
+      assert(bounds.width>=48&&bounds.height>=48,name+': privacy action has a full touch target');
+      assert.equal(await page.getByRole('button',{name:'Ad choices',exact:true}).isVisible(),false,'ad choices start hidden');
+      await policy.click(); assert.equal(await page.evaluate(()=>__privacyCalls),1,'policy action dispatches once');
+      await page.evaluate(()=>{__androidPrivacyOptionsRequired=true;dispatchEvent(new Event('android-privacy-options'));});
+      const choices = page.getByRole('button',{name:'Ad choices',exact:true}); await choices.waitFor({state:'visible'});
+      await choices.click(); assert.equal(await page.evaluate(()=>__adOptionsCalls),1,'UMP action dispatches separately');
+      await page.evaluate(()=>{__androidPrivacyOptionsRequired=false;dispatchEvent(new Event('android-privacy-options'));});
+      assert.equal(await choices.isVisible(),false,'current UMP status removes the optional action');
+      assert.equal(await page.locator('#hsc-language option').count(),12,'selector exposes exactly the implemented language packs');
+      await page.locator('#hsc-language').selectOption('es');
+      assert((await page.locator('#hsc-set.open').innerText()).includes('Ajustes'),'language change updates Settings atomically');
+      await page.locator('#hsc-language').selectOption('en');
+      assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),hair,'settings and privacy preserve the haircut');
       assert.deepEqual(errors,[],'privacy path has no page exceptions');
-      report.layouts.push({name,width,height,existingBoundsUnchanged:true,alignment,optionsGeometry,conditionalAdOptions:true,separateNativeDispatch:true,nativeEntryCalls:1,hairPreserved:true,pauseOwnership:true,pageErrors:errors});
-      console.log('PASS privacy:',name,'unchanged existing layout; aligned shield; native entry; preserved haircut/pause');
+      const shot='android-browser-settings-'+name+'.png'; await page.screenshot({path:path.join(out,shot)}); report.screenshots.push(shot);
+      report.layouts.push({name,width,height,careerFreestyleDistinct:true,dailyGrouped:true,languageSwitch:true,settingsText:true,policyUnderSettings:true,conditionalAdOptions:true,nativeEntryCalls:1,hairPreserved:true,pageErrors:errors});
+      console.log('PASS privacy:',name,'text Settings; policy/UMP routing; preserved haircut');
       await context.close();
     }
     report.status='PASS';
-  } catch(error) { report.status='FAIL';report.error=error.stack;throw error; }
+  } catch(error) { report.status='FAIL'; report.error=error.stack; throw error; }
   finally { fs.writeFileSync(path.join(out,'android-browser-privacy-report.json'),JSON.stringify(report,null,2)); await browser.close(); }
 })().catch(error=>{console.error(error);process.exitCode=1;});

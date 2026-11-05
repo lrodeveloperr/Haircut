@@ -3,10 +3,13 @@
 // unlocked by level. Each is modelled to scale in the clipper's own hand (the same transform, so placement and
 // touch targeting are the clipper's) and cuts the way the real tool does, within the game's hair grid:
 //
-//   trimmer        level 3   narrow T-blade, cuts to the skin (0.5 mm): line-ups, edges and the nape
-//   scissors       level 6   blends: each pass takes about 3 mm off what is longer than the chosen guard
-//   straight razor level 9   very narrow; shaves beard and edges clean
-//   beard trimmer  level 12  compact; its guards give fine beard lengths (1, 2, 3, 4.5, 6 mm)
+//   trimmer        level 3   narrow T-blade with a fixed 0.5 mm residual on every surface: line-ups, edges, the nape
+//   scissors       level 6   no guard: they cut every hair crossing the blades at the blade height (3-16 mm,
+//                            chosen on the scissors' own height arc)
+//   straight razor level 9   very narrow; shaves only stubble of 2 mm or less, to the skin; longer hair is untouched
+//   beard trimmer  level 12  compact; its own guards (1, 2, 3, 4.5, 6 mm) apply to any hair it reaches
+// One millimetre target per tool applies identically to scalp, beard and brow (TOOL-PHYSICS contract 4, 7.1);
+// the clipper's own guards and behaviour are unchanged.
 //
 // The tool button sits bottom-left (it appears once a second tool is unlocked). Wordless: pictures only.
 // patch19 routes the engine's cut level, blade width and motor sound through here; the clipper is unchanged.
@@ -19,13 +22,16 @@
   const TOOLS = {
     clipper: { level: 1, width: 0.56 },
     trimmer: { level: 3, width: 0.3, cut: () => 0, hz: (g) => 168, gain: 0.8 },
-    // each spot loses one level (about 3 mm) per stroke, never below the chosen guard
-    scissors: { level: 6, width: 0.46, cut: (u, g, c) => { if (c == null || snipped.has(c)) return u; snipped.add(c); return Math.max(g, u - 1); }, gain: 0 },
-    razor: { level: 9, width: 0.2, cut: () => 0, gain: 0 },
-    beard: { level: 12, width: 0.4, hz: (g) => 150 - g * 6, gain: 0.55 },
+    scissors: { level: 6, width: 0.46, cut: (u, g) => scalpLevel(SCISSOR_MM[g] != null ? SCISSOR_MM[g] : 6), gain: 0 },
+    // the scalp is stored at 0.5 mm and above: nothing there is short enough to change under the razor
+    razor: { level: 9, width: 0.2, cut: (u) => u, gain: 0 },
+    beard: { level: 12, width: 0.4, cut: (u, g) => scalpLevel(FINE[g] != null ? FINE[g] : 3), hz: (g) => 150 - g * 6, gain: 0.55 },
   };
-  const snipped = new Set(); // cells the scissors cut in this stroke
-  addEventListener('pointerdown', () => snipped.clear(), true);
+  // the stored scalp lengths (mm) and each tool's physical target
+  const SCALP_MM = [0.5, 3, 6, 10, 13, 16];
+  const SCISSOR_MM = [3, 6, 10, 13, 16]; // the scissors' blade heights
+  // the longest stored scalp length that is not above a target (never leaves more than the tool's length)
+  const scalpLevel = (mm) => { let l = 0; for (let i = 0; i < SCALP_MM.length; i++) if (SCALP_MM[i] <= mm + 1e-9) l = i; return l; };
   const ORDER = ['clipper', 'trimmer', 'scissors', 'razor', 'beard'];
   let tool = 'clipper';
   const unlocked = () => { const lv = M() && M().data ? M().level() : 1; return ORDER.filter((k) => lv >= TOOLS[k].level); };
@@ -34,18 +40,65 @@
   // rituals (turkish.js) join the tray; while one is in the hand nothing is cut and the motor is silent
   HSC.addTool = function (key, def, icon) { TOOLS[key] = Object.assign({ width: 0.01, gain: 0, ritual: true }, def); ICON[key] = icon; if (!ORDER.includes(key)) ORDER.push(key); };
   HSC.isRitual = () => !!TOOLS[tool].ritual;
-  HSC.toolLevel = (u, g, c) => (TOOLS[tool].ritual ? u : TOOLS[tool].cut ? TOOLS[tool].cut(u, g, c) : g);
+  HSC.toolLevel = (u, g, c) => { const r = TOOLS[tool].ritual ? u : TOOLS[tool].cut ? TOOLS[tool].cut(u, g, c) : g; if (r < u) dirty.add(tool); return r; };
+  // ---- which tools really changed hair during a job (career tool mastery: map logic section 4) ----
+  // a tool counts once it shortens at least one cell; strokes are attributed to the job they were made in
+  const used = { job: null, set: new Set() }, dirty = new Set();
+  const flush = (job) => {
+    if (job == null) return;
+    if (used.job !== job) { used.job = job; used.set = new Set(); }
+    for (const t of dirty) used.set.add(t);
+    dirty.clear();
+  };
+  HSC.noteTool = (job) => { dirty.add(tool); flush(job); };
+  HSC.toolsUsed = (job) => { const g = G(); flush(g ? g.getState().jobId : job); return used.job === job ? [...used.set] : []; };
+  addEventListener('pointerup', () => { const g = G(); if (g && dirty.size) flush(g.getState().jobId); }, true);
+  addEventListener('pointercancel', () => { const g = G(); if (g && dirty.size) flush(g.getState().jobId); }, true);
   HSC.bladeWidth = () => TOOLS[tool].width;
   HSC.toolHz = (g) => (TOOLS[tool].hz ? TOOLS[tool].hz(g) : 118 - Math.max(0, g) * 9);
   HSC.toolGain = () => (TOOLS[tool].gain == null ? 1 : TOOLS[tool].gain);
   const FINE = [1, 2, 3, 4.5, 6]; // the beard trimmer's guards, mm
   const levelOfMm = (mm) => { const L = HSC.BEARD_MM; let best = 0; for (let i = 0; i < L.length; i++) if (Math.abs(L[i] - mm) < Math.abs(L[best] - mm)) best = i; return best; };
+  // the tool's physical target in millimetres for a selector position (null: a ritual in hand, nothing cut)
+  HSC.toolMm = (g) => {
+    if (TOOLS[tool].ritual) return null;
+    if (tool === 'trimmer') return 0.5;
+    if (tool === 'razor') return 0;
+    if (tool === 'scissors') return SCISSOR_MM[g] != null ? SCISSOR_MM[g] : 6;
+    if (tool === 'beard') return FINE[g] != null ? FINE[g] : 3;
+    return HSC.GUARD_MM ? HSC.GUARD_MM[g] : null;
+  };
+  // the beard lengths the barber's owned (unlocked) tools can leave, without picking any of them up: the career
+  // director offers only beard requests these can reach (director section 4: owned-tool feasibility)
+  HSC.beardReach = () => {
+    const out = new Set(), u = unlocked();
+    for (const k of u) {
+      if (TOOLS[k].ritual) continue;
+      if (k === "clipper") { for (const l of Object.values(HSC.GUARD_LEVEL || {})) if (l != null) out.add(l); }
+      else if (k === 'trimmer') out.add(levelOfMm(0.5));
+      else if (k === 'scissors') for (const mm of SCISSOR_MM) out.add(levelOfMm(mm));
+      else if (k === 'beard') for (const mm of FINE) out.add(levelOfMm(mm));
+    }
+    // the razor takes stubble of 2 mm or less to skin, so it reaches 0 once another tool can reach 2 mm
+    if (u.includes('razor') && [...out].some((l) => HSC.BEARD_MM[l] <= 2)) out.add(0);
+    return [...out].sort((a, b) => a - b);
+  };
+  HSC.toolSelector = () => (tool === 'scissors' ? SCISSOR_MM : tool === 'beard' ? FINE : tool === 'clipper' ? null : []);
   HSC.toolBeard = (g) => {
     if (TOOLS[tool].ritual) return HSC.BEARD_MM.length - 1;
-    if (tool === 'razor' || tool === 'trimmer') return 0;
-    if (tool === 'beard') return levelOfMm(FINE[g] != null ? FINE[g] : 3);
-    if (tool === 'scissors') return HSC.GUARD_LEVEL[g];
-    return HSC.GUARD_LEVEL[g];
+    if (tool === 'razor') return 0; // with toolBeardCell: only stubble of 2 mm or less goes
+    if (tool === 'clipper') return HSC.GUARD_LEVEL[g];
+    return levelOfMm(HSC.toolMm(g));
+  };
+  // per beard cell: the razor's edge takes only short stubble; every other tool cuts to its target
+  HSC.toolBeardCell = (cur, guard) => (tool === 'razor' && !TOOLS[tool].ritual ? (HSC.BEARD_MM[cur] <= 2 ? 0 : cur) : guard);
+  // a brow cell (2 full, 1 short, 0 shaved) under the tool: the same millimetre target as everywhere else
+  HSC.toolBrow = (cur, g) => {
+    if (TOOLS[tool].ritual) return cur;
+    if (tool === 'razor') return cur <= 1 ? 0 : cur; // a full brow is too long for the razor's edge
+    const mm = HSC.toolMm(g);
+    if (mm == null) return cur;
+    return Math.min(cur, mm < 1 ? 0 : mm < 5 ? 1 : 2);
   };
 
   // ---- models (built from the clipper's own geometry and material classes) ----
@@ -144,13 +197,44 @@
   }
   HSC.setTool = function (k) {
     if (!TOOLS[k] || !unlocked().includes(k)) return false;
-    tool = k; show(); ui.render();
+    tool = k; show(); ui.render(); arc();
     // a ritual works by touch: the hand goes to cut mode (nothing is cut)
     try { if (TOOLS[k].ritual && G().getState().interactionMode !== 'cut') G().toggleClipper(); } catch (e) {}
     try { const g = G(); g && g.getState && navigator.vibrate && navigator.vibrate(10); } catch (e) {}
     return true;
   };
   HSC.tool = () => tool;
+
+  // ---- the guard arc follows the tool in hand (owner-approved 5 November 2026; TOOL-PHYSICS contract 7.1) ----
+  // clipper: its own guards, unchanged. Beard trimmer: its five fine guards in millimetres. Scissors have no guard:
+  // the arc becomes their blade-height scale (3-16 mm). Trimmer, razor and the rituals have a fixed working edge or
+  // cut nothing, so the arc is hidden. A visible number is never reinterpreted: the label, the spoken label and the
+  // millimetre target always agree. Only the labels change; the engine's control, layout and input are untouched.
+  const fmt = (mm) => (HSC.num ? HSC.num(mm) : String(mm));
+  function arc() {
+    const el = document.querySelector('.guard-arc');
+    if (!el) return;
+    const sel = HSC.toolSelector ? HSC.toolSelector() : null;
+    const off = Array.isArray(sel) && !sel.length;
+    el.classList.toggle('hsc-arc-off', off);
+    el.classList.toggle('hsc-arc-mm', !!(sel && sel.length));
+    const say = (node, key, args) => (HSC.setSpoken ? HSC.setSpoken(node, key, args) : node.setAttribute('aria-label', key));
+    say(el, tool === 'scissors' ? 'arc_scissors' : tool === 'beard' ? 'arc_beard' : 'arc_clipper');
+    el.querySelectorAll('.rung').forEach((b, i) => {
+      if (!b.dataset.n) b.dataset.n = b.textContent;
+      if (sel && sel.length) {
+        b.textContent = fmt(sel[i]);
+        say(b, 'a_mmv', { v: sel[i] });
+      } else {
+        if (b.textContent !== b.dataset.n) b.textContent = b.dataset.n;
+        const g = +b.dataset.n;
+        say(b, 'a_guard', { g, mm: HSC.GUARD_MM ? HSC.GUARD_MM[g] : g });
+      }
+    });
+  }
+  HSC.relabelArc = arc;
+  addEventListener('hsc-language', arc);
+  new MutationObserver(() => { const el = document.querySelector('.guard-arc'); if (el && !el.dataset.hscSeen) { el.dataset.hscSeen = '1'; arc(); } }).observe(document.documentElement, { childList: true, subtree: true });
 
   // ---- feel: the scissors open and close as you drag, each close a crisp snip (a crunchier shear when it is
   // cutting hair), with a light tap of vibration; the razor scrapes. The clipper keeps the game's own motor. ----
@@ -239,6 +323,8 @@
     beard: `<svg viewBox="0 0 24 24" width="30" height="30"><path d="M9 5h6a2 2 0 0 1 2 2v8H7V7a2 2 0 0 1 2-2z" fill="#b7bcc1" stroke="${INK}" stroke-width="1.6"/><path d="M6 15h12v2H6z" fill="#1b1c1e" stroke="${INK}" stroke-width="1.4"/><path d="M7 17l-1 3M9.5 17l-.5 3M12 17v3M14.5 17l.5 3M17 17l1 3" stroke="#6e7479" stroke-width="1.4"/></svg>`,
   };
   const CSS = `
+.guard-arc.hsc-arc-off{visibility:hidden;pointer-events:none}
+.guard-arc.hsc-arc-mm .rung{font-size:15px;letter-spacing:-.02em}
 #hsc-tools{position:fixed;z-index:20;left:max(14px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));display:flex;flex-direction:column-reverse;gap:10px;zoom:var(--hsc-s,1)}
 #hsc-tools button{width:60px;height:60px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};cursor:pointer}
 #hsc-tools button.on{background:#ffb627}

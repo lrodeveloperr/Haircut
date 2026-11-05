@@ -9,7 +9,8 @@
 //                tip (0 / 25 / 50% of the net fee); regular +4, VIP +25% of the net fee and the 3-star combo
 //                apply to the tip, which is then capped at the net fee. A rewarded triple adds two tips, as its
 //                own transaction.
-//   bill         from paid contract 6 on, every five paid contracts post a 100-coin operating bill once, even
+//   bill         the first five contracts are sponsored; each later five-contract cycle starts with a 50-coin
+//                operating bill, posted at the preceding result boundary so it is visible before the next shift,
 //                into debt. The balance is signed: debt never blocks play; discretionary buys need the price.
 //   milestones   career facts pay once (first haircut, home chapter, licence, first city showcase, ...).
 //   ledger       the balance and lifetime totals by category are authoritative; a bounded recent ledger explains
@@ -28,7 +29,7 @@
     service: { requested: [8, 2], extra: [4, 2], extraMax: 2 }, // [charge, supply cost]
     demand: { share: 0.2, max: 12, perShift: 3, shiftLength: 5 },
     dailyFirst: 30, freestyleOnce: 5,
-    bill: { every: 5, amount: 100, subsidised: 5, lines: { rent: 50, utilities: 25, cleaning: 15, tools: 10 } },
+    bill: { every: 5, amount: 50, subsidised: 5, lines: { rent: 25, utilities: 12, cleaning: 8, tools: 5 } },
     milestones: { firstHaircut: 40, homeChapter: 75, licence: 300, cityShowcase: 150, cityMastery: 250, cityChapter: 75, tour: 400 },
     levels: [[2, 5, 50], [6, 9, 75], [10, 12, 100]], // one-time coins for reaching a level; none after 12
     calendar: [20, 25, 30, 35, 40, 50, 80], goal: 25, weekly: 200, weeklyGoal: 15, duplicateItem: 50,
@@ -105,20 +106,22 @@
     if (r.error || r.duplicate) return Object.assign(r, { payout: p });
     let eco = r.eco;
     eco.paid++;
-    // the operating bill: the first five paid contracts are sponsored; then every five paid contracts post once
+    // At the end of jobs 5/10/15..., post the next cycle's bill. The result screen therefore discloses it before
+    // the player can start jobs 6/11/16..., while a duplicate result cannot post it twice.
     const B = CONFIG.bill;
-    if (eco.paid > B.subsidised && (eco.paid - B.subsidised) % B.every === 0) {
-      const cycle = (eco.paid - B.subsidised) / B.every;
+    let bill = null;
+    if (eco.paid >= B.subsidised && eco.paid % B.every === 0) {
+      const cycle = eco.paid / B.every;
       const b = apply(eco, { key: 'bill:' + cycle, type: 'cost', cat: 'bill', amount: -B.amount, lines: Object.entries(B.lines).map(([k, v]) => [k, -v]) });
-      eco = b.eco; eco.cycle = { id: cycle, billed: cycle };
+      eco = b.eco; bill = b.txn || null; eco.cycle = { id: cycle, billed: cycle };
     }
-    return { eco, txn: r.txn, payout: p };
+    return { eco, txn: r.txn, payout: p, bill };
   }
   // the next bill: how many paid contracts until it posts (for the player's view)
   function billDue(eco) {
     const B = CONFIG.bill;
     if (eco.paid < B.subsidised) return { sponsored: B.subsidised - eco.paid, amount: B.amount };
-    return { inJobs: B.every - ((eco.paid - B.subsidised) % B.every), amount: B.amount };
+    return { inJobs: B.every - (eco.paid % B.every), amount: B.amount };
   }
   // the rewarded triple: two more organic tips, keyed to the job so a duplicate callback cannot pay again
   function tripleTip(eco, jobKey, tip) { return apply(eco, { key: jobKey + ':triple', type: 'reward', cat: 'rewarded', amount: 2 * Math.max(0, tip | 0) }); }
@@ -136,13 +139,19 @@
     if (pos && pos.licence && pos.slot === 4) out.push(['home-chapter:' + pos.visit, CONFIG.milestones.homeChapter]);
     return out;
   }
+  // A milestone that can be reached again (a mastered city is still mastered on its next chapter) is also kept in
+  // the permanent `milestones` list, because the idempotency key ring is bounded and would forget it. Chapter
+  // milestones are unique per chapter, so only their key is kept.
+  const PERMANENT = (id) => !id.startsWith('chapter:');
   function payMilestones(eco0, list) {
     let eco = eco0;
     const paid = [];
     for (const [id, amount] of list) {
+      if (PERMANENT(id) && Array.isArray(eco.milestones) && eco.milestones.includes(id)) continue;
       const r = apply(eco, { key: 'milestone:' + id, type: 'earn', cat: 'milestone', amount });
       if (!r.duplicate && !r.error) paid.push([id, amount]);
       eco = r.eco;
+      if (!r.error && PERMANENT(id)) { eco = Object.assign({}, eco, { milestones: (Array.isArray(eco.milestones) ? eco.milestones : []).concat([id]) }); }
     }
     return { eco, paid };
   }

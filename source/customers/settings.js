@@ -1,11 +1,11 @@
 // ---------------------------------------------------------------------------------------------
-// Android only (buildall.sh, HEAD_SHAPES=1; owner-approved item 32, 5 November 2026): a settings panel in the menu,
-// icons only. Every setting is the player's choice; the defaults keep the game exactly as it was.
+// Android only (buildall.sh, HEAD_SHAPES=1): a concise text settings list in the menu. Every setting is the
+// player's choice; the defaults keep the game exactly as it was. Android policy actions register into this list.
 //
 //   hand         left-handed layout: the guards and the clipper button move to the left, the tool button to the
 //                right (mirrored with CSS; the 3D clipper and its placement under the finger are unchanged)
-//   size         the blade's cutting width, 80%..125% (default 100%)
-//   strength     how much one pass takes off: one level, two levels, or all the way to the guard (default)
+//   (size and strength were removed 5 November 2026: a setting may not change a tool's physical result or its
+//    effect footprint, TOOL-PHYSICS-AND-EFFECT-CONTRACT.md 7.3 items 5 and 6; saved values are ignored)
 //   vibration    on (default) or off: every navigator.vibrate call is dropped when off
 //   calm         reduce motion: interface animations and transitions stop (the reveal spin is the engine's own)
 //   pulses       a sound cue on screen: waves pulse at the bottom while any game sound plays (for players who
@@ -18,7 +18,6 @@
   const INK = '#10223f';
   const M = () => HSC.meta;
   const DEF = { left: false, size: 2, sens: 2, vib: true, calm: false, pulses: false };
-  const SIZES = [0.8, 0.9, 1, 1.12, 1.25];
   const get = () => Object.assign({}, DEF, (M() && M().data && M().data.settings) || {});
   function set(k, v) {
     const d = M() && M().data;
@@ -29,18 +28,6 @@
   }
 
   // ---- what each setting does ----
-  // blade width (patch19 asks HSC.bladeWidth for every tool)
-  const bw = HSC.bladeWidth;
-  if (bw) HSC.bladeWidth = () => bw() * SIZES[get().size];
-  // strength: a cell drops at most 1 or 2 levels per stroke below where it was when the stroke reached it
-  const tl = HSC.toolLevel, seen = new Map();
-  addEventListener('pointerdown', () => seen.clear(), true);
-  if (tl) HSC.toolLevel = (u, g, c) => {
-    const r = tl(u, g, c), sens = get().sens;
-    if (sens >= 2 || c == null || !(r < u)) return r;
-    if (!seen.has(c)) seen.set(c, u);
-    return Math.max(r, seen.get(c) - (sens + 1));
-  };
   // vibration
   const vib = navigator.vibrate ? navigator.vibrate.bind(navigator) : null;
   if (vib) try { navigator.vibrate = (p) => (get().vib ? vib(p) : false); } catch (e) {}
@@ -67,12 +54,6 @@
   // ---- icons ----
   const CLOSE = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   const GEAR = `<svg viewBox="0 0 24 24" width="40" height="40"><path d="M10.3 2.5h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9-2.6-.5v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z" fill="#c9cfd6" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.6" fill="#fff6e6" stroke="${INK}" stroke-width="1.6"/></svg>`;
-  const HAND = (flip) => `<svg viewBox="0 0 24 24" width="40" height="40"${flip ? ' style="transform:scaleX(-1)"' : ''}><path d="M8.6 12V4.6a1.5 1.5 0 0 1 3 0V11V3.6a1.5 1.5 0 0 1 3 0V11V5a1.5 1.5 0 0 1 3 0v6.5V8a1.5 1.5 0 0 1 3 0v7.3c0 4-2.7 6.7-6.6 6.7h-1.2c-2.3 0-3.9-.9-5.2-2.7l-3.4-4.8a1.6 1.6 0 0 1 2.5-2z" fill="#e9c9a8" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
-  const CLIPPER = (s) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><rect x="7" y="7" width="10" height="15" rx="3" fill="#ffb627" stroke="${INK}" stroke-width="1.8"/><path d="M6.5 7.5V4h11v3.5" fill="#c9cfd6" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 4V2.5M10 4V2.5M12 4V2.5M14 4V2.5M16 4V2.5" stroke="${INK}" stroke-width="1.4" stroke-linecap="round"/></svg>`;
-  // strength: one strand falls, or many
-  const FALL = (n) => `<svg viewBox="0 0 24 24" width="30" height="30">${[[12, 0], [7, 1], [17, 1], [9.5, 2], [14.5, 2]].slice(0, n).map(([x, k]) => `<path d="M${x} ${3 + k * 2}c1.4 3 -1.4 6 0 9s-1.4 6 0 8" fill="none" stroke="#5a3b1f" stroke-width="2" stroke-linecap="round"/>`).join('')}</svg>`;
-  const PHONE = `<svg viewBox="0 0 24 24" width="34" height="34"><rect x="7.5" y="3" width="9" height="18" rx="2.2" fill="#fff" stroke="${INK}" stroke-width="1.8"/><path d="M4 8.5l-1.5 1.7L4 12l-1.5 1.8L4 15.5M20 8.5l1.5 1.7L20 12l1.5 1.8L20 15.5" fill="none" stroke="${INK}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  const CALM = `<svg viewBox="0 0 24 24" width="34" height="34"><path d="M20 12a8 8 0 1 1-2.3-5.7" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round"/><path d="M18.4 2.8v3.8h-3.8" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="9" y="9" width="2.3" height="6" rx=".8" fill="${INK}"/><rect x="12.7" y="9" width="2.3" height="6" rx=".8" fill="${INK}"/></svg>`;
   const WAVES = (s = 34) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><path d="M4 9.5v5h3.5l4.5 4v-13l-4.5 4z" fill="#fff6e6" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/><path class="w1" d="M15.5 9.5a3.5 3.5 0 0 1 0 5" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round"/><path class="w2" d="M18 7a7 7 0 0 1 0 10" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round"/><path class="w3" d="M20.5 4.6a10.5 10.5 0 0 1 0 14.8" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round"/></svg>`;
   // on and off differ in shape, not only colour: a tick or a cross in the knob, which also moves
   const TICK = '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#10223f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -85,28 +66,35 @@
 #hsc-set .sheet{position:relative;width:min(100%,520px);max-height:92%;overflow-y:auto;display:flex;flex-direction:column;gap:10px;background:#fff6e6;border:3px solid ${INK};border-bottom:0;border-radius:26px 26px 0 0;box-shadow:0 -4px 0 ${INK};padding:14px max(14px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
 @media (orientation:landscape){#hsc-set.open{align-items:center}#hsc-set .sheet{border-radius:26px;border-bottom:3px solid ${INK};box-shadow:0 5px 0 ${INK}}}
 #hsc-set .head{display:flex;align-items:center;justify-content:space-between}
+#hsc-set .head h2{margin:0 8px;font:900 26px/1.1 "Arial Rounded MT Bold","Nunito",system-ui,sans-serif}
 #hsc-set .x{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};cursor:pointer;color:${INK};padding:0}
-#hsc-set .row{display:flex;align-items:center;gap:10px;min-height:60px;padding:6px 10px;border-radius:18px;border:3px solid ${INK};background:#fff}
-#hsc-set .row .ic{flex:none;display:flex;width:40px;justify-content:center}
-#hsc-set .row .sp{flex:1}
-#hsc-set .hands{display:flex;gap:10px;flex:1;justify-content:center}
-#hsc-set .hand{position:relative;width:64px;height:56px;border-radius:16px;border:3px solid ${INK};background:#f1e4cc;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+#hsc-set .row{display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 12px;border-radius:18px;border:3px solid ${INK};background:#fff}
+#hsc-set .label{flex:1;min-width:0;font:800 16px/1.2 "DM Sans",system-ui,sans-serif}
+#hsc-set .hands{display:flex;gap:8px;flex:none}
+#hsc-set .hand{min-width:76px;height:48px;border-radius:14px;border:3px solid ${INK};background:#f1e4cc;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0 12px;font:800 15px/1 system-ui,sans-serif;color:${INK}}
 #hsc-set .hand[aria-pressed=true]{background:#ffe08a;box-shadow:0 0 0 3px #ffb627}
-#hsc-set .hand .ok{position:absolute;right:-9px;top:-9px;width:26px;height:26px;border-radius:50%;background:#fff;border:2.5px solid ${INK};display:none;align-items:center;justify-content:center}
-#hsc-set .hand[aria-pressed=true] .ok{display:flex}
-#hsc-set .slide{flex:1;display:flex;align-items:center;gap:6px}
+#hsc-set .slide{flex:0 1 240px;display:flex;align-items:center;gap:8px}
+#hsc-set .slide output{min-width:54px;text-align:end;font:800 14px/1 system-ui,sans-serif;font-variant-numeric:tabular-nums}
 #hsc-set input[type=range]{flex:1;height:48px;margin:0;background:transparent;-webkit-appearance:none;appearance:none;touch-action:none}
 #hsc-set input[type=range]::-webkit-slider-runnable-track{height:12px;border-radius:6px;background:#e9dcc4;border:2.5px solid ${INK}}
 #hsc-set input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:40px;height:40px;margin-top:-16px;border-radius:50%;background:#ffb627;border:3px solid ${INK};box-shadow:0 3px 0 ${INK}}
-#hsc-set .row.nm input{flex:1;min-width:0;height:48px;box-sizing:border-box;border-radius:14px;border:3px solid ${INK};background:#fff;padding:0 12px;font:900 20px "Arial Rounded MT Bold","Nunito",system-ui,sans-serif;color:${INK};letter-spacing:.5px;unicode-bidi:plaintext}
+#hsc-set .row.nm{flex-wrap:wrap}
+#hsc-set .row.nm .label{flex:1 0 100%}
+#hsc-set .row.nm input{flex:1 1 220px;min-width:0;height:48px;box-sizing:border-box;border-radius:14px;border:3px solid ${INK};background:#fff;padding:0 12px;font:900 20px "Arial Rounded MT Bold","Nunito",system-ui,sans-serif;color:${INK};letter-spacing:.5px;unicode-bidi:plaintext}
 #hsc-set .row.nm input:focus{outline:none;border-color:#3aa2f2;box-shadow:0 0 0 4px #3aa2f233}
 #hsc-set .row.nm .cnt{flex:none;min-width:44px;text-align:end;font:700 14px system-ui,sans-serif;opacity:.55;font-variant-numeric:tabular-nums}
 #hsc-set .row.nm.bad input{border-color:#f04436;animation:hsc-shake .3s}
+#hsc-set select{min-width:180px;max-width:58%;height:48px;border-radius:14px;border:3px solid ${INK};background:#fff;padding:0 10px;font:800 16px/1 system-ui,sans-serif;color:${INK}}
 @keyframes hsc-shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 #hsc-set .sw{position:relative;width:88px;height:48px;border-radius:24px;border:3px solid ${INK};background:#e9dcc4;cursor:pointer;padding:0;flex:none}
 #hsc-set .sw .k{position:absolute;top:3px;left:3px;width:36px;height:36px;border-radius:50%;background:#fff;border:2.5px solid ${INK};display:flex;align-items:center;justify-content:center;transition:left .15s}
 #hsc-set .sw[aria-checked=true]{background:#8fd18f}
 #hsc-set .sw[aria-checked=true] .k{left:41px}
+#hsc-set .actions{display:flex;flex-direction:column;gap:10px}
+#hsc-set .action{width:100%;justify-content:space-between;cursor:pointer;color:${INK};font:800 16px/1.2 "DM Sans",system-ui,sans-serif;text-align:start}
+#hsc-set .action[hidden]{display:none}
+#hsc-set .action::after{content:"›";font-size:30px;line-height:1}
+#hsc-set .action:focus-visible,#hsc-set .hand:focus-visible,#hsc-set .sw:focus-visible{outline:4px solid #3aa2f2;outline-offset:2px}
 #hsc-pulse{position:fixed;z-index:25;left:50%;bottom:calc(env(safe-area-inset-bottom) + 10px);transform:translateX(-50%);width:56px;height:56px;border-radius:50%;background:#fff6e6;border:3px solid ${INK};display:none;align-items:center;justify-content:center;pointer-events:none;zoom:var(--hsc-s,1)}
 #hsc-pulse.on{display:flex}
 #hsc-pulse.on .w1{animation:hsc-wave 0.9s ease-in-out infinite}
@@ -134,16 +122,16 @@ body.hsc-calm #hsc-pulse.on path{animation:none!important;opacity:1}
       const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
       const p = document.createElement('div'); p.id = 'hsc-set';
       p.innerHTML = `<div class="sheet" role="dialog" aria-label="Settings">
-        <div class="head"><span class="ic">${GEAR}</span><button class="x" type="button" aria-label="Close">${CLOSE}</button></div>
-        <div class="row nm" hidden><span class="ic"></span><input type="text" maxlength="64" enterkeyhint="done" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Shop name"><span class="cnt"></span></div>
-        <div class="row"><div class="hands">
-          <button class="hand" type="button" data-left="1" aria-label="Left-handed">${HAND(true)}<span class="ok">${TICK}</span></button>
-          <button class="hand" type="button" data-left="0" aria-label="Right-handed">${HAND(false)}<span class="ok">${TICK}</span></button></div></div>
-        <div class="row"><span class="ic">${CLIPPER(24)}</span><div class="slide"><input type="range" min="0" max="4" step="1" data-k="size" aria-label="Clipper size"><span class="ic">${CLIPPER(38)}</span></div></div>
-        <div class="row"><span class="ic">${FALL(1)}</span><div class="slide"><input type="range" min="0" max="2" step="1" data-k="sens" aria-label="Cutting strength"><span class="ic">${FALL(5)}</span></div></div>
-        <div class="row"><span class="ic">${PHONE}</span><span class="sp"></span><button class="sw" type="button" role="switch" data-k="vib" aria-label="Vibration"><span class="k"></span></button></div>
-        <div class="row"><span class="ic">${CALM}</span><span class="sp"></span><button class="sw" type="button" role="switch" data-k="calm" aria-label="Reduce motion"><span class="k"></span></button></div>
-        <div class="row"><span class="ic">${WAVES()}</span><span class="sp"></span><button class="sw" type="button" role="switch" data-k="pulses" aria-label="Show sounds on screen"><span class="k"></span></button></div>
+        <div class="head"><h2 data-t="settings">Settings</h2><button class="x" type="button" aria-label="Close">${CLOSE}</button></div>
+        <div class="row nm" hidden><label class="label" for="hsc-shop-name" data-t="shop_name">Salon name</label><input id="hsc-shop-name" type="text" maxlength="64" enterkeyhint="done" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Salon name"><span class="cnt"></span></div>
+        <div class="row"><label class="label" for="hsc-language" data-t="language">Language</label><select id="hsc-language" aria-label="Language"></select></div>
+        <div class="row"><span class="label" data-t="hand">Hand</span><div class="hands">
+          <button class="hand" type="button" data-left="1" aria-label="Left"><span data-t="left">Left</span></button>
+          <button class="hand" type="button" data-left="0" aria-label="Right"><span data-t="right">Right</span></button></div></div>
+        <div class="row"><span class="label" data-t="vibration">Vibration</span><button class="sw" type="button" role="switch" data-k="vib" aria-label="Vibration"><span class="k"></span></button></div>
+        <div class="row"><span class="label" data-t="reduce_motion">Reduce motion</span><button class="sw" type="button" role="switch" data-k="calm" aria-label="Reduce motion"><span class="k"></span></button></div>
+        <div class="row"><span class="label" data-t="sound_cues">Sound cues</span><button class="sw" type="button" role="switch" data-k="pulses" aria-label="Sound cues"><span class="k"></span></button></div>
+        <div class="actions"></div>
       </div>`;
       document.body.appendChild(p);
       this.el.panel = p;
@@ -152,6 +140,9 @@ body.hsc-calm #hsc-pulse.on path{animation:none!important;opacity:1}
       p.querySelectorAll('.hand').forEach((b) => b.addEventListener('click', () => set('left', b.dataset.left === '1')));
       p.querySelectorAll('input[type=range]').forEach((r) => r.addEventListener('input', () => set(r.dataset.k, +r.value)));
       p.querySelectorAll('.sw').forEach((b) => b.addEventListener('click', () => set(b.dataset.k, !get()[b.dataset.k])));
+      const language = p.querySelector('#hsc-language');
+      for (const [value, name] of HSC.languageOptions || []) { const o = document.createElement('option'); o.value = value; o.textContent = name; language.appendChild(o); }
+      language.addEventListener('change', () => { if (HSC.setLang) HSC.setLang(language.value); });
       // the shop's name (salon.js): shown on the TV and when a session opens; at most 16 letters in any script
       const nm = p.querySelector('.row.nm'), inp = nm.querySelector('input'), cnt = nm.querySelector('.cnt');
       let wait = 0;
@@ -161,23 +152,57 @@ body.hsc-calm #hsc-pulse.on path{animation:none!important;opacity:1}
       inp.addEventListener('change', () => { clearTimeout(wait); commit(); });
       inp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { inp.blur(); } });
       inp.addEventListener('keyup', (e) => e.stopPropagation());
-      addEventListener('keydown', (e) => { if (e.key === 'Escape' && p.classList.contains('open')) { e.preventDefault(); this.close(); } });
+      addEventListener('keydown', (e) => { if (e.key === 'Escape' && p.classList.contains('open')) this.close(); });
       const pulse = document.createElement('div'); pulse.id = 'hsc-pulse'; pulse.setAttribute('aria-hidden', 'true'); pulse.innerHTML = WAVES(36);
       document.body.appendChild(pulse);
       this.el.pulse = pulse;
       setInterval(() => this.tick(), 120);
       apply();
     },
+    actions: new Map(),
+    addAction(action) {
+      if (!action || !action.id || typeof action.run !== 'function' || this.actions.has(action.id)) return false;
+      this.actions.set(action.id, Object.assign({}, action));
+      if (this.el.panel) this.renderActions();
+      return true;
+    },
+    renderActions() {
+      const box = this.el.panel && this.el.panel.querySelector('.actions');
+      if (!box) return;
+      for (const action of this.actions.values()) {
+        let b = box.querySelector(`[data-action="${action.id}"]`);
+        if (!b) {
+          b = document.createElement('button'); b.type = 'button'; b.dataset.action = action.id;
+          b.className = 'row action' + (action.className ? ' ' + action.className : '');
+          b.addEventListener('click', () => action.run()); box.appendChild(b);
+        }
+        const label = HSC.t ? HSC.t(action.label) : action.fallback || action.label;
+        b.textContent = label; b.setAttribute('aria-label', label);
+        b.hidden = typeof action.visible === 'function' ? !action.visible() : false;
+      }
+    },
+    labels() {
+      const p = this.el.panel;
+      if (!p) return;
+      p.setAttribute('dir', HSC.rtl && HSC.rtl() ? 'rtl' : 'ltr');
+      p.querySelectorAll('[data-t]').forEach((el) => { el.textContent = HSC.t ? HSC.t(el.dataset.t) : el.dataset.t; });
+      for (const [sel, key] of [['.row.nm input', 'shop_name'], ['#hsc-language', 'language'], ['[data-left="1"]', 'left'], ['[data-left="0"]', 'right'], ['[data-k="vib"]', 'vibration'], ['[data-k="calm"]', 'reduce_motion'], ['[data-k="pulses"]', 'sound_cues']]) {
+        const el = p.querySelector(sel); if (el) el.setAttribute('aria-label', HSC.t ? HSC.t(key) : key);
+      }
+      this.renderActions();
+    },
     render() {
       const s = get(), p = this.el.panel;
       p.querySelectorAll('.hand').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.left === '1') === s.left)));
       p.querySelectorAll('input[type=range]').forEach((r) => { if (+r.value !== s[r.dataset.k]) r.value = s[r.dataset.k]; });
       p.querySelectorAll('.sw').forEach((b) => { const on = !!s[b.dataset.k]; b.setAttribute('aria-checked', String(on)); b.querySelector('.k').innerHTML = on ? TICK : CROSS; });
+      p.querySelector('#hsc-language').value = HSC.lang ? HSC.lang() : 'en';
+      this.labels();
     },
     open() {
       this.render();
       const nm = this.el.panel.querySelector('.row.nm');
-      if (HSC.salon) { nm.hidden = false; nm.querySelector('.ic').innerHTML = HSC.icon ? HSC.icon('salon', 34) : ''; const inp = nm.querySelector('input'); if (document.activeElement !== inp) inp.value = HSC.salon.shown(); inp.placeholder = HSC.t ? HSC.t('shopname') : 'Barbershop'; nm.querySelector('.cnt').textContent = HSC.salon.graphemes(inp.value) + '/' + HSC.salon.NAME_MAX; }
+      if (HSC.salon) { nm.hidden = false; const inp = nm.querySelector('input'); if (document.activeElement !== inp) inp.value = HSC.salon.shown(); inp.placeholder = HSC.t ? HSC.t('shopname') : 'Barbershop'; nm.querySelector('.cnt').textContent = HSC.salon.graphemes(inp.value) + '/' + HSC.salon.NAME_MAX; }
       this.el.panel.classList.add('open');
     },
     close() { this.el.panel.classList.remove('open'); },
@@ -194,7 +219,8 @@ body.hsc-calm #hsc-pulse.on path{animation:none!important;opacity:1}
       this.el.pulse.classList.toggle('on', get().pulses && live.n > 0 && audible());
     },
   };
+  addEventListener('hsc-language', () => { if (ui.el.panel) { ui.labels(); ui.render(); } });
   const boot = () => { if (globalThis.skinFadeStudio && document.querySelector('#hsc-hud .hsc-row') && HSC.meta && HSC.meta.data) ui.build(); else setTimeout(boot, 300); };
   boot();
-  HSC.settings = { get, set, open: () => ui.open() };
+  HSC.settings = { get, set, open: () => ui.open(), addAction: (action) => ui.addAction(action), refresh: () => ui.renderActions() };
 })(globalThis.HSC || (globalThis.HSC = {}));

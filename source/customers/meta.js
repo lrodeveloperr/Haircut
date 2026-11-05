@@ -233,7 +233,7 @@
       (j.none === true || j.m === 'daily' || (typeof j.st === 'string' && j.st.length < 40 && (typeof j.t === 'string' ? j.t.length < 24000 : typeof j.b === 'string' && j.b.length < 24000)));
     const dl = o.daily, okDaily = dl && typeof dl === 'object' && typeof dl.day === 'string' && /^\d{4}-\d\d-\d\d$/.test(dl.day) && [0, 1, 2, 3].includes(dl.stars);
     return { mode: MODES.includes(o.mode) ? o.mode : 'requests', job: okJob ? { n: j.n, m: j.m, st: j.st, t: j.t, b: j.b, none: j.none === true || undefined } : null,
-      daily: okDaily ? { day: dl.day, stars: dl.stars, paid: dl.paid === true } : null, tried: Array.isArray(o.tried) ? o.tried.filter((m) => MODES.includes(m)).slice(0, 10) : [], rush: Number.isSafeInteger(o.rush) && o.rush >= 0 ? Math.min(o.rush, 1e6) : 0 };
+      daily: okDaily ? { day: dl.day, stars: dl.stars, paid: dl.paid === true } : null, beforeDaily: MODES.includes(o.beforeDaily) && o.beforeDaily !== 'daily' ? o.beforeDaily : null, tried: Array.isArray(o.tried) ? o.tried.filter((m) => MODES.includes(m)).slice(0, 10) : [], rush: Number.isSafeInteger(o.rush) && o.rush >= 0 ? Math.min(o.rush, 1e6) : 0 };
   }
   // the play-time gift: today's active play seconds and the gifts taken (session.js)
   function cleanGift(o) {
@@ -244,7 +244,8 @@
   function cleanSettings(o) {
     if (!o || typeof o !== 'object') return null;
     const b = (v, d) => (typeof v === 'boolean' ? v : d), i = (v, lo, hi, d) => (Number.isSafeInteger(v) && v >= lo && v <= hi ? v : d);
-    return { left: b(o.left, false), size: i(o.size, 0, 4, 2), sens: i(o.sens, 0, 2, 2), vib: b(o.vib, true), calm: b(o.calm, false), pulses: b(o.pulses, false) };
+    const lang = typeof o.lang === 'string' && /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})?$/.test(o.lang) ? o.lang : null;
+    return { left: b(o.left, false), size: i(o.size, 0, 4, 2), sens: i(o.sens, 0, 2, 2), vib: b(o.vib, true), calm: b(o.calm, false), pulses: b(o.pulses, false), lang };
   }
   // the lookbook: the best stars for each requested cut (requests.js)
   function cleanBook(b) {
@@ -256,7 +257,10 @@
   function cleanRound(r) {
     if (!r || typeof r !== 'object' || !Number.isSafeInteger(r.job) || ![0, 1, 2, 3].includes(r.stars)) return null;
     const n = (v) => (Number.isSafeInteger(v) && v >= 0 && v < 1e6 ? v : 0);
-    return { job: r.job, stars: r.stars, tips: n(r.tips), paid: n(r.paid), tripled: r.tripled === true, shownStars: [1, 2, 3].includes(r.shownStars) ? r.shownStars : r.stars, prev: Math.min(999, n(r.prev)), mult: [1, 1.2, 1.5, 2].includes(r.mult) ? r.mult : 1, free: r.free === true };
+    const key = typeof r.key === 'string' && r.key.length <= 160 ? r.key : null;
+    const lines = Array.isArray(r.lines) ? r.lines.filter((x) => Array.isArray(x) && x.length === 2 && typeof x[0] === 'string' && x[0].length < 32 && Number.isSafeInteger(x[1]) && Math.abs(x[1]) < 1e6).slice(0, 24) : [];
+    const bill = r.bill && typeof r.bill.key === 'string' && r.bill.key.length < 80 ? { key: r.bill.key, lines: Array.isArray(r.bill.lines) ? r.bill.lines.filter((x) => Array.isArray(x) && x.length === 2 && typeof x[0] === 'string' && Number.isSafeInteger(x[1])).slice(0, 8) : [] } : null;
+    return { job: r.job, key, stars: r.stars, tips: n(r.tips), tip: n(r.tip), paid: n(r.paid), lines, bill, tripled: r.tripled === true, shownStars: [1, 2, 3].includes(r.shownStars) ? r.shownStars : r.stars, prev: Math.min(999, n(r.prev)), mult: [1, 1.2, 1.5, 2].includes(r.mult) ? r.mult : 1, free: r.free === true };
   }
   function sanitize(d) {
     const f = fresh();

@@ -129,4 +129,148 @@ C.selectCity(s, 'lon'); C.complete(s, { id: 'x', stars: 1, valid: true });
 assert.equal(JSON.stringify(s), frozen);
 ok('pure');
 
+// 13. Shop Owner is reached apart from Master: the home salon is not a branch, three branches beyond it are
+{
+  C.setCities(CITIES, 5);
+  const base = C.create('ist', 99);
+  const mk = (over) => Object.assign(C.clone(base), over);
+  const city = (est) => ({ visits: 3, chapters: 3, showcaseBest: 3, established: est, estTour: 1, awards: [], styles: ['a', 'b', 'c', 'd'], svc: ['m:requests', 't:clipper', 't:trimmer', 'm:fix'], regVisits: 2, gold: 1 });
+  const styles = Object.fromEntries(Array.from({ length: 12 }, (_, i) => ['s' + i, 3]));
+  const common = { licence: { next: 30 }, current: null, tour: { n: 1, roster: ['ist', 'lon', 'lag', 'nyc', 'sao'], rosterVersion: 5, done: ['ist'], na: [] }, completedModes: SPEC.slice(), mastery: { style: styles, mode: {}, tool: {}, service: {}, city: {} } };
+  const master = mk(Object.assign({}, common, { cities: { ist: city(true), lon: city(true), lag: city(true) } }));
+  assert.equal(C.rank(master, SPEC).id, 'master', 'three mastered cities incl. home, two branches -> Master, not Owner');
+  const owner = mk(Object.assign({}, common, { cities: { ist: city(true), lon: city(true), lag: city(true), nyc: city(true) } }));
+  assert.equal(C.rank(owner, SPEC).id, 'owner', 'three branches beyond the home salon -> Shop Owner');
+  ok('owner');
+}
+
+// 14. an earned rank is kept: a new specialist mode or a lost fact never demotes the player
+{
+  const st = C.create('ist', 7);
+  const spec = Object.assign(C.clone(st), { licence: { next: 30 }, current: null, tour: { n: 1, roster: ['ist'], rosterVersion: 5, done: ['ist'], na: [] }, completedModes: SPEC.slice(), cities: { ist: { visits: 6, chapters: 6, showcaseBest: 3, established: true, estTour: 0, awards: [] }, lon: { visits: 1, chapters: 1, showcaseBest: 1, established: true, estTour: 1, awards: [] }, lag: { visits: 1, chapters: 1, showcaseBest: 1, established: true, estTour: 1, awards: [] } } });
+  assert.equal(C.rank(spec, SPEC).id, 'specialist');
+  spec.rankBest = C.rankIndex(spec, SPEC);
+  assert.deepEqual(plain(C.validate(spec)), []);
+  assert.equal(C.rank(spec, SPEC.concat(['newmode'])).id, 'specialist', 'a later mode does not demote a Specialist');
+  const fresh = C.clone(spec); delete fresh.rankBest;
+  assert.equal(C.rank(fresh, SPEC.concat(['newmode'])).id, 'professional', 'without the saved rank the new mode would apply');
+  ok('sticky');
+}
+
+// 15. founding city: a career made at startup sits on the placeholder until the player chooses; the choice is final
+{
+  C.setCities(CITIES, 6);
+  let st = C.create(C.UNSET, 4242);
+  assert.equal(C.needsFounding(st), true);
+  assert.deepEqual(plain(C.validate(st)), []);
+  assert.equal(C.found(st, 'nowhere').error, 'city-unavailable');
+  st = finish(st, 2).state; // a contract already played on the placeholder (a career from the one-city build)
+  const f = C.found(st, 'lag');
+  assert.equal(f.error, undefined);
+  assert.equal(f.state.founding, 'lag');
+  assert.equal(f.state.current.city, 'lag');
+  assert.equal(f.state.licence.next, 1, 'progress is kept');
+  assert.equal(C.contractId(f.state).split(':')[2], 'lag');
+  assert.ok(!f.state.cities[C.UNSET], 'the placeholder record is merged into the chosen city');
+  assert.equal(C.found(f.state, 'lon').error, 'already-founded', 'the founding city is chosen once');
+  assert.deepEqual(plain(C.validate(f.state)), []);
+  ok('founding');
+}
+
+// 16. a one-city-build career past its licence: the open tour gets the full roster, its number (rank, Legend) is kept
+{
+  C.setCities([{ id: C.UNSET, enabled: true }], 1);
+  let st = C.create(C.UNSET, 77);
+  for (let i = 0; i < 30; i++) st = finish(st, 3).state;
+  // the old one-city registry closed a tour with every chapter
+  for (let k = 0; k < 4; k++) { st = C.selectCity(st, C.UNSET).state; for (let i = 0; i < 5; i++) st = finish(st, 3).state; }
+  const legendBefore = C.rank(st, SPEC);
+  assert.equal(legendBefore.id, 'legend');
+  st.rankBest = C.rankIndex(st, SPEC);
+  C.setCities(CITIES, 6);
+  assert.equal(C.needsFounding(st), true);
+  assert.deepEqual(plain(C.selectable(st)), [], 'no map choice before the founding city');
+  assert.equal(C.reconcile(st).tour.n, st.tour.n, 'reconcile waits for the founding choice');
+  const f = C.found(st, 'nyc').state;
+  assert.equal(f.tour.n, st.tour.n, 'the tour number is kept');
+  assert.deepEqual(plain(f.tour.roster).sort(), CITIES.map((c) => c.id).sort(), 'the open tour has the full roster');
+  assert.equal(C.rank(f, SPEC).legend, legendBefore.legend, 'the Legend number is kept');
+  assert.equal(C.phase(f), 'map');
+  // a chapter no longer closes a tour: four cities are still needed
+  let g = C.selectCity(f, 'lon').state;
+  for (let i = 0; i < 5; i++) g = finish(g, 1).state;
+  assert.equal(g.tour.n, f.tour.n, 'one chapter does not close a five-city tour');
+  assert.equal(C.phase(g), 'map', 'after a chapter the map asks for the next city');
+  assert.deepEqual(plain(C.validate(g)), []);
+  ok('one-city migration');
+}
+
+// 17. the shipped registry: 36 cities, coverage allocation, every name, neutral tables flagged for research
+{
+  const ctx2 = { HSC: {}, console }; ctx2.globalThis = ctx2; vm.createContext(ctx2);
+  vm.runInContext(fs.readFileSync(path.join(root, 'source/customers/cities.js'), 'utf8'), ctx2);
+  const R = ctx2.HSC.cityRegistry, list = ctx2.HSC.CITIES;
+  assert.equal(list.length, 36);
+  assert.deepEqual(plain(R.validateRegistry(list)), []);
+  assert.ok(list.every((c) => c.population === null && c.confidence === 'low' && c.review === 'research'), 'neutral, low confidence, in research');
+  const bad = Object.assign({}, list[0], { population: { groups: { 0: 0.5 }, confidence: 'high' } });
+  assert.ok(plain(R.validateCity(bad)).includes('population-sum'));
+  assert.ok(plain(R.validateCity(bad)).includes('unsourced-table'));
+  assert.ok(plain(R.validateRegistry(list.slice(1))).includes('coverage:africa'));
+  ok('registry');
+}
+
+// 18. a Daily result raises mastery only: no slot, no progress; the same result twice changes nothing
+{
+  C.setCities(CITIES, 6);
+  const st = C.create('ist', 31);
+  const r = C.side(st, { valid: true, stars: 3, mode: 'daily', style: 'crop', tools: ['clipper'], services: [] });
+  assert.equal(r.state.licence.next, 0, 'no progress');
+  assert.equal(C.contractId(r.state), C.contractId(st), 'the offered slot is unchanged');
+  assert.equal(r.state.mastery.style.crop, 3);
+  assert.equal(r.state.mastery.mode.daily, 3);
+  assert.equal(C.side(r.state, { valid: true, stars: 2, mode: 'daily', style: 'crop', tools: ['clipper'], services: [] }).duplicate, true);
+  assert.equal(C.side(st, { valid: false, mode: 'daily' }).error, 'not-valid');
+  ok('daily mastery');
+}
+
+// 19. four-part city mastery and branch states: completion alone is not mastery; all four parts are
+{
+  C.setCities(CITIES, 6);
+  let st = C.create('ist', 55);
+  const kinds = ['requests', 'fix', 'beard', 'relax'];
+  for (let i = 0; i < 30; i++) {
+    const id = C.contractId(st), pos = C.position(st);
+    st = C.complete(st, { id, stars: 3, valid: true, mode: kinds[i % 4], style: 'st' + (i % 6), tools: ['clipper'], services: [], regular: pos.role === 'relationship' && pos.visit > 0 }).state;
+  }
+  const m = C.cityMastery(st, 'ist');
+  assert.equal(m.all, true, 'six 3-star chapters with varied work and returning regulars master the home city');
+  assert.equal(C.branchState(st, 'ist'), 'mastered');
+  const plainWork = C.create('lon', 56);
+  let pw = plainWork;
+  for (let i = 0; i < 30; i++) pw = C.complete(pw, { id: C.contractId(pw), stars: 3, valid: true, mode: 'requests', style: 'same', tools: ['clipper'], services: [] }).state;
+  const pm = C.cityMastery(pw, 'lon');
+  assert.equal(pm.completion, 1);
+  assert.equal(pm.all, false, 'completion alone is not city mastery');
+  assert.equal(C.branchState(pw, 'lon'), 'growing');
+  assert.equal(C.branchState(pw, 'ist'), 'unvisited');
+  ok('city mastery');
+}
+
+// 20. relocation: locked during World Tour 1; afterwards any established branch, never an unestablished city
+{
+  C.setCities(CITIES, 6);
+  let st = C.create('ist', 61);
+  for (let i = 0; i < 30; i++) st = finish(st).state;
+  assert.equal(C.setBase(st, 'ist').error, 'base-locked', 'no relocation before World Tour 1 is complete');
+  for (const id of ['lon', 'lag', 'nyc', 'sao']) { st = C.selectCity(st, id).state; for (let i = 0; i < 5; i++) st = finish(st).state; }
+  assert.equal(st.tour.n, 2, 'World Tour 1 is complete');
+  assert.equal(C.setBase(st, 'zzz').error, 'not-established');
+  const moved = C.setBase(st, 'lag');
+  assert.equal(moved.state.base, 'lag');
+  assert.equal(moved.state.founding, 'ist', 'the founding city never changes');
+  assert.equal(moved.state.tour.n, st.tour.n, 'relocating does not reset the tour');
+  ok('relocation');
+}
+
 console.log('PASS: ' + passed + ' career state-machine cases (licence, tours, idempotency, roster changes, bounded save).');

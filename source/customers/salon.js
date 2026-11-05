@@ -87,30 +87,48 @@
   const save = () => { if (client && client.saveProgress && S) client.saveProgress(KEY, S).catch(() => {}); };
   const coins = () => (HSC.coins ? HSC.coins.get() : 0);
 
+  // ---- the salon on show: the founding salon (S) or a career branch (career-run.js) ----
+  // A branch uses the same nine slots and the parts the barber owns; its choice is saved in the career journal by
+  // the branch's own save. An invalid or missing branch look shows the neutral salon (branch plan section 12).
+  let ctx = null;
+  const cur = () => ctx || S;
+  function cleanLook(c) {
+    const parts = {};
+    for (const k of SLOTS) parts[k] = c && c.parts && OPTIONS[k].includes(c.parts[k]) ? c.parts[k] : OPTIONS[k][0];
+    return { city: c.city, parts, region: c && REGION_IDS.includes(c.region) ? c.region : '', save: c.save };
+  }
+  function setContext(c) {
+    const next = c && c.city && typeof c.save === 'function' ? cleanLook(c) : null;
+    if (JSON.stringify(next && [next.city, next.parts, next.region]) === JSON.stringify(ctx && [ctx.city, ctx.parts, ctx.region])) return;
+    ctx = next; changed();
+  }
+  const keep = () => { if (ctx) ctx.save(Object.assign({}, ctx.parts), ctx.region); else save(); };
+
   // ---- buying and choosing ----
   const owns = (slot, opt) => S.owned[slot].includes(opt);
-  function equip(slot, opt) { if (!owns(slot, opt)) return false; S.parts[slot] = opt; S.region = ''; save(); changed(); return true; }
+  function equip(slot, opt) { if (!owns(slot, opt)) return false; cur().parts[slot] = opt; cur().region = ''; keep(); changed(); return true; }
   async function buyPart(slot, opt) {
     if (owns(slot, opt)) return equip(slot, opt);
     const price = priceOf(slot, opt);
     if (coins() < price) return false;
-    const ok = await HSC.coins.spend(price, 'salon', 'salon:part:' + slot + ':' + opt);
+    const ok = await (HSC.coins.buyItem || HSC.coins.spend)(price, 'salon', 'salon:part:' + slot + ':' + opt);
     if (!ok) return false;
-    S.owned[slot].push(opt);
+    if (!owns(slot, opt)) S.owned[slot].push(opt);
+    if (ctx) save(); // ownership is the founding salon's record, whichever salon is on show
     return equip(slot, opt);
   }
   function useRegion(id) {
     if (!S.regions.includes(id)) return false;
     const p = regionParts(id);
-    for (const k of SLOTS) { if (!owns(k, p[k])) S.owned[k].push(p[k]); S.parts[k] = p[k]; }
-    S.region = id; save(); changed(); return true;
+    for (const k of SLOTS) { if (!owns(k, p[k])) S.owned[k].push(p[k]); cur().parts[k] = p[k]; }
+    cur().region = id; if (ctx) save(); keep(); changed(); return true;
   }
   async function buyRegion(id) {
     if (S.regions.includes(id)) return useRegion(id);
     if (coins() < SHOP_PRICE) return false;
-    const ok = await HSC.coins.spend(SHOP_PRICE, 'salon', 'salon:shop:' + id);
+    const ok = await (HSC.coins.buyItem || HSC.coins.spend)(SHOP_PRICE, 'salon', 'salon:shop:' + id);
     if (!ok) return false;
-    S.regions.push(id);
+    if (!S.regions.includes(id)) S.regions.push(id);
     return useRegion(id);
   }
   function setName(v) {
@@ -122,8 +140,22 @@
     save(); changed();
     return n;
   }
+  // what the career journal says was bought (career-run.js buyItem) is owned, even if this shop save was not
+  // written after the purchase (a crash between the two writes); returns true when something was restored
+  function reconcile() {
+    if (!S || !HSC.econ || !HSC.econ.ready || !HSC.econ.ready() || !HSC.econ.entitlements) return false;
+    let fixed = false;
+    for (const k of HSC.econ.entitlements()) {
+      const p = k.split(':');
+      if (p[0] !== 'salon') continue;
+      if (p[1] === 'part' && OPTIONS[p[2]] && OPTIONS[p[2]].includes(p[3]) && !owns(p[2], p[3])) { S.owned[p[2]].push(p[3]); fixed = true; }
+      if (p[1] === 'shop' && REGION_IDS.includes(p[2]) && !S.regions.includes(p[2])) { S.regions.push(p[2]); fixed = true; }
+    }
+    if (fixed) save();
+    return fixed;
+  }
   // the neon colours come with the shop's region (or the classic ones for a mixed shop)
-  const look = (parts) => Object.assign({}, parts || S.parts, { neon: (S3() && S3().REGIONS[S.region || 'classic'] || {}).neon || ['#ff3d9a', '#3df2ff'] });
+  const look = (parts) => Object.assign({}, parts || cur().parts, { neon: (S3() && S3().REGIONS[cur().region || 'classic'] || {}).neon || ['#ff3d9a', '#3df2ff'] });
   // until the player names it, the shop carries a default name in their language (labels.js 'shopname')
   const shown = () => S.name || t('shopname');
   const info = () => ({ name: shown(), year: S.year });
@@ -135,7 +167,7 @@
   function apply() {
     const root = document.querySelector('.game-root');
     if (!root || !S || failed || !S3()) return;
-    const land = innerWidth > innerHeight, key = land + JSON.stringify([S.parts, S.region, shown(), S.year]);
+    const land = innerWidth > innerHeight, key = land + JSON.stringify([cur().parts, cur().region, shown(), S.year]);
     if (applied === key) return;
     try {
       // drawn small and softened: the haircut stays the sharpest thing on screen
@@ -187,7 +219,7 @@
 #hsc-salon .tabs .on{background:linear-gradient(#ffe682,#ffb21a)}
 #hsc-salon .cats{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 8px;flex:none}
 #hsc-salon .cats::-webkit-scrollbar{display:none}
-#hsc-salon .cats .j{flex:none;flex-direction:column;gap:2px;width:62px;height:66px;border-radius:14px;font-size:11px;padding:0 2px}
+#hsc-salon .cats .j{flex:none;flex-direction:column;gap:2px;width:66px;height:66px;border-radius:14px;font-size:12px;padding:0 2px}
 #hsc-salon .cats .j.on{background:linear-gradient(#ffe682,#ffb21a)}
 #hsc-salon .cats img{width:34px;height:34px;object-fit:cover;border-radius:7px;border:2px solid ${K}}
 #hsc-salon .cats .hsc-lbl{max-width:100%}
@@ -274,8 +306,8 @@
     // the look being shown: what is chosen, or a preview of what is picked
     previewParts() {
       if (this.tab === 'shops' && this.region) return regionParts(this.region);
-      if (this.tab === 'parts' && this.pick) return Object.assign({}, S.parts, { [this.slot]: this.pick });
-      return S.parts;
+      if (this.tab === 'parts' && this.pick) return Object.assign({}, cur().parts, { [this.slot]: this.pick });
+      return cur().parts;
     },
     layout() {
       const land = innerWidth > innerHeight, z = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hsc-s')) || 1;
@@ -328,13 +360,13 @@
       this.el.cats.hidden = this.el.cards.hidden = this.tab !== 'parts';
       this.el.grid.hidden = this.tab !== 'shops';
       if (this.tab === 'parts') {
-        this.el.cats.innerHTML = SLOTS.map((s) => `<button class="j ${s === this.slot ? 'c-yellow on' : 'c-white'}" type="button" data-s="${s}"><img alt="" src="${S3() ? S3().thumb(s, S.parts[s], 64) || '' : ''}"><span class="hsc-lbl" data-k="${SLOT_ICON[s]}"></span></button>`).join('');
+        this.el.cats.innerHTML = SLOTS.map((s) => `<button class="j ${s === this.slot ? 'c-yellow on' : 'c-white'}" type="button" data-s="${s}"><img alt="" src="${S3() ? S3().thumb(s, cur().parts[s], 64) || '' : ''}"><span class="hsc-lbl" data-k="${SLOT_ICON[s]}"></span></button>`).join('');
         this.el.cats.querySelectorAll('.j').forEach((b) => b.addEventListener('click', () => { if (HSC.fx) HSC.fx.play('down'); this.slot = b.dataset.s; this.pick = null; this.render(); }));
         const obj = !['wall', 'lower', 'floor', 'mat'].includes(this.slot);
         this.el.cards.innerHTML = OPTIONS[this.slot].map((o) => {
-          const own = owns(this.slot, o), on = S.parts[this.slot] === o, sel = (this.pick || S.parts[this.slot]) === o;
+          const own = owns(this.slot, o), on = cur().parts[this.slot] === o, sel = (this.pick || cur().parts[this.slot]) === o;
           const src = S3() ? S3().thumb(this.slot, o, 160) : '';
-          const foot = on ? `<span style="color:#2f9e44">${I('tick', 22)}</span>` : own ? '' : `${I('coin', 22)}${priceOf(this.slot, o).toLocaleString()}`;
+          const foot = on ? `<span style="color:#2f9e44">${I('tick', 22)}</span>` : own ? '' : `${I('coin', 22)}${priceOf(this.slot, o).toLocaleString(HSC.langTag ? HSC.langTag() : undefined)}`;
           return `<button class="card ${sel ? 'sel' : ''}" type="button" data-o="${o}"><span class="art">${src ? `<img class="${obj ? 'obj' : ''}" alt="" src="${src}">` : I('lock', 40)}</span><span class="foot">${foot}</span>${on ? `<span class="own">${I('tick', 20)}</span>` : ''}</button>`;
         }).join('');
         this.el.cards.querySelectorAll('.card').forEach((b) => b.addEventListener('click', () => {
@@ -345,8 +377,8 @@
         }));
       } else {
         this.el.grid.innerHTML = REGION_IDS.map((id) => {
-          const own = S.regions.includes(id), on = S.region === id, sel = (this.region || S.region) === id;
-          const foot = on ? `<span style="color:#2f9e44">${I('tick', 22)}</span>` : own ? '' : `${I('coin', 22)}${SHOP_PRICE.toLocaleString()}`;
+          const own = S.regions.includes(id), on = cur().region === id, sel = (this.region || cur().region) === id;
+          const foot = on ? `<span style="color:#2f9e44">${I('tick', 22)}</span>` : own ? '' : `${I('coin', 22)}${SHOP_PRICE.toLocaleString(HSC.langTag ? HSC.langTag() : undefined)}`;
           return `<button class="card ${sel ? 'sel' : ''}" type="button" data-r="${id}"><span class="art"><img alt="" data-r="${id}"></span><span class="tag hsc-lbl" data-k="${id === 'classic' ? 'classic' : 'c_' + id}"></span><span class="foot">${foot}</span>${on ? `<span class="own">${I('tick', 20)}</span>` : ''}</button>`;
         }).join('');
         this.el.grid.querySelectorAll('.card').forEach((b) => b.addEventListener('click', () => {
@@ -360,7 +392,7 @@
       this.actBar();
       this.layout();
       fill(p);
-      this.el.coin.textContent = coins().toLocaleString();
+      this.el.coin.textContent = coins().toLocaleString(HSC.langTag ? HSC.langTag() : undefined);
       this.draw();
     },
     // region pictures, one per idle moment (each is a separate scene)
@@ -381,12 +413,12 @@
       if (this.tab === 'parts' && this.pick) {
         const pr = priceOf(this.slot, this.pick);
         this.el.nm.innerHTML = `<span class="hsc-lbl" data-k="${SLOT_ICON[this.slot]}"></span>`;
-        b.hidden = false; b.className = 'j c-yellow buy'; b.innerHTML = I('coin', 26) + pr.toLocaleString(); b.disabled = coins() < pr;
+        b.hidden = false; b.className = 'j c-yellow buy'; b.innerHTML = I('coin', 26) + pr.toLocaleString(HSC.langTag ? HSC.langTag() : undefined); b.disabled = coins() < pr;
       } else if (this.tab === 'shops' && this.region) {
         this.el.nm.innerHTML = `<span class="hsc-lbl" data-k="c_${this.region}"></span>`;
-        b.hidden = false; b.className = 'j c-yellow buy'; b.innerHTML = I('coin', 26) + SHOP_PRICE.toLocaleString(); b.disabled = coins() < SHOP_PRICE;
+        b.hidden = false; b.className = 'j c-yellow buy'; b.innerHTML = I('coin', 26) + SHOP_PRICE.toLocaleString(HSC.langTag ? HSC.langTag() : undefined); b.disabled = coins() < SHOP_PRICE;
       } else {
-        this.el.nm.innerHTML = `<span class="hsc-lbl" data-k="${this.tab === 'parts' ? SLOT_ICON[this.slot] : S.region ? (S.region === 'classic' ? 'classic' : 'c_' + S.region) : 'shops'}"></span>`;
+        this.el.nm.innerHTML = `<span class="hsc-lbl" data-k="${this.tab === 'parts' ? SLOT_ICON[this.slot] : cur().region ? (cur().region === 'classic' ? 'classic' : 'c_' + cur().region) : 'shops'}"></span>`;
         b.hidden = true;
       }
     },
@@ -399,7 +431,7 @@
       this.render();
     },
     refresh() { if (this.open_()) this.render(); },
-    tick() { if (!S) return; this.button(); if (this.open_()) this.el.coin.textContent = coins().toLocaleString(); },
+    tick() { if (!S) return; this.button(); if (this.open_()) this.el.coin.textContent = coins().toLocaleString(HSC.langTag ? HSC.langTag() : undefined); },
   };
   const regionThumb = new Map();
   // label texts in the player's language, then fitted to their boxes
@@ -408,7 +440,7 @@
   // ---- the first customer of a session opens on the shop ----
   let revealed = false, revealPic = null, revealKey = '';
   function revealPicture() {
-    const land = innerWidth > innerHeight, key = land + JSON.stringify([S.parts, S.region, shown(), S.year]);
+    const land = innerWidth > innerHeight, key = land + JSON.stringify([cur().parts, cur().region, shown(), S.year]);
     if (revealPic && revealKey === key) return revealPic;
     const dpr = Math.min(devicePixelRatio || 1, 1.5), w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
     revealPic = S3().render(look(), land ? 'land' : 'port', w, h, info()).canvas.toDataURL('image/jpeg', 0.88);
@@ -423,7 +455,7 @@
     let el = document.getElementById('hsc-reveal');
     if (!el) { el = document.createElement('div'); el.id = 'hsc-reveal'; document.body.appendChild(el); }
     const ICON = { career: 'play', requests: 'orders', free: 'freestyle', fix: 'rescue', daily: 'daily', beard: 'beards', relax: 'relax', rush: 'rush' };
-    const LBL = { career: 'play', requests: 'orders', free: 'freestyle', fix: 'rescue', daily: 'daily', beard: 'beards', relax: 'relax', rush: 'rush' };
+    const LBL = { career: 'career', requests: 'orders', free: 'quick_play', fix: 'rescue', daily: 'daily', beard: 'beards', relax: 'relax', rush: 'rush' };
     const sign = document.createTextNode(shown());
     el.innerHTML = `<img alt=""><div class="shade"></div><div class="sui"><div class="sign"><b></b><i class="hsc-lbl" data-k="open"></i></div>
       <div class="go"><div class="mode">${I(ICON[mode] || 'play', 34)}<span class="hsc-lbl" data-k="${LBL[mode] || 'play'}"></span></div><div class="bar"><i></i></div></div></div>`;
@@ -442,7 +474,9 @@
   HSC.salon = {
     state: () => S, SLOTS, OPTIONS, REGIONS: REGION_IDS, NAME_MAX, priceOf, SHOP_PRICE,
     name: () => (S ? S.name : ''), shown: () => (S ? shown() : ''), setName, cleanName, graphemes,
-    buyPart, buyRegion, equip, useRegion, open: () => ui.open(), reveal,
+    buyPart, buyRegion, equip, useRegion, open: () => { reconcile(); ui.open(); }, reveal, reconcile,
+    // a career branch's look in place of the founding salon (null: the founding salon); which city is on show
+    setContext, context: () => (ctx ? ctx.city : null), look: () => ({ parts: Object.assign({}, cur().parts), region: cur().region }),
     // tests
     _sanitize: sanitize, _migrate: migrate, _load: (d) => { S = sanitize(d); return S; },
   };
@@ -456,6 +490,9 @@
     // the shop is founded the first time it is seen: its year shows under the name
     if (!S.year) { S.year = new Date().getFullYear(); save(); } else if (d && d.v === 1) save();
     ui.build(); ui.button();
+    // once the career journal is up, restore anything it recorded as bought
+    const sync = (n) => (reconcile() || (HSC.econ && HSC.econ.ready && HSC.econ.ready()) || n > 100 ? null : setTimeout(() => sync(n + 1), 300));
+    sync(0);
     // the 3D shop is drawn once the game is up (the original picture shows until then)
     const go = () => (HSC.startupTiming && HSC.startupTiming.firstPlayable ? setTimeout(apply, 400) : setTimeout(go, 300));
     go();

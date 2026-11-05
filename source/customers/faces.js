@@ -356,7 +356,7 @@
   }
 
   Object.assign(HSC, {
-    BEARD_MM, GUARD_LEVEL, beardUV, beardCell, beardZone, lipMask, beardRegion, canonIds, areaNormals, morphDelta,
+    BEARD_MM, GUARD_MM, GUARD_LEVEL, beardUV, beardCell, beardZone, lipMask, beardRegion, canonIds, areaNormals, morphDelta,
     buildBeardSurface, beardCellPositions, sampleBeardRoots, beardStart,
   });
 })(globalThis.HSC || (globalThis.HSC = {}));

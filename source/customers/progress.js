@@ -104,6 +104,7 @@
   function afterCut(s) {
     const d = M() && M().data, last = d && d.lastRound;
     if (!P || !last || last.job !== s.jobId || P.lastJob === s.jobId || !(s.cutStrokeCount > 0)) return;
+    if (HSC.practiceJob && HSC.practiceJob(s.jobId)) return; // practice advances nothing (portfolio contract 5)
     P.lastJob = s.jobId;
     const p = s.look && s.look.person, req = HSC.requestFor ? HSC.requestFor(s) : null;
     const beard = Array.isArray(s.beard) && Array.isArray(s.startBeard) && s.beard.some((v, i) => v < s.startBeard[i]);

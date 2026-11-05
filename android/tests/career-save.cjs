@@ -99,13 +99,86 @@ const advance = (body) => { const id = C.contractId(body.core); body.core = C.co
   // 7. the economy and the population counters ride in the same record; a damaged economy is dropped, not loaded
   s = store(); j = J.journal(s);
   const eco = { balance: -40, paid: 7, ledger: [{ key: 'k', amount: 3 }], keys: ['k'], sources: { job: 3 }, sinks: {} };
-  await j.commit(() => Object.assign(firstBody(), { eco, ecoLegacy: true, pop: { a: 2 } }));
+  await j.commit(() => Object.assign(firstBody(), { eco, ecoLegacy: true, pop: { ist: { 3: 0.5 } } }));
   loaded = await J.journal(s).load();
   assert.deepEqual(plain(loaded.body.eco), eco, 'the coin ledger survives a reload');
   assert.equal(loaded.body.ecoLegacy, true);
-  assert.deepEqual(plain(loaded.body.pop), { a: 2 });
+  assert.deepEqual(plain(loaded.body.pop), { ist: { 3: 0.5 } });
   assert.equal(J.sanitize(Object.assign(firstBody(), { eco: { balance: 'lots' } })).eco, undefined, 'a damaged economy is dropped');
   passed++;
 
-  console.log('PASS: ' + passed + ' career save-journal cases (round trip, interrupted commits, corruption, prototype keys, newer versions, lease, economy record).');
+  // 8. golden fixture: a real record from the schema-1 game (startup career on the placeholder city) migrates,
+  //    loads identically twice (idempotent) and can then choose its founding city
+  {
+    const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/career-schema1-startup.json'), 'utf8'));
+    C.setCities(['ist', 'lon', 'lag'].map((id) => ({ id, enabled: true })), 2);
+    const seal1 = (body, rev) => { const json = JSON.stringify(body); return { schema: 1, rev, committed: true, sum: J.checksum(json), body: json }; };
+    const st = store();
+    await st.set(J.KEYS[0], seal1(fixture, 7));
+    const a = await J.journal(st).load(), b = await J.journal(st).load();
+    assert.equal(a.rev, 7);
+    assert.deepEqual(plain(a.body), plain(b.body), 'loading twice gives the same career');
+    assert.deepEqual(plain(J.migrate(J.migrate(fixture, 1), 2)), plain(J.migrate(fixture, 1)), 'the migration is idempotent');
+    assert.equal(a.body.core.founding, C.UNSET);
+    assert.equal(a.body.active.id, fixture.active.id, 'the offered contract survives the migration');
+    assert.equal(a.body.eco.balance, fixture.eco.balance, 'coins survive the migration');
+    assert.deepEqual(plain(a.body.ent), []);
+    const f = C.found(a.body.core, 'lag');
+    assert.equal(f.error, undefined);
+    // the first commit after loading writes schema 2 and keeps everything
+    const j = J.journal(st); await j.load();
+    await j.commit((body) => Object.assign(body, { core: f.state }));
+    const raw = JSON.parse(st.data.get(J.KEYS[1]));
+    assert.equal(raw.schema, J.SCHEMA);
+    assert.equal((await J.journal(st).load()).body.core.founding, 'lag');
+    passed++;
+  }
+
+  // 9. size budget: a record above 3 MB is refused before anything is written
+  {
+    const st = store(), j = J.journal(st);
+    await j.commit(() => firstBody());
+    const w0 = st.writes();
+    await assert.rejects(j.commit((b) => Object.assign(b, { port: { pad: 'x'.repeat(1.6 * 1024 * 1024) } })), /too large/);
+    assert.equal(st.writes(), w0, 'nothing is written');
+    assert.equal((await J.journal(st).load()).rev, 1);
+    passed++;
+  }
+
+  // 10. a stale surface cannot overwrite a newer revision; a released lease writes nothing until it reloads
+  {
+    const st = store(), j1 = J.journal(st);
+    await j1.commit(() => firstBody());
+    const j2 = J.journal(st); await j2.load();
+    await j1.commit(advance);
+    await assert.rejects(j2.commit(advance), /stale/);
+    assert.equal((await J.journal(st).load()).rev, 2);
+    // j1 is hidden (released); another surface writes; j1's next write reloads first and builds on it
+    j1.release();
+    const j3 = J.journal(st); await j3.load();
+    await j3.commit((b) => Object.assign(b, { regs: { lon: [{ key: 'k', seed: 1, person: { seed: 1 }, visits: 1 }] } }));
+    await j1.commit(advance);
+    const last = await J.journal(st).load();
+    assert.equal(last.rev, 4);
+    assert.equal(last.body.regs.lon.length, 1, 'the other surface\'s write is kept');
+    passed++;
+  }
+
+  // 11. per-field sanitizing: malformed regulars, populations and contracts are dropped, good ones kept
+  {
+    const good = { key: 'g1', seed: 5, person: { seed: 5 }, visits: 2, h: 'abc' };
+    const out = J.sanitize(Object.assign(firstBody(), {
+      regs: { ist: [good, { key: 7 }, null], 'BAD ID!': [good] },
+      pop: { ist: { 3: 9, x: 1, 4: 'a' }, lon: 'no' },
+      active: { id: 'x', state: 'weird', person: {}, start: { h: 'a' }, request: {} },
+      dir: { sig: 'not-a-list' },
+    }));
+    assert.deepEqual(plain(out.regs), { ist: [good] });
+    assert.deepEqual(plain(out.pop), { ist: { 3: 4 } });
+    assert.equal(out.active, null);
+    assert.deepEqual(plain(out.dir), plain(D.fresh()));
+    passed++;
+  }
+
+  console.log('PASS: ' + passed + ' career save-journal cases (round trip, interrupted commits, corruption, prototype keys, newer versions, lease, economy record, schema-1 fixture, size budget, stale writes, field sanitizing).');
 })().catch((e) => { console.error(e); process.exitCode = 1; });

@@ -407,7 +407,7 @@
     try {
       return (
         isObj(p) && p.v === PERSON_VERSION && Number.isInteger(p.seed) &&
-        Number.isInteger(p.years) && p.years >= 16 && p.years <= 95 && own(AGE_BANDS, p.age) &&
+        Number.isInteger(p.years) && p.years >= 18 && p.years <= 95 && own(AGE_BANDS, p.age) &&
         isObj(p.skin) && num(p.skin.tone) && own(UNDERTONES, p.skin.under) &&
         isObj(p.hair) && ['straight', 'wavy', 'curly', 'coily'].includes(p.hair.texture) && Number.isInteger(p.hair.colour) &&
         p.hair.colour >= 0 && p.hair.colour < HAIR_DARK.length && num(p.hair.grey) && num(p.hair.curl) && str(p.hair.greyPattern) && str(p.hair.greyTone) &&

@@ -60,12 +60,15 @@ const catalog = {
     return r;
   },
   baseline(cu, x, st) { return { start: st || { id: 'walkin', silhouette: cu.traits.silhouette, beard: cu.traits.beard, cost: {} }, request: { id: 'trim', family: 'trim', cost: {}, weight: 1 } }; },
+  // hair and beard presence, as the game's catalog reports it
+  presence: (c) => ({ shaved: 'shaved', buzz: 'short', tight: 'short', crop: 'short', long: 'long', full: 'long' }[c.customer.traits.silhouette.split('-')[0]] || 'medium') + '|' + (c.start.beard === 'clean' ? 'clean' : c.start.beard === 'stubble' ? 'stubble' : 'beard'),
+  timeNeeded: () => 20,
 };
 const ctxFor = () => ({ level: 50, regulars: [] });
 
 // ---- simulate careers until TARGET contracts ----
 let made = 0, careers = 0;
-const stats = { lanesWhere: {}, silWhere: {}, hardFail: 0, unvalidated: 0, sigRepeat: 0, chaptersShort: 0, chapterLanesFail: 0, chapterSilFail: 0, showcaseNew: 0, bandOver: 0, stages: {}, roleBand: new Set(), modes: {} };
+const stats = { presenceTriples: 0, presenceForced: 0, comfortOver: 0, families: {}, lanesWhere: {}, silWhere: {}, hardFail: 0, unvalidated: 0, sigRepeat: 0, chaptersShort: 0, chapterLanesFail: 0, chapterSilFail: 0, showcaseNew: 0, bandOver: 0, stages: {}, roleBand: new Set(), modes: {} };
 const t0 = Date.now();
 while (made < TARGET) {
   careers++;
@@ -75,6 +78,7 @@ while (made < TARGET) {
   const recent = [];
   let chapter = [];
   let regulars = [];
+  const pres = [], okBands = [];
   for (let k = 0; k < 2500 && made < TARGET; k++) {
     if (C.phase(s) === 'map') { const rem = C.remaining(s); s = C.selectCity(s, rem[(careers + k) % rem.length]).state; }
     const g = D.generate(s, dir, catalog, Object.assign(ctxFor(), { regulars }));
@@ -86,6 +90,16 @@ while (made < TARGET) {
     stats.stages[c.stage] = (stats.stages[c.stage] || 0) + 1;
     stats.modes[c.mode] = (stats.modes[c.mode] || 0) + 1;
     stats.roleBand.add(c.role + c.band);
+    // never a fourth customer in a row with the same broad hair presence or facial-hair state, unless the director
+    // had to accept one (every attempt of its stages drew the same state) or he is a regular
+    pres.push(c.presence);
+    if (pres.length >= 4 && !c.regular) {
+      const l4 = pres.slice(-4), same = (k) => l4.every((x) => x.split('|')[k] === c.presence.split('|')[k]);
+      if (same(0) || same(1)) { if (c.reasons['presence-forced']) { if (c.mode === 'beard' || c.role === 'showcase') stats.presenceForcedByMode = (stats.presenceForcedByMode || 0) + 1; else stats.presenceForced++; } else stats.presenceTriples++; }
+    }
+    // the preferred band stays within two of the recent comfort band (the floor before any good result)
+    if (okBands.length && c.band > Math.max(...okBands) + 2) stats.comfortOver++;
+    stats.families[c.request.family] = (stats.families[c.request.family] || 0) + 1;
     if (c.band > 10) stats.bandOver++;
     const sig = D.signature(c);
     if (c.stage !== 'standard-orders' && c.stage !== 'baseline-request' && c.stage !== 'next-specialist' && recent.includes(sig)) stats.sigRepeat++;
@@ -102,16 +116,35 @@ while (made < TARGET) {
       if (!practised.has(c.mode)) stats.showcaseNew++;
       chapter = [];
     }
+    // a regular outside his relationship slot needs the stage for it: Trusted (4) for specialist, Signature (7) for a showcase
+    if (c.regular && c.role !== 'relationship') {
+      const g = regulars.find((x) => x.key === c.regular), need = c.role === 'showcase' ? 7 : 4;
+      stats.stageJobs = (stats.stageJobs || 0) + 1;
+      if (!g || g.visits < need || (c.role !== 'specialist' && c.role !== 'showcase')) stats.stageEarly = (stats.stageEarly || 0) + 1;
+    }
     // regulars accumulate from relationship jobs
     if (c.role === 'relationship' && !c.regular && regulars.length < 6) regulars.push({ key: 'r' + c.customer.person.seed, seed: c.customer.person.seed, visits: 1 });
     if (c.regular) { const g = regulars.find((x) => x.key === c.regular); if (g) g.visits++; }
     const stars = 1 + ((made * 2654435761) >>> 0) % 3;
-    D.noteResult(dir, stars, true);
+    D.noteResult(dir, stars, true, c.band);
+    if (stars >= 2) { okBands.push(c.band); if (okBands.length > 4) okBands.shift(); }
     s = C.complete(s, { id: c.id, stars, valid: true, mode: c.mode, style: c.request.family }).state;
   }
 }
 const secs = ((Date.now() - t0) / 1000).toFixed(1);
 console.log(JSON.stringify({ made, careers, secs, ...stats, roleBand: stats.roleBand.size }, null, 0));
+assert.equal(stats.presenceTriples, 0, 'no avoidable fourth customer in a row with the same hair presence or facial-hair state');
+// a Beards job needs a beard and a showcase reuses its chapter's skills, so those may have to repeat a state;
+// anywhere else a forced repeat is rare
+assert.ok(stats.presenceForced < made * 0.005, 'a forced presence repeat is rare (' + stats.presenceForced + ')');
+assert.ok(stats.stageJobs > 0, 'Trusted and Signature regulars come for specialist jobs and showcases');
+assert.equal(stats.stageEarly || 0, 0, 'no regular comes outside his slot before his stage allows it');
+assert.equal(stats.comfortOver, 0, 'progression stays within two bands of the comfort band');
+// the style-family deck spreads the ordinary families: none is offered less than a third as often as the most used
+{
+  const ord = ['skin', 'fade', 'taper', 'temple', 'undercut', 'classic', 'crew', 'hawk', 'buzz'].map((f) => stats.families[f] || 0);
+  assert.ok(Math.min(...ord) * 3 >= Math.max(...ord), 'style families stay balanced: ' + ord.join(','));
+}
 assert.equal(stats.unvalidated, 0, 'every contract passes the second validation');
 assert.equal(stats.sigRepeat, 0, 'no effective duplicate inside the 200-contract window');
 assert.equal(stats.chaptersShort, 0, 'every chapter has five roles');

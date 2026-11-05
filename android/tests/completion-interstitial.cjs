@@ -16,7 +16,8 @@ const client = fs.readFileSync(path.join(root, 'source/build/runtime/android-cli
 assert(!client.includes('performance.now() - lastAttempt < 60000'), 'every customer is eligible, including quick successive customers');
 
 function harness(outcome) {
-  const context = vm.createContext({outcome});
+  // the adaptive-graphics patch marks a pending quality commit on Next; the sandbox only needs the call to exist
+  const context = vm.createContext({outcome, HSC: {detail: {commitPending() {}}}});
   vm.runInContext(`
     let C=false,T=false,c=false,x=true,y=false,l={qualified:1,activeMs:1};
     let s={status:'reveal',jobId:'customer-1',completed:1};

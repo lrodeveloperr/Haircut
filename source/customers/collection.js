@@ -51,6 +51,10 @@
 .hsc-coll-panel .face{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 4px 6px;border-radius:18px;border:3px solid ${INK};background:#fff}
 .hsc-coll-panel .face img{width:86px;height:86px;border-radius:13px;background:radial-gradient(circle at 50% 35%,#fff,#e4d2b4);display:block}
 .hsc-coll-panel .face .n{display:flex;align-items:center;gap:3px;font-weight:900;font-size:18px;font-variant-numeric:tabular-nums}
+.hsc-coll-panel .face .stg{display:flex;gap:3px}
+.hsc-coll-panel .face .stg i{width:10px;height:10px;border-radius:50%;border:2px solid ${INK};background:#fff}
+.hsc-coll-panel .face .stg i.on{background:#ff5c98}
+.hsc-coll-panel .face .city{max-width:92px;font-size:12px;font-weight:900;line-height:1.1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hsc-coll-panel .empty{display:flex;justify-content:center;padding:24px;opacity:.35}
 .hsc-coll-panel [hidden]{display:none}
 @media (prefers-reduced-motion:reduce){.hsc-coll-panel .cut .nx{animation:none}}
@@ -95,6 +99,21 @@
     return facePics.get(key) || null;
   }
 
+  // one list of regulars: the career's own (career-run.js, kept per city in the career journal) first, then the
+  // regulars met in the other modes (meta.js); a customer who is both appears once, as the career's
+  function regulars() {
+    const body = HSC.careerRun && HSC.careerRun.body ? HSC.careerRun.body() : null, out = [], seen = new Set();
+    for (const [city, list] of Object.entries((body && body.regs) || {})) {
+      for (const g of list || []) {
+        if (!g || !g.person || typeof g.h !== 'string' || typeof g.b !== 'string' || seen.has(g.person.seed)) continue;
+        seen.add(g.person.seed);
+        out.push({ p: g.person, h: g.h, b: g.b, n: Math.max(1, g.visits | 0), city });
+      }
+    }
+    for (const r of (M() && M().data && M().data.regulars) || []) if (r && r.p && !seen.has(r.p.seed)) { seen.add(r.p.seed); out.push(r); }
+    return out.sort((a, b) => b.n - a.n);
+  }
+
   const ui = {
     el: {}, built: false, job: 0,
     build() {
@@ -104,7 +123,7 @@
       // each panel has a button to the other one (the lookbook and the regulars album sit side by side)
       const mk = (id, icon, label, other, otherIcon, otherWord) => {
         const p = document.createElement('div'); p.id = id; p.className = 'hsc-coll-panel';
-        p.innerHTML = `<div class="sheet" role="dialog" aria-label="${label}"><div class="head"><span class="ic">${icon}</span><span class="cnt"></span><span class="sp"></span><button class="swap" type="button" data-to="${other}">${otherIcon}<span class="hsc-lbl">${HSC.t ? HSC.t(otherWord) : ''}</span></button><button class="x" type="button" aria-label="Close">${CLOSE}</button></div><div class="grid"></div></div>`;
+        p.innerHTML = `<div class="sheet" role="dialog" aria-label="${label}"><div class="head"><span class="ic">${icon}</span><span class="cnt"></span><span class="sp"></span><button class="swap" type="button" data-to="${other}">${otherIcon}<span class="hsc-lbl" data-k="${otherWord}">${HSC.t ? HSC.t(otherWord) : ''}</span></button><button class="x" type="button" aria-label="Close">${CLOSE}</button></div><div class="grid"></div></div>`;
         p.querySelector('.swap').addEventListener('click', () => { this.close(p); if (other === 'album') this.openAlbum(); else this.openBook(); });
         p.querySelector('.x').addEventListener('click', () => this.close(p));
         p.addEventListener('click', (e) => { if (e.target === p) this.close(p); });
@@ -172,10 +191,16 @@
     },
     openAlbum() {
       const p = this.el.album, grid = p.querySelector('.grid');
-      const regs = ((M() && M().data && M().data.regulars) || []).slice().sort((a, b) => b.n - a.n);
+      const regs = regulars();
       p.querySelector('.cnt').textContent = regs.length ? String(regs.length) : '';
       grid.innerHTML = regs.length
-        ? regs.map((r) => `<div class="face"><img alt=""><span class="n">${HEART(20)}${r.n}</span></div>`).join('')
+        ? regs.map((r) => {
+          // the relationship stage as four dots (Recognized, Familiar, Trusted, Signature) and the city he lives in
+          const stage = HSC.career && HSC.career.regularStage ? HSC.career.regularStage(r.n) : null, at = ['recognized', 'familiar', 'trusted', 'signature'].indexOf(stage);
+          const city = r.city && r.city !== (HSC.career && HSC.career.UNSET) && HSC.cityName ? HSC.cityName(r.city) : '';
+          const said = (stage ? HSC.t('s_' + stage) : '') + (city ? ', ' + city : '');
+          return `<div class="face" role="img" aria-label="${said.replace(/"/g, '')}"><img alt=""><span class="n">${HEART(20)}${HSC.num ? HSC.num(r.n) : r.n}</span>${stage ? `<span class="stg" aria-hidden="true">${[0, 1, 2, 3].map((k) => `<i class="${k <= at ? 'on' : ''}"></i>`).join('')}</span>` : ''}${city ? `<span class="city" aria-hidden="true"><bdi>${city}</bdi></span>` : ''}</div>`;
+        }).join('')
         : `<div class="empty" style="grid-column:1/-1">${HEART(64)}</div>`;
       const list = [];
       grid.querySelectorAll('.face').forEach((el, k) => list.push([el.querySelector('img'), regs[k]]));

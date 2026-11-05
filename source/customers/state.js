@@ -141,7 +141,9 @@
     if (!s || s.status !== 'cutting' || s.interactionMode !== 'cut' || !cells || !Array.isArray(s.brow) || !Array.isArray(points)) return none;
     const tool = HSC.tool ? HSC.tool() : 'clipper';
     if (HSC.isRitual && HSC.isRitual()) return none;
-    const to = tool === 'razor' || tool === 'trimmer' || (tool === 'clipper' && s.selectedGuard === 0) ? 0 : 1;
+    // each tool's millimetre target (tools.js); the old rule (razor/trimmer/guard 0 shave, the rest trim short)
+    // remains only where the tools module is absent
+    const to = HSC.toolBrow ? null : tool === 'razor' || tool === 'trimmer' || (tool === 'clipper' && s.selectedGuard === 0) ? 0 : 1;
     // on a brow a barber works with the blade's corner: a razor or trimmer slit is 2-3 mm wide. Brows face forward,
     // so the stroke is a brush of that width along the drag, in the brow grid's own x / y (cells are about 1 mm)
     const R = { razor: 0.03, trimmer: 0.04, scissors: 0.11, beard: 0.09, clipper: 0.14 }[tool] || 0.14;
@@ -164,12 +166,14 @@
           const t = Math.max(0, Math.min(1, ((cx - a[0]) * dx + (cy - a[1]) * dy) / ll));
           if (Math.hypot(cx - a[0] - dx * t, cy - a[1] - dy * t) > R) continue;
           const c = row * 128 + col;
-          if (next[c] > to) { next[c] = to; n++; }
+          const tc = to == null ? HSC.toolBrow(next[c], s.selectedGuard) : to;
+          if (next[c] > tc) { next[c] = tc; n++; }
         }
       }
     }
     if (!n) return none;
     HSC.setBrow && HSC.setBrow(next);
+    HSC.noteTool && HSC.noteTool(s.jobId);
     return { state: Object.assign({}, s, { brow: next, cutStrokeCount: s.cutStrokeCount + 1 }), changed: true, changedCells: n, removedLength: n * 0.4, intensity: Math.min(1, n / 60) };
   };
 
@@ -210,9 +214,10 @@
           const d = [pos[c * 3] - g[0], pos[c * 3 + 1] - g[1], pos[c * 3 + 2] - g[2]];
           const dot = (v) => d[0] * v[0] + d[1] * v[1] + d[2] * v[2];
           if (Math.abs(dot(across)) > BLADE_W / 2 || Math.abs(dot(along)) > BLADE_D / 2 || Math.abs(dot(nrm)) > 0.1) continue;
-          if (next[c] > guard) {
-            removed += HSC.BEARD_MM[next[c]] - HSC.BEARD_MM[guard];
-            next[c] = guard;
+          const to = HSC.toolBeardCell ? HSC.toolBeardCell(next[c], guard) : guard;
+          if (next[c] > to) {
+            removed += HSC.BEARD_MM[next[c]] - HSC.BEARD_MM[to];
+            next[c] = to;
             changed.add(c);
           }
         }
@@ -220,6 +225,7 @@
     }
     if (!changed.size) return none;
     checked.add(next);
+    HSC.noteTool && HSC.noteTool(s.jobId);
     return {
       state: Object.assign({}, s, { beard: next, cutStrokeCount: s.cutStrokeCount + 1 }),
       changed: true,

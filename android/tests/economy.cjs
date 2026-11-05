@@ -52,17 +52,21 @@ assert.equal(eco.balance, 60);
 assert.equal(E.tripleTip(eco, 'job:A', 12).duplicate, true, 'a duplicate rewarded callback pays once');
 passed++;
 
-// 5. the operating bill: five sponsored jobs, then 100 coins every five paid jobs, posted once, even into debt
+// 5. the operating bill: the first cycle is sponsored; the 50-coin next-cycle bill is disclosed at the preceding
+// result boundary (after jobs 5/10/15), before jobs 6/11/16 can begin, and posts once even into debt
 eco = E.fresh();
-for (let i = 0; i < 5; i++) eco = E.payJob(eco, 'j' + i, { kind: 'requests', stars: 1, valid: true }).eco;
-assert.equal(eco.balance, 5 * 24, 'the first five paid jobs are sponsored');
+for (let i = 0; i < 4; i++) eco = E.payJob(eco, 'j' + i, { kind: 'requests', stars: 1, valid: true }).eco;
+assert.equal(eco.balance, 4 * 24, 'the sponsored opening cycle has no bill');
+let fifth = E.payJob(eco, 'j4', { kind: 'requests', stars: 1, valid: true }); eco = fifth.eco;
+assert.equal(eco.balance, 5 * 24 - 50, 'the next-cycle bill is visible before job six');
+assert.equal(fifth.bill.key, 'bill:1');
 for (let i = 5; i < 10; i++) eco = E.payJob(eco, 'j' + i, { kind: 'requests', stars: 1, valid: true }).eco;
-assert.equal(eco.balance, 10 * 24 - 100, 'the bill posts once after the sixth to tenth paid jobs');
+assert.equal(eco.balance, 10 * 24 - 100, 'one 50-coin bill posts at each five-job boundary');
 assert.equal(eco.sinks.bill, 100);
 // into debt: a player who spent everything still gets billed, and can always work back
 eco = E.apply(eco, { key: 'force-debt', type: 'cost', cat: 'test', amount: -eco.balance - 50 }).eco;
 for (let i = 10; i < 15; i++) eco = E.payJob(eco, 'j' + i, { kind: 'requests', stars: 1, valid: true }).eco;
-assert.equal(eco.balance, -50 + 5 * 24 - 100, 'bills post below zero; earnings reduce the debt first');
+assert.equal(eco.balance, -50 + 5 * 24 - 50, 'bills post below zero; earnings reduce the debt first');
 passed++;
 
 // 6. a discretionary purchase needs the price in hand; debt never buys

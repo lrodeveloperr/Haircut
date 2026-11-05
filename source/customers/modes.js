@@ -3,7 +3,8 @@
 // home screen (menu.js). Every mode keeps the interstitial after every cut, the undo videos and x3 tips.
 //
 //   requests  (M1) the career: a customer asks for a cut, 1-3 stars, tips, combo, regulars, VIPs
-//   free      (M2) freestyle: no request and no stars; a flat tip plus services; a button seats a new customer
+//   free      (M2) Quick Play (the former freestyle; `free` stays the saved id): no request and no stars, no
+//             progression; a button seats a new customer. It is a Home action, not a Modes tile.
 //   fix       (M3) hair disasters: a botched cut walks in (a gouge, one side done, a step, a bowl, chunks, a crooked
 //             line-up). The bubble shows the repaired cut. Every flaw is hair already cut to the repaired cut's own
 //             length, so the repair never needs hair that is not there. Tips x1.5. Level 2.
@@ -26,7 +27,7 @@
   const data = () => {
     const d = M() && M().data;
     if (!d) return null;
-    if (!d.modes || typeof d.modes !== 'object') d.modes = { mode: 'requests', job: null, daily: null, rush: 0 };
+    if (!d.modes || typeof d.modes !== 'object') d.modes = { mode: 'requests', job: null, daily: null, beforeDaily: null, rush: 0 };
     return d.modes;
   };
   const level = () => (M() && M().data ? M().level() : 1);
@@ -167,7 +168,12 @@
     const pfj = HSC.personForJob;
     HSC.personForJob = function (s, seed) {
       const d = M() && M().data, m = current();
-      if (m === 'career') { const p = CR().person(s.jobId); if (p) return p; }
+      if (m === 'career') {
+        const p = CR().person(s.jobId);
+        if (p) return p;
+        // the chapter is over (or the founding city is not chosen): the world map asks where to go next
+        if (CR().needsChoice() && HSC.menu && HSC.menu.career) setTimeout(() => HSC.menu.career(), 0);
+      }
       if (wantsPerson(m) && !(d && d.queue && d.queue.job === s.jobId)) { const p = modePerson(m, s.jobId, seed); if (p) return p; }
       return pfj.apply(this, arguments);
     };
@@ -192,10 +198,11 @@
     const sw = HSC.servicesWanted;
     if (sw) HSC.servicesWanted = function (p, job) {
       const m = current(), lv = level();
-      // the ritual in order, as far as the barber's level has the services (services.js unlock levels)
+      // the ritual in order, as far as the barber's level has the services (services.js unlock levels); no talc:
+      // a ritual cuts nothing, so there are no clippings for the neck duster to clear (tool contract 7.2)
       const AT = { towel: 2, lather: 9, massage: 3, aftershave: 1, talc: 3, pomade: 4 };
       if (m === 'career') { const c = CR().services(p, job); if (c) return c; }
-      if (m === 'relax') return ['towel', 'lather', 'massage', 'aftershave', 'talc', 'pomade'].filter((k) => (k !== 'lather' || p.beard.style === 'clean' || /^stubble/.test(p.beard.style)) && lv >= AT[k]).slice(0, 4);
+      if (m === 'relax') return ['towel', 'lather', 'massage', 'aftershave', 'pomade'].filter((k) => (HSC.serviceFits ? HSC.serviceFits(p, k) : k !== 'lather') && lv >= AT[k]).slice(0, 4);
       if (m === 'beard') return ['towel'];
       return sw.apply(this, arguments);
     };
@@ -235,7 +242,8 @@
   const reqCache = { key: null, val: undefined };
   function request(s) {
     const m = current(), md = data(), p = s.look && s.look.person;
-    if (m === 'career') { const r = CR().request(s); if (r !== undefined) return r; }
+    // a career chair without its contract (between chapters) asks for nothing
+    if (m === 'career') { const r = CR().request(s); return r !== undefined ? r : null; }
     if (m === 'free' || m === 'relax') return null;
     if (p && p.challenge) {
       // the daily challenge: the same cut for everyone today
@@ -264,6 +272,7 @@
   function econJob(s) {
     const m = current(), p = s.look && s.look.person, md = data();
     const out = { kind: m === 'daily' || m === 'requests' || m === 'career' ? 'requests' : m };
+    if (m === 'career' && CR() && CR().unscored()) out.kind = 'free'; // no contract in the chair: practice, no pay
     if (p && p.challenge) { out.kind = 'requests'; out.dailyFirst = !(md && md.daily && md.daily.day === p.challenge && md.daily.paid); }
     if (m === 'rush' && rush.job === s.jobId) out.rushBonus = Math.round(12 * timeLeft() / rush.LIMIT);
     return out;
@@ -273,9 +282,15 @@
     if (!md) return;
     if (current() === 'career') CR().done(s, stars);
     if (p && p.challenge) {
+      // the Daily also counts toward career mastery (its style, the tools that cut and the services done)
+      if (CR() && CR().side && s.cutStrokeCount > 0) {
+        const rq = request(s);
+        CR().side({ valid: true, stars: Math.max(1, stars | 0), mode: 'daily', style: rq && rq.style ? rq.style.id : null, tools: HSC.toolsUsed ? HSC.toolsUsed(s.jobId) : [], services: HSC.servicesDone ? HSC.servicesDone(s.jobId) : [] });
+      }
       const was = md.daily && md.daily.day === p.challenge ? md.daily : null;
       md.daily = { day: p.challenge, stars: Math.max(was ? was.stars : 0, stars), paid: true };
-      md.mode = 'requests'; // the career carries on after the challenge
+      md.mode = md.beforeDaily && md.beforeDaily !== 'daily' ? md.beforeDaily : 'requests';
+      md.beforeDaily = null;
     }
     if (current() === 'rush' && rush.job === s.jobId) {
       rush.job = null;
@@ -289,11 +304,15 @@
     if (m === 'career') { if (!CR()) return false; await CR().ensure(); }
     else if (!md || !LIST.includes(m) || !unlocked(m)) return false;
     const was = current();
+    // leaving the career chair: its contract keeps the work done so far and waits for the barber (suspended)
+    if (was === 'career' && m !== 'career' && g) await CR().suspend(g.getState());
+    if (m === 'daily' && was !== 'daily') md.beforeDaily = was;
     md.mode = m;
     md.tried = Array.isArray(md.tried) ? md.tried : [];
     if (!md.tried.includes(m)) md.tried.push(m); // a mode is no longer new once played
     if (m === 'daily') md.mode = 'daily';
     M().save();
+    if (CR() && CR().syncLook) CR().syncLook(); // the salon behind the chair follows the mode (a branch in Career)
     if (!g) return true;
     const s = g.getState();
     // a new customer for the new mode (the one in the chair keeps his cut in freestyle and the career)
@@ -321,7 +340,7 @@
     relax: `<svg viewBox="0 0 48 48" width="56" height="56"><path d="M8 30h32a3 3 0 0 1 3 3v3a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-3a3 3 0 0 1 3-3z" fill="#fff" stroke="${INK}" stroke-width="2.4"/><path d="M8 34h32" stroke="#9cc9e8" stroke-width="2.4"/><path d="M16 24c-3-4 3-6 0-11M24 24c-3-4 3-6 0-11M32 24c-3-4 3-6 0-11" fill="none" stroke="#b9a68f" stroke-width="2.6" stroke-linecap="round"/></svg>`,
     rush: `<svg viewBox="0 0 48 48" width="56" height="56"><circle cx="24" cy="26" r="16" fill="#fff" stroke="${INK}" stroke-width="2.4"/><path d="M20 4h8M24 4v6M38 12l3-3" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/><path d="M26 14l-6 13h6l-3 11 9-15h-6l3-9z" fill="#ffc83d" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/></svg>`,
   };
-  const NAME = { requests: 'Customer requests', free: 'Freestyle', fix: 'Hair disasters', daily: 'Daily challenge', beard: 'Beard studio', relax: 'Relax', rush: 'Rush hour' };
+  const NAME = { requests: 'Customer requests', free: 'Quick Play', fix: 'Hair disasters', daily: 'Daily challenge', beard: 'Beard studio', relax: 'Relax', rush: 'Rush hour' };
   const LOCK = `<svg viewBox="0 0 24 24" width="22" height="22"><rect x="5" y="10.5" width="14" height="10" rx="2.4" fill="#ffc83d" stroke="${INK}" stroke-width="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="${INK}" stroke-width="2"/></svg>`;
   const STAR = (on) => `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc83d' : 'none'}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"${on ? '' : ' stroke-dasharray="2.6 2.2" opacity=".55"'}/></svg>`;
   const TICK = '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#10223f" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';

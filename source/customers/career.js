@@ -41,8 +41,12 @@
   const enabledIds = () => [...registry.cities.values()].filter((c) => c.enabled !== false).map((c) => c.id).sort();
 
   // ---- a new career ----
+  // UNSET: the placeholder home city of a career whose founding city is not chosen yet. The journal and wallet are
+  // created at startup (economy), before the player opens Career; the first Career visit asks for the city and
+  // `found` renames the placeholder. Careers from the one-city build used the same id, so they migrate the same way.
+  const UNSET = 'home';
   function create(cityId, seed) {
-    if (!registry.cities.has(cityId)) throw new Error('career: unknown city ' + cityId);
+    if (cityId !== UNSET && !registry.cities.has(cityId)) throw new Error('career: unknown city ' + cityId);
     const s = {
       v: VERSION, rev: 0, seed: (seed >>> 0) || 1, founding: cityId, base: cityId,
       licence: { next: 0 },
@@ -59,7 +63,14 @@
   }
   function cityRec(s, id) {
     if (!s.cities[id]) s.cities[id] = { visits: 0, chapters: 0, showcaseBest: 0, established: false, estTour: 0, awards: [] };
-    return s.cities[id];
+    const c = s.cities[id];
+    // the four-part city mastery (branch plan section 10), bounded: 3-star styles cut here, the modes, tools and
+    // services used validly here, returning-regular visits here, and the tours with a 3-star showcase here
+    if (!Array.isArray(c.styles)) c.styles = [];
+    if (!Array.isArray(c.svc)) c.svc = [];
+    if (!Number.isSafeInteger(c.regVisits)) c.regVisits = 0;
+    if (!Number.isSafeInteger(c.gold)) c.gold = 0;
+    return c;
   }
 
   // ---- where the career is ----
@@ -86,6 +97,46 @@
   }
   const contractSeed = (id, revision) => hash32(id + '#' + (revision | 0)) || 1;
 
+  // ---- the founding city (map logic section 3, phase A) ----
+  const needsFounding = (s) => !!s && s.founding === UNSET && !registry.cities.has(UNSET);
+  // choose the founding city: the placeholder becomes the chosen city everywhere it is recorded. A career from the
+  // one-city build also gets its open tour's full roster here (defect D2): its tour number is kept, so no rank or
+  // Legend number is lost, and the roster can no longer close a whole tour with one chapter.
+  function found(s, cityId) {
+    if (!needsFounding(s)) return { state: s, error: 'already-founded' };
+    const rec = registry.cities.get(cityId);
+    if (!rec || rec.enabled === false || cityId === UNSET) return { state: s, error: 'city-unavailable' };
+    const n = clone(s), sw = (id) => (id === UNSET ? cityId : id), uniq = (a) => [...new Set(a.map(sw))];
+    const old = n.cities[UNSET];
+    delete n.cities[UNSET];
+    const c = cityRec(n, cityId);
+    if (old) {
+      c.visits = Math.max(c.visits, old.visits); c.chapters += old.chapters; c.showcaseBest = Math.max(c.showcaseBest, old.showcaseBest);
+      if (old.established && !c.established) { c.established = true; c.estTour = old.estTour; }
+      c.awards = c.awards.concat(old.awards || []);
+      for (const x of old.styles || []) if (!c.styles.includes(x) && c.styles.length < 64) c.styles.push(x);
+      for (const x of old.svc || []) if (!c.svc.includes(x) && c.svc.length < 32) c.svc.push(x);
+      c.regVisits += old.regVisits | 0; c.gold += old.gold | 0;
+    }
+    if (UNSET in n.mastery.city) { n.mastery.city[cityId] = Math.max(n.mastery.city[cityId] || 0, n.mastery.city[UNSET]); delete n.mastery.city[UNSET]; }
+    n.founding = cityId; n.base = sw(n.base);
+    if (n.current) n.current.city = sw(n.current.city);
+    if (n.tour) {
+      n.tour.done = uniq(n.tour.done); n.tour.na = uniq(n.tour.na).filter((id) => id !== cityId); n.tour.roster = uniq(n.tour.roster);
+      if ((n.tour.rosterVersion | 0) < registry.version) {
+        n.tour.roster = enabledIds();
+        if (!n.tour.roster.includes(cityId)) n.tour.roster.push(cityId);
+        n.tour.rosterVersion = registry.version;
+        n.tour.done = n.tour.done.filter((id) => n.tour.roster.includes(id));
+        n.tour.na = [];
+        n.tour.migrated = true;
+      }
+    }
+    n.last = null; // its ids named the placeholder
+    n.rev++;
+    return { state: n };
+  }
+
   // ---- the map ----
   // cities still to visit in the current tour (not done, not marked not-applicable, still enabled)
   function remaining(s) {
@@ -93,9 +144,10 @@
     return s.tour.roster.filter((id) => !s.tour.done.includes(id) && !s.tour.na.includes(id));
   }
   // every enabled city may be visited: an incomplete one advances the tour, a completed one is practice
-  function selectable(s) { return phase(s) === 'map' ? enabledIds() : []; }
+  function selectable(s) { return phase(s) === 'map' && !needsFounding(s) ? enabledIds() : []; }
   function selectCity(s, cityId) {
     if (phase(s) !== 'map') return { state: s, error: 'not-on-map' };
+    if (needsFounding(s)) return { state: s, error: 'needs-founding' };
     if (!registry.cities.has(cityId) || registry.cities.get(cityId).enabled === false) return { state: s, error: 'city-unavailable' };
     const n = clone(s);
     const practice = !remaining(n).includes(cityId);
@@ -129,6 +181,38 @@
     for (const sv of r.services || []) up(n.mastery.service, sv);
     if (r.mode && !n.completedModes.includes(r.mode)) n.completedModes.push(r.mode);
   }
+  // what a valid job in a city adds to that city's mastery record
+  function cityWork(n, city, r) {
+    const c = cityRec(n, city);
+    if ((r.stars | 0) >= MASTER_STARS && r.style != null && !c.styles.includes(r.style) && c.styles.length < 64) c.styles.push(String(r.style));
+    for (const k of [r.mode ? 'm:' + r.mode : null].concat((r.tools || []).map((t) => 't:' + t), (r.services || []).map((x) => 's:' + x))) if (k && !c.svc.includes(k) && c.svc.length < 32) c.svc.push(k);
+    if (r.regular) c.regVisits++;
+  }
+  // city mastery: every part complete (a city stays playable forever after; mastery adds no power)
+  const MASTERY_NEED = { chapters: CITY_MASTER_CHAPTERS, styles: 4, svc: 4, regVisits: 2 };
+  function cityMastery(s, id) {
+    const c = s.cities[id];
+    if (!c) return { completion: 0, style: 0, service: 0, relationship: 0, all: false };
+    const part = (v, need) => Math.max(0, Math.min(1, (v | 0) / need));
+    const out = {
+      completion: c.showcaseBest >= MASTER_STARS ? part(c.chapters, MASTERY_NEED.chapters) : Math.min(0.99, part(c.chapters, MASTERY_NEED.chapters)),
+      style: part((c.styles || []).length, MASTERY_NEED.styles),
+      service: part((c.svc || []).length, MASTERY_NEED.svc),
+      relationship: part(c.regVisits, MASTERY_NEED.regVisits),
+    };
+    out.all = out.completion >= 1 && out.style >= 1 && out.service >= 1 && out.relationship >= 1;
+    return out;
+  }
+  // the branch's state (branch plan section 4): unvisited, visiting, established, growing, mastered, legend
+  function branchState(s, id) {
+    const c = s.cities[id];
+    if (!c || (!c.visits && !c.chapters && !(s.current && s.current.city === id))) return 'unvisited';
+    if (!c.established) return 'visiting';
+    const m = cityMastery(s, id);
+    if (m.all && (c.gold | 0) >= 3) return 'legend';
+    if (m.all) return 'mastered';
+    return c.chapters > 1 ? 'growing' : 'established';
+  }
   function complete(s, r) {
     if (!r || !r.id) return { state: s, error: 'no-result' };
     if (isDone(s, r.id)) {
@@ -144,6 +228,7 @@
     if (!r.valid) return { state: s, result: { id: r.id, incomplete: true } };
     const n = clone(s), pos = position(n);
     recordMastery(n, r);
+    cityWork(n, pos.city, r);
     const out = { id: r.id, stars: r.stars | 0, events: [] };
     if (pos.licence) {
       n.licence.next++;
@@ -173,9 +258,21 @@
     n.last = out;
     return { state: n, result: out };
   }
+  // a side job (Daily): its valid result raises mastery only; it never takes a chapter slot or moves progress
+  // (map logic sections 6 and 14.9). Mastery keeps the best stars, so a repeated event changes nothing.
+  function side(s, r) {
+    if (!r || !r.valid || !r.mode) return { state: s, error: 'not-valid' };
+    const n = clone(s);
+    recordMastery(n, r);
+    if (JSON.stringify(n.mastery) === JSON.stringify(s.mastery) && n.completedModes.length === s.completedModes.length) return { state: s, duplicate: true };
+    n.rev++;
+    return { state: n };
+  }
   function showcase(n, city, stars, out, tourN) {
     const c = cityRec(n, city);
     c.showcaseBest = Math.max(c.showcaseBest, stars | 0);
+    // a 3-star showcase in a new tour counts toward the Legend branch (one per tour, so it stays bounded)
+    if ((stars | 0) >= MASTER_STARS && c.goldTour !== tourN) { c.gold = (c.gold | 0) + 1; c.goldTour = tourN; }
     n.showcases++;
     if (!c.established) { c.established = true; c.estTour = tourN; out.events.push('branch-established:' + city); }
     n.mastery.city[city] = Math.max(n.mastery.city[city] || 0, stars | 0);
@@ -190,7 +287,8 @@
   // ---- roster changes (map logic section 13; save contract section 9) ----
   // call after the registry changes: a disabled city in the active roster becomes not-applicable
   function reconcile(s) {
-    if (!s || !s.tour) return s;
+    // a career still on the placeholder city keeps its tour untouched until `found` migrates it
+    if (!s || !s.tour || needsFounding(s)) return s;
     const n = clone(s), on = new Set(enabledIds());
     for (const id of n.tour.roster) if (!on.has(id) && !n.tour.done.includes(id) && !n.tour.na.includes(id)) n.tour.na.push(id);
     if (n.current && !on.has(n.current.city)) n.current.suspendedCity = true;
@@ -204,19 +302,28 @@
     const cities = Object.entries(s.cities);
     const toursDone = s.tour ? s.tour.n - 1 : 0;
     const showcaseCities = cities.filter(([, c]) => c.established).length;
-    const mastered = cities.filter(([, c]) => c.chapters >= CITY_MASTER_CHAPTERS && c.showcaseBest >= MASTER_STARS).length;
+    const mastered = cities.filter(([id]) => cityMastery(s, id).all).length;
     const styleMasteries = Object.values(s.mastery.style).filter((v) => v >= MASTER_STARS).length;
-    const branches = showcaseCities;
+    // the founding city is the home salon (branch plan sections 3 and 5); a branch is a city beyond it
+    const branches = cities.filter(([id, c]) => c.established && id !== s.founding).length;
     return { toursDone, showcaseCities, showcases: s.showcases, mastered, styleMasteries, branches, modes: s.completedModes.length };
   }
-  // specialistModes: the specialist modes currently eligible for career play
+  // specialistModes: the specialist modes currently eligible for career play.
+  // An earned rank is kept (map logic section 4): a mode added later, or a city disabled, never demotes a player;
+  // the highest rank reached is saved as `rankBest` and wins over a lower computed rank.
   function rank(s, specialistModes) {
     if (!s) return null;
-    const st = stats(s), size = Math.max(1, enabledIds().length), three = Math.min(3, size);
+    const now = rankNow(s, specialistModes), best = Number.isSafeInteger(s.rankBest) ? s.rankBest : 0;
+    return RANKS.indexOf(now.id) >= best ? now : { id: RANKS[Math.min(best, RANKS.indexOf('owner'))] };
+  }
+  // the rank to save after a commit (the index of the highest rank reached)
+  function rankIndex(s, specialistModes) { return Math.max(Number.isSafeInteger(s.rankBest) ? s.rankBest : 0, RANKS.indexOf(rankNow(s, specialistModes).id)); }
+  function rankNow(s, specialistModes) {
+    const st = stats(s), size = Math.max(1, enabledIds().length), three = Math.min(3, size), branchesNeeded = Math.min(3, Math.max(1, size - 1));
     const spec = (specialistModes || []).every((m) => s.completedModes.includes(m));
     if (st.toursDone >= 2) return { id: 'legend', legend: st.toursDone - 1 };
     if (st.toursDone >= 1) return { id: 'world' };
-    if (st.branches >= three && st.mastered >= three && st.styleMasteries >= 12 && spec && st.showcaseCities >= three && s.licence.next >= LICENCE) return { id: 'owner' };
+    if (st.branches >= branchesNeeded && st.mastered >= three && st.styleMasteries >= 12 && spec && st.showcaseCities >= three && s.licence.next >= LICENCE) return { id: 'owner' };
     if (st.mastered >= three && st.styleMasteries >= 12 && spec && st.showcaseCities >= three && s.licence.next >= LICENCE) return { id: 'master' };
     if (spec && st.showcaseCities >= three && s.licence.next >= LICENCE) return { id: 'specialist' };
     if (st.showcaseCities >= three && s.licence.next >= LICENCE) return { id: 'professional' };
@@ -238,13 +345,20 @@
       for (const id of s.tour.done) if (!s.tour.roster.includes(id)) bad.push('done-outside-roster:' + id);
     }
     if (s.current && (!int(s.current.slot) || s.current.slot >= SLOTS)) bad.push('slot');
+    if (s.rankBest != null && (!int(s.rankBest) || s.rankBest >= RANKS.length)) bad.push('rank-best');
     return bad;
   }
 
+  // ---- regulars (director section 12): the relationship stage from completed visits ----
+  const REG_STAGES = [['signature', 7], ['trusted', 4], ['familiar', 2], ['recognized', 1]];
+  const regularStage = (visits) => { for (const [id, n] of REG_STAGES) if ((visits | 0) >= n) return id; return null; };
+
   HSC.career = {
+    regularStage, REG_STAGES, cityMastery, branchState, MASTERY_NEED,
     VERSION, LICENCE, SLOTS, ROLES, RANKS, MASTER_STARS,
+    UNSET, needsFounding, found,
     setCities, enabledIds, create, phase, position, contractId, contractSeed, remaining, selectable, selectCity, setBase,
-    isDone, complete, reconcile, rank, stats, validate, hash32, clone,
+    isDone, complete, side, reconcile, rank, rankIndex, stats, validate, hash32, clone,
     city: (id) => registry.cities.get(id) || null,
   };
 })(globalThis.HSC || (globalThis.HSC = {}));
