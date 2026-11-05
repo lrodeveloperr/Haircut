@@ -31,5 +31,9 @@ The existing version 1.0.12 (13) was submitted for review earlier today. Prepare
 ## Verification
 
 - Local: `compileDebugJavaWithJavac`, `testDebugUnitTest` and `lintDebug` pass with 0 lint errors.
-- Not done: the local emulator did not finish booting (cold boot timed out with both software and host GPU), so the banner has not been seen on a device. The `Android APK` workflow (`workflow_dispatch`) or a physical-device test should confirm placement and no-fill height on phone and tablet before a candidate build.
+- Local emulator (5 November 2026). The original `MonkeyPost_API36` emulator crash-looped on boot (`BOOTCLASSPATH is not defined`) because the Mac was low on disk. A clean `Barber_API36` emulator (Pixel 7, API 36, 3 GB data partition) was created for this app, and the debug build was run on it with test IDs only.
+  - Phone portrait: the strip holds its height with no fill (network unavailable at first). Google's test banner then loaded in the same strip below the 16dp gap, and no game control overlaps it.
+  - Phone landscape: the strip resizes to the landscape adaptive height (about 80dp including the gap, about a fifth of a 412dp-tall screen).
+  - Screenshots are in `qa/results/banner-phone-*.png`.
+- Not yet checked: tablet layouts, and a landscape test banner actually loaded after rotation.
 - Live ads were not requested.
