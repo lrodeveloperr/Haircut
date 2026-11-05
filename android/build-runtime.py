@@ -38,12 +38,13 @@ game = replace(game, 'let ae=j.clientY-(j.pointerType==="touch"?Math.min(ur.touc
 # Guard arc anchors are local design units; pointer events are viewport pixels.
 game = replace(game, 'C=w.left+ds-p.clientX,x=w.top+ds-p.clientY',
                'C=w.left+ds*(w.width/i.current.offsetWidth)-p.clientX,x=w.top+ds*(w.height/i.current.offsetHeight)-p.clientY')
-# The completion ad owns the reveal-to-next transition. Lock Next in the same
-# JavaScript turn as reveal completion, before the HUD can publish an enabled button.
-game = replace(game, 'async function Ee(){',
-               (root / 'android/completion-interstitial.js').read_text() + '\nasync function Ee(){')
+# The result router (plan 3.2): no ad at the reveal; Continue (Next) asks HSC.adRouter once per completed
+# customer and attempts the interstitial before advancing, unless that result's rewarded route was used.
+game = replace(game, 'async function Ee(){if(c||T||s.status!=="reveal"||!x)return!1;',
+               (root / 'android/completion-interstitial.js').read_text() +
+               '\nasync function Ee(){if(c||T||s.status!=="reveal"||!x)return!1;await androidResultBreak();if(c||C||T||s.status!=="reveal")return!1;')
 game = replace(game, 'fe===1&&(x=!0,Z())',
-               'fe===1&&(x=!0,androidCompletionInterstitial())')
+               'fe===1&&androidRevealDone()')
 old_next_ad = 'let j=Cc(l);if(j.showInterstitial&&!y&&!(HSC.recentReward&&HSC.recentReward()))try{await $(!0);let ae=await t.showInterstitial("next-customer",{onDisplay:ie});t.lastInterstitialRequestAccepted&&(l=j.adSession),t.sendAnalytics("interstitial_outcome",{opened:ae,nextClick:s.jobId})}catch(ae){}'
 game = replace(game, old_next_ad, '')
 (out / 'runtime/game.js').write_text(game)

@@ -10,7 +10,9 @@ const out = path.join(root, 'qa/results'); fs.mkdirSync(out, {recursive:true});
 const hash = p => crypto.createHash('sha256').update(fs.readFileSync(path.join(root,p))).digest('hex');
 const frozen = {
   'android/clipper-input.js':'231830bf96d9e63b8a30832d75ca45399fb85e31affb8a02d47c4b7bdea115ca',
-  'source/build/runtime/game.js':'bd68b869f04724b4abfd9dd3fbf8464d1a3b5fd2fbe141af7c24f49d8d55292c',
+  // re-pinned 5 November 2026 for the result router (plan 3.2) only: reversing android/completion-interstitial.js and
+  // its two splice points reproduces the previous approved hash bd68b869... exactly, so the renderer is unchanged
+  'source/build/runtime/game.js':'2aef7996ff5f2212153a2830b86e53aaf57b40c7e51391c6332eff8fbd4e144b',
   'source/customers/wardrobe.js':'b6b0cb1d438cb8da4f4a0ca754a27ca02e2df25cffd4811835608420ab0948e6',
 };
 for(const [p,expected] of Object.entries(frozen)) assert.equal(hash(p),expected,'owner-approved source must remain byte-identical: '+p);

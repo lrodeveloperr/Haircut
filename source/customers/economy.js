@@ -20,7 +20,7 @@
 (function (HSC) {
   'use strict';
   const CONFIG = {
-    version: 1,
+    version: 2,
     // [gross fee, operating cost] per contract type (balance model section 3)
     fee: { requests: [28, 4], fix: [40, 6], beard: [26, 4], relax: [36, 8], rush: [24, 4], showcase: [52, 8], free: [0, 0] },
     tipShare: { 1: 0, 2: 0.25, 3: 0.5 }, // of the net fee
@@ -30,7 +30,9 @@
     demand: { share: 0.2, max: 12, perShift: 3, shiftLength: 5 },
     dailyFirst: 30, freestyleOnce: 5,
     bill: { every: 5, amount: 50, subsidised: 5, lines: { rent: 25, utilities: 12, cleaning: 8, tools: 5 } },
-    milestones: { firstHaircut: 40, homeChapter: 75, licence: 300, cityShowcase: 150, cityMastery: 250, cityChapter: 75, tour: 400 },
+    // owner decision 5 November 2026 (economy simulator, plan 3.1/3.7): city chapter 75 -> 30, first showcase 150 -> 75,
+    // so ordinary work carries more of the income; paid milestones keep their keys and are never repaid or taken back
+    milestones: { firstHaircut: 40, homeChapter: 75, licence: 300, cityShowcase: 75, cityMastery: 250, cityChapter: 30, tour: 400 },
     levels: [[2, 5, 50], [6, 9, 75], [10, 12, 100]], // one-time coins for reaching a level; none after 12
     calendar: [20, 25, 30, 35, 40, 50, 80], goal: 25, weekly: 200, weeklyGoal: 15, duplicateItem: 50,
     salon: [100, 300, 800, 1800], // price of tier 0->1, 1->2, 2->3, 3->4 in every slot
@@ -98,6 +100,25 @@
     return { total, net, tip, lines, kind };
   }
 
+  // ---- demand shifts (balance model section 7): each shift of five paid contracts highlights up to two modes ----
+  // Derived from the paid-contract count, so nothing to save and nothing a reload can re-roll: a seeded permutation
+  // per pass of the list means every eligible mode appears before the deck repeats. Only the bonuses used this shift
+  // are stored. Quick Play is never a target; demand never depends on who the customer is.
+  const DEMAND_MODES = ['requests', 'fix', 'beard', 'relax', 'rush'];
+  const shiftOf = (paid) => Math.floor(paid / CONFIG.demand.shiftLength);
+  function demandModes(paid, eligible) {
+    const list = DEMAND_MODES.filter((m) => !eligible || eligible.includes(m));
+    if (!list.length) return [];
+    const shift = shiftOf(paid), n = Math.min(2, list.length), out = [];
+    const deck = (c) => { const a = list.slice(); let h = (c + 1) * 2654435761 >>> 0; for (let i = a.length - 1; i > 0; i--) { h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0; const j = h % (i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    for (let k = 0, i = shift * n; out.length < n && k < n + list.length; k++, i++) { const m = deck(Math.floor(i / list.length))[i % list.length]; if (!out.includes(m)) out.push(m); }
+    return out;
+  }
+  function demandMatch(eco, mode, eligible) {
+    const used = eco.demand && eco.demand.shift === shiftOf(eco.paid) ? eco.demand.used : 0;
+    return used < CONFIG.demand.perShift && demandModes(eco.paid, eligible).includes(mode);
+  }
+
   // ---- paying a finished job: the base transaction, then the operating bill when a cycle closes ----
   function payJob(eco0, key, job) {
     const p = payout(job);
@@ -105,6 +126,7 @@
     let r = apply(eco0, { key, type: 'earn', cat: 'job', amount: p.total, lines: p.lines, ref: job.ref || null });
     if (r.error || r.duplicate) return Object.assign(r, { payout: p });
     let eco = r.eco;
+    if (job.demandMatch) { const sh = shiftOf(eco.paid), d = eco.demand; eco.demand = { shift: sh, used: (d && d.shift === sh ? d.used : 0) + 1 }; }
     eco.paid++;
     // At the end of jobs 5/10/15..., post the next cycle's bill. The result screen therefore discloses it before
     // the player can start jobs 6/11/16..., while a duplicate result cannot post it twice.
@@ -190,5 +212,5 @@
     return { balance: eco.balance, sources: eco.sources, sinks: eco.sinks, ratio: src ? snk / src : 0 };
   }
 
-  HSC.economy = { CONFIG, fresh, apply, payout, payJob, billDue, tripleTip, milestonesFor, payMilestones, levelReward, payLevels, buy, grant, migrate, report };
+  HSC.economy = { CONFIG, fresh, apply, payout, payJob, demandModes, demandMatch, billDue, tripleTip, milestonesFor, payMilestones, levelReward, payLevels, buy, grant, migrate, report };
 })(globalThis.HSC || (globalThis.HSC = {}));

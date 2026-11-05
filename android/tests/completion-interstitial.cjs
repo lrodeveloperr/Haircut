@@ -1,5 +1,10 @@
 'use strict';
-// Run the production Android completion hook and production Next handler together.
+// The completed-customer result router (MONETIZATION-STRATEGY sections 4 and 6; plan 3.2): runs the production
+// Android reveal hook, the production Next handler and the real HSC.adRouter together.
+//   - the reveal shows no ad; Continue attempts one interstitial for a newly completed customer
+//   - a rewarded video started on that result wins the break: Continue shows no interstitial
+//   - an incomplete customer, or a reveal restored after a reload, shows none
+//   - rapid Next taps cannot advance during the ad or request a second one; no fill and SDK errors release it
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -7,69 +12,99 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '../..');
 const game = fs.readFileSync(path.join(root, 'source/build/runtime/game.js'), 'utf8');
 const hook = fs.readFileSync(path.join(root, 'android/completion-interstitial.js'), 'utf8');
+const routerSrc = fs.readFileSync(path.join(root, 'source/customers/ad-router.js'), 'utf8');
 const start = game.indexOf('async function Ee(){');
 const next = game.slice(start, game.indexOf('async function hs_replay()', start));
-assert(game.includes(hook));
-assert(game.includes('fe===1&&(x=!0,androidCompletionInterstitial())'));
-assert(!next.includes('showInterstitial'), 'Next cannot issue a duplicate or late ad');
-const client = fs.readFileSync(path.join(root, 'source/build/runtime/android-client.js'), 'utf8');
-assert(!client.includes('performance.now() - lastAttempt < 60000'), 'every customer is eligible, including quick successive customers');
+assert(game.includes(hook), 'the router hook is in the Android game');
+assert(game.includes('fe===1&&androidRevealDone()'), 'the reveal only enables Continue');
+assert(!game.includes('androidCompletionInterstitial'), 'no ad at the reveal');
+assert(next.startsWith('async function Ee(){if(c||T||s.status!=="reveal"||!x)return!1;await androidResultBreak();'), 'Continue asks the router first');
+assert.equal((next.match(/showInterstitial/g) || []).length, 0, 'the Next body itself requests no ad');
 
 function harness(outcome) {
-  // the adaptive-graphics patch marks a pending quality commit on Next; the sandbox only needs the call to exist
-  const context = vm.createContext({outcome, HSC: {detail: {commitPending() {}}}});
+  const context = vm.createContext({ outcome, console });
   vm.runInContext(`
-    let C=false,T=false,c=false,x=true,y=false,l={qualified:1,activeMs:1};
-    let s={status:'reveal',jobId:'customer-1',completed:1};
-    let calls=0,writes=0,renderedBusy=false,releases,events=[];
-    const V=()=>{},Z=()=>{renderedBusy=T},J=()=>{},ga=()=>({qualified:0,activeMs:0});
-    const rt=Object.assign,gt=Object.assign,Is=old=>({...old,status:'cutting'});
+    var HSC = { PHENOTYPES: {}, detail: { commitPending() {} } };
+    var globalThis_ = this;
+    ${routerSrc.replace('globalThis.HSC || (globalThis.HSC = {})', 'HSC')}
+    let C=false,T=false,c=false,x=false,y=false,l={};
+    let s={status:'reveal',jobId:1};
+    let calls=0,writes=0,releases,events=[];
+    const V=()=>{},Z=()=>{},J=()=>{},ga=()=>({});
+    const rt=Object.assign,gt=Object.assign,Is=old=>({...old,status:'cutting',jobId:old.jobId+1});
     const $=async()=>{writes++};
     const t={showInterstitial:async placement=>{
       calls++;events.push(placement);
       if(outcome==='throw')throw Error('SDK failed');
       return new Promise(resolve=>{releases=resolve});
     },sendAnalytics:(...args)=>events.push(args)};
+    this.skinFadeStudio = { getState: () => s };
     ${hook}
     ${next}
-    globalThis.h={complete:androidCompletionInterstitial,next:Ee,
-      read:()=>({busy:T,status:s.status,calls,writes,renderedBusy}),
+    globalThis.h={reveal:()=>{androidRevealDone();},next:Ee,router:HSC.adRouter,
+      read:()=>({busy:T,status:s.status,job:s.jobId,calls}),
       close:value=>releases(value),destroy:()=>{C=true},
-      customer:()=>{s={status:'reveal',jobId:'customer-'+(s.completed+1),completed:s.completed+1};x=true;}
+      customer:()=>{s={status:'reveal',jobId:s.jobId,completed:1};x=false;}
     };
   `, context);
   return context.h;
 }
+const tick = () => new Promise(setImmediate);
 
 (async () => {
+  // 1. a completed customer: the reveal shows nothing; Continue attempts one interstitial, blocks, then advances
   for (const displayed of [true, false]) {
-    const h=harness();
-    const first=h.complete();
-    assert.equal(h.read().busy,true,'busy is acquired synchronously before any enabled Next render');
-    assert.equal(h.read().renderedBusy,true);
-    assert.equal(await h.next(),false,'a queued Next tap during save/preload cannot advance');
-    await new Promise(setImmediate);
-    assert.equal(h.read().calls,1);
-    await h.complete();
-    assert.equal(h.read().calls,1,'duplicate completion notifications cannot request a second ad');
-    assert.equal(await h.next(),false,'Next stays blocked while the ad is showing');
-    h.close(displayed);await first;
-    assert.equal(h.read().busy,false,'close and no-fill both release the completion');
-    assert.equal(await h.next(),true);
-    assert.equal(h.read().status,'cutting');
-    assert.equal(h.read().calls,1,'starting the next haircut does not show a late interstitial');
-    h.customer();
-    const second=h.complete();await new Promise(setImmediate);
-    assert.equal(h.read().calls,2,'the second customer has its own ad without a time/count gate');
-    h.close(displayed);await second;
+    const h = harness();
+    h.router.completed(1, true);
+    h.reveal();
+    assert.equal(h.read().calls, 0, 'no ad at the reveal');
+    const first = h.next();
+    await tick();
+    assert.equal(h.read().calls, 1, 'Continue attempts the interstitial');
+    assert.equal(h.read().busy, true);
+    assert.equal(await h.next(), false, 'a second tap during the ad cannot advance');
+    assert.equal(h.read().calls, 1, 'or request a second ad');
+    h.close(displayed);
+    assert.equal(await first, true, 'close and no-fill both continue to the next customer');
+    assert.equal(h.read().status, 'cutting');
+    assert.equal(h.router.outcome(1), 'interstitial');
+    // the next customer has his own break
+    h.customer(); h.router.completed(2, true); h.reveal();
+    const second = h.next(); await tick();
+    assert.equal(h.read().calls, 2, 'every completed customer gets one attempt');
+    h.close(displayed); await second;
   }
-  const failure=harness('throw');
-  await failure.complete();
-  assert.equal(failure.read().busy,false,'an SDK exception cannot strand the completion');
-  assert.equal(await failure.next(),true);
-  const destroyed=harness();
-  const pending=destroyed.complete();await new Promise(setImmediate);
-  destroyed.destroy();destroyed.close(true);await pending;
-  assert.equal(destroyed.read().busy,false);
-  console.log('PASS: completion is atomic; rapid Next cannot bypass; every customer gets one attempt; close/no-fill/error/destruction release safely.');
-})().catch(error=>{console.error(error);process.exitCode=1;});
+  // 2. a rewarded video started on the result wins the break
+  {
+    const h = harness();
+    h.router.completed(1, true); h.reveal();
+    h.router.rewardedStarted();
+    assert.equal(await h.next(), true);
+    assert.equal(h.read().calls, 0, 'no interstitial after a rewarded result');
+    assert.equal(h.router.outcome(1), 'rewarded');
+  }
+  // 3. incomplete work, and a reveal restored after a reload (never completed in this session): no ad
+  {
+    const h = harness();
+    h.router.completed(1, false); h.reveal();
+    assert.equal(await h.next(), true); assert.equal(h.read().calls, 0, 'an incomplete customer opens no break');
+    const r = harness(); r.reveal();
+    assert.equal(await r.next(), true); assert.equal(r.read().calls, 0, 'a restored reveal shows no ad');
+  }
+  // 4. a replay of the same customer cannot open a second break
+  {
+    const h = harness();
+    h.router.completed(1, true); h.router.completed(1, true);
+    h.reveal(); const p = h.next(); await tick(); h.close(true); await p;
+    assert.equal(h.router.route(1), null, 'the break is used once');
+  }
+  // 5. SDK errors and destruction release Continue
+  {
+    const f = harness('throw'); f.router.completed(1, true); f.reveal();
+    assert.equal(await f.next(), true); assert.equal(f.read().busy, false, 'an SDK exception cannot strand Continue');
+    const d = harness(); d.router.completed(1, true); d.reveal();
+    const p = d.next(); await tick(); d.destroy(); d.close(true); await p;
+    assert.equal(d.read().busy, false);
+  }
+  console.log('PASS: result router: no ad at the reveal; one interstitial on Continue per completed customer; a rewarded result, incomplete work or a restored reveal shows none; rapid taps, no fill and errors release safely.');
+})().catch((error) => { console.error(error); process.exitCode = 1; });

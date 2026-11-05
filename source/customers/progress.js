@@ -74,7 +74,10 @@
   function ensureTasks() {
     const today = dayKey();
     if (P.tasks.day !== today) {
-      const keys = Object.keys(TASKS), out = [];
+      // goals come only from what this barber can do today (balance model section 11): beards from level 2, regulars
+      // once there is one to come back; fades, stars, customers and tips are always reachable, so three always exist
+      const hasRegular = Object.values((HSC.careerRun && HSC.careerRun.body && HSC.careerRun.body() && HSC.careerRun.body().regs) || {}).some((l) => l && l.length) || !!(M() && M().data && (M().data.regulars || []).length);
+      const keys = Object.keys(TASKS).filter((k) => (k !== 'beard' || (M() && M().level() >= 2)) && (k !== 'regular' || hasRegular)), out = [];
       let h = hash('tasks|' + today);
       while (out.length < 3) { h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0; const k = keys[h % keys.length]; if (!out.includes(k)) out.push(k); }
       P.tasks = { day: today, list: out.map((k) => ({ k, n: 0, claimed: false })) };
@@ -105,6 +108,8 @@
     const d = M() && M().data, last = d && d.lastRound;
     if (!P || !last || last.job !== s.jobId || P.lastJob === s.jobId || !(s.cutStrokeCount > 0)) return;
     if (HSC.practiceJob && HSC.practiceJob(s.jobId)) return; // practice advances nothing (portfolio contract 5)
+    // Quick Play is outside the tasks and the prize bar (a pressure-free customer cannot farm them)
+    if (HSC.modes && HSC.modes.econJob && HSC.modes.econJob(s).kind === 'free') return;
     P.lastJob = s.jobId;
     const p = s.look && s.look.person, req = HSC.requestFor ? HSC.requestFor(s) : null;
     const beard = Array.isArray(s.beard) && Array.isArray(s.startBeard) && s.beard.some((v, i) => v < s.startBeard[i]);
@@ -300,8 +305,10 @@
       if (!(P.week.done >= WEEK_GOAL && !P.week.opened)) return;
       P.week.opened = true;
       pay(WEEK_PAY, 'weekly', 'weekly:' + P.week.key);
+      // one eligible item; when every item is owned it converts to 50 coins (balance model section 11)
       const k = nextPrize();
       if (k) A().award(k, 'week');
+      else pay(HSC.economy ? HSC.economy.CONFIG.duplicateItem : 50, 'weekly', 'weekly-item:' + P.week.key);
       save();
       this.burst(this.el.panel.querySelector('.week .claim'));
       this.panel(); this.button();

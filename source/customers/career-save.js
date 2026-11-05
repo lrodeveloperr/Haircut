@@ -117,13 +117,18 @@
     if (body.ecoLegacy) out.ecoLegacy = true;
     // entitlements bought with coins (item keys such as salon:part:wall:plaster); bounded by the catalog
     if (Array.isArray(body.ent)) out.ent = body.ent.filter((k) => typeof k === 'string' && k.length < 80).slice(-500);
+    // the wishlist: at most one target per kind, each a shop key and its price
+    if (obj(body.wish)) {
+      out.wish = {};
+      for (const k of ['salon', 'cosmetic']) { const w = body.wish[k]; if (obj(w) && str(w.key, 80) && nat(w.price, 1e7)) out.wish[k] = { key: w.key, price: w.price }; }
+    }
     // branches: one per city id; a damaged look is dropped (the salon shows the neutral look), the record stays
     if (obj(body.branches)) {
       out.branches = {};
       for (const city of Object.keys(body.branches).slice(0, 64)) {
         const br = body.branches[city];
         if (!ID.test(city) || !obj(br)) continue;
-        out.branches[city] = { v: nat(br.v, 99) ? br.v : 1, theme: str(br.theme, 32) ? br.theme : 'neutral', parts: obj(br.parts) ? br.parts : null, region: str(br.region, 32) ? br.region : '', objects: Array.isArray(br.objects) ? br.objects.filter((x) => str(x, 40)).slice(0, 16) : [] };
+        out.branches[city] = { v: nat(br.v, 99) ? br.v : 1, theme: str(br.theme, 32) ? br.theme : 'neutral', parts: obj(br.parts) ? br.parts : null, region: str(br.region, 32) ? br.region : '', fit: nat(br.fit, 4) ? br.fit : 0, objects: Array.isArray(br.objects) ? br.objects.filter((x) => str(x, 40)).slice(0, 16) : [] };
       }
     }
     // the portfolio's own section: seals, claimed reward ids and at most 24 favourite cards within their budgets;

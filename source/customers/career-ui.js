@@ -70,6 +70,10 @@
 #hsc-menu .branch .acts{display:flex;gap:12px;flex-wrap:wrap}
 #hsc-menu .branch .acts .j{display:flex;align-items:center;gap:8px;height:56px;padding:0 18px 0 10px;font-size:18px;font-weight:900}
 #hsc-menu .branch .acts .hsc-ic{width:36px;height:36px}
+#hsc-menu .branch .by{font-size:13px;font-weight:800;color:#fff;text-align:center}
+#hsc-menu .branch .pips{display:flex;gap:3px}
+#hsc-menu .branch .pips i{width:11px;height:11px;border-radius:50%;border:2px solid ${K};background:#fff}
+#hsc-menu .branch .pips i.on{background:#36b83a}
 #hsc-menu .upd{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:14px;padding:28px 18px;border-radius:22px;background:linear-gradient(#fff,#e4f3ff);border:3px solid ${K};color:${K};font-weight:900;font-size:20px;text-align:center}
 #hsc-menu .upd p{margin:0;max-width:30ch;line-height:1.3}
 #hsc-menu .city.pick .state{background:linear-gradient(#a8e4ff,#3aa2f2)}
@@ -151,13 +155,17 @@ body.hsc-calm #hsc-menu .career .dot.now{animation:none}
       const row = (ic, key, v) => `<div class="mrow" role="img" aria-label="${t(key)} ${Math.round(v * 100)}%">${I(ic)}<span class="w">${t(key)}</span><span class="bm"><i style="width:${Math.round(v * 100)}%"></i></span></div>`;
       const regs = (body.regs[id] || []).slice().sort((a, b) => (b.visits | 0) - (a.visits | 0));
       const canBase = !C.setBase(core, id).error && core.base !== id;
+      // fit-outs: four equal stages in every branch; the founding salon is the shop itself
+      const brec = (body.branches || {})[id], curve = HSC.economy.CONFIG.salon, fit = brec ? brec.fit | 0 : 0, fitNext = brec && id !== core.founding && fit < curve.length ? curve[fit] : null;
+      const by = HSC.sponsor && HSC.sponsor.line(id);
       page.querySelector('.bbody').innerHTML = `
         <div class="bcard top2"><span class="badge2">${t('st_' + (state === 'visiting' || state === 'unvisited' ? 'established' : state))}</span>
           <span class="cstars" aria-hidden="true">${[1, 2, 3].map((x) => STAR(x <= (c.showcaseBest || 0))).join('')}</span>
           <span class="fact">${I('orders')}${n(c.chapters | 0)}</span>${core.base === id ? `<span class="fact">${I('home')}</span>` : ''}</div>
+        ${by ? `<div class="by">${t('presented_by')} <bdi>${by}</bdi></div>` : ''}
         <div class="bcard">${row('medal', 'm_completion', m.completion)}${row('styles', 'm_style', m.style)}${row('modes', 'm_service', m.service)}${row('regulars', 'm_relation', m.relationship)}</div>
         ${regs.length ? `<div class="bcard faces">${regs.map((g, k) => `<span class="face"><img alt="" data-r="${k}"><span>${n(g.visits | 0)}</span></span>`).join('')}</div>` : ''}
-        <div class="acts"><button class="j c-orange sal" type="button">${I('salon')}<span class="hsc-lbl" data-k="salon">${t('salon')}</span></button>${canBase ? `<button class="j c-blue bas" type="button">${I('home')}<span class="hsc-lbl" data-k="make_base">${t('make_base')}</span></button>` : ''}</div>`;
+        <div class="acts"><button class="j c-orange sal" type="button">${I('salon')}<span class="hsc-lbl" data-k="salon">${t('salon')}</span></button>${fitNext != null ? `<button class="j c-yellow fit" type="button" aria-label="${t('a_fit')}">${I('coin')}<span class="num">${n(fitNext)}</span><span class="pips" aria-hidden="true">${curve.map((_, k) => `<i class="${k < fit ? 'on' : ''}"></i>`).join('')}</span></button>` : ''}${canBase ? `<button class="j c-blue bas" type="button">${I('home')}<span class="hsc-lbl" data-k="make_base">${t('make_base')}</span></button>` : ''}</div>`;
       // regulars' faces as they last left the chair
       page.querySelectorAll('.face img').forEach((img) => {
         const g = regs[+img.dataset.r], h = g && HSC.gridUnpack(g.h, 5), b = g && HSC.gridUnpack(g.b, HSC.BEARD_MM.length - 1);
@@ -172,6 +180,13 @@ body.hsc-calm #hsc-menu .career .dot.now{animation:none}
         // back on the chair, the salon on show follows the job again
         const back = () => (document.querySelector('#hsc-salon.open') ? setTimeout(back, 400) : cr.syncLook());
         setTimeout(back, 600);
+      });
+      const fb = page.querySelector('.fit');
+      if (fb) fb.addEventListener('click', async () => {
+        fb.disabled = true;
+        const ok = await HSC.econ.buyFit(id);
+        if (ok && HSC.fx) HSC.fx.play('coin'); else if (!ok && HSC.nope) HSC.nope(fb);
+        this.render('branch');
       });
       const bb = page.querySelector('.bas');
       if (bb) bb.addEventListener('click', async () => {

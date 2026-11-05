@@ -232,8 +232,21 @@
       const licChapters = Math.floor((core.licence.next | 0) / 5), allChapters = Object.values(core.cities).reduce((a, c) => a + (c.chapters | 0), 0);
       const served = (core.licence.next | 0) + Math.max(0, allChapters - licChapters) * 5 + (core.licence.next >= 30 && core.current ? core.current.slot | 0 : 0);
       const gl = goals(body);
+      // three distances at once, none a blocker (friction contract section 5): the next bill, a near target within
+      // 12 ordinary contracts and a long one 30-60 contracts away; the wishlist target leads when one is set
+      const dist = [];
+      if (HSC.econ && HSC.salon && HSC.salon.targets) {
+        const per = HSC.econ.perJob(), bal = HSC.econ.balance(), jobs = (p) => Math.max(0, Math.ceil((p - bal) / per));
+        const list = HSC.salon.targets().map((x) => Object.assign({ jobs: jobs(x.price) }, x)), w = HSC.econ.wishes().salon;
+        const bl = HSC.econ.bill();
+        if (bl) dist.push(['flame', bl.sponsored != null ? bl.sponsored : bl.inJobs]);
+        const near = w ? { jobs: jobs(w.price), heart: true } : list.find((x) => x.jobs <= 12) || list[0], far = list.find((x) => x.jobs >= 30 && x.jobs <= 60) || list[list.length - 1];
+        if (near) dist.push([near.heart ? 'regulars' : 'salon', near.jobs]);
+        if (far && far !== near) dist.push(['salon', far.jobs]);
+      }
       const p = port(body), total = sets().length, sealed = sets().filter((s) => p.seals[s.id + '@' + s.ver]).length;
       return `<div class="pc row">${I('medal')}<span>${t('r_' + rk.id)}${rk.legend ? ' ' + n(rk.legend) : ''}</span><span class="row">${I('rush', 28)}<span class="num">${n(core.tour ? core.tour.n : 0)}</span></span><span class="row">${I('orders', 28)}<span class="num">${n(served)}</span></span><span class="row">${I('medal', 28)}<span class="num">${n(sealed)} / ${n(total)}</span></span></div>
+        ${dist.length ? `<div class="pc row" role="img" aria-label="${t('p_goal')}">${dist.map(([ic, v]) => `<span class="row">${I(ic, 28)}<span class="num">${n(v)}</span></span>`).join('')}${I('orders', 28)}</div>` : ''}
         ${gl.map((g) => `<div class="pc row" role="img" aria-label="${t('p_goal')}">${I(g.icon)}<span>${g.kind === 'city' ? (HSC.cityName ? HSC.cityName(g.city) : g.city) : g.kind === 'set' ? this.setName(g.set) : g.kind === 'style' ? t('styles') : t('regulars')}</span><span class="num">−${n(g.left)}</span></div>`).join('')}`;
     },
     setName(id) {

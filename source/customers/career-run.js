@@ -85,8 +85,22 @@
         if (!r.duplicate) body.eco = r.eco;
         const ent = (body.ent = Array.isArray(body.ent) ? body.ent : []);
         if (!ent.includes(key)) ent.push(key);
+        // a bought wish is done
+        if (body.wish) for (const k of Object.keys(body.wish)) if (body.wish[k] && body.wish[k].key === key) body.wish[k] = null;
         return body;
       }).then(() => { mirror(); return !!(out && !out.error); });
+    },
+    // a branch fit-out stage: the same four prices in every city; payment and stage land in one commit
+    buyFit: (city) => {
+      let out = false;
+      return commit((b) => {
+        const body = JSON.parse(JSON.stringify(withEco(b))), br = body.branches && body.branches[city], stage = br ? br.fit | 0 : 9;
+        if (!br || stage >= E().CONFIG.salon.length) return body;
+        const r = E().buy(body.eco, 'branch:' + city + ':' + (stage + 1), 'branch', E().CONFIG.salon[stage]);
+        if (r.error || r.duplicate) return body;
+        body.eco = r.eco; br.fit = stage + 1; out = true;
+        return body;
+      }).then(() => { mirror(); syncLook(); return out; });
     },
     owns: (key) => !!(run.body && Array.isArray(run.body.ent) && run.body.ent.includes(key)),
     entitlements: () => (run.body && Array.isArray(run.body.ent) ? run.body.ent.slice() : []),
@@ -102,8 +116,17 @@
       return r;
     }),
     triple: (key, tip) => ecoCommit((eco) => E().tripleTip(eco, key, tip)),
+    // the shift's highlighted modes, among those unlocked, and whether a job in this mode earns the bonus now
+    demand: () => (run.body && run.body.eco ? E().demandModes(run.body.eco.paid, eligibleModes()) : []),
+    demandMatch: (mode) => !!(run.body && run.body.eco && E().demandMatch(run.body.eco, mode, eligibleModes())),
     bill: () => (run.body && run.body.eco ? E().billDue(run.body.eco) : null),
+    // the wishlist: one salon target and one cosmetic (economy architecture, "Wishlist"), kept in the journal
+    wish: (kind, target) => commit((b) => { const body = JSON.parse(JSON.stringify(b)); body.wish = Object.assign({}, body.wish, { [kind]: target || null }); return body; }),
+    wishes: () => (run.body && run.body.wish) || {},
+    // ordinary work per paid contract after the bill: what a gap is measured in (a safe default before any history)
+    perJob: () => { const e = run.body && run.body.eco; return e && e.paid >= 5 ? Math.max(10, Math.round(((e.sources.job || 0) - (e.sinks.bill || 0)) / e.paid)) : 30; },
   };
+  const eligibleModes = () => ['requests', 'fix', 'beard', 'relax', 'rush'].filter((m) => !HSC.modes || HSC.modes.unlocked(m));
   const commit = (fn) => (run.busy = (run.busy || Promise.resolve()).then(() => run.j.commit((b) => fn(b || run.body))).then((b) => { run.body = b; return b; }).catch(async (e) => {
     console.error('career: commit failed', e);
     // another surface wrote a newer career: take it (the event is not applied twice; the player repeats it)
@@ -346,7 +369,7 @@
   function branchLook(city) {
     const br = run.body && run.body.branches && run.body.branches[city];
     if (!br) return null;
-    return { city, parts: br.parts, region: br.region || '', save: (parts, region) => commit((b) => { const body = JSON.parse(JSON.stringify(b)); if (body.branches && body.branches[city]) Object.assign(body.branches[city], { parts: Object.assign({}, parts), region: region || '' }); return body; }) };
+    return { city, fit: br.fit | 0, parts: br.parts, region: br.region || '', save: (parts, region) => commit((b) => { const body = JSON.parse(JSON.stringify(b)); if (body.branches && body.branches[city]) Object.assign(body.branches[city], { parts: Object.assign({}, parts), region: region || '' }); return body; }) };
   }
   function syncLook() { if (HSC.salon && HSC.salon.setContext) HSC.salon.setContext(branchLook(lookCity())); }
   // relocation (branch plan section 8): after World Tour 1 any established branch may become the active base; asked

@@ -85,4 +85,19 @@ let passed = 0;
   passed++;
 }
 
+// 5. sponsor slots: empty by default; no link, tracker or blocked category can be configured
+{
+  vm.runInContext(fs.readFileSync(path.join(root, 'source/customers/sponsor.js'), 'utf8'), ctx);
+  const S = ctx.HSC.sponsor;
+  assert.equal(S.line('ist'), null, 'an empty slot shows the normal art');
+  assert.equal(S.panel('ist'), null); assert.equal(S.shelf('ist'), null);
+  assert.ok(plain(S.validate({ name: 'X', category: 'alcohol', rightsRef: 'r' })).includes('category'));
+  assert.ok(plain(S.validate({ name: 'X', category: 'tools' })).includes('rights'), 'written rights are required');
+  assert.ok(plain(S.validate({ name: 'X', category: 'tools', rightsRef: 'r', url: 'https://x.test' })).includes('field:url'), 'no link field exists');
+  assert.equal(S.set('ist', { name: 'Acme', category: 'tools', rightsRef: 'contract-1' }), true);
+  assert.equal(S.line('ist'), 'Acme');
+  S.clear();
+  passed++;
+}
+
 console.log('PASS: ' + passed + ' portfolio cases (frozen set versions, seals once, migration, card codec and budgets).');

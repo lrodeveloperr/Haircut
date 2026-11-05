@@ -182,6 +182,70 @@ and research), visitor share per city (5.4), culturally specific branch themes (
 | 3.8 | Branch fit-outs as coin sinks; facilities/staff only after their effect specs are approved | M |
 | 3.9 | Neutral sponsor slots (`presented by` line, wall panel, shelf) that resolve to normal salon art when empty | S/M |
 
+**3.1 result — economy simulator (`android/tests/economy-sim.cjs`, 5 November 2026).** Uses the game's own
+economy.js and salon.js prices; 7 archetypes × 30/90/365 days; what-if flags `--chapter`, `--showcase`, `--gift`,
+`--prices=proposed`. Findings on the current values:
+
+- **Part prices are within the cap.** Ordinary work nets about 40 coins per contract after the bill, so the
+  dearest part (1,800) is 45 contracts away, not the 69 estimated in D18. Only the 2,500 regional shop exceeds
+  60 (63), and it is still cheaper than its own parts (the D18 arbitrage).
+- **The source mix misses the locked band.** Ordinary work is 38–43% of all coins (target 55–65%). The causes are
+  the locked milestone table (75 per chapter = 15 extra per contract; 150 per first city showcase), which makes
+  25–30% of income, and the Gift: 10% for a normal player, about 30% for a heavy one.
+- **Long-term sinks run out.** A normal player owns the whole 45,000-coin salon within a year, a heavy player
+  within 90 days. After that the seven-day sinks fall to about 10% of sources and wallets grow without limit. The
+  missing sinks are 3.5 (wardrobe prices) and 3.8 (branch fit-outs).
+- Bill share is 20% of work income (target 25–35%), because real jobs pay more than the doc's 30–36
+  (services, tips, showcase fee). Debt recovery (3/2/2 contracts) and no inflation by tour number: pass.
+
+What-if (normal player, 90 days, share of all coins that is ordinary work): current 40%; chapter 30 / showcase 75:
+47%; plus Gift 25/50/75: 50%; chapter 20 / showcase 50 / Gift 20/30/50: 53%. The 55–65% target is not reachable
+while the locked calendar, goal and weekly tables stay as they are, so the locked tables and the target conflict.
+**Owner decision (5 November 2026): "Trim sources + fix shop" — implemented, not committed.**
+
+- City chapter milestone 75 → 30; first showcase in a city 150 → 75 (economy config version 2; paid milestones
+  keep their keys and are never repaid or taken back).
+- Play-time Gift 50/100/200 → 25/50/75 (a video still doubles one).
+- A regional shop costs exactly its parts not owned yet, at their normal prices (no arbitrage). On a fresh salon:
+  London 1,900, Istanbul 3,000, Mumbai 3,800, Lagos and Mexico 6,000, Tokyo 6,400; 0 once all its parts are owned.
+  Each part stays at most 1,800 (about 45 contracts). The bundle is an optional one-tap shortcut and can cost more
+  than 60 contracts.
+- Result (normal player, 90 days): ordinary work is 50% of income (was 40%), the Gift 6% (was 10%); heavy player
+  Gift 17% (was 29%). Still open: work share under 55% because of the locked calendar/goal/weekly tables, and
+  long-term sinks (heavy and saver wallets keep growing) until 3.5 wardrobe prices and 3.8 branch fit-outs exist.
+
+**Wave 3 status — implemented 5 November 2026 (not committed).**
+
+- **3.2 Result router** (`ad-router.js`, `android/completion-interstitial.js`): no ad at the reveal. Continue attempts
+  one interstitial per newly completed customer. Any rewarded video started on that result, including a failed
+  attempt, wins the break. Incomplete customers and reveals restored after a reload show none. Earned-reward
+  callbacks are unchanged (the router only notes that a video started). **Revenue effect:** interstitials shown
+  fall by the share of results where a video is tried, and players who leave from the result screen without
+  tapping Continue no longer see one. Debug stays on Google's test IDs; tested only with a fake native host.
+- **3.3 Undo:** one rewarded undo per customer, offered only after a measurable mistake (a stroke that takes 40+
+  cells below the request; any stroke when there is no request). **Revenue effect:** fewer undo videos than the old
+  one-per-stroke rule. A new owner review item.
+- **3.4 Wishlist and distances:** one salon target and one cosmetic in the journal; heart button in the shop;
+  coin gap beside the balance and on the result; five-dot bill cycle on the result; bill / near / long distances
+  in the portfolio overview.
+- **3.5 Wardrobe prices** (`wardrobe-shop.js`; `wardrobe.js` untouched): all 1,600 designs at 120/350/900/2,400 from
+  their catalog tier, in a shop opened from the wardrobe; one-commit purchase, restored from the journal; the daily
+  one-video picks are unchanged and lead the list. Simulator: normal player's seven-day spend stays ~1.0 of
+  income for a year (was 0.10), because the catalogue holds about 1.56M coins of items.
+- **3.6 Quick Play and goals:** 5 coins once for the first meaningful Quick Play, nothing after; no task or prize-bar
+  progress; demand shifts live (two modes per five contracts, +20% net, max 12, three per shift, flame on the mode
+  card, derived from the paid count); goals only from unlocked content; weekly chest pays 50 coins when no item is
+  left.
+- **3.7** see the owner decision above.
+- **3.8 Branch fit-outs:** four stages per branch at the salon curve (100/300/800/1,800), identical in every city;
+  each frees a group of salon slots from the founding look; a whole regional look needs all four. This
+  replaces Wave 2's free per-branch editing. Facilities and staff stay out until their effect specs are approved.
+- **3.9 Sponsor slots** (`sponsor.js`): `presented by` line, wall panel and shelf hooks, empty so normal art shows;
+  a campaign needs a name, an allowed category and a written-rights reference; no URL field exists.
+
+Open: haircut income share is 51–52% (target 55–65%) while the calendar, goal and weekly tables stay locked; bill
+share 19–20% (target 25–35%). Set rewards in the portfolio still pay 0 coins. A saver's wallet grows by choice.
+
 ### Wave 4 — Tools, anatomy, services and audio
 
 | Item | Work | Effort |

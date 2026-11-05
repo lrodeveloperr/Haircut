@@ -1,6 +1,7 @@
 // ---------------------------------------------------------------------------------------------
 // Android only (buildall.sh, HEAD_SHAPES=1; owner-approved item T3, 5 November 2026): the play-time gift.
-// Gifts open after 10, 20 and 30 minutes of play in a day: 50, 100 and 200 coins, and a video doubles one.
+// Gifts open after 10, 20 and 30 minutes of play in a day: 25, 50 and 75 coins (owner decision 5 November 2026,
+// folded into the source budget; was 50 / 100 / 200), and a video doubles one.
 // Only real play counts: the app in front, a customer in the chair, and a touch within the last minute, so leaving
 // the phone untouched earns nothing (AdMob treats unattended screens as invalid traffic).
 // The home screen's Gift block (menu.js) shows the time left or a red dot; the gift itself opens here.
@@ -9,7 +10,7 @@
   'use strict';
   if (!HSC.PHENOTYPES) return;
   const INK = '#10223f';
-  const AT = [600, 1200, 1800], PAY = [50, 100, 200];
+  const AT = [600, 1200, 1800], PAY = [25, 50, 75];
   const M = () => HSC.meta, G = () => globalThis.skinFadeStudio;
   let lastTouch = 0, dirty = 0;
   addEventListener('pointerdown', () => { lastTouch = Date.now(); }, true);

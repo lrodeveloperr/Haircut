@@ -220,7 +220,7 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       m.querySelector('[data-b=gift]').addEventListener('click', (e) => { if (!(HSC.gift && HSC.gift.open()) && HSC.nope) HSC.nope(e.currentTarget); });
       m.querySelector('.back').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('back'); this.view('home', true); });
       // back (Escape) closes only the top layer: a panel over the home screen handles it first
-      addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('open') && !document.querySelector('#hsc-panel.open,#hsc-goals.open,#hsc-salon.open,.hsc-coll-panel.open,#hsc-set.open,#hsc-gift.open')) { if (m.querySelector('.page.home').hidden) this.view('home', true); else this.close(); } });
+      addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('open') && !document.querySelector('#hsc-wshop.open,#hsc-panel.open,#hsc-goals.open,#hsc-salon.open,.hsc-coll-panel.open,#hsc-set.open,#hsc-gift.open')) { if (m.querySelector('.page.home').hidden) this.view('home', true); else this.close(); } });
       addEventListener('resize', () => { if (m.classList.contains('open')) requestAnimationFrame(() => HSC.fitLabels && HSC.fitLabels(m)); });
       Object.assign(this.el, { btn: b, menu: m, row });
       this.tick();
@@ -302,7 +302,8 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
         const lock = !M.unlocked(k);
         // a locked mode shows how close the barber is: the levels still to go, as a bar
         const need = M.level[k], frac = Math.max(0, Math.min(1, (lv - 1 + prog) / Math.max(1, need - 1)));
-        const reward = k === 'daily' && daily && daily.done ? [1, 2, 3].map((x) => STAR(x <= daily.stars)).join('') : REWARD[k]();
+        const hot = !lock && HSC.econ && HSC.econ.demand && HSC.econ.demand().includes(k); // this shift's demand bonus
+        const reward = (k === 'daily' && daily && daily.done ? [1, 2, 3].map((x) => STAR(x <= daily.stars)).join('') : REWARD[k]()) + (hot ? I('flame') : '');
         return `<button class="j mode c-${MODE_COLOUR[k]}${k === cur ? ' on' : ''}" type="button" data-m="${k}"${lock ? ' aria-disabled="true"' : ''}>${I(MODE_ICON[k])}<span class="hsc-lbl" data-k="${MODE_WORD[k]}"></span><span class="reward">${reward}</span>${k === 'daily' && !lock && !(daily && daily.done) ? '<span class="hsc-dot"></span>' : ''}${!lock && M.isNew && M.isNew(k) ? `<span class="new">${t('new')}</span>` : ''}${lock ? `<span class="lock">${I('lock')}<span>${need}</span><span class="bar"><i style="width:${Math.round(frac * 100)}%"></i></span></span>` : ''}</button>`;
       }).join('');
       grid.querySelectorAll('.mode').forEach((b) => b.addEventListener('click', () => {
@@ -384,7 +385,7 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
     if (!m) return false;
     const gift = document.querySelector('#hsc-gift.open');
     if (gift) { gift.classList.remove('open'); return true; }
-    for (const sel of ['#hsc-goals.open .x', '#hsc-salon.open .x', '.hsc-coll-panel.open .x', '#hsc-set.open .x']) {
+    for (const sel of ['#hsc-wshop.open .x', '#hsc-goals.open .x', '#hsc-salon.open .x', '.hsc-coll-panel.open .x', '#hsc-set.open .x']) {
       const x = document.querySelector(sel);
       if (x) { x.click(); return true; }
     }

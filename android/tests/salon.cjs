@@ -49,7 +49,8 @@ let passed = 0;
   assert.equal(S.priceOf('floor', 'terrazzo'), 300);
   assert.equal(S.priceOf('floor', 'cement'), 800);
   assert.equal(S.priceOf('floor', 'stone'), 1800, 'later options stay at the top price');
-  assert.equal(S.SHOP_PRICE, 2500);
+  // a regional shop costs exactly its parts not owned yet (owner decision 5 November 2026)
+  { S._load(null); const p = S.regionPrice('tokyo'); assert.ok(p > 0 && p <= 9 * 1800, 'priced from its parts: ' + p); }
   passed++;
 
   // 4. the name: 16 letters in any script, control and direction characters removed, insults refused
@@ -73,8 +74,10 @@ let passed = 0;
   assert.equal(await S.buyPart('floor', 'terrazzo'), true, 'owned: choosing it again is free');
   assert.equal(balance, 10000 - 300);
   assert.equal(await S.buyPart('floor', 'checker'), true); assert.equal(balance, 10000 - 300, 'the free option is always owned');
+  const tokyo = S.regionPrice('tokyo');
   assert.equal(await S.buyRegion('tokyo'), true);
-  assert.equal(balance, 10000 - 300 - 2500); assert.equal(S.state().region, 'tokyo'); assert.equal(S.state().parts.lights, 'lantern');
+  assert.equal(balance, 10000 - 300 - tokyo, 'the shop costs its missing parts');
+  assert.equal(S.regionPrice('tokyo'), 0, 'once its parts are owned the shop adds nothing'); assert.equal(S.state().region, 'tokyo'); assert.equal(S.state().parts.lights, 'lantern');
   assert.ok(S.state().owned.wall.includes('hinoki'), 'a shop brings its parts');
   assert.deepEqual(spent, ['salon:part:floor:terrazzo', 'salon:shop:tokyo'], 'one keyed transaction per purchase');
   balance = 50;

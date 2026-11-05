@@ -3,7 +3,7 @@
 // barbershop. The shop behind the customer is rendered in 3D (shop3d.js), light and in daylight, and softened like
 // the original backdrop picture. It is modular: one choice per slot (wall, panels, floor, mat, mirror, lights,
 // shelf, chair, decor), bought with coins on the economy's renovation curve (100 / 300 / 800 / 1800), and whole
-// regional shops (the same base with local materials) for 2,500 coins. The TV shows the player's shop name, set in
+// regional shops (the same base with local materials) for the price of the parts not owned yet. The TV shows the player's shop name, set in
 // Settings; the first customer of a session opens on the shop with its name. No sponsored content.
 // The game's renderer, camera and controls are untouched: only the picture behind them changes.
 // ---------------------------------------------------------------------------------------------
@@ -16,7 +16,6 @@
   const t = (k) => (HSC.t ? HSC.t(k) : k);
   const I = (n, s) => (HSC.icon ? HSC.icon(n, s) : '');
   const PRICE = (HSC.economy && HSC.economy.CONFIG.salon) || [100, 300, 800, 1800];
-  const SHOP_PRICE = 2500;
   const NAME_MAX = 16;
   const SLOTS = ['wall', 'lower', 'floor', 'mat', 'mirror', 'lights', 'shelf', 'chair', 'decor'];
   // the options of each slot, in price order (the first is free and always owned); kept here so the save can be
@@ -90,24 +89,30 @@
   // ---- the salon on show: the founding salon (S) or a career branch (career-run.js) ----
   // A branch uses the same nine slots and the parts the barber owns; its choice is saved in the career journal by
   // the branch's own save. An invalid or missing branch look shows the neutral salon (branch plan section 12).
+  // A branch starts on the founding salon's look; each fit-out stage (100/300/800/1800, the same in every city) frees
+  // a group of slots to be chosen for that branch alone.
+  const FIT = [['wall', 'lower'], ['floor', 'mat'], ['mirror', 'lights'], ['shelf', 'chair', 'decor']];
+  const slotOpen = (slot) => !ctx || FIT.slice(0, ctx.fit | 0).some((g) => g.includes(slot));
   let ctx = null;
   const cur = () => ctx || S;
   function cleanLook(c) {
     const parts = {};
-    for (const k of SLOTS) parts[k] = c && c.parts && OPTIONS[k].includes(c.parts[k]) ? c.parts[k] : OPTIONS[k][0];
-    return { city: c.city, parts, region: c && REGION_IDS.includes(c.region) ? c.region : '', save: c.save };
+    const fit = c.fit | 0, open = (k) => FIT.slice(0, fit).some((g) => g.includes(k));
+    for (const k of SLOTS) parts[k] = !open(k) && S ? S.parts[k] : c && c.parts && OPTIONS[k].includes(c.parts[k]) ? c.parts[k] : OPTIONS[k][0];
+    return { city: c.city, fit, parts, region: c && REGION_IDS.includes(c.region) ? c.region : '', save: c.save };
   }
   function setContext(c) {
     const next = c && c.city && typeof c.save === 'function' ? cleanLook(c) : null;
-    if (JSON.stringify(next && [next.city, next.parts, next.region]) === JSON.stringify(ctx && [ctx.city, ctx.parts, ctx.region])) return;
+    if (JSON.stringify(next && [next.city, next.fit, next.parts, next.region]) === JSON.stringify(ctx && [ctx.city, ctx.fit, ctx.parts, ctx.region])) return;
     ctx = next; changed();
   }
   const keep = () => { if (ctx) ctx.save(Object.assign({}, ctx.parts), ctx.region); else save(); };
 
   // ---- buying and choosing ----
   const owns = (slot, opt) => S.owned[slot].includes(opt);
-  function equip(slot, opt) { if (!owns(slot, opt)) return false; cur().parts[slot] = opt; cur().region = ''; keep(); changed(); return true; }
+  function equip(slot, opt) { if (!owns(slot, opt) || !slotOpen(slot)) return false; cur().parts[slot] = opt; cur().region = ''; keep(); changed(); return true; }
   async function buyPart(slot, opt) {
+    if (!slotOpen(slot)) return false; // this branch's fit-out has not reached that slot
     if (owns(slot, opt)) return equip(slot, opt);
     const price = priceOf(slot, opt);
     if (coins() < price) return false;
@@ -118,18 +123,32 @@
     return equip(slot, opt);
   }
   function useRegion(id) {
-    if (!S.regions.includes(id)) return false;
+    if (!S.regions.includes(id) || (ctx && (ctx.fit | 0) < FIT.length)) return false; // a whole look needs a full fit-out
     const p = regionParts(id);
     for (const k of SLOTS) { if (!owns(k, p[k])) S.owned[k].push(p[k]); cur().parts[k] = p[k]; }
     cur().region = id; if (ctx) save(); keep(); changed(); return true;
   }
+  // a regional shop is a one-tap bundle of its parts: it costs exactly the parts not owned yet, at their own prices
+  // (owner decision 5 November 2026: no shop cheaper than its parts, and no single price beyond the part curve's)
+  function regionPrice(id) {
+    const p = regionParts(id);
+    if (!p || !S) return 0;
+    return SLOTS.reduce((a, k) => a + (owns(k, p[k]) ? 0 : priceOf(k, p[k])), 0);
+  }
   async function buyRegion(id) {
     if (S.regions.includes(id)) return useRegion(id);
-    if (coins() < SHOP_PRICE) return false;
-    const ok = await (HSC.coins.buyItem || HSC.coins.spend)(SHOP_PRICE, 'salon', 'salon:shop:' + id);
+    const price = regionPrice(id);
+    if (coins() < price) return false;
+    const ok = price ? await (HSC.coins.buyItem || HSC.coins.spend)(price, 'salon', 'salon:shop:' + id) : true;
     if (!ok) return false;
     if (!S.regions.includes(id)) S.regions.push(id);
     return useRegion(id);
+  }
+  // the unowned salon items, cheapest first (parts only: a shop is a bundle of them)
+  function targets() {
+    const out = [];
+    for (const k of SLOTS) OPTIONS[k].forEach((o, i) => { if (i > 0 && !owns(k, o)) out.push({ key: 'salon:part:' + k + ':' + o, price: priceOf(k, o), slot: k }); });
+    return out.sort((a, b) => a.price - b.price);
   }
   function setName(v) {
     let n = cleanName(v);
@@ -240,6 +259,7 @@
 #hsc-salon .act .nm{font-size:22px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 #hsc-salon .act .j{height:52px;font-size:20px;padding:0 18px;flex:none}
 #hsc-salon .act .j .hsc-ic{width:26px;height:26px}
+#hsc-salon .act .j[hidden]{display:none}
 #hsc-salon .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;overflow-y:auto;scrollbar-width:none;flex:1;min-height:0;grid-auto-rows:128px;padding:2px}
 #hsc-salon.land .grid{grid-auto-rows:150px}
 #hsc-salon [hidden]{display:none!important}
@@ -276,7 +296,7 @@
           <div class="bar"><button class="j c-white x" type="button" aria-label="Back">${I('back', 30)}</button><div class="title">${I('salon', 38)}<span class="hsc-lbl" data-k="salon"></span></div><div class="grow"></div><div class="chip">${I('coin', 32)}<bdi></bdi></div></div>
           <div class="sheet">
             <div class="tabs"><button class="j c-white" type="button" data-tab="shops">${I('salon', 30)}<span class="hsc-lbl" data-k="shops"></span></button><button class="j c-white" type="button" data-tab="parts">${I('styles', 30)}<span class="hsc-lbl" data-k="parts"></span></button></div>
-            <div class="act"><span class="nm"></span><span class="grow"></span><button class="j c-yellow buy" type="button"></button></div>
+            <div class="act"><span class="nm"></span><span class="grow"></span><button class="j c-pink wishb" type="button" hidden></button><button class="j c-yellow buy" type="button"></button></div>
             <div class="cats"></div><div class="cards"></div><div class="grid"></div>
           </div></div>`;
       document.body.appendChild(p);
@@ -284,6 +304,16 @@
       p.querySelector('.x').addEventListener('click', () => this.close());
       p.querySelectorAll('.tabs .j').forEach((b) => b.addEventListener('click', () => { if (HSC.fx) HSC.fx.play('down'); this.tab = b.dataset.tab; this.pick = null; this.region = null; this.render(); }));
       this.el.buy.addEventListener('click', () => this.act());
+      // the wishlist: mark the shown part or shop as the salon target (tap again to clear)
+      this.el.wish = p.querySelector('.wishb');
+      this.el.wish.addEventListener('click', async () => {
+        const t2 = this.target();
+        if (!t2 || !HSC.econ || !HSC.econ.wish) return;
+        const cur2 = HSC.econ.wishes().salon;
+        await HSC.econ.wish('salon', cur2 && cur2.key === t2.key ? null : t2);
+        if (HSC.fx) HSC.fx.play('tap');
+        this.render();
+      });
       addEventListener('resize', () => { schedule(); if (this.open_()) { this.layout(); this.draw(); } });
       setInterval(() => this.tick(), 500);
     },
@@ -378,7 +408,7 @@
       } else {
         this.el.grid.innerHTML = REGION_IDS.map((id) => {
           const own = S.regions.includes(id), on = cur().region === id, sel = (this.region || cur().region) === id;
-          const foot = on ? `<span style="color:#2f9e44">${I('tick', 22)}</span>` : own ? '' : `${I('coin', 22)}${SHOP_PRICE.toLocaleString(HSC.langTag ? HSC.langTag() : undefined)}`;
+          const foot = on ? `<span style="color:#2f9e44">${I('tick', 22)}</span>` : own ? '' : `${I('coin', 22)}${regionPrice(id).toLocaleString(HSC.langTag ? HSC.langTag() : undefined)}`;
           return `<button class="card ${sel ? 'sel' : ''}" type="button" data-r="${id}"><span class="art"><img alt="" data-r="${id}"></span><span class="tag hsc-lbl" data-k="${id === 'classic' ? 'classic' : 'c_' + id}"></span><span class="foot">${foot}</span>${on ? `<span class="own">${I('tick', 20)}</span>` : ''}</button>`;
         }).join('');
         this.el.grid.querySelectorAll('.card').forEach((b) => b.addEventListener('click', () => {
@@ -408,7 +438,24 @@
       };
       setTimeout(next, 60);
     },
+    // what the action bar is offering, if it is something to save for
+    target() {
+      if (this.tab === 'parts' && this.pick && !owns(this.slot, this.pick)) return { key: 'salon:part:' + this.slot + ':' + this.pick, price: priceOf(this.slot, this.pick) };
+      if (this.tab === 'shops' && this.region && !S.regions.includes(this.region)) return { key: 'salon:shop:' + this.region, price: regionPrice(this.region) };
+      return null;
+    },
+    wishBar() {
+      const t2 = this.target(), wb = this.el.wish, w = HSC.econ && HSC.econ.wishes ? HSC.econ.wishes().salon : null;
+      wb.hidden = !(t2 && t2.price > 0);
+      if (wb.hidden) return;
+      const on = !!(w && w.key === t2.key);
+      wb.className = 'j wishb ' + (on ? 'c-pink' : 'c-white');
+      wb.setAttribute('aria-pressed', on);
+      wb.setAttribute('aria-label', t('a_wish'));
+      wb.innerHTML = `<svg viewBox="0 0 24 24" width="28" height="28"><path d="M12 20.5S3 15 3 8.8A4.6 4.6 0 0 1 12 6.6a4.6 4.6 0 0 1 9 2.2C21 15 12 20.5 12 20.5z" fill="${on ? '#ff5c98' : 'none'}" stroke="${K}" stroke-width="2.4"/></svg>`;
+    },
     actBar() {
+      this.wishBar();
       const b = this.el.buy;
       if (this.tab === 'parts' && this.pick) {
         const pr = priceOf(this.slot, this.pick);
@@ -416,7 +463,7 @@
         b.hidden = false; b.className = 'j c-yellow buy'; b.innerHTML = I('coin', 26) + pr.toLocaleString(HSC.langTag ? HSC.langTag() : undefined); b.disabled = coins() < pr;
       } else if (this.tab === 'shops' && this.region) {
         this.el.nm.innerHTML = `<span class="hsc-lbl" data-k="c_${this.region}"></span>`;
-        b.hidden = false; b.className = 'j c-yellow buy'; b.innerHTML = I('coin', 26) + SHOP_PRICE.toLocaleString(HSC.langTag ? HSC.langTag() : undefined); b.disabled = coins() < SHOP_PRICE;
+        b.hidden = false; b.className = 'j c-yellow buy'; b.innerHTML = I('coin', 26) + regionPrice(this.region).toLocaleString(HSC.langTag ? HSC.langTag() : undefined); b.disabled = coins() < regionPrice(this.region);
       } else {
         this.el.nm.innerHTML = `<span class="hsc-lbl" data-k="${this.tab === 'parts' ? SLOT_ICON[this.slot] : cur().region ? (cur().region === 'classic' ? 'classic' : 'c_' + cur().region) : 'shops'}"></span>`;
         b.hidden = true;
@@ -472,7 +519,7 @@
   }
 
   HSC.salon = {
-    state: () => S, SLOTS, OPTIONS, REGIONS: REGION_IDS, NAME_MAX, priceOf, SHOP_PRICE,
+    state: () => S, SLOTS, OPTIONS, REGIONS: REGION_IDS, NAME_MAX, priceOf, regionPrice, targets,
     name: () => (S ? S.name : ''), shown: () => (S ? shown() : ''), setName, cleanName, graphemes,
     buyPart, buyRegion, equip, useRegion, open: () => { reconcile(); ui.open(); }, reveal, reconcile,
     // a career branch's look in place of the founding salon (null: the founding salon); which city is on show

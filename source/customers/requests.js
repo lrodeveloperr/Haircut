@@ -12,7 +12,7 @@
 //             x2 from the 4th (owner-approved item 18). A cut under 3 stars ends the run. A flame tag on the coin
 //             counter shows what the next 3-star cut pays.
 //   x3 tips   a rewarded video on the reveal triples that customer's tips (once per customer).
-//   undo      every undo of the last stroke is a rewarded video (up to 20 strokes back).
+//   undo      one rewarded video per customer, offered after a measurable mistake, restores that stroke.
 //   smile     at the reveal the customer smiles in his own ancestry mix of MakeHuman's expression units
 //             (render.js): a polite smile for 1 star, a warm one for 2, a big real smile for 3.
 // No text: icons, stars and numbers only. Every video is optional.
@@ -159,6 +159,7 @@
   // the balance lives in the economy (economy.js, kept in the career journal) once it is up; until then (and in
   // other builds) the progress save holds it
   const EC = () => (HSC.econ && HSC.econ.ready() ? HSC.econ : null);
+  const t2 = (k) => (HSC.t ? HSC.t(k) : k);
   const coins = () => (EC() ? EC().balance() : M() && M().data ? M().data.coins || 0 : 0);
   let miscKey = 0;
   // credits that arrive while the career journal is still loading wait for it (or for its failure), so the
@@ -232,8 +233,15 @@
     const prev = d.combo || 0;
     const combo = free || kind === 'relax' ? 0 : stars === 3 ? prev + 1 : 0;
     const job = { kind, stars, valid, regular: !!(p && p.regular) || !!(careerJob && careerJob.regular), vip: !!(p && p.vip), combo, servicesRequested: asked, servicesDone: svc.done, relaxShare: asked.length ? doneAsked / asked.length : svc.done.length ? 1 : 0, rushBonus: mj.rushBonus || 0, dailyFirst: !!mj.dailyFirst };
+    // a demand shift's highlighted mode pays its bonus (never Quick Play, never a replay)
+    if (!last && valid && EC() && EC().demandMatch) job.demandMatch = EC().demandMatch(careerJob ? careerJob.mode : kind);
+    // Quick Play: one thank-you for the first meaningful practice, then nothing (balance model section 3); keyed once
+    if (!last && kind === 'free' && valid && !(HSC.practiceJob && HSC.practiceJob(s.jobId)) && EC()) EC().earn('quick-play-first', 'job', HSC.economy.CONFIG.freestyleOnce).then(() => ui.coinPill(true));
     const key = careerJob ? careerJob.id : 'job:' + (d.firstDay || '') + ':' + s.jobId;
     const pay = HSC.economy.payout(job);
+    // the result router (ad-router.js): a newly completed customer opens one commercial break; a customer finished
+    // with no change from his start (incomplete) opens none
+    if (!last && HSC.adRouter) HSC.adRouter.completed(s.jobId, s.cutStrokeCount > 0 || (Array.isArray(s.hair) && Array.isArray(s.startHair) && s.hair.some((v, i) => v !== s.startHair[i])));
     if (!last) {
       if (!free && kind !== 'relax') d.combo = combo; // Relax and Freestyle pause the combo
       d.lastRound = { job: s.jobId, key, stars, tips: pay.tip, tip: pay.tip, paid: pay.total, lines: pay.lines, tripled: false, prev, mult: HSC.economy.CONFIG.combo[Math.min(combo, 4)] || 1, free: free || kind === 'free' };
@@ -297,7 +305,16 @@
   HSC.clippingsActive = () => !!face.anim || ui.flying > 0 || (clipActive ? clipActive() : false);
 
   // ---- undo: one rewarded video per stroke undone ----
-  const undo = { job: null, stack: [], snap: null, busy: false };
+  // one contextual offer per contract (friction contract section 6; plan 3.3): the undo appears only after a measurable
+  // mistake, a stroke that took hair below what was asked (with no request, any stroke), and once used it is gone
+  const undo = { job: null, stack: [], snap: null, busy: false, used: null };
+  const OVERCUT = 40; // cells newly below the target that make a stroke a measurable mistake
+  function mistake(s, snap) {
+    const rq = HSC.requestFor ? HSC.requestFor(s) : null;
+    if (!rq) return true;
+    const count = (now, was, t) => { let n = 0; if (!Array.isArray(now) || !Array.isArray(was) || !t) return 0; for (let i = 0; i < 8192; i++) if (now[i] < t[i] && was[i] >= t[i]) n++; return n; };
+    return count(s.hair, snap.hair, rq.target) + count(s.beard, snap.beard, rq.beard) >= OVERCUT;
+  }
   function onDown(e) {
     const g = G();
     if (!g || e.button > 0) return;
@@ -313,7 +330,7 @@
     if (s.status !== 'cutting' || s.jobId !== snap.job) return;
     if (s.hair !== snap.hair || s.beard !== snap.beard || s.brow !== snap.brow) {
       if (undo.job !== s.jobId) { undo.job = s.jobId; undo.stack = []; }
-      undo.stack.push({ hair: snap.hair, beard: snap.beard, brow: snap.brow, svc: snap.svc });
+      undo.stack.push({ hair: snap.hair, beard: snap.beard, brow: snap.brow, svc: snap.svc, mistake: mistake(s, snap) });
       if (undo.stack.length > 20) undo.stack.shift();
       ui.undoButton();
     }
@@ -333,7 +350,7 @@
         let back = false;
         for (let k = 0; k < 40 && !back; k++) { back = g.restore ? await g.restore(prev.hair, prev.beard, prev.brow) : false; if (!back) await new Promise((r) => setTimeout(r, 150)); }
         if (!back) undo.stack.push(prev);
-        else if (HSC.servicesRestore) HSC.servicesRestore(prev.svc); // a threaded line put back is no longer threaded
+        else { undo.used = job; if (HSC.servicesRestore) HSC.servicesRestore(prev.svc); } // a threaded line put back is no longer threaded
       } else if (!ok) HSC.nope && HSC.nope(ui.el.undo);
     } finally {
       undo.busy = false;
@@ -411,6 +428,11 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
 #hsc-score .rcpt span{display:flex;align-items:center;gap:3px;height:28px;padding:0 9px 0 5px;border-radius:14px;background:#fff6e6;border:2px solid ${INK};font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;opacity:0;animation:hsc-rcpt .3s ease-out forwards}
 #hsc-score .rcpt span.neg{background:#e9eef6;color:#4a5872}
 #hsc-score .rcpt svg{width:20px;height:20px}
+#hsc-score .cyc{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;direction:ltr}
+#hsc-score .cyc i{width:12px;height:12px;border-radius:50%;background:#fff6e6;border:2px solid ${INK};box-sizing:border-box}
+#hsc-score .cyc i.on{background:#36b83a}
+#hsc-score .cyc b{margin-inline-start:4px}
+#hsc-hud .hsc-gap{font-style:normal;font-size:13px;font-weight:800;opacity:.9;margin-inline-start:4px;white-space:nowrap}
 @keyframes hsc-rcpt{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 #hsc-score .tip{display:flex;gap:6px;align-items:center;height:48px;padding:0 14px 0 10px;border-radius:24px;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};font-weight:900;font-size:22px;font-variant-numeric:tabular-nums}
 #hsc-score .x3{pointer-events:auto;position:relative;display:flex;gap:4px;align-items:center;height:52px;padding:0 16px 0 10px;border-radius:26px;background:#ffb627;border:3px solid ${INK};box-shadow:0 4px 0 ${INK};font-weight:900;font-size:24px;color:${INK};cursor:pointer;animation:hsc-rbreathe 1.3s ease-in-out infinite}
@@ -456,6 +478,12 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
         this.el.coins = c;
       }
       this.el.coins.querySelector('span').textContent = coins();
+      // the wishlist target: how many coins are still missing, beside the balance
+      const wishT = HSC.econ && HSC.econ.wishes ? HSC.econ.wishes().salon : null, gap = wishT ? wishT.price - coins() : 0;
+      let gapEl = this.el.coins.querySelector('.hsc-gap');
+      if (!gapEl) { gapEl = document.createElement('i'); gapEl.className = 'hsc-gap'; gapEl.setAttribute('aria-hidden', 'true'); this.el.coins.querySelector('span').after(gapEl); }
+      gapEl.hidden = !(gap > 0);
+      if (gap > 0) gapEl.textContent = '♥ −' + (HSC.num ? HSC.num(gap) : gap);
       // what the next 3-star cut pays while a run of 3-star cuts is going
       const run = HSC.combo.now(), tag = this.el.coins.querySelector('.hsc-combo');
       tag.hidden = run < 1;
@@ -483,7 +511,8 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
       const g = G(), b = this.el.undo;
       if (!g || !b) return;
       const s = g.getState();
-      const show = s.status === 'cutting' && undo.job === s.jobId && undo.stack.length > 0 && !!(HSC.canVideo && HSC.canVideo());
+      const top = undo.stack[undo.stack.length - 1];
+      const show = s.status === 'cutting' && undo.job === s.jobId && !!top && top.mistake && undo.used !== s.jobId && !!(HSC.canVideo && HSC.canVideo());
       b.hidden = !show;
       if (!show) return;
       // under the top-left buttons
@@ -553,6 +582,16 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
         const IC = { fee: 'salon', services: 'relax', rush: 'rush', demand: 'flame', daily: 'daily', triple: 'video' };
         const lines = rk ? last.lines.concat(last.tripled ? [['triple', 2 * (last.tip || 0)]] : []) : [];
         this.el.rcpt.innerHTML = lines.filter((l) => l[1]).map(([k, v], i) => `<span class="${v < 0 ? 'neg' : ''}" style="animation-delay:${0.6 + i * 0.08}s">${k === 'tip' ? STAR(true) : IC[k] && HSC.icon ? HSC.icon(IC[k], 20) : ''}${v > 0 ? '+' : '−'}${Math.abs(v)}</span>`).join('');
+      }
+      // the operating cycle: five dots to the next bill, and the wishlist gap (friction contract section 5)
+      const bl = EC() && EC().bill ? EC().bill() : null;
+      if (bl) {
+        let cy = this.el.score.querySelector('.cyc');
+        if (!cy) { cy = document.createElement('div'); cy.className = 'cyc'; this.el.rcpt.after(cy); }
+        const doneN = bl.sponsored != null ? 5 - bl.sponsored : 5 - bl.inJobs, wish = EC().wishes ? EC().wishes().salon : null, gap = wish ? wish.price - coins() : 0;
+        cy.setAttribute('role', 'img');
+        cy.setAttribute('aria-label', t2('a_bill').replace('{n}', bl.sponsored != null ? bl.sponsored : bl.inJobs).replace('{c}', bl.amount));
+        cy.innerHTML = [0, 1, 2, 3, 4].map((i) => `<i class="${i < doneN ? 'on' : ''}"></i>`).join('') + `<b>−${bl.amount}</b>` + (gap > 0 ? `<b>♥ −${HSC.num ? HSC.num(gap) : gap}</b>` : '');
       }
       const canX = !last.tripled && (last.key ? last.tip > 0 : last.paid > 0) && !!(HSC.canVideo && HSC.canVideo());
       this.el.x3.hidden = !canX && !last.tripled;

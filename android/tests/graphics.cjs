@@ -123,7 +123,8 @@ let original=game.replace(androidStartup,defaultStartup).replace(firstFrameDiagn
 // Strip only the explicitly authorised Android completion-ad adaptation as well.
 original=original
   .replace(fs.readFileSync(path.join(root,'android/completion-interstitial.js'),'utf8')+'\n','')
-  .replace('fe===1&&(x=!0,androidCompletionInterstitial())','fe===1&&(x=!0,Z())')
+  .replace('await androidResultBreak();if(c||C||T||s.status!=="reveal")return!1;','')
+  .replace('fe===1&&androidRevealDone()','fe===1&&(x=!0,Z())')
   .replace('Z();try{return C?!1:', 'Z();try{let j=Cc(l);if(j.showInterstitial&&!y&&!(HSC.recentReward&&HSC.recentReward()))try{await $(!0);let ae=await t.showInterstitial("next-customer",{onDisplay:ie});t.lastInterstitialRequestAccepted&&(l=j.adSession),t.sendAnalytics("interstitial_outcome",{opened:ae,nextClick:s.jobId})}catch(ae){}return C?!1:');
 assert.equal(original, fs.readFileSync(path.join(root, 'source/build-youtube/runtime/game.js'), 'utf8'), 'working engine unchanged outside reviewed touch/startup/completion-ad adaptations');
 assert.equal(game.split('n.touchTarget(j)').length-1,2,'cut and proximity share one touch helper');

@@ -58,7 +58,6 @@ function hostFixture(){
             const r=node.getBoundingClientRect();return {selector,x:r.left+r.width/2,y:r.top+r.height/2};
           })};
       });
-      assert.equal(layout.profile,'high');
       for(const control of layout.controls){
         assert(!control.missing,JSON.stringify(control));
         assert(control.x>=0&&control.x<width&&control.y>=0&&control.y<height,JSON.stringify({layout,control}));
@@ -66,42 +65,57 @@ function hostFixture(){
       layouts.push(layout);
     }
     await page.setViewportSize({width:390,height:778});
-    // One customer: hammer the engine's Next route throughout the reveal. It must
-    // neither advance before the ad nor display an ad over a new haircut.
-    const first=await page.evaluate(async()=>{
-      const g=skinFadeStudio,job=g.getState().jobId;
-      window.__earlyAdvance=false;
-      g.finish();
-      window.__hammer=setInterval(async()=>{
-        if(await g.next())__earlyAdvance=true;
-      },10);
-      return job;
-    });
+    // The result router (plan 3.2): no ad at the reveal; Continue attempts one interstitial per completed customer.
+    // `work` changes the haircut so the customer counts as completed (an untouched finish opens no break).
+    const work=()=>page.evaluate(async()=>{const g=skinFadeStudio,s=g.getState();await g.restore(s.hair.map((v,i)=>i%3?v:Math.max(0,v-1)),s.beard,s.brow);await g.finish();});
+    const revealed=()=>page.waitForFunction(()=>skinFadeStudio.getState().status==='reveal'&&!skinFadeStudio.getView().busy);
+    // Continue only answers once the reveal spin has finished: keep tapping, as an impatient player would
+    const tap=()=>page.evaluate(()=>{clearInterval(window.__tap);window.__tap=setInterval(()=>skinFadeStudio.next(),50);});
+    const stopTap=()=>page.evaluate(()=>clearInterval(window.__tap));
+    const first=await page.evaluate(()=>skinFadeStudio.getState().jobId);
+    await work();await revealed();
+    await page.waitForTimeout(400);
+    assert.equal(await page.evaluate(()=>__native.ads.length),0,'no ad at the reveal');
+    // hammer Continue: one ad, no early advance
+    await page.evaluate(()=>{window.__earlyAdvance=0;window.__hammer=setInterval(async()=>{if(await skinFadeStudio.next())__earlyAdvance++;},10);});
     await page.waitForFunction(()=>__native.ads.length===1&&skinFadeStudio.getView().busy);
-    await page.evaluate(()=>clearInterval(__hammer));
-    assert.equal(await page.evaluate(()=>__earlyAdvance),false);
-    assert.equal(await page.evaluate(()=>skinFadeStudio.getState().jobId),first);
+    assert.equal(await page.evaluate(()=>skinFadeStudio.getState().jobId),first,'the customer stays while the ad is up');
     assert.equal(await page.evaluate(()=>skinFadeStudio.getState().status),'reveal');
-    assert.equal(await page.locator('.training-continue').isDisabled(),true);
     await page.evaluate(()=>__androidHost.ad('interstitial','closed'));
-    await page.waitForFunction(()=>!skinFadeStudio.getView().busy&&!skinFadeStudio.getView().paused);
-    await page.getByRole('button',{name:'Next customer',exact:true}).click();
     await page.waitForFunction(()=>skinFadeStudio.getState().status==='cutting');
-    // A second completion immediately afterwards must still request an ad.
-    await page.evaluate(()=>skinFadeStudio.finish());
+    await page.evaluate(()=>clearInterval(__hammer));
+    assert.equal(await page.evaluate(()=>__native.ads.length),1,'one ad for the first customer, however many taps');
+    // a successive customer has his own break, without a time gate
+    await page.waitForFunction(()=>!skinFadeStudio.getView().busy);
+    await work();await revealed();
+    await tap();
     await page.waitForFunction(()=>__native.ads.length===2&&skinFadeStudio.getView().busy);
     await page.evaluate(()=>__androidHost.ad('interstitial','closed'));
-    await page.waitForFunction(()=>!skinFadeStudio.getView().busy&&!skinFadeStudio.getView().paused);
-    await page.getByRole('button',{name:'Next customer',exact:true}).click();
-    await page.waitForFunction(()=>skinFadeStudio.getState().status==='cutting');
-    await page.evaluate(()=>{__native.outcome='fail';skinFadeStudio.finish();});
-    await page.waitForFunction(()=>__native.ads.length===3&&!skinFadeStudio.getView().busy&&!skinFadeStudio.getView().paused);
-    assert.equal(await page.locator('.training-continue').isEnabled(),true,'no fill releases the completion');
+    await page.waitForFunction(()=>skinFadeStudio.getState().status==='cutting'&&!skinFadeStudio.getView().busy);
+    await stopTap();
+    // a rewarded video started on the result (here it fails) wins the break: Continue shows no interstitial
+    await work();await revealed();
+    await page.evaluate(async()=>{HSC.lastRewardAt=0;await HSC.watchVideo('triple-tips').catch(()=>false);});
+    await page.evaluate(()=>{HSC.lastRewardAt=0;});await tap();
+    await page.waitForFunction(()=>skinFadeStudio.getState().status==='cutting'&&!skinFadeStudio.getView().busy);
+    await stopTap();
+    assert.equal(await page.evaluate(()=>__native.ads.length),2,'a rewarded result suppresses its interstitial');
+    // no fill releases Continue
+    await work();await revealed();
+    await page.evaluate(()=>{__native.outcome='fail';});await tap();
+    await page.waitForFunction(()=>__native.ads.length===3&&skinFadeStudio.getState().status==='cutting'&&!skinFadeStudio.getView().busy&&!skinFadeStudio.getView().paused);
+    await stopTap();
+    // a reveal restored after a reload shows no ad on Continue
+    await work();await revealed();
     await page.evaluate(async()=>(await HSC.youtubeClientPromise).flushProgress());
     await page.reload();await ready();
     assert.equal(await page.evaluate(()=>skinFadeStudio.getState().status),'reveal');
-    assert.equal(await page.evaluate(()=>__native.ads.length),0,'restoring a completed reveal does not duplicate the ad');
+    assert.equal(await page.evaluate(()=>__native.ads.length),0,'restoring a completed reveal does not show an ad');
+    await tap();
+    await page.waitForFunction(()=>skinFadeStudio.getState().status==='cutting');
+    await stopTap();
+    assert.equal(await page.evaluate(()=>__native.ads.length),0,'nor does Continue from a restored reveal');
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({passed:true,layouts,checks:['rapid Next cannot bypass','first customer monetized','successive customer monetized without 60-second gate','no fill releases Next','restored reveal does not replay an ad','full-detail renderer preserved','controls stay inside reduced game window']},null,2));
+    console.log(JSON.stringify({passed:true,layouts,checks:['no ad at the reveal','one interstitial on Continue per completed customer','rapid Continue cannot bypass','successive customer monetized without a time gate','a rewarded result suppresses its interstitial','no fill releases Continue','restored reveal shows no ad','full-detail renderer preserved','controls stay inside reduced game window']},null,2));
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

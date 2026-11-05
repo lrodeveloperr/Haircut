@@ -12,6 +12,7 @@ vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(root, 'source/customers/economy.js'), 'utf8'), ctx);
 const E = ctx.HSC.economy;
 let passed = 0;
+const plain = (x) => JSON.parse(JSON.stringify(x));
 
 // 1. the balance model's worked examples
 assert.equal(E.payout({ kind: 'requests', stars: 3, valid: true }).total, 36, 'ordinary 3-star order pays 36');
@@ -81,7 +82,7 @@ passed++;
 eco = E.fresh();
 let ms = E.milestonesFor(['licence-complete', 'branch-established:lon', 'tour-complete:1'], { city: 'lon', visit: 0, tour: 1 }, true);
 let m = E.payMilestones(eco, ms); eco = m.eco;
-assert.equal(eco.balance, 40 + 300 + 150 + 400);
+assert.equal(eco.balance, 40 + 300 + 75 + 400); // first showcase 75 (owner decision 5 November 2026)
 m = E.payMilestones(eco, ms);
 assert.equal(m.paid.length, 0, 'replays cannot pay a milestone again');
 const tour9 = E.milestonesFor(['tour-complete:9'], null, false);
@@ -112,4 +113,22 @@ E.payJob(eco, 'z', { kind: 'requests', stars: 3, valid: true }); E.buy(eco, 'zz'
 assert.equal(JSON.stringify(eco), frozen);
 passed++;
 
+// demand shifts: two highlighted modes per five paid contracts, three bonuses at most, every mode before a repeat
+{
+  const job = { kind: 'requests', stars: 2, valid: true };
+  const seen = new Set();
+  for (let s = 0; s < 3; s++) for (const m of E.demandModes(s * 5, null)) seen.add(m);
+  assert.equal(seen.size, 5, 'every mode appears before the deck repeats');
+  assert.equal(JSON.stringify(plain(E.demandModes(7, null))), JSON.stringify(plain(E.demandModes(9, null))), 'a shift keeps its modes');
+  assert.equal(E.demandModes(0, ['requests']).length, 1, 'only unlocked modes');
+  assert.ok(!E.demandModes(0, null).includes('free'), 'Quick Play is never a target');
+  const bonus = E.payout(Object.assign({ demandMatch: true }, job)).total - E.payout(job).total;
+  assert.equal(bonus, Math.min(12, Math.round(24 * 0.2)), '+20% of the net fee, at most 12');
+  let d = E.fresh();
+  const mode = E.demandModes(0, null)[0];
+  let hits = 0;
+  for (let i = 0; i < 4; i++) { const m = E.demandMatch(d, mode); if (m) hits++; d = E.payJob(d, 'd' + i, Object.assign({ demandMatch: m }, job)).eco; }
+  assert.equal(hits, 3, 'at most three demand bonuses per shift');
+  passed++;
+}
 console.log('PASS: ' + passed + ' economy cases (worked examples, tips, services, idempotency, operating bill, debt, milestones, levels, migration).');
