@@ -158,7 +158,7 @@
   const hash = (str) => { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
 
   function fresh() {
-    return { v: 1, cuts: 0, streak: 0, lastDay: null, firstDay: dayKey(), dailyDay: null, queue: null, trial: null, declines: 0, pauseLeft: 0, offerTurn: 0, seen: {}, deck: {}, last: {}, regulars: [], sinceReg: 0 };
+    return { v: 1, cuts: 0, streak: 0, lastDay: null, firstDay: dayKey(), dailyDay: null, queue: null, trial: null, declines: 0, pauseLeft: 0, offerTurn: 0, seen: {}, deck: {}, last: {}, regulars: [], sinceReg: 0, coins: 0, lastRound: null };
   }
   const okTok = (v) => (typeof v === 'string' && v.length < 16) || (Number.isInteger(v) && v >= 0 && v < 8);
   function cleanDecks(o) {
@@ -204,6 +204,9 @@
     const n = Math.min(999, (Number.isSafeInteger(p.regular) ? p.regular : 0) + 1);
     const rec = Object.assign({}, p);
     for (const k of ['job', 'vip', 'daily', 'first', 'regular']) delete rec[k];
+    // the cut he asked for this time is his usual next time (requests.js)
+    const asked = HSC.requestStyleFor ? HSC.requestStyleFor(state.jobId) : null;
+    if (asked) rec.usual = asked; else if (typeof rec.usual !== 'string') delete rec.usual;
     const prof = state.look && typeof state.look.profile === 'string' ? state.look.profile : null;
     d.regulars = d.regulars.filter((r) => r.p.seed !== p.seed).concat([{ p: rec, h, b, u, pr: prof, day: dayKey(), cuts: d.cuts, n }]).slice(-MAX_REG);
   }
@@ -221,6 +224,12 @@
     d.regulars = d.regulars.filter((x) => x !== r);
     return { person: Object.assign({}, r.p, { regular: r.n }), profile: r.pr, regular: { h: HSC.gridPack(g.hair), b: HSC.gridPack(g.beard), u: r.u } };
   }
+  // the last scored customer (requests.js): stars, tips paid and whether they were tripled
+  function cleanRound(r) {
+    if (!r || typeof r !== 'object' || !Number.isSafeInteger(r.job) || ![0, 1, 2, 3].includes(r.stars)) return null;
+    const n = (v) => (Number.isSafeInteger(v) && v >= 0 && v < 1e6 ? v : 0);
+    return { job: r.job, stars: r.stars, tips: n(r.tips), paid: n(r.paid), tripled: r.tripled === true, shownStars: [1, 2, 3].includes(r.shownStars) ? r.shownStars : r.stars };
+  }
   function sanitize(d) {
     const f = fresh();
     if (!d || typeof d !== 'object' || d.v !== 1) return f;
@@ -235,7 +244,7 @@
       v: 1, cuts: int(d.cuts, 0), streak: int(d.streak, 0), lastDay: str(d.lastDay), firstDay: str(d.firstDay) || f.firstDay,
       dailyDay: str(d.dailyDay), queue: q, trial: t, declines: int(d.declines, 0), pauseLeft: int(d.pauseLeft, 0),
       offerTurn: int(d.offerTurn, 0), seen: d.seen && typeof d.seen === 'object' ? d.seen : {},
-      deck: cleanDecks(d.deck), last: cleanLast(d.last), sinceVip: int(d.sinceVip, 9), runs: cleanRuns(d.runs), regulars: cleanRegulars(d.regulars), sinceReg: int(d.sinceReg, 0),
+      deck: cleanDecks(d.deck), last: cleanLast(d.last), sinceVip: int(d.sinceVip, 9), runs: cleanRuns(d.runs), regulars: cleanRegulars(d.regulars), sinceReg: int(d.sinceReg, 0), coins: Math.min(99999999, int(d.coins, 0)), lastRound: cleanRound(d.lastRound),
     };
   }
   M.save = function () {

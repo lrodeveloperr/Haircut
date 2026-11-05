@@ -24,7 +24,7 @@ async function hC() {
     globalThis.skinFadeStudio = Object.freeze({
       selectGuard: game.selectGuard, turn: game.turn, toggleClipper: game.toggleClipper,
       setAudioEnabled: game.setUserAudio, finish: game.finish, next: game.next,
-      getView: game.getView, getState: game.getState, replay: game.replay,
+      getView: game.getView, getState: game.getState, replay: game.replay, restore: game.restore,
     });
   } catch (error) {
     if (unmount) unmount();

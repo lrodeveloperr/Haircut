@@ -220,6 +220,17 @@
           st.nbr[v * K + 2] = i2; st.nbw[v * K + 2] = b2 / sum;
         }
       }
+      // expressions (expressions-data.js) may also move the lids and brows, which the shape guard keeps still:
+      // only the eyeballs themselves (radius 0.305), the scalp and the lower neck stay out
+      const zoneE = (x, y, z, scalp) => (1 - smooth(0.0, 0.03, scalp)) * smooth(0.33, 0.4, Math.hypot(Math.abs(x) - eye[0], y - eye[1], z - eye[2])) * smooth(-1.9, -1.3, y);
+      st.eg = new Float32Array(ns);
+      for (let v = 0; v < ns; v++) {
+        const ge = zoneE(B[v * 3], B[v * 3 + 1], B[v * 3 + 2], st.scalp[v]);
+        if (ge <= 0) continue;
+        let fade = 0;
+        for (let k = 0; k < K; k++) { const i = st.nbr[v * K + k]; if (i >= 0) fade += st.nbw[v * K + k] * fadeC[i]; }
+        st.eg[v] = ge * fade;
+      }
       st.sg = new Float32Array(ns);
       for (let v = 0; v < ns; v++) {
         const g = zone(B[v * 3], B[v * 3 + 1], B[v * 3 + 2], st.scalp[v]);
@@ -247,6 +258,24 @@
         } else console.error('customers: face targets do not match the head');
       }
       st.D = new Float32Array(nv * 3);
+      // expression units (sparse, the faces' format), [ethnicity][unit]
+      st.expr = null;
+      if (HSC.EXPR_B64) {
+        const eb = atob(HSC.EXPR_B64), er = new Uint8Array(eb.length);
+        for (let i = 0; i < eb.length; i++) er[i] = eb.charCodeAt(i);
+        const ev = new DataView(er.buffer), en = ev.getUint16(0, true);
+        if (ev.getUint32(2, true) === nv) {
+          const units = [];
+          for (let k = 0, o = 6; k < en; k++) {
+            const sc = ev.getFloat32(o, true), m = ev.getUint16(o + 4, true), idx = new Uint16Array(m);
+            for (let j = 0; j < m; j++) idx[j] = ev.getUint16(o + 6 + j * 2, true);
+            units.push({ sc, idx, q: new Int8Array(er.buffer, o + 6 + m * 2, m * 3) });
+            o += 6 + m * 5;
+          }
+          st.expr = units;
+          st.DE = new Float32Array(nv * 3);
+        }
+      }
       if (HSC.startupTiming) { HSC.startupTiming.headShapesMs = Math.round(performance.now() - t0); HSC.startupTiming.headShapesDecodeMs = Math.round(tDecode); }
     } catch (err) {
       console.error('customers: head shapes failed', err);
@@ -477,6 +506,28 @@
       }
     }
     const sdC = (i, a) => (shaped ? D[i * 3 + a] * st.sgC[i] : 0);
+    // the customer's expression (a smile at the reveal), in his own ancestry mix of the expression units
+    const ex = st.expr && st.face && st.face.seed === person.seed && st.face.w > 0.001 && !HSC.snapshotting ? st.face : null;
+    const DE = st.DE;
+    if (ex) {
+      DE.fill(0);
+      const E = HSC.EXPR_ETH, U = HSC.EXPR_UNITS, mix = (HSC.EXPR_MIX || {})[person.heritage] || [1 / 3, 1 / 3, 1 / 3];
+      E.forEach((_, ei) => U.forEach((u, ui) => {
+        // eyes narrow most into crescents on East Asian faces (the reference photos)
+        const asianEye = u === 'squint' ? 1 + 0.35 * mix[1] : 1;
+        const w = (ex.amounts[u] || 0) * mix[ei] * ex.w * asianEye, t = st.expr[ei * U.length + ui];
+        if (!w || !t) return;
+        const k = w * t.sc;
+        for (let j = 0; j < t.idx.length; j++) { const i = t.idx[j] * 3; DE[i] += k * t.q[j * 3]; DE[i + 1] += k * t.q[j * 3 + 1]; DE[i + 2] += k * t.q[j * 3 + 2]; }
+      }));
+    }
+    if (HSC.U.uSmileA) HSC.U.uSmileA.value = [ex ? ex.w * Math.min(1, ex.amounts.folds || ex.amounts.smile || 0) : 0, 0, 0, 0];
+    const se = (v, a) => {
+      if (!ex || !(st.eg[v] > 0)) return 0;
+      let t = 0;
+      for (let k = 0; k < 3; k++) { const i = st.nbr[v * 3 + k]; if (i >= 0) t += st.nbw[v * 3 + k] * DE[i * 3 + a]; }
+      return t * st.eg[v];
+    };
     const sd = (v, a) => {
       if (!shaped || !(st.sg[v] > 0)) return 0;
       let t = 0;
@@ -486,8 +537,8 @@
     for (let v = 0; v < P.length / 3; v++) {
       const x = st.base[v * 3], y = st.base[v * 3 + 1], z = st.base[v * 3 + 2];
       const d = HSC.morphDelta(x, y, z, m, age, st.scalp[v]);
-      P[v * 3] = x + (d ? d[0] : 0) + sd(v, 0); P[v * 3 + 1] = y + (d ? d[1] : 0) + sd(v, 1); P[v * 3 + 2] = z + (d ? d[2] : 0) + sd(v, 2);
-      if (d || (shaped && st.sg[v] > 0)) moved = true;
+      P[v * 3] = x + (d ? d[0] : 0) + sd(v, 0) + se(v, 0); P[v * 3 + 1] = y + (d ? d[1] : 0) + sd(v, 1) + se(v, 1); P[v * 3 + 2] = z + (d ? d[2] : 0) + sd(v, 2) + se(v, 2);
+      if (d || (shaped && st.sg[v] > 0) || (ex && st.eg[v] > 0)) moved = true;
     }
     const C = st.coarse.pos;
     for (let v = 0; v < C.length / 3; v++) {
@@ -649,6 +700,15 @@
     }
     try { applyMorph(person); } catch (err) { console.error('customers: morph failed', err); }
     try { drawEyes(person); } catch (err) { console.error('customers: eyes failed', err); }
+  };
+
+  // a facial expression for the customer in the chair (requests.js): unit amounts (smile, squint, brows, lift) at
+  // strength w 0..1; w 0 is his resting face. Snapshots of the next customer never carry it.
+  HSC.setExpression = function (person, amounts, w) {
+    if (!ctx || !st.expr || !person || !HSC.validPerson(person)) return false;
+    st.face = { seed: person.seed, amounts: amounts || {}, w: Math.max(0, Math.min(1, w || 0)) };
+    try { applyMorph(person); } catch (err) { console.error('customers: expression failed', err); return false; }
+    return true;
   };
 
   HSC.setBeard = function (levels) {

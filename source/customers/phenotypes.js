@@ -196,7 +196,8 @@
     const arch = { straight: 0.025, soft: 0.08, arched: 0.13, rising: 0.045 }[shape] + R.range(-0.01, 0.01);
     const tilt = shape === 'rising' ? R.range(0.05, 0.08) : R.range(-0.01, 0.015);
     const lv = R.next(), thick = (lv < f.thick ? 1.22 : lv > 0.8 ? 0.84 : 1) * (1 + 0.15 * sm(45, 70, y));
-    const unibrow = R.next() < f.uni ? R.range(0.55, 1) : 0;
+    // the owner asked for no unibrows (5 November 2026); the roll is kept so every other feature stays the same
+    const uniRoll = R.next() < f.uni ? R.range(0.55, 1) : 0, unibrow = 0 * uniRoll;
     const tail = 0.45 * sm(58, 80, y);
     const freckles = R.next() < (REDS.includes(person.hair.colour) ? 0.75 : f.freckle) ? R.range(0.5, 1) * (1 - 0.4 * sm(50, 75, y)) : 0;
     const dpn = person.skin.tone >= 6.5 && R.next() < 0.6 * sm(40, 65, y) ? R.range(0.4, 1) : 0;

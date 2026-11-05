@@ -19,6 +19,7 @@
     uScar: { value: new Float32Array(8) },
     uTatA: { value: [0, 0, 0, 0] },
     uTatB: { value: [0, 0, 0, 0] },
+    uSmileA: { value: [0, 0, 0, 0] }, // smile lines: strength (nasolabial folds, crow's feet, under-eye bulge), -, -, -
     uBeard: { value: null }, // beard length grid (mm / 50)
     uSkinA: { value: [0.66, 0.385, 0.3, 0] }, // base albedo, darkness 0..1
     uLip: { value: [1.06, 0.78, 0.93] }, // lip colour relative to skin
@@ -208,7 +209,7 @@ float beardZone(vec3 p){ return beardZoneS(p, 1.0); }
 
 
   // ---- Android skin details (extras.js); injected into the skin shader only when extras.js is in the build ----
-  const EX_PRELUDE = `uniform vec4 uMole[3], uScar[2], uTatA, uTatB;
+  const EX_PRELUDE = `uniform vec4 uMole[3], uScar[2], uTatA, uTatB, uSmileA;
 float moleMask(vec3 P, vec4 m){
   float r = abs(m.w);
   if (r < .001) return 0.0;
@@ -244,6 +245,21 @@ float sdTri(vec2 p, float r){
   return -length(p) * sign(p.y);
 }
 float segD(vec2 p, vec2 a, vec2 b){ vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
+// the lines a real smile makes at any age: the nasolabial fold pushed out by the raised cheek, crow's feet, and the
+// bulge under the lower lid
+float smileLines(vec3 P){
+  float s = uSmileA.x;
+  if (s < .01) return 0.0;
+  float aX = abs(P.x);
+  float nl = 1.0 - smoothstep(.0, .055, segD(vec2(aX, P.y), vec2(.37, .7), vec2(.75, .02)));
+  float w = nl * smoothstep(1.7, 2.1, P.z) * .75;
+  vec2 cf = vec2(aX - .98, P.y - 1.6);
+  float cr = length(cf), ca = atan(cf.y, cf.x);
+  w += (1.0 - smoothstep(.1, .3, cr)) * smoothstep(.04, .09, cr) * step(-.02, cf.x) * pow(abs(sin(ca * 6.0)), 8.0) * .5;
+  vec2 ue = vec2((aX - .63) / .3, (P.y - 1.36) / .09);
+  w += (1.0 - smoothstep(.0, .3, abs(length(ue) - 1.0))) * step(P.y, 1.42) * smoothstep(1.8, 2.05, P.z) * .3;
+  return clamp(w, 0.0, 1.0) * s;
+}
 float tattooInk(vec2 q, float kind, float aa){
   float ink = 0.0;
   if (kind < 1.5) {
@@ -486,6 +502,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
       tone = mix(tone, tone * vec3(.26, .19, .16), st * .88 * smoothstep(0.0,.12,gridValue(P)));
       tone = mix(tone, uHairDark, smoothstep(.06, .32, Lh) * .92);
       float wr = wrinkles(P, age);
+      ${EX ? 'wr = max(wr, smileLines(P));' : ''}
       tone *= 1.0 - .32 * wr;
       if (uDebug > .5) tone = mix(tone, vec3(.9, .1, .1), bz * .7) + vec3(0.0, .25, 0.0) * step(.5, fract(beardUV(P).x * 16.0)) * bz;
       diffuseColor.rgb = tone;`)

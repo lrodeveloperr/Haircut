@@ -35,9 +35,10 @@ python3 patch14.py build/runtime/game.js
 [ "${HEAD_SHAPES:-0}" = 1 ] && python3 patch15.py build/runtime/game.js
 [ "${HEAD_SHAPES:-0}" = 1 ] && python3 patch16.py build/runtime/game.js
 [ "${HEAD_SHAPES:-0}" = 1 ] && python3 patch17.py build/runtime/game.js
+[ "${HEAD_SHAPES:-0}" = 1 ] && python3 patch18.py build/runtime/game.js
 { echo "/* Haircut Studio customers: generated people, skin, hair textures, baldness, trimmable beards, face shapes. */"
-  SHAPES=""; PHENO=""; EXTRAS=""; [ "${HEAD_SHAPES:-0}" = 1 ] && SHAPES="headshapes-data headshapes faces-data facegen" && PHENO="phenotypes" && EXTRAS="extras"
-  for f in "$DETAIL" $PHENO people $EXTRAS glsl faces $SHAPES render state meta catalog patterns wardrobe hub clippings; do cat customers/$f.js; echo; done; } > build/runtime/customers.js
+  SHAPES=""; PHENO=""; EXTRAS=""; LOOP=""; [ "${HEAD_SHAPES:-0}" = 1 ] && SHAPES="headshapes-data headshapes faces-data facegen expressions-data" && PHENO="phenotypes" && EXTRAS="extras" && LOOP="requests progress"
+  for f in "$DETAIL" $PHENO people $EXTRAS glsl faces $SHAPES render state meta catalog patterns wardrobe hub clippings $LOOP; do cat customers/$f.js; echo; done; } > build/runtime/customers.js
 python3 - <<'PY'
 p='build/index.html'; s=open('src/index.html').read()
 a='  <script src="./runtime/game.js?entry=src/main.js"></script>'
