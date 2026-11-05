@@ -12,7 +12,8 @@ const hash = p => crypto.createHash('sha256').update(fs.readFileSync(path.join(r
 // approved Android features); android/clipper-input.js is unchanged since its October approval
 const frozen = {
   'android/clipper-input.js':'231830bf96d9e63b8a30832d75ca45399fb85e31affb8a02d47c4b7bdea115ca',
-  'source/build/runtime/game.js':'489f971e82774b6e882b64ead1120bfa50eff981579f7bd8f446d062cd466490',
+  // re-pinned for the owner-approved game modes: patch20 adds skip() (a new customer without a cut); nothing else changed
+  'source/build/runtime/game.js':'20fa35d106d5de83e29f9adee055022203aa333d4c24f967028867c423992f01',
   'source/customers/wardrobe.js':'b6b0cb1d438cb8da4f4a0ca754a27ca02e2df25cffd4811835608420ab0948e6',
 };
 for(const [p,expected] of Object.entries(frozen)) assert.equal(hash(p),expected,'owner-approved source must remain byte-identical: '+p);

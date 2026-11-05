@@ -43,7 +43,8 @@
       if (state === 'closed' || state === 'failed') ad.end();
     },
     back() {
-      if (!document.querySelector('#hsc-panel.open')) return false;
+      // the wardrobe handles its own Escape; everything else goes to the home screen's back (menu.js, Android build)
+      if (!document.querySelector('#hsc-panel.open')) return HSC.menuBack ? HSC.menuBack() : false;
       (document.activeElement || document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
       return true;
     },

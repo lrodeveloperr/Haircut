@@ -19,7 +19,7 @@
 (function (HSC) {
   'use strict';
   if (!HSC.PHENOTYPES) return;
-  const INK = '#2a1d15';
+  const INK = '#10223f';
   const G = () => globalThis.skinFadeStudio, M = () => HSC.meta;
   const SERVICES = {
     aftershave: { level: 1 }, towel: { level: 2 }, massage: { level: 3 }, talc: { level: 3 }, pomade: { level: 4 },

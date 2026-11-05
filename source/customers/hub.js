@@ -7,7 +7,7 @@
 (function (HSC) {
   'use strict';
   const M = () => HSC.meta;
-  const INK = '#2a1d15';
+  const INK = '#10223f';
 
   // ---------------- next customer: a real render ----------------
   // The game's own thumbnail() renders the head with any hair grid. For a snapshot the next customer is
@@ -40,6 +40,29 @@
     if (shots.size > 12) shots.delete(shots.keys().next().value);
     return url;
   }
+
+  // any person with any hair and beard grids, for the lookbook and the regulars album (collection.js);
+  // the customer in the chair is put back after the one render
+  HSC.portrait = function (person, hair, beard, angle, size) {
+    const v = HSC.view, g = globalThis.skinFadeStudio;
+    if (!v || !v.thumbnail || !g) return null;
+    const s = g.getState();
+    let url = null;
+    HSC.snapshotting = true;
+    try {
+      HSC.setPerson(person);
+      HSC.setBeard(beard || HSC.beardStartFor(person));
+      if (HSC.setBrow) HSC.setBrow(null);
+      if (v.setAppearance) v.setAppearance(person.hair.colour);
+      url = v.thumbnail(hair, angle == null ? 160 : angle, 4, { size: size || 200, headOnly: true });
+    } catch (e) {
+      console.error('customers: portrait failed', e);
+    } finally {
+      try { HSC.setPerson(s.look.person); HSC.setBeard(s.beard); if (HSC.setBrow) HSC.setBrow(s.brow || null); if (v.setAppearance) v.setAppearance(s.look.colour != null ? s.look.colour : 1); } catch (e) {}
+      HSC.snapshotting = false;
+    }
+    return url;
+  };
 
   // ---------------- reveal sound ----------------
   // synthesised (no audio files): a soft whoosh as the camera spins, a bright bell chime when it lands
@@ -109,12 +132,12 @@
     replay: '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="translate(0 1.5)"><path d="M12 5A7 7 0 1 1 5 12"/><path d="M8.4 5L12.6 1.9V8.1Z" fill="currentColor" stroke-width="1.6"/></g></svg>',
     play: '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>',
     tick: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
-    star: '<svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="#ffc83d" stroke="#2a1d15" stroke-width="2" stroke-linejoin="round"/></svg>',
-    flame: '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z" fill="#ff8a3d" stroke="#2a1d15" stroke-width="2" stroke-linejoin="round"/></svg>',
-    heart: '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 20.5S3 15 3 8.8A4.6 4.6 0 0 1 12 6.6a4.6 4.6 0 0 1 9 2.2C21 15 12 20.5 12 20.5z" fill="#ff5d73" stroke="#2a1d15" stroke-width="2" stroke-linejoin="round"/></svg>',
-    crown: '<svg viewBox="0 0 24 24" width="30" height="30"><path d="M3 18l1.5-11 5 5L12 4l2.5 8 5-5L21 18z" fill="#ffc83d" stroke="#2a1d15" stroke-width="2" stroke-linejoin="round"/></svg>',
+    star: '<svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="#ffc83d" stroke="#10223f" stroke-width="2" stroke-linejoin="round"/></svg>',
+    flame: '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z" fill="#ff8a3d" stroke="#10223f" stroke-width="2" stroke-linejoin="round"/></svg>',
+    heart: '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 20.5S3 15 3 8.8A4.6 4.6 0 0 1 12 6.6a4.6 4.6 0 0 1 9 2.2C21 15 12 20.5 12 20.5z" fill="#ff5d73" stroke="#10223f" stroke-width="2" stroke-linejoin="round"/></svg>',
+    crown: '<svg viewBox="0 0 24 24" width="30" height="30"><path d="M3 18l1.5-11 5 5L12 4l2.5 8 5-5L21 18z" fill="#ffc83d" stroke="#10223f" stroke-width="2" stroke-linejoin="round"/></svg>',
     chev: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
-    spark: '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 1.5l2.2 7.3 7.3 2.2-7.3 2.2L12 20.5l-2.2-7.3L2.5 11l7.3-2.2z" fill="#fff6e6" stroke="#2a1d15" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    spark: '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 1.5l2.2 7.3 7.3 2.2-7.3 2.2L12 20.5l-2.2-7.3L2.5 11l7.3-2.2z" fill="#fff6e6" stroke="#10223f" stroke-width="1.8" stroke-linejoin="round"/></svg>',
     gown: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M9 3h6l1 2 5 3-2 13H5L3 8l5-3z"/></svg>',
     clipper: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M8 3h8a2 2 0 0 1 2 2v12H6V5a2 2 0 0 1 2-2z"/><path d="M5 17h14v3H5z"/></svg>',
   };

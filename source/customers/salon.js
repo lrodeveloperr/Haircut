@@ -13,7 +13,7 @@
   'use strict';
   if (!HSC.PHENOTYPES) return;
   const KEY = 'skin-fade-studio-salon-v1';
-  const INK = '#2a1d15';
+  const INK = '#10223f';
   const M = () => HSC.meta, G = () => globalThis.skinFadeStudio;
   const SLOTS = ['wall', 'lower', 'mirror', 'lights', 'shelf', 'decor'];
   const PRICE = [60, 180, 450, 1000];
@@ -199,14 +199,17 @@
   }
 
   // ---- UI ----
-  const COIN = (s = 20) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><circle cx="12" cy="12" r="9.5" fill="#ffc83d" stroke="${INK}" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#c98a12" stroke-width="1.8"/></svg>`;
+  const COIN_OLD = (s = 20) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><circle cx="12" cy="12" r="9.5" fill="#ffc83d" stroke="${INK}" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#c98a12" stroke-width="1.8"/></svg>`;
+  const COIN = (s = 20) => (HSC.icon ? HSC.icon('coin', s) : COIN_OLD(s)); // the theme's one coin (icons.js)
+  // the salon's button: a barber chair (the shop you decorate)
+  const CHAIR = `<svg viewBox="0 0 24 24" width="26" height="26"><path d="M6.5 3.5h11a1.5 1.5 0 0 1 1.5 1.5v6.5H5V5a1.5 1.5 0 0 1 1.5-1.5z" fill="#c0392b" stroke="${INK}" stroke-width="1.7" stroke-linejoin="round"/><rect x="3.5" y="11" width="17" height="4" rx="1.6" fill="#e2553f" stroke="${INK}" stroke-width="1.7"/><path d="M3 9.5v4M21 9.5v4" stroke="${INK}" stroke-width="2" stroke-linecap="round"/><path d="M12 15v4.5M7.5 20.5h9" stroke="#8a95a1" stroke-width="2.4" stroke-linecap="round"/><path d="M12 15v4.5M7.5 20.5h9" stroke="${INK}" stroke-width="0.9" stroke-linecap="round" opacity=".5"/></svg>`;
   const HAMMER = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M14 4l6 6-2.5 2.5-6-6z" fill="#9aa3ab"/><path d="M12.5 8.5L4 17l3 3 8.5-8.5" fill="#c9782e"/></svg>`;
   const DOOR = `<svg viewBox="0 0 24 24" width="28" height="28"><rect x="6" y="3" width="12" height="18" rx="1.5" fill="#c9782e" stroke="${INK}" stroke-width="2"/><circle cx="15" cy="12.5" r="1.3" fill="#ffc83d"/><path d="M3 21h18" stroke="${INK}" stroke-width="2"/></svg>`;
   const TICK = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#2f9e44" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   const CLOSE = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   const CSS = `
 #hsc-salon-btn{padding:0}
-#hsc-salon{position:fixed;inset:0;z-index:30;display:none;background:#2a1d1599;font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color:${INK};zoom:var(--hsc-s,1);touch-action:manipulation}
+#hsc-salon{position:fixed;inset:0;z-index:30;display:none;background:#0d3f86b8;font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color:${INK};zoom:var(--hsc-s,1);touch-action:manipulation}
 #hsc-salon.open{display:flex;align-items:flex-end;justify-content:center}
 #hsc-salon .sheet{width:min(100%,600px);max-height:92%;overflow-y:auto;display:flex;flex-direction:column;gap:10px;background:#fff6e6;border:3px solid ${INK};border-bottom:0;border-radius:26px 26px 0 0;box-shadow:0 -4px 0 ${INK};padding:12px max(12px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
 @media (orientation:landscape){#hsc-salon.open{align-items:center}#hsc-salon .sheet{border-radius:26px;border-bottom:3px solid ${INK};box-shadow:0 5px 0 ${INK};max-width:820px}#hsc-salon .slots{grid-template-columns:1fr 1fr}}
@@ -253,7 +256,7 @@
       if (!this.el.btn || !this.el.btn.isConnected) {
         const b = document.createElement('button');
         b.className = 'hsc-btn'; b.id = 'hsc-salon-btn'; b.type = 'button'; b.setAttribute('aria-label', 'Salon');
-        b.innerHTML = HAMMER + '<span class="hsc-dot" hidden></span>';
+        b.innerHTML = CHAIR + '<span class="hsc-dot" hidden></span>';
         b.addEventListener('click', () => { this.el.panel.classList.add('open'); this.render(); });
         const goals = document.getElementById('hsc-goals-btn');
         row.insertBefore(b, goals && goals.parentNode === row ? goals.nextSibling : row.children[1] || null);

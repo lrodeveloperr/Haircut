@@ -14,7 +14,7 @@
   'use strict';
   if (!HSC.PHENOTYPES) return;
   const KEY = 'skin-fade-studio-progress-v1';
-  const INK = '#2a1d15';
+  const INK = '#10223f';
   const M = () => HSC.meta, G = () => globalThis.skinFadeStudio, A = () => HSC.wardrobeApi, C = () => HSC.catalog;
   const dayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   const weekKey = (d = new Date()) => { const t = new Date(d); t.setHours(0, 0, 0, 0); t.setDate(t.getDate() - ((t.getDay() + 6) % 7)); return dayKey(t); };
@@ -149,7 +149,8 @@
   }
 
   // ---- icons ----
-  const COIN = (s = 22) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><circle cx="12" cy="12" r="9.5" fill="#ffc83d" stroke="${INK}" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#c98a12" stroke-width="1.8"/><path d="M10.6 8.6h2.8v6.8" fill="none" stroke="#c98a12" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const COIN_OLD = (s = 22) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><circle cx="12" cy="12" r="9.5" fill="#ffc83d" stroke="${INK}" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#c98a12" stroke-width="1.8"/><path d="M10.6 8.6h2.8v6.8" fill="none" stroke="#c98a12" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const COIN = (s = 22) => (HSC.icon ? HSC.icon('coin', s) : COIN_OLD(s)); // the theme's one coin (icons.js)
   const MEDAL = (n) => `<svg viewBox="0 0 40 40" width="40" height="40"><path d="M12 2h6l3 9-6 2zM28 2h-6l-3 9 6 2z" fill="#4a90d9" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/><circle cx="20" cy="25" r="12" fill="#ffc83d" stroke="${INK}" stroke-width="2.4"/><text x="20" y="30" text-anchor="middle" font-family="DM Sans,system-ui,sans-serif" font-weight="900" font-size="${n > 99 ? 10 : n > 9 ? 13 : 15}" fill="${INK}">${n}</text></svg>`;
   const CHEST = (s = 34) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><path d="M3 10h18v10H3z" fill="#c9782e" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 10c0-4 3-6 9-6s9 2 9 6z" fill="#e0913b" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 12.5h18" stroke="#ffc83d" stroke-width="2"/><rect x="10" y="10.5" width="4" height="5" rx="1" fill="#ffc83d" stroke="${INK}" stroke-width="1.5"/></svg>`;
   const TICK = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#2f9e44" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -169,7 +170,7 @@
   const CSS = `
 #hsc-goals-btn{position:relative;padding:0}
 #hsc-goals-btn svg{width:40px;height:40px}
-#hsc-goals{position:fixed;inset:0;z-index:30;display:none;background:#2a1d1599;font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color:${INK};touch-action:manipulation;zoom:var(--hsc-s,1)}
+#hsc-goals{position:fixed;inset:0;z-index:30;display:none;background:#0d3f86b8;font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color:${INK};touch-action:manipulation;zoom:var(--hsc-s,1)}
 #hsc-goals.open{display:flex;align-items:flex-end;justify-content:center}
 #hsc-goals .sheet{position:relative;width:min(100%,560px);max-height:92%;overflow-y:auto;display:flex;flex-direction:column;gap:14px;background:#fff6e6;border:3px solid ${INK};border-bottom:0;border-radius:26px 26px 0 0;box-shadow:0 -4px 0 ${INK};padding:14px max(14px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
 @media (orientation:landscape){#hsc-goals.open{align-items:center}#hsc-goals .sheet{border-radius:26px;border-bottom:3px solid ${INK};box-shadow:0 5px 0 ${INK}}}
@@ -187,7 +188,7 @@
 #hsc-goals .row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:18px;border:3px solid ${INK};background:#fff}
 #hsc-goals .row .bar{flex:1}
 #hsc-goals .row .num{min-width:58px;text-align:center;font-weight:900;font-variant-numeric:tabular-nums}
-#hsc-goals .claim{min-width:82px;height:46px;border-radius:23px;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};background:#ffb627;display:flex;align-items:center;justify-content:center;gap:4px;font-weight:900;font-size:17px;color:${INK};cursor:pointer;padding:0 10px}
+#hsc-goals .claim{min-width:82px;height:48px;border-radius:24px;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};background:#ffb627;display:flex;align-items:center;justify-content:center;gap:4px;font-weight:900;font-size:17px;color:${INK};cursor:pointer;padding:0 10px}
 #hsc-goals .claim:disabled{background:#e9dcc4;box-shadow:0 1px 0 ${INK};opacity:.75;cursor:default}
 #hsc-goals .claim.on{animation:hsc-tile 1s ease-in-out infinite}
 #hsc-goals .dbl{position:relative;align-self:center;height:50px;padding:0 18px 0 12px;border-radius:25px;background:#ffb627;border:3px solid ${INK};box-shadow:0 4px 0 ${INK};font-weight:900;font-size:22px;display:flex;gap:6px;align-items:center;cursor:pointer;color:${INK}}
@@ -200,7 +201,7 @@
 #hsc-score .hsc-prize .pic img.col{transition:clip-path 1s ease-out}
 #hsc-score .hsc-prize .pct{font-weight:900;font-size:20px;min-width:56px;font-variant-numeric:tabular-nums}
 #hsc-score .hsc-prize.won{background:radial-gradient(circle,#fff,#ffe08a);animation:hsc-pop .6s ease-out}
-#hsc-score .hsc-prize button{position:relative;height:46px;min-width:46px;border-radius:23px;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};background:#fff6e6;display:flex;align-items:center;justify-content:center;gap:4px;color:${INK};cursor:pointer;padding:0 10px;font-weight:900;font-size:18px}
+#hsc-score .hsc-prize button{position:relative;height:48px;min-width:48px;border-radius:24px;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};background:#fff6e6;display:flex;align-items:center;justify-content:center;gap:4px;color:${INK};cursor:pointer;padding:0 10px;font-weight:900;font-size:18px}
 #hsc-score .hsc-prize button.bonus{background:#ffb627}
 #hsc-score .hsc-prize button:disabled{opacity:.55}
 #hsc-score .hsc-lvl{display:flex;align-items:center;gap:6px;font-weight:900;font-size:22px;animation:hsc-pop .7s ease-out}

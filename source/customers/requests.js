@@ -8,6 +8,9 @@
 //             60% match, 3 from 85%. Never a fail.
 //   tips      coins at the reveal: 10 + 5 per star, +5 for a regular, x2 for a VIP. A replay that earns more
 //             stars pays the difference. Coins show in the top bar.
+//   combo     consecutive 3-star cuts raise that customer's tips: x1.2 for the 2nd in a row, x1.5 for the 3rd,
+//             x2 from the 4th (owner-approved item 18). A cut under 3 stars ends the run. A flame tag on the coin
+//             counter shows what the next 3-star cut pays.
 //   x3 tips   a rewarded video on the reveal triples that customer's tips (once per customer).
 //   undo      every undo of the last stroke is a rewarded video (up to 20 strokes back).
 //   smile     at the reveal the customer smiles in his own ancestry mix of MakeHuman's expression units
@@ -17,7 +20,7 @@
 (function (HSC) {
   'use strict';
   if (!HSC.PHENOTYPES) return;
-  const INK = '#2a1d15';
+  const INK = '#10223f';
   const M = () => HSC.meta, G = () => globalThis.skinFadeStudio;
 
   // ---- the cuts customers ask for (shapes the walk-in builder draws: side / blend / top hair levels, 1 = 3 mm) ----
@@ -80,12 +83,18 @@
     if (!s || !s.look || !s.look.person || !Array.isArray(s.startHair)) return null;
     if (req.job === s.jobId && req.start === s.startHair) return req.style ? req : null;
     const p = s.look.person;
-    Object.assign(req, { job: s.jobId, start: s.startHair, style: null, target: null });
+    Object.assign(req, { job: s.jobId, start: s.startHair, style: null, target: null, beard: null });
     if (p.first || !HSC.walkIns) return null;
+    // a game mode (modes.js) may decide the request: null for none, or {style, target} / {style, beard}
+    const mr = HSC.modes ? HSC.modes.request(s) : undefined;
+    if (mr !== undefined) { if (!mr) return null; Object.assign(req, { style: mr.style, target: mr.target || null, beard: mr.beard || null }); return req; }
     const R = HSC.rng(((p.seed >>> 0) ^ Math.imul((s.jobId | 0) + 7, 0x27d4eb2d)) >>> 0 || 1);
     const usual = p.usual && byId.get(p.usual);
     let pick = null;
-    if (usual && suit(usual, p) > 0 && R.next() < 0.75) { const t = targetFor(usual, s.startHair); if (worthCutting(s.startHair, t)) pick = { style: usual, target: t }; }
+    // a cut picked in the lookbook to practise: the first customer it suits asks for it
+    const want = practice.id && byId.get(practice.id);
+    if (want && suit(want, p) > 0) { const t = targetFor(want, s.startHair); if (worthCutting(s.startHair, t)) { pick = { style: want, target: t }; practice.id = null; } }
+    if (!pick && usual && suit(usual, p) > 0 && R.next() < 0.75) { const t = targetFor(usual, s.startHair); if (worthCutting(s.startHair, t)) pick = { style: usual, target: t }; }
     if (!pick) {
       const opts = [];
       for (const st of STYLES) {
@@ -102,13 +111,31 @@
     req.style = pick.style; req.target = pick.target;
     return req;
   };
+  // practise a cut from the lookbook (collection.js): the customer in the chair asks for it if it suits him and he
+  // has not been cut yet; otherwise the next customer it suits does. Returns 'now', 'next' or null.
+  const practice = { id: null };
+  HSC.practise = function (id) {
+    const st = byId.get(id), g = G();
+    if (!st || st.fam === 'trim' || !g) return null;
+    const s = g.getState(), p = s.look && s.look.person;
+    if (s.status === 'cutting' && !(s.cutStrokeCount > 0) && p && !p.first && Array.isArray(s.startHair) && suit(st, p) > 0) {
+      const t = targetFor(st, s.startHair);
+      if (worthCutting(s.startHair, t)) { Object.assign(req, { job: s.jobId, start: s.startHair, style: st, target: t }); practice.id = null; return 'now'; }
+    }
+    practice.id = id;
+    return 'next';
+  };
+  HSC.practising = () => practice.id;
   // the style a customer asked for on a job (meta.js keeps it as a regular's usual)
-  HSC.requestStyleFor = (job) => (req.job === job && req.style ? req.style.id : null);
+  HSC.requestStyleFor = (job) => (req.job === job && req.style && byId.has(req.style.id) ? req.style.id : null);
+  // for modes.js: the cut catalogue and its rules
+  HSC.requestKit = { STYLES, byId, targetFor, suit, worthCutting };
 
   // ---- scoring (the engine's own match, patch18) ----
   function starsFor(s) {
     if (!s || !(s.cutStrokeCount > 0)) return 0;
     const r = HSC.requestFor(s);
+    if (r && r.beard && HSC.modes) return HSC.modes.beardStars(s, r);
     if (!r || !HSC.requests || !HSC.requests.match) return 3; // free style (the first customer): always a great cut
     let w;
     try { w = G().getView().surface.weights; } catch (e) {}
@@ -119,6 +146,8 @@
   // the services a customer asks for on a job (services.js), kept for the job
   const wantCache = { job: null, list: [] };
   function wanted(s) { if (wantCache.job !== s.jobId) { wantCache.job = s.jobId; wantCache.list = HSC.servicesWanted && s.look && s.look.person && !s.look.person.first ? HSC.servicesWanted(s.look.person, s.jobId) : []; } return wantCache.list; }
+  const comboMult = (n) => (n >= 4 ? 2 : n === 3 ? 1.5 : n === 2 ? 1.2 : 1);
+  HSC.combo = { now: () => (M() && M().data ? M().data.combo || 0 : 0), mult: comboMult };
   const tipsFor = (p, stars) => (stars ? (10 + 5 * stars + (p && p.regular ? 5 : 0)) * (p && p.vip ? 2 : 1) : 0);
 
   // ---- coins ----
@@ -141,21 +170,35 @@
   function scoreRound(s) {
     const d = M() && M().data;
     if (!d || !s) return;
-    const stars = starsFor(s), p = s.look && s.look.person;
+    // freestyle and relax (modes.js) have no request: no stars, a flat tip plus the services, and the combo waits
+    const free = !!(HSC.modes && HSC.modes.unscored());
+    const stars = free ? (s.cutStrokeCount > 0 ? 1 : 0) : starsFor(s), p = s.look && s.look.person;
     const last = d.lastRound && d.lastRound.job === s.jobId ? d.lastRound : null;
     const svc = HSC.serviceTips ? HSC.serviceTips(s.jobId, wanted(s)) : { coins: 0, done: [] };
-    const tips = tipsFor(p, stars) + (stars ? svc.coins : 0);
+    let base = free ? (stars ? 10 + svc.coins : 0) : tipsFor(p, stars) + (stars ? svc.coins : 0);
+    if (HSC.modes && stars) base = HSC.modes.tips(base, stars, s);
     if (!last) {
-      d.lastRound = { job: s.jobId, stars, tips, paid: tips, tripled: false };
+      // the combo: this cut extends the run of 3-star cuts or ends it
+      const prev = d.combo || 0;
+      if (!free) d.combo = stars === 3 ? prev + 1 : 0;
+      const mult = !free && stars === 3 ? comboMult(d.combo) : 1, tips = Math.round(base * mult);
+      d.lastRound = { job: s.jobId, stars, tips, paid: tips, tripled: false, prev, mult, free };
       addCoins(tips);
     } else if (stars > last.stars) {
-      const extra = tips - last.paid;
-      Object.assign(last, { stars, tips, paid: last.paid + Math.max(0, extra) });
+      // a replay that reaches 3 stars carries on the run he had before this customer
+      let mult = last.mult || 1;
+      if (stars === 3 && !free) { d.combo = (last.prev || 0) + 1; mult = comboMult(d.combo); }
+      const tips = Math.round(base * mult), extra = tips - last.paid;
+      Object.assign(last, { stars, tips, mult, paid: last.paid + Math.max(0, extra) });
       addCoins(Math.max(0, extra) * (last.tripled ? 3 : 1));
     }
     d.lastRound.shownStars = stars;
+    // the lookbook keeps the best stars for each cut asked for
+    const r = HSC.requestFor(s);
+    if (!free && r && r.style && byId.has(r.style.id) && r.style.fam !== 'trim' && stars) { d.book = d.book || {}; d.book[r.style.id] = Math.max(d.book[r.style.id] || 0, stars); }
     ui.svcDone = svc.done;
     ui.round = { job: s.jobId, stars };
+    if (HSC.modes) HSC.modes.done(s, stars);
     M().save();
   }
 
@@ -253,19 +296,24 @@
   }
 
   // ---- UI ----
-  const STAR = (on) => `<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc83d' : '#e9dcc4'}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/></svg>`;
-  const COIN = (s = 26) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><circle cx="12" cy="12" r="9.5" fill="#ffc83d" stroke="${INK}" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#c98a12" stroke-width="1.8"/><path d="M10.6 8.6h2.8v6.8" fill="none" stroke="#c98a12" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const STAR = (on) => `<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc83d' : 'none'}" stroke="${INK}"${on ? '' : ' stroke-dasharray="2.6 2.2" opacity=".55"'} stroke-width="2" stroke-linejoin="round"/></svg>`;
+  const COIN_OLD = (s = 26) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><circle cx="12" cy="12" r="9.5" fill="#ffc83d" stroke="${INK}" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#c98a12" stroke-width="1.8"/><path d="M10.6 8.6h2.8v6.8" fill="none" stroke="#c98a12" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const COIN = (s = 26) => (HSC.icon ? HSC.icon('coin', s) : COIN_OLD(s)); // the theme's one coin (icons.js)
+  // the combo: a flame with a star in it (the daily streak is a plain flame)
+  const FLAME = (sz = 20) => `<svg viewBox="0 0 24 24" width="${sz}" height="${sz}"><path d="M12 2.2c.6 3.2 3.4 4.6 4.9 7.3 1.6 2.9 1.4 6.6-1 8.9A6.8 6.8 0 0 1 5.4 16c-.9-2.7.1-5.2 1.9-7 .2 1.6.9 2.7 2 3.3-.5-3.8.7-7.4 2.7-10.1z" fill="#ff7a2f" stroke="${INK}" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 11.4l1.1 2.2 2.4.3-1.8 1.7.5 2.4-2.2-1.2-2.2 1.2.5-2.4-1.8-1.7 2.4-.3z" fill="#ffe14d" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
   const UNDO = '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7H15a5 5 0 0 1 0 10H8"/><path d="M11.5 3.5L7.5 7l4 3.5"/></svg>';
   const CSS = `
 #hsc-req,#hsc-undo,#hsc-score{zoom:var(--hsc-s,1);font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color:${INK};-webkit-user-select:none;user-select:none}
 #hsc-req{position:fixed;z-index:20;top:calc(env(safe-area-inset-top) + 72px);left:50%;transform:translateX(-50%);pointer-events:auto;cursor:pointer;
   display:flex;gap:4px;padding:6px;border-radius:22px;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};transition:transform .25s}
 #hsc-req .svc{position:absolute;left:50%;bottom:-20px;transform:translateX(-50%);display:flex;gap:4px}
-#hsc-req .svc span{width:34px;height:34px;border-radius:50%;background:#fff6e6;border:2.5px solid #2a1d15;display:flex;align-items:center;justify-content:center}
+#hsc-req .svc span{width:34px;height:34px;border-radius:50%;background:#fff6e6;border:2.5px solid #10223f;display:flex;align-items:center;justify-content:center}
 #hsc-req .svc span svg{width:24px;height:24px}
+#hsc-req .svc span{position:relative}
 #hsc-req .svc span.ok{background:#d8efd0}
+#hsc-req .svc span.ok::after{content:"";position:absolute;right:-7px;top:-7px;width:18px;height:18px;border-radius:50%;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='%2310223f' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat;border:2px solid #10223f}
 #hsc-score .svc{display:flex;gap:6px}
-#hsc-score .svc span{width:40px;height:40px;border-radius:50%;background:#fff6e6;border:3px solid #2a1d15;display:flex;align-items:center;justify-content:center}
+#hsc-score .svc span{width:40px;height:40px;border-radius:50%;background:#fff6e6;border:3px solid #10223f;display:flex;align-items:center;justify-content:center}
 #hsc-score .svc span svg{width:28px;height:28px}
 #hsc-req img{width:66px;height:66px;border-radius:15px;display:block;background:radial-gradient(circle at 50% 35%,#fff,#e4d2b4)}
 #hsc-req::after,#hsc-req::before{content:"";position:absolute;border-radius:50%;background:#fff6e6;border:3px solid ${INK}}
@@ -280,7 +328,11 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
 #hsc-undo:active{transform:translateY(3px);box-shadow:0 1px 0 ${INK}}
 #hsc-undo:disabled{opacity:.6}
 #hsc-undo .hsc-ad,#hsc-score .hsc-ad{position:absolute;right:-8px;bottom:-6px;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#ffb627;color:${INK};border:2.5px solid ${INK}}
-.hsc-coins{pointer-events:auto}
+.hsc-coins{pointer-events:auto;position:relative}
+.hsc-combo{position:absolute;right:-10px;bottom:-20px;display:flex;align-items:center;gap:1px;height:28px;padding:0 7px 0 3px;border-radius:14px;background:#fff1d6;border:2.5px solid ${INK};font-weight:900;font-size:15px;color:${INK};white-space:nowrap;animation:hsc-combo 1.4s ease-in-out infinite}
+.hsc-combo[hidden]{display:none}
+@keyframes hsc-combo{50%{transform:scale(1.08)}}
+#hsc-score .tip .hsc-combo{position:static;animation:none;margin-left:4px}
 .hsc-coins svg{flex:none}
 .hsc-coins.bump{animation:hsc-pop .45s ease-out}
 #hsc-score{position:fixed;z-index:21;left:50%;top:calc(env(safe-area-inset-top) + 14px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
@@ -295,7 +347,7 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
 #hsc-score .x3:disabled{animation:none;opacity:.55;cursor:default}
 #hsc-score .x3:not(:disabled):active{transform:translateY(3px);box-shadow:0 1px 0 ${INK}}
 .hsc-fly{position:fixed;z-index:40;pointer-events:none;transition:transform .7s cubic-bezier(.5,-0.2,.7,1),opacity .7s}
-@media (prefers-reduced-motion:reduce){#hsc-score .stars svg{animation-duration:.01s}#hsc-score .x3{animation:none}}
+@media (prefers-reduced-motion:reduce){#hsc-score .stars svg{animation-duration:.01s}#hsc-score .x3,.hsc-combo{animation:none}}
 `;
   const ui = {
     el: {}, built: false, round: null, flying: 0, shownJob: null,
@@ -311,11 +363,11 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
       undoEl.innerHTML = `${UNDO}<span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}</span>`;
       undoEl.addEventListener('click', doUndo);
       const score = document.createElement('div'); score.id = 'hsc-score'; score.hidden = true;
-      score.innerHTML = `<div class="stars"></div><div class="svc"></div><div class="row"><div class="tip">${COIN(28)}<span></span></div>
+      score.innerHTML = `<div class="stars"></div><div class="svc"></div><div class="row"><div class="tip">${COIN(28)}<span></span><div class="hsc-combo" hidden>${FLAME(20)}<b></b></div></div>
         <button class="x3" type="button" aria-label="Watch a video to triple the tips">${COIN(30)}<span>×3</span><span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}</span></button></div>`;
       score.querySelector('.x3').addEventListener('click', triple);
       document.body.append(reqEl, undoEl, score);
-      Object.assign(this.el, { req: reqEl, undo: undoEl, score, stars: score.querySelector('.stars'), tip: score.querySelector('.tip span'), x3: score.querySelector('.x3') });
+      Object.assign(this.el, { req: reqEl, undo: undoEl, score, stars: score.querySelector('.stars'), tip: score.querySelector('.tip span'), tipCombo: score.querySelector('.tip .hsc-combo'), x3: score.querySelector('.x3') });
       const scene = document.getElementById('scene') || document;
       scene.addEventListener('pointerdown', onDown, true);
       addEventListener('pointerup', onUp, true);
@@ -329,11 +381,15 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
         const c = document.createElement('div');
         c.className = 'hsc-pill hsc-coins';
         c.setAttribute('aria-label', 'Coins');
-        c.innerHTML = `${COIN(26)}<span></span>`;
+        c.innerHTML = `${COIN(26)}<span></span><div class="hsc-combo" hidden aria-hidden="true">${FLAME(20)}<b></b></div>`;
         row.appendChild(c);
         this.el.coins = c;
       }
       this.el.coins.querySelector('span').textContent = coins();
+      // what the next 3-star cut pays while a run of 3-star cuts is going
+      const run = HSC.combo.now(), tag = this.el.coins.querySelector('.hsc-combo');
+      tag.hidden = run < 1;
+      if (run >= 1) tag.querySelector('b').textContent = '×' + comboMult(run + 1);
       if (bump) { this.el.coins.classList.remove('bump'); void this.el.coins.offsetWidth; this.el.coins.classList.add('bump'); }
     },
     coinBurst(n, from) {
@@ -377,8 +433,13 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
         let a = null, b = null;
         try {
           // his own head with the cut he wants: from the side and from the back
-          a = v.thumbnail(r.target, 110, 4, { size: 160, headOnly: true });
-          b = v.thumbnail(r.target, 10, 6, { size: 160, headOnly: true });
+          if (r.beard) {
+            a = HSC.portrait(s.look.person, s.hair, r.beard, 160, 160);
+            b = HSC.portrait(s.look.person, s.hair, r.beard, 105, 160);
+          } else {
+            a = v.thumbnail(r.target, 110, 4, { size: 160, headOnly: true });
+            b = v.thumbnail(r.target, 10, 6, { size: 160, headOnly: true });
+          }
         } catch (e) { console.error('customers: request picture failed', e); }
         if (!a || !b) { el.hidden = true; this.reqKey = null; return; }
         const imgs = el.querySelectorAll('img');
@@ -405,11 +466,14 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
       if (!show) return;
       const stars = last.shownStars || last.stars;
       const key = last.job + ':' + stars;
-      if (this.starKey !== key) {
-        this.starKey = key;
-        this.el.stars.innerHTML = [1, 2, 3].map((n) => STAR(n <= stars)).join('');
+      if (this.starKey !== key + ':' + !!last.free) {
+        this.starKey = key + ':' + !!last.free;
+        this.el.stars.innerHTML = last.free ? '' : [1, 2, 3].map((n) => STAR(n <= stars)).join('');
       }
       this.el.tip.textContent = '+' + last.paid * (last.tripled ? 3 : 1);
+      const ct = this.el.tipCombo, m = last.mult || 1;
+      ct.hidden = !(m > 1);
+      if (m > 1) ct.querySelector('b').textContent = '×' + m;
       const sv = this.el.score.querySelector('.svc'), key2 = (this.svcDone || []).join();
       if (sv.dataset.k !== key2) { sv.dataset.k = key2; sv.innerHTML = (this.svcDone || []).map((k) => `<span>${(HSC.SERVICE_ICON || {})[k] || ''}</span>`).join(''); }
       const canX = !last.tripled && last.paid > 0 && !!(HSC.canVideo && HSC.canVideo());

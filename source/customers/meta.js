@@ -158,7 +158,7 @@
   const hash = (str) => { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
 
   function fresh() {
-    return { v: 1, cuts: 0, streak: 0, lastDay: null, firstDay: dayKey(), dailyDay: null, queue: null, trial: null, declines: 0, pauseLeft: 0, offerTurn: 0, seen: {}, deck: {}, last: {}, regulars: [], sinceReg: 0, coins: 0, lastRound: null };
+    return { v: 1, cuts: 0, streak: 0, lastDay: null, firstDay: dayKey(), dailyDay: null, queue: null, trial: null, declines: 0, pauseLeft: 0, offerTurn: 0, seen: {}, deck: {}, last: {}, regulars: [], sinceReg: 0, coins: 0, lastRound: null, combo: 0, book: {}, settings: null, modes: null, gift: null };
   }
   const okTok = (v) => (typeof v === 'string' && v.length < 16) || (Number.isInteger(v) && v >= 0 && v < 8);
   function cleanDecks(o) {
@@ -225,10 +225,38 @@
     return { person: Object.assign({}, r.p, { regular: r.n }), profile: r.pr, regular: { h: HSC.gridPack(g.hair), b: HSC.gridPack(g.beard), u: r.u } };
   }
   // the last scored customer (requests.js): stars, tips paid and whether they were tripled
+  // the game mode, its current job (a flawed start and its repair, packed) and the daily challenge (modes.js)
+  function cleanModes(o) {
+    if (!o || typeof o !== 'object') return null;
+    const MODES = ['requests', 'free', 'fix', 'daily', 'beard', 'relax', 'rush'];
+    const j = o.job, okJob = j && typeof j === 'object' && Number.isSafeInteger(j.n) && MODES.includes(j.m) &&
+      (j.none === true || j.m === 'daily' || (typeof j.st === 'string' && j.st.length < 40 && (typeof j.t === 'string' ? j.t.length < 24000 : typeof j.b === 'string' && j.b.length < 24000)));
+    const dl = o.daily, okDaily = dl && typeof dl === 'object' && typeof dl.day === 'string' && /^\d{4}-\d\d-\d\d$/.test(dl.day) && [0, 1, 2, 3].includes(dl.stars);
+    return { mode: MODES.includes(o.mode) ? o.mode : 'requests', job: okJob ? { n: j.n, m: j.m, st: j.st, t: j.t, b: j.b, none: j.none === true || undefined } : null,
+      daily: okDaily ? { day: dl.day, stars: dl.stars, paid: dl.paid === true } : null, tried: Array.isArray(o.tried) ? o.tried.filter((m) => MODES.includes(m)).slice(0, 10) : [], rush: Number.isSafeInteger(o.rush) && o.rush >= 0 ? Math.min(o.rush, 1e6) : 0 };
+  }
+  // the play-time gift: today's active play seconds and the gifts taken (session.js)
+  function cleanGift(o) {
+    if (!o || typeof o !== 'object' || typeof o.day !== 'string' || !/^\d{4}-\d\d-\d\d$/.test(o.day)) return null;
+    return { day: o.day, sec: Number.isFinite(o.sec) && o.sec >= 0 ? Math.min(o.sec, 86400) : 0, got: Number.isSafeInteger(o.got) && o.got >= 0 ? Math.min(o.got, 9) : 0 };
+  }
+  // the player's settings (settings.js)
+  function cleanSettings(o) {
+    if (!o || typeof o !== 'object') return null;
+    const b = (v, d) => (typeof v === 'boolean' ? v : d), i = (v, lo, hi, d) => (Number.isSafeInteger(v) && v >= lo && v <= hi ? v : d);
+    return { left: b(o.left, false), size: i(o.size, 0, 4, 2), sens: i(o.sens, 0, 2, 2), vib: b(o.vib, true), calm: b(o.calm, false), pulses: b(o.pulses, false) };
+  }
+  // the lookbook: the best stars for each requested cut (requests.js)
+  function cleanBook(b) {
+    const out = {};
+    if (!b || typeof b !== 'object') return out;
+    for (const [k, v] of Object.entries(b).slice(0, 200)) if (typeof k === 'string' && k.length < 40 && [1, 2, 3].includes(v)) out[k] = v;
+    return out;
+  }
   function cleanRound(r) {
     if (!r || typeof r !== 'object' || !Number.isSafeInteger(r.job) || ![0, 1, 2, 3].includes(r.stars)) return null;
     const n = (v) => (Number.isSafeInteger(v) && v >= 0 && v < 1e6 ? v : 0);
-    return { job: r.job, stars: r.stars, tips: n(r.tips), paid: n(r.paid), tripled: r.tripled === true, shownStars: [1, 2, 3].includes(r.shownStars) ? r.shownStars : r.stars };
+    return { job: r.job, stars: r.stars, tips: n(r.tips), paid: n(r.paid), tripled: r.tripled === true, shownStars: [1, 2, 3].includes(r.shownStars) ? r.shownStars : r.stars, prev: Math.min(999, n(r.prev)), mult: [1, 1.2, 1.5, 2].includes(r.mult) ? r.mult : 1, free: r.free === true };
   }
   function sanitize(d) {
     const f = fresh();
@@ -244,7 +272,7 @@
       v: 1, cuts: int(d.cuts, 0), streak: int(d.streak, 0), lastDay: str(d.lastDay), firstDay: str(d.firstDay) || f.firstDay,
       dailyDay: str(d.dailyDay), queue: q, trial: t, declines: int(d.declines, 0), pauseLeft: int(d.pauseLeft, 0),
       offerTurn: int(d.offerTurn, 0), seen: d.seen && typeof d.seen === 'object' ? d.seen : {},
-      deck: cleanDecks(d.deck), last: cleanLast(d.last), sinceVip: int(d.sinceVip, 9), runs: cleanRuns(d.runs), regulars: cleanRegulars(d.regulars), sinceReg: int(d.sinceReg, 0), coins: Math.min(99999999, int(d.coins, 0)), lastRound: cleanRound(d.lastRound),
+      deck: cleanDecks(d.deck), last: cleanLast(d.last), sinceVip: int(d.sinceVip, 9), runs: cleanRuns(d.runs), regulars: cleanRegulars(d.regulars), sinceReg: int(d.sinceReg, 0), coins: Math.min(99999999, int(d.coins, 0)), lastRound: cleanRound(d.lastRound), combo: Math.min(999, int(d.combo, 0)), book: cleanBook(d.book), settings: cleanSettings(d.settings), modes: cleanModes(d.modes), gift: cleanGift(d.gift),
     };
   }
   M.save = function () {
@@ -285,6 +313,8 @@
   }
 
   M.level = () => levelOf(M.data ? M.data.cuts : 0);
+  // how far the barber is through the current level, 0..1 (the home screen's XP bar)
+  M.levelProgress = () => { const c = M.data ? M.data.cuts : 0, l = levelOf(c), a = cutsFor(l), b = cutsFor(l + 1); return b > a ? Math.max(0, Math.min(1, (c - a) / (b - a))) : 0; };
   M.today = dayKey;
 
   // ---- customers ----

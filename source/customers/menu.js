@@ -1,76 +1,362 @@
 // ---------------------------------------------------------------------------------------------
-// Android only (buildall.sh, HEAD_SHAPES=1; owner request 5 November 2026): one menu instead of a row of buttons.
-// The cutting screen keeps the game's own controls (sound, guards, clipper, finish) and shows only the menu button
-// and the coins. The menu holds the wardrobe, the goals (level, calendar, tasks) and the salon as large picture
-// tiles, each with its own red dot; the menu button shows a dot when any of them has one. The buttons are the
-// features' own buttons, moved into the menu, so each feature keeps working exactly as before.
+// Android only (buildall.sh, HEAD_SHAPES=1; owner-chosen layout (option 2) and theme (Jelly Gold), 5 November 2026):
+// the home screen.
+// The cutting screen keeps only the cutting itself (the game's own sound, guards, clipper and finish), the coins and
+// one home button. The home screen has a top row and two parts, each a picture (icons.js) with a one-word label
+// (labels.js):
+//
+//   top row  the level medal with its progress bar (goals: level, calendar, tasks), the day streak, the coins,
+//            and the settings gear
+//   play     one big green card showing the customer waiting in the chair: one tap and you are cutting
+//   blocks   Modes (every game mode on one screen), Daily (today's challenge), Gift (the play-time gift),
+//            Wardrobe, Salon and Styles (the lookbook, with the regulars album beside it)
+// The look: glossy jelly buttons with a thick base that squash when pressed and spring back, a gold-rimmed play card
+// with a shine sweeping across it, and barber-pole stripes drifting behind; taps sound and ripple (fx.js).
+// Alignment: every block and card puts its icon and its label on the same fixed rows, and labels in a row share one
+// size (labels.js), so baselines line up. It scales with the screen: tall screens stack, wide screens put the play
+// card on the left, and tablets and PCs draw it larger (--hsc-s); everything is vector.
+// The wardrobe, salon, lookbook, goals and settings buttons are the features' own buttons moved here, so each works
+// exactly as before; their panels open over the home screen and close back to it.
+// A returning barber starts here; a first-time player goes straight to the first customer.
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
   'use strict';
   if (!HSC.PHENOTYPES) return;
-  const INK = '#2a1d15';
-  const IDS = ['.hsc-rw', '#hsc-goals-btn', '#hsc-salon-btn'];
-  const MENU = `<svg viewBox="0 0 24 24" width="26" height="26"><rect x="3.5" y="3.5" width="7" height="7" rx="2" fill="#ffb627" stroke="${INK}" stroke-width="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2" fill="#fff6e6" stroke="${INK}" stroke-width="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2" fill="#fff6e6" stroke="${INK}" stroke-width="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2" fill="#ffb627" stroke="${INK}" stroke-width="2"/></svg>`;
-  const CLOSE = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  const K = '#10223f';
+  const t = (k) => (HSC.t ? HSC.t(k) : k);
+  const I = (n, s) => (HSC.icon ? HSC.icon(n, s) : '');
+  // each feature's own button and where it goes on the home screen
+  const PLACE = [['#hsc-goals-btn', '.lvl'], ['#hsc-set-btn', '.gear'], ['.hsc-rw', '[data-b=wardrobe]'], ['#hsc-salon-btn', '[data-b=salon]'], ['#hsc-book-btn', '[data-b=styles]'], ['#hsc-album-btn', '.hold']];
+  // the blocks: [key, colour]
+  const BLOCKS = [['modes', 'yellow'], ['daily', 'white'], ['gift', 'pink'], ['wardrobe', 'blue'], ['salon', 'orange'], ['styles', 'mint']];
+  const MODE_ICON = { requests: 'orders', free: 'freestyle', fix: 'rescue', daily: 'daily', beard: 'beards', relax: 'relax', rush: 'rush' };
+  const MODE_WORD = MODE_ICON;
+  const MODE_COLOUR = { requests: 'green', free: 'yellow', fix: 'red', daily: 'white', beard: 'orange', relax: 'blue', rush: 'purple' };
+  const STAR = (on) => `<svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc21a' : 'none'}" stroke="${on ? K : '#fff'}" stroke-width="2.4" stroke-linejoin="round"${on ? '' : ' stroke-dasharray="2.6 2.2"'}/></svg>`;
+  // what each mode pays, shown on its card: numbers and icons only
+  const REWARD = { requests: () => STAR(1) + STAR(1) + STAR(1), free: () => I('coin') + '10', fix: () => I('coin') + '×1.5', daily: () => I('coin') + '×2', beard: () => I('coin') + '×1.2', relax: () => I('coin') + '+32', rush: () => I('rush') + '45' };
   const CSS = `
 #hsc-menu-btn{padding:0}
-#hsc-menu{position:fixed;inset:0;z-index:29;display:none;background:#2a1d1580;pointer-events:auto;touch-action:manipulation}
-#hsc-menu.open{display:flex;align-items:flex-start;justify-content:flex-start}
-#hsc-menu .card{position:absolute;display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:26px;background:#fff6e6;border:3px solid ${INK};box-shadow:0 5px 0 ${INK};animation:hsc-menuin .18s ease-out}
-@keyframes hsc-menuin{from{opacity:0;transform:translateY(-8px) scale(.97)}}
-#hsc-menu .top{display:flex;justify-content:flex-end}
-#hsc-menu .x{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};cursor:pointer;color:${INK};padding:0}
-#hsc-menu .tiles{display:grid;grid-template-columns:repeat(3,96px);gap:12px}
-#hsc-menu .tiles .hsc-btn{width:96px;height:96px;border-radius:24px;box-shadow:0 4px 0 ${INK};background:radial-gradient(circle at 50% 35%,#fff,#ffe9b8)}
-#hsc-menu .tiles .hsc-btn svg{width:52px!important;height:52px!important}
-#hsc-menu .tiles .hsc-btn .hsc-dot{right:-6px;top:-6px;width:20px;height:20px}
-@media (prefers-reduced-motion:reduce){#hsc-menu .card{animation:none}}
+#hsc-menu{position:fixed;inset:0;z-index:29;zoom:var(--hsc-s,1);display:none;pointer-events:auto;touch-action:manipulation;font-family:"Arial Rounded MT Bold","Nunito","Baloo 2",system-ui,-apple-system,"Segoe UI",sans-serif;color:${K};-webkit-user-select:none;user-select:none;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,#38d1e8,#1679c9 55%,#0d3f86)}
+#hsc-menu::before{content:"";position:absolute;inset:-50%;background:repeating-linear-gradient(-35deg,#ffffff12 0 22px,#0000 22px 60px);animation:hsc-pole 14s linear infinite;pointer-events:none}
+#hsc-menu::after{content:"";position:absolute;inset:0;background:radial-gradient(60% 40% at 50% 112%,#ffd76a66,#0000);pointer-events:none}
+@keyframes hsc-pole{to{transform:translateX(60px)}}
+#hsc-menu.open{display:block}
+#hsc-menu .hold{display:none}
+#hsc-menu .page{position:relative;z-index:1;box-sizing:border-box;height:100%;max-width:600px;margin:0 auto;display:grid;gap:12px;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+#hsc-menu .page[hidden]{display:none}
+/* the game's own sheet also uses .top and .home: pin this grid so nothing outside places its parts */
+#hsc-menu .page{grid-template-areas:none;grid-template-columns:minmax(0,1fr);grid-auto-flow:row}
+#hsc-menu .page > *{grid-area:auto;margin:0}
+#hsc-menu .page.in{animation:hsc-pagein .42s cubic-bezier(.2,1.3,.4,1)}
+#hsc-menu .page.back-in{animation:hsc-pageback .42s cubic-bezier(.2,1.3,.4,1)}
+@keyframes hsc-pagein{from{transform:translateX(16%) scale(.96);opacity:0}}
+@keyframes hsc-pageback{from{transform:translateX(-16%) scale(.96);opacity:0}}
+#hsc-menu .home{grid-template-rows:48px minmax(120px,1fr) minmax(180px,1.3fr)}
+#hsc-menu .modes{grid-template-rows:48px minmax(0,1fr)}
+/* ---- jelly: the shared button ---- */
+#hsc-menu .j{position:relative;box-sizing:border-box;border:3px solid ${K};border-radius:22px;box-shadow:inset 0 -7px 0 #0003,inset 0 3px 0 #fff6,0 6px 0 ${K},0 10px 14px #0005;cursor:pointer;color:${K};font:inherit;padding:0;transition:transform .32s cubic-bezier(.3,1.8,.5,1),box-shadow .2s}
+#hsc-menu .j::before{content:"";position:absolute;left:10%;right:10%;top:5%;height:24%;border-radius:999px;background:linear-gradient(#ffffffc8,#fff0);pointer-events:none}
+#hsc-menu .j:active{transform:translateY(5px) scale(1.03,.95);box-shadow:inset 0 -4px 0 #0003,inset 0 3px 0 #fff6,0 1px 0 ${K},0 4px 6px #0005;transition:transform .06s,box-shadow .06s}
+#hsc-menu .j:focus-visible{outline:4px solid #4fc3ff;outline-offset:3px}
+@media (hover:hover){#hsc-menu .j:hover{filter:brightness(1.06) saturate(1.05)}}
+#hsc-menu .c-green{background:linear-gradient(#9cf06c,#36b83a)}#hsc-menu .c-yellow{background:linear-gradient(#ffe682,#ffb21a)}#hsc-menu .c-pink{background:linear-gradient(#ffb8d4,#ff5c98)}#hsc-menu .c-blue{background:linear-gradient(#a8e4ff,#3aa2f2)}#hsc-menu .c-orange{background:linear-gradient(#ffc98a,#ff7d2e)}#hsc-menu .c-mint{background:linear-gradient(#b6f5d8,#2fc68f)}#hsc-menu .c-white{background:linear-gradient(#fff,#dfe8f2)}#hsc-menu .c-purple{background:linear-gradient(#e4b8ff,#9c4ef0)}#hsc-menu .c-red{background:linear-gradient(#ffa59b,#f04436)}
+#hsc-menu .hsc-ic{display:block;flex:none}
+#hsc-menu .hsc-lbl{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-align:center;font-weight:900;line-height:1.2}
+#hsc-menu .hsc-dot{position:absolute;right:-7px;top:-7px;width:22px;height:22px;z-index:2}
+/* ---- top row: everything 48 tall on one centre line ---- */
+#hsc-menu .top{display:flex;align-items:center;gap:8px;min-width:0;height:48px}
+#hsc-menu .chip{box-sizing:border-box;display:flex;align-items:center;gap:6px;height:44px;flex:none;padding:0 14px 0 6px;border-radius:22px;background:#10223fcc;border:2px solid #ffffff30;color:#fff;font-weight:900;font-size:18px;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;unicode-bidi:isolate}
+#hsc-menu .chip .hsc-ic{width:32px;height:32px}
+#hsc-menu .lvl{box-sizing:border-box;display:flex;align-items:center;gap:8px;height:48px;padding-inline-end:14px;border-radius:24px;background:#10223fcc;border:2px solid #ffffff30;flex:0 1 auto;min-width:0}
+#hsc-menu .lvl .hsc-btn{width:48px;height:48px;margin:-2px;flex:none;border-radius:50%;background:none;border:0;box-shadow:none;padding:0}
+#hsc-menu .lvl .hsc-btn .m{display:block;width:100%;height:100%}
+#hsc-menu .lvl .hsc-btn .m svg{width:100%!important;height:100%!important}
+#hsc-menu .xp{width:clamp(32px,12vw,90px);height:12px;border-radius:6px;background:#ffffff35;overflow:hidden}
+#hsc-menu .xp i{display:block;height:100%;background:linear-gradient(#b5ff7a,#46c43a);border-radius:6px;transition:width .6s}
+#hsc-menu .coins{margin-inline-start:auto}
+#hsc-menu .gear{display:flex}
+#hsc-menu .gear .hsc-btn{width:48px;height:48px;border-radius:50%;background:#10223fcc;border:2px solid #ffffff30;box-shadow:none;display:flex;align-items:center;justify-content:center;padding:0}
+#hsc-menu .gear .hsc-btn > svg:not(.hsc-ic){display:none}
+#hsc-menu .gear .hsc-btn .hsc-ic{width:34px;height:34px}
+/* ---- the play card ---- */
+#hsc-menu .hero{min-height:0;overflow:visible;container-type:size;border-color:#7a4a00;border-radius:26px;box-shadow:inset 0 -7px 0 #0003,inset 0 3px 0 #fff6,0 0 0 4px #ffd34d,0 7px 0 4px #7a4a00,0 12px 18px #0006}
+#hsc-menu .hero:active{box-shadow:inset 0 -4px 0 #0003,inset 0 3px 0 #fff6,0 0 0 4px #ffd34d,0 2px 0 4px #7a4a00,0 4px 8px #0006}
+#hsc-menu .hero .clip{position:absolute;inset:0;border-radius:23px;overflow:hidden;pointer-events:none}
+#hsc-menu .hero .clip::after{content:"";position:absolute;top:0;bottom:0;width:30%;left:-40%;background:linear-gradient(100deg,#fff0,#fff8,#fff0);transform:skewX(-20deg);animation:hsc-shine 3.2s ease-in-out infinite}
+@keyframes hsc-shine{0%,55%{left:-40%}85%,100%{left:130%}}
+#hsc-menu .hero .hin{position:absolute;inset:0;display:flex;align-items:center}
+#hsc-menu .hero img{height:96%;width:min(52%,100cqh);object-fit:contain;object-position:50% 100%;align-self:flex-end;flex:none;animation:hsc-bob 3s ease-in-out infinite}
+@keyframes hsc-bob{50%{transform:translateY(-2.5%) rotate(-1deg)}}
+#hsc-menu .hero .go{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2cqh}
+#hsc-menu .hero .go .hsc-ic{width:clamp(44px,30cqh,150px);height:auto;aspect-ratio:1;filter:drop-shadow(0 4px 0 #0003);animation:hsc-playb 1.5s ease-in-out infinite}
+@keyframes hsc-playb{50%{transform:scale(1.07)}}
+#hsc-menu .hero .go .hsc-lbl{font-size:clamp(26px,20cqh,90px);color:#fff;-webkit-text-stroke:3px ${K};paint-order:stroke fill;text-shadow:0 4px 0 ${K};overflow:visible}
+@container (max-aspect-ratio: 6/5){
+  #hsc-menu .hero .hin{flex-direction:column}
+  #hsc-menu .hero img{width:100%;height:auto;flex:1;min-height:0}
+  #hsc-menu .hero .go{flex:none;flex-direction:row;padding:2cqh 0 6cqh;gap:3cqw}
+  #hsc-menu .hero .go .hsc-ic{width:clamp(40px,14cqw,110px)}
+  #hsc-menu .hero .go .hsc-lbl{font-size:clamp(26px,13cqw,80px)}
+}
+/* ---- the blocks: icon and label on the same rows in every block ---- */
+#hsc-menu .blocks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:12px;min-height:0;padding-bottom:6px}
+#hsc-menu .blocks > *{min-width:0;min-height:0}
+#hsc-menu .blk,#hsc-menu .blocks .hsc-btn{width:100%;height:100%;display:grid;grid-template-rows:minmax(0,1fr) auto;justify-items:center;align-items:end;row-gap:6px;padding:12px 8px 14px;container-type:size}
+#hsc-menu .blocks .hsc-btn > svg:not(.hsc-ic),#hsc-menu .blocks .hsc-btn > .m{display:none}
+#hsc-menu .blk .hsc-ic,#hsc-menu .blocks .hsc-btn .hsc-ic{width:min(62cqw,52cqh,120px);height:auto;aspect-ratio:1;align-self:end;filter:drop-shadow(0 3px 0 #0002)}
+#hsc-menu .blk .hsc-lbl,#hsc-menu .blocks .hsc-btn .hsc-lbl{font-size:clamp(13px,15cqmin,30px);align-self:start;width:100%}
+#hsc-menu .badge{position:absolute;left:8px;top:8px;z-index:2;padding:2px 8px;border-radius:12px;background:${K};color:#fff;font-size:clamp(12px,10cqmin,20px);font-weight:900;font-variant-numeric:tabular-nums;line-height:1.3}
+#hsc-menu .stars{position:absolute;left:0;right:0;top:8px;display:flex;justify-content:center;gap:2px;font-size:clamp(14px,11cqmin,22px)}
+#hsc-menu .blocks > *{animation:hsc-popin .5s cubic-bezier(.2,1.5,.4,1) both}
+#hsc-menu .blocks > *:nth-child(2){animation-delay:.05s}#hsc-menu .blocks > *:nth-child(3){animation-delay:.1s}#hsc-menu .blocks > *:nth-child(4){animation-delay:.15s}#hsc-menu .blocks > *:nth-child(5){animation-delay:.2s}#hsc-menu .blocks > *:nth-child(6){animation-delay:.25s}
+@keyframes hsc-popin{from{transform:scale(.6) translateY(12%);opacity:0}}
+/* ---- the modes screen ---- */
+#hsc-menu .mhead{display:flex;align-items:center;gap:10px;height:48px}
+#hsc-menu .back{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center}
+#hsc-menu .back .hsc-ic{width:28px;height:28px}
+#hsc-menu .title{display:flex;align-items:center;gap:8px;min-width:0;color:#fff;font-weight:900;font-size:clamp(22px,6vw,34px);-webkit-text-stroke:3px ${K};paint-order:stroke fill;text-shadow:0 3px 0 ${K}}
+#hsc-menu .title .hsc-ic{width:44px;height:44px}
+#hsc-menu .title .hsc-lbl{overflow:visible}
+#hsc-menu .mhead .coins{margin-inline-start:auto}
+#hsc-menu .mgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:12px;min-height:0;padding:4px 2px 10px}
+#hsc-menu .mode{display:grid;grid-template-rows:minmax(0,1fr) auto auto;justify-items:center;align-items:center;row-gap:6px;padding:12px 10px 16px;overflow:hidden;container-type:size}
+#hsc-menu .mode .hsc-ic{width:min(48cqw,46cqh,130px);height:auto;aspect-ratio:1;align-self:end;animation:hsc-float 3.2s ease-in-out infinite;filter:drop-shadow(0 5px 4px #0003)}
+#hsc-menu .mode:nth-child(2n) .hsc-ic{animation-delay:-1.1s}#hsc-menu .mode:nth-child(3n) .hsc-ic{animation-delay:-2.2s}
+@keyframes hsc-float{50%{transform:translateY(-6%) rotate(2deg)}}
+#hsc-menu .mode .hsc-lbl{font-size:clamp(14px,13cqmin,32px);width:100%}
+#hsc-menu .mode .reward{display:flex;align-items:center;gap:3px;height:clamp(22px,13cqmin,34px);padding:0 10px;border-radius:99px;background:${K};color:#ffe682;font-weight:900;font-size:clamp(12px,9cqmin,20px);font-variant-numeric:tabular-nums;white-space:nowrap}
+#hsc-menu .mode .reward .hsc-ic,#hsc-menu .mode .reward svg{width:1.25em;height:1.25em;animation:none;filter:none}
+#hsc-menu .mode .hsc-dot{right:8px;top:8px}
+#hsc-menu .mode .new{position:absolute;top:9%;left:-14%;width:52%;transform:rotate(-38deg);text-align:center;background:#f04436;color:#fff;font-weight:900;font-size:clamp(10px,7cqmin,15px);padding:2px 0;box-shadow:0 2px 0 ${K};z-index:2}
+#hsc-menu .mode .lock{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4%;background:#10223fb8;color:#fff;font-weight:900;font-size:clamp(16px,13cqmin,30px)}
+#hsc-menu .mode .lock .hsc-ic{width:min(30cqw,30cqh,64px);height:auto;aspect-ratio:1;animation:none}
+#hsc-menu .mode .lock .bar{width:60%;height:clamp(8px,5cqmin,14px);border-radius:99px;background:#ffffff40;overflow:hidden}
+#hsc-menu .mode .lock .bar i{display:block;height:100%;background:#ffd34d;border-radius:99px}
+#hsc-menu .mode.on{box-shadow:inset 0 -7px 0 #0003,inset 0 3px 0 #fff6,0 0 0 4px #ffd34d,0 6px 0 4px ${K},0 10px 14px #0005}
+#hsc-menu .mgrid > *{animation:hsc-popin .5s cubic-bezier(.2,1.5,.4,1) both}
+#hsc-menu .mgrid > *:nth-child(2){animation-delay:.04s}#hsc-menu .mgrid > *:nth-child(3){animation-delay:.08s}#hsc-menu .mgrid > *:nth-child(4){animation-delay:.12s}#hsc-menu .mgrid > *:nth-child(5){animation-delay:.16s}#hsc-menu .mgrid > *:nth-child(6){animation-delay:.2s}#hsc-menu .mgrid > *:nth-child(7){animation-delay:.24s}
+/* an odd last card fills its row */
+#hsc-menu .mgrid .mode:last-child:nth-child(odd){grid-column:1/-1}
+/* wide screens (phones on their side, tablets on their side, PC): the play card on the left, the blocks on the right */
+@media (orientation:landscape){
+  #hsc-menu .page{max-width:1280px}
+  #hsc-menu .home{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);grid-template-rows:48px minmax(0,1fr)}
+  #hsc-menu .home .top{grid-column:1/3}
+  #hsc-menu .mgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  #hsc-menu .mgrid .mode:last-child:nth-child(odd){grid-column:auto}
+  #hsc-menu .mgrid .mode:last-child:nth-child(4n+3){grid-column:span 2}
+}
+@media (prefers-reduced-motion:reduce){#hsc-menu::before,#hsc-menu .page,#hsc-menu .hero img,#hsc-menu .hero .go .hsc-ic,#hsc-menu .hero .clip::after,#hsc-menu .blocks > *,#hsc-menu .mgrid > *,#hsc-menu .mode .hsc-ic{animation:none!important}}
+body.hsc-calm #hsc-menu::before,body.hsc-calm #hsc-menu .hero img,body.hsc-calm #hsc-menu .hero .go .hsc-ic,body.hsc-calm #hsc-menu .hero .clip::after,body.hsc-calm #hsc-menu .mode .hsc-ic{animation:none!important}
 body.hsc-reveal #hsc-menu-btn{visibility:hidden}
-/* a feature button that appears in the top row before the menu takes it in is never shown there */
-#hsc-hud .hsc-row .hsc-rw,#hsc-hud .hsc-row #hsc-goals-btn,#hsc-hud .hsc-row #hsc-salon-btn{display:none!important}
+/* ---- every panel in the same family: navy ink, a jelly-blue backdrop, white-to-blue sheets, the rounded type ---- */
+#hsc-goals,#hsc-salon,.hsc-coll-panel,#hsc-set,#hsc-gift,#hsc-panel{font-family:"Arial Rounded MT Bold","Nunito","Baloo 2",system-ui,-apple-system,"Segoe UI",sans-serif!important}
+#hsc-panel{background:#0d3f86b8!important;color:${K}!important}
+#hsc-goals .sheet,#hsc-salon .sheet,.hsc-coll-panel .sheet,#hsc-set .sheet,#hsc-panel .hsc-sheet{background:linear-gradient(#ffffff,#e4f3ff)!important;border-color:${K}!important}
+#hsc-goals .x,#hsc-salon .x,.hsc-coll-panel .x,#hsc-set .x,#hsc-panel .hsc-x{background:linear-gradient(#fff,#dfe8f2)!important;border-color:${K}!important;box-shadow:inset 0 -4px 0 #0002,inset 0 2px 0 #fff9,0 3px 0 ${K}!important;color:${K}!important}
+/* ---- the cutting screen, in the same jelly style (looks only: every control keeps its size and place) ---- */
+#hsc-hud .hsc-btn,#hsc-undo,#hsc-tools button,#hsc-newc,.ui .audio-toggle{background:linear-gradient(#fff,#dfe8f2)!important;border:3px solid ${K}!important;box-shadow:inset 0 -5px 0 #0002,inset 0 2px 0 #fff9,0 4px 0 ${K},0 6px 8px #0004!important;color:${K}}
+#hsc-menu-btn{background:linear-gradient(#ffe682,#ffb21a)!important}
+#hsc-undo{background:linear-gradient(#ffa59b,#f04436)!important;color:#fff}
+#hsc-tools button.on{background:linear-gradient(#ffe682,#ffb21a)!important}
+.ui .guard-arc .rung{background:linear-gradient(#fff,#dfe8f2)!important;border:3px solid ${K}!important;box-shadow:inset 0 -4px 0 #0002,inset 0 2px 0 #fff9,0 3px 0 ${K},0 5px 6px #0004!important;color:${K}}
+.ui .guard-arc .rung[aria-checked=true]{background:linear-gradient(#ffe682,#ffb21a)!important;box-shadow:inset 0 -5px 0 #0002,inset 0 2px 0 #fff9,0 4px 0 ${K},0 6px 8px #0004!important}
+.ui .clip-toggle{background:linear-gradient(#fff,#dfe8f2)!important;border:3px solid ${K}!important;box-shadow:inset 0 -7px 0 #0002,inset 0 3px 0 #fff9,0 6px 0 ${K},0 9px 12px #0005!important;color:${K}}
+.ui .clip-toggle.on{background:linear-gradient(#a8e4ff,#3aa2f2)!important}
+#hsc-hud .hsc-pill{background:#10223fcc!important;border:2px solid #ffffff30!important;box-shadow:0 3px 8px #0004!important;color:#fff}
+#hsc-hud .hsc-pill .hsc-combo{color:${K}}
+.ui .seal .seal-shape{filter:drop-shadow(0 5px 0 ${K}) drop-shadow(0 8px 6px #0004)}
+.ui .seal .seal-shape polygon{stroke:${K}}
+#hsc-hud .hsc-btn:active,#hsc-undo:active,#hsc-tools button:active,#hsc-newc:active,.ui .audio-toggle:active,.ui .guard-arc .rung:active,.ui .clip-toggle:active{box-shadow:inset 0 -3px 0 #0002,inset 0 2px 0 #fff9,0 1px 0 ${K}!important}
+/* a feature button that appears in the top row before the home screen takes it in is never shown there */
+#hsc-hud .hsc-row .hsc-rw,#hsc-hud .hsc-row #hsc-goals-btn,#hsc-hud .hsc-row #hsc-salon-btn,#hsc-hud .hsc-row #hsc-book-btn,#hsc-hud .hsc-row #hsc-album-btn,#hsc-hud .hsc-row #hsc-set-btn{display:none!important}
 `;
   const ui = {
-    el: {}, moved: new Set(),
+    el: {}, shotKey: null,
     build(row) {
       const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
       const b = document.createElement('button');
       b.className = 'hsc-btn'; b.id = 'hsc-menu-btn'; b.type = 'button'; b.setAttribute('aria-label', 'Menu');
-      b.innerHTML = MENU + '<span class="hsc-dot" hidden></span>';
+      b.innerHTML = I('home', 30) + '<span class="hsc-dot" hidden></span>';
       b.addEventListener('click', () => this.open());
       row.insertBefore(b, row.firstChild);
-      // the menu lives inside the HUD (the features look for their buttons there)
+      // the home screen sits above every cutting-screen layer (the panels it opens sit above it)
       const m = document.createElement('div'); m.id = 'hsc-menu';
-      m.innerHTML = `<div class="card" role="dialog" aria-label="Menu"><div class="top"><button class="x" type="button" aria-label="Close">${CLOSE}</button></div><div class="tiles"></div></div>`;
-      document.getElementById('hsc-hud').appendChild(m);
-      m.querySelector('.x').addEventListener('click', () => this.close());
-      m.addEventListener('click', (e) => { if (e.target === m) this.close(); else if (e.target.closest('.tiles .hsc-btn')) this.close(); });
-      addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('open')) { e.preventDefault(); this.close(); } });
-      Object.assign(this.el, { btn: b, menu: m, tiles: m.querySelector('.tiles'), card: m.querySelector('.card'), row });
+      m.innerHTML = `<div class="hold"></div>
+        <div class="page home" role="dialog" aria-label="Menu">
+          <div class="top"><div class="lvl"><div class="xp"><i></i></div></div><div class="chip flame">${I('flame')}<span></span></div><div class="chip coins">${I('coin')}<bdi></bdi></div><div class="gear"></div></div>
+          <button class="j c-green hero" type="button" aria-label="Play"><span class="clip"></span><span class="hin"><img alt=""><span class="go">${I('play')}<span class="hsc-lbl" data-k="play"></span></span></span></button>
+          <div class="blocks hsc-same">${BLOCKS.map(([k, c]) => (['wardrobe', 'salon', 'styles'].includes(k)
+            ? `<div class="slot" data-b="${k}" data-c="${c}"></div>`
+            : `<button class="j blk c-${c}" type="button" data-b="${k}">${I(k)}<span class="hsc-lbl" data-k="${k}"></span></button>`)).join('')}</div>
+        </div>
+        <div class="page modes" hidden role="dialog" aria-label="Modes">
+          <div class="mhead"><button class="j c-white back" type="button" aria-label="Back">${I('back')}</button><div class="title">${I('modes')}<span class="hsc-lbl" data-k="modes"></span></div><div class="chip coins">${I('coin')}<bdi></bdi></div></div>
+          <div class="mgrid hsc-same"></div>
+        </div>`;
+      document.body.appendChild(m);
+      m.querySelector('.hero').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('swish'); this.close(); });
+      m.querySelector('[data-b=modes]').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('swish'); this.view('modes'); });
+      m.querySelector('[data-b=daily]').addEventListener('click', () => this.play('daily'));
+      m.querySelector('[data-b=gift]').addEventListener('click', (e) => { if (!(HSC.gift && HSC.gift.open()) && HSC.nope) HSC.nope(e.currentTarget); });
+      m.querySelector('.back').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('back'); this.view('home', true); });
+      // back (Escape) closes only the top layer: a panel over the home screen handles it first
+      addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('open') && !e.defaultPrevented && !document.querySelector('#hsc-panel.open,#hsc-goals.open,#hsc-salon.open,.hsc-coll-panel.open,#hsc-set.open,#hsc-gift.open')) { e.preventDefault(); if (!m.querySelector('.modes').hidden) this.view('home', true); else this.close(); } });
+      addEventListener('resize', () => { if (m.classList.contains('open')) requestAnimationFrame(() => HSC.fitLabels && HSC.fitLabels(m)); });
+      Object.assign(this.el, { btn: b, menu: m, row });
       this.tick();
-      // take each feature button in as soon as it is added (no visible move in the top row)
       try { new MutationObserver(() => this.tick()).observe(row, { childList: true }); } catch (e) {}
       setInterval(() => this.tick(), 250);
+      // a returning barber starts on the home screen (a first-time player goes straight to the first customer)
+      const home = () => {
+        const g = globalThis.skinFadeStudio, d = HSC.meta && HSC.meta.data;
+        if (!g || !d || !HSC.modes) return setTimeout(home, 250);
+        if (d.cuts >= 1 && g.getState().status === 'cutting' && !g.getState().cutStrokeCount) this.open();
+      };
+      home();
+    },
+    labels() {
+      const m = this.el.menu;
+      m.setAttribute('dir', HSC.rtl && HSC.rtl() ? 'rtl' : 'ltr');
+      m.querySelectorAll('.hsc-lbl[data-k]').forEach((el) => { el.textContent = t(el.dataset.k); });
+      requestAnimationFrame(() => HSC.fitLabels && HSC.fitLabels(m));
     },
     open() {
-      const r = this.el.btn.getBoundingClientRect(), S = HSC.S || 1;
-      Object.assign(this.el.card.style, { left: Math.max(8, r.left) / S + 'px', top: (r.bottom + 10) / S + 'px' });
+      this.view('home');
       this.el.menu.classList.add('open');
+      this.refresh();
+      this.portrait();
     },
     close() { this.el.menu.classList.remove('open'); },
-    tick() {
-      // move each feature button into the menu as it appears (in this order)
-      for (const sel of IDS) {
-        const b = document.querySelector('#hsc-hud .hsc-row ' + sel);
-        if (b) { this.el.tiles.appendChild(b); this.moved.add(sel); }
+    view(v, back) {
+      const m = this.el.menu;
+      for (const p of m.querySelectorAll('.page')) {
+        const on = p.classList.contains(v);
+        p.hidden = !on;
+        p.classList.remove('in', 'back-in');
+        if (on && m.classList.contains('open')) { void p.offsetWidth; p.classList.add(back ? 'back-in' : 'in'); }
       }
-      const order = IDS.map((s) => this.el.tiles.querySelector(s)).filter(Boolean);
-      order.forEach((b, i) => { if (this.el.tiles.children[i] !== b) this.el.tiles.insertBefore(b, this.el.tiles.children[i] || null); });
-      const dot = [...this.el.tiles.querySelectorAll('.hsc-dot')].some((d) => !d.hidden);
+      if (v === 'modes') this.modes();
+      this.labels();
+    },
+    async play(mode) {
+      if (HSC.modes && !HSC.modes.unlocked(mode)) return;
+      if (HSC.fx) HSC.fx.play('swish');
+      this.close();
+      if (HSC.modes) await HSC.modes.set(mode);
+    },
+    // the customer waiting in the chair, rendered by the game
+    portrait() {
+      const g = globalThis.skinFadeStudio, img = this.el.menu.querySelector('.hero img');
+      if (!g || !HSC.portrait) return;
+      const s = g.getState(), p = s.look && s.look.person;
+      if (!p) return;
+      const key = s.jobId + ':' + p.seed + ':' + s.cutStrokeCount;
+      if (this.shotKey === key) return;
+      requestAnimationFrame(() => {
+        const url = HSC.portrait(p, s.hair, s.beard, 160, 360);
+        if (url) { img.onload = () => HSC.fitLabels && HSC.fitLabels(this.el.menu); img.src = url; this.shotKey = key; }
+      });
+    },
+    modes() {
+      const M = HSC.modes, grid = this.el.menu.querySelector('.mgrid');
+      if (!M) return;
+      const cur = M.current(), daily = M.daily ? M.daily() : null, lv = HSC.meta.level(), prog = HSC.meta.levelProgress ? HSC.meta.levelProgress() : 0;
+      grid.innerHTML = M.list.map((k) => {
+        const lock = !M.unlocked(k);
+        // a locked mode shows how close the barber is: the levels still to go, as a bar
+        const need = M.level[k], frac = Math.max(0, Math.min(1, (lv - 1 + prog) / Math.max(1, need - 1)));
+        const reward = k === 'daily' && daily && daily.done ? [1, 2, 3].map((x) => STAR(x <= daily.stars)).join('') : REWARD[k]();
+        return `<button class="j mode c-${MODE_COLOUR[k]}${k === cur ? ' on' : ''}" type="button" data-m="${k}"${lock ? ' aria-disabled="true"' : ''}>${I(MODE_ICON[k])}<span class="hsc-lbl" data-k="${MODE_WORD[k]}"></span><span class="reward">${reward}</span>${k === 'daily' && !lock && !(daily && daily.done) ? '<span class="hsc-dot"></span>' : ''}${!lock && M.isNew && M.isNew(k) ? `<span class="new">${t('new')}</span>` : ''}${lock ? `<span class="lock">${I('lock')}<span>${need}</span><span class="bar"><i style="width:${Math.round(frac * 100)}%"></i></span></span>` : ''}</button>`;
+      }).join('');
+      grid.querySelectorAll('.mode').forEach((b) => b.addEventListener('click', () => {
+        if (b.getAttribute('aria-disabled')) { if (HSC.nope) HSC.nope(b); return; }
+        this.play(b.dataset.m);
+      }));
+    },
+    // the live parts of the home screen
+    refresh() {
+      const d = HSC.meta && HSC.meta.data, m = this.el.menu;
+      if (!d) return;
+      m.querySelectorAll('.coins bdi').forEach((el) => { el.textContent = d.coins || 0; });
+      const streak = HSC.meta.streakNow ? HSC.meta.streakNow() : d.streak || 0;
+      m.querySelector('.flame').hidden = !(streak > 0);
+      m.querySelector('.flame span').textContent = streak;
+      m.querySelector('.xp i').style.width = Math.round((HSC.meta.levelProgress ? HSC.meta.levelProgress() : 0) * 100) + '%';
+      // daily: stars once done, a dot until then
+      const db = m.querySelector('[data-b=daily]'), daily = HSC.modes && HSC.modes.daily ? HSC.modes.daily() : null;
+      const dailyOn = HSC.modes ? HSC.modes.unlocked('daily') : false;
+      let ds = db.querySelector('.stars'), dd = db.querySelector('.hsc-dot');
+      if (!ds) { ds = document.createElement('span'); ds.className = 'stars'; db.appendChild(ds); }
+      if (!dd) { dd = document.createElement('span'); dd.className = 'hsc-dot'; db.appendChild(dd); }
+      ds.innerHTML = daily && daily.done ? [1, 2, 3].map((x) => STAR(x <= daily.stars)).join('') : '';
+      ds.hidden = !(daily && daily.done);
+      dd.hidden = !dailyOn || !!(daily && daily.done);
+      db.style.opacity = dailyOn ? '' : '.55';
+      // gift: the time left, or a dot when it is ready
+      const gb = m.querySelector('[data-b=gift]'), gs = HSC.gift ? HSC.gift.state() : null;
+      let gt = gb.querySelector('.badge'), gd = gb.querySelector('.hsc-dot');
+      if (!gt) { gt = document.createElement('span'); gt.className = 'badge'; gb.appendChild(gt); }
+      if (!gd) { gd = document.createElement('span'); gd.className = 'hsc-dot'; gb.appendChild(gd); }
+      gd.hidden = !(gs && gs.ready);
+      gt.hidden = !gs || gs.ready || gs.done;
+      if (gs && !gs.ready && !gs.done) gt.textContent = Math.floor(gs.left / 60) + ':' + String(gs.left % 60).padStart(2, '0');
+      gb.style.opacity = gs && gs.done ? '.55' : '';
+    },
+    tick() {
+      const m = this.el.menu;
+      if (m.classList.contains('open') && HSC.fitLabels && [...m.querySelectorAll('.hsc-lbl')].some((e) => e.offsetParent && e.scrollWidth > e.clientWidth + 0.5)) HSC.fitLabels(m);
+      // move each feature button into its place as it appears
+      for (const [sel, slot] of PLACE) {
+        const btn = document.querySelector('#hsc-hud .hsc-row ' + sel);
+        if (!btn) continue;
+        const to = m.querySelector(slot);
+        if (to.classList.contains('slot')) {
+          // a feature button becomes a block: its own icon hides, this set's picture and a word show
+          btn.classList.add('j', 'c-' + to.dataset.c);
+          btn.dataset.b = to.dataset.b;
+          to.replaceWith(btn);
+        } else to.appendChild(btn);
+      }
+      for (const btn of m.querySelectorAll('.blocks .hsc-btn')) {
+        if (!btn.querySelector('.hsc-lbl')) {
+          const k = btn.dataset.b;
+          btn.insertAdjacentHTML('beforeend', `${I(k)}<span class="hsc-lbl" data-k="${k}">${t(k)}</span>`);
+          requestAnimationFrame(() => HSC.fitLabels && HSC.fitLabels(m));
+        }
+      }
+      const gear = m.querySelector('.gear .hsc-btn');
+      if (gear && !gear.querySelector('.hsc-ic')) gear.insertAdjacentHTML('beforeend', I('gear'));
+      const lvl = m.querySelector('.lvl'), gbtn = lvl.querySelector('#hsc-goals-btn');
+      if (gbtn && lvl.firstElementChild !== gbtn) lvl.insertBefore(gbtn, lvl.firstChild);
+      // the home button's dot: anything waiting on the home screen
+      const gs = HSC.gift ? HSC.gift.state() : null, daily = HSC.modes && HSC.modes.daily ? HSC.modes.daily() : null;
+      const dot = [...m.querySelectorAll('.hsc-btn .hsc-dot')].some((d) => !d.hidden) || !!(gs && gs.ready) || !!(daily && !daily.done && HSC.modes.unlocked('daily'));
       this.el.btn.querySelector('.hsc-dot').hidden = !dot;
+      if (m.classList.contains('open')) this.refresh();
     },
   };
-  // the features put their buttons in the HUD row; once it exists the menu takes them in
+  // the features put their buttons in the HUD row; once it exists the home screen takes them in
   const boot = () => { const row = document.querySelector('#hsc-hud .hsc-row'); if (row && document.getElementById('hsc-hud')) ui.build(row); else setTimeout(boot, 200); };
   boot();
-  HSC.menu = { open: () => ui.open(), close: () => ui.close() };
+  HSC.menu = { open: () => ui.open(), close: () => ui.close(), view: (v) => ui.view(v) };
+  // the Android back button: close the top panel, then the modes screen back to home; from the chair it opens the home
+  // screen; on the home screen it is not handled (Android leaves the app as usual)
+  HSC.menuBack = function () {
+    const m = ui.el.menu;
+    if (!m) return false;
+    const gift = document.querySelector('#hsc-gift.open');
+    if (gift) { gift.classList.remove('open'); return true; }
+    for (const sel of ['#hsc-goals.open .x', '#hsc-salon.open .x', '.hsc-coll-panel.open .x', '#hsc-set.open .x']) {
+      const x = document.querySelector(sel);
+      if (x) { x.click(); return true; }
+    }
+    if (m.classList.contains('open')) {
+      if (!m.querySelector('.modes').hidden) { ui.view('home', true); return true; }
+      return false;
+    }
+    ui.open();
+    return true;
+  };
 })(globalThis.HSC || (globalThis.HSC = {}));

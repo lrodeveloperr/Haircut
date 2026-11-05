@@ -121,7 +121,8 @@ async function privacy(layout) {
     new MutationObserver(()=>log.push('menu:'+m.className)).observe(m,{attributes:true,attributeFilter:['class']});
   });
   for(let attempt=1;;attempt++){
-    await tap('#hsc-menu-btn');
+    // a returning barber may already be on the home screen
+    if(!await page.evaluate(()=>!!document.querySelector('#hsc-menu.open')))await tap('#hsc-menu-btn');
     try{await page.waitForFunction(()=>document.querySelector('#hsc-menu.open .hsc-rw'),undefined,{timeout:10000});break;}
     catch(error){
       const log=await page.evaluate(()=>__menuTap.slice());
@@ -196,6 +197,9 @@ async function privacy(layout) {
   assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),before,'returning from the external policy preserves haircut');
   await tap('.hsc-head .hsc-x:not(.hsc-privacy)');
   await page.waitForFunction(()=>!skinFadeStudio.getView().paused);
+  // the wardrobe closes back to the home screen; Play returns to the chair
+  await tap('#hsc-menu .hero');
+  await page.waitForFunction(()=>!document.querySelector('#hsc-menu.open'));
   await page.evaluate(()=>document.querySelector('#privacy-capture-stability')?.remove());
   layout.privacy={existingBoundsUnchanged:true,alignment:geometry,externalPolicyOpened:true,hairPreserved:true};
   check(layout.name+' privacy icon preserves all existing wardrobe bounds');

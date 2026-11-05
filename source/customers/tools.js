@@ -14,7 +14,7 @@
 (function (HSC) {
   'use strict';
   if (!HSC.PHENOTYPES) return;
-  const INK = '#2a1d15';
+  const INK = '#10223f';
   const M = () => HSC.meta, G = () => globalThis.skinFadeStudio;
   const TOOLS = {
     clipper: { level: 1, width: 0.56 },
@@ -244,7 +244,7 @@
 #hsc-tools button.on{background:#ffb627}
 #hsc-tools button:active{transform:translateY(3px);box-shadow:0 1px 0 ${INK}}
 #hsc-tools .fan{display:grid;grid-template-columns:repeat(2,60px);grid-auto-flow:row;gap:10px;direction:ltr}
-#hsc-tools .fan .sep{grid-column:1/3;height:3px;border-radius:2px;background:#2a1d15;opacity:.25}
+#hsc-tools .fan .sep{grid-column:1/3;height:3px;border-radius:2px;background:#10223f;opacity:.25}
 #hsc-tools .fan[hidden],#hsc-tools[hidden]{display:none}
 body.hsc-reveal #hsc-tools,body.hsc-spin #hsc-tools{display:none}
 `;
