@@ -65,6 +65,8 @@ const UNITS = {
   smile: ['@mouth-corner-puller'],
   widen: ['@mouth-retraction'],
   squint: ['@eye-left-slit', '@eye-right-slit'],
+  // eyes closed in comfort (the hot towel, the massage)
+  close: ['@eye-left-closure', '@eye-right-closure'],
   lift: ['@mouth-elevation'],
   browsDown: ['@eyebrows-left-down', '@eyebrows-right-down'],
   cheekUp: ['cheek/l-cheek-trans-up', 'cheek/r-cheek-trans-up'],

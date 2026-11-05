@@ -55,7 +55,8 @@
     c.fillStyle = P.wall[t.wall]; c.fillRect(0, 0, W, base);
     const ink = P.wallInk[t.wall];
     if (t.wall === 2) { c.fillStyle = ink; for (let x = 0; x < W; x += 46) c.fillRect(x, 0, 10, base); }
-    if (t.wall === 3) { c.fillStyle = ink; for (let y = 0, r = 0; y < base; y += 58, r++) { c.fillRect(0, y, W, 6); for (let x = (r % 2) * 70; x < W; x += 140) c.fillRect(x, y, 6, 58); } }
+    // Iznik-style tiles (as in Turkish barbershops): white ground, cobalt borders, red tulips and green leaves
+    if (t.wall === 3) iznik(c, W, base);
     if (t.wall === 4) { c.strokeStyle = ink; c.lineWidth = 5; for (let y = 60; y < base; y += 150) for (let x = (Math.floor(y / 150) % 2) * 75 + 40; x < W; x += 150) { c.beginPath(); c.ellipse(x, y, 26, 40, 0, 0, 7); c.stroke(); c.beginPath(); c.moveTo(x, y - 60); c.lineTo(x, y + 60); c.stroke(); } }
     const wg = c.createLinearGradient(0, 0, 0, base); wg.addColorStop(0, 'rgba(255,255,255,.12)'); wg.addColorStop(1, 'rgba(0,0,0,.12)'); c.fillStyle = wg; c.fillRect(0, 0, W, base);
     // lower wall
@@ -107,12 +108,39 @@
       rr(c, x - wd / 2, sy0 - hgt, wd, hgt, 10); c.fill();
       c.fillStyle = 'rgba(255,255,255,.25)'; c.fillRect(x - wd / 2 + 6, sy0 - hgt + 10, 6, hgt - 20);
     }
+    // tea glasses and kolonya on the shelf from the first upgrade
+    if (t.shelf >= 1) { teaGlass(c, sx1 - 70, sy0, 1); teaGlass(c, sx1 - 150, sy0, 1); kolonya(c, sx0 + 80, sy0, 1); if (t.shelf >= 3) kolonya(c, sx0 + 150, sy0, 0.9); }
     if (t.shelf >= 2) { const [tx, ty] = L.towels; for (let k = 0; k < 3; k++) { c.fillStyle = ['#f4f1ec', '#e8e2d8', '#f4f1ec'][k]; rr(c, tx - 90, ty - 30 - k * 32, 90, 30, 8); c.fill(); } }
     // plants, pictures and a clock
     if (t.decor >= 1) plant(c, L.plant[0], L.plant[1], t.decor >= 3 ? 1.6 : 1);
     if (t.decor >= 2) for (const [x0, y0, x1, y1] of L.art) { c.fillStyle = P.accent; c.fillRect(x0, y0, x1 - x0, y1 - y0); c.fillStyle = '#f4efe4'; c.fillRect(x0 + 14, y0 + 14, x1 - x0 - 28, y1 - y0 - 28); scissors(c, (x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) * 0.28, '#3a3a3a'); }
     if (t.decor >= 3) { const [cx, cy] = L.clock; c.fillStyle = INK; c.beginPath(); c.arc(cx, cy, 62, 0, 7); c.fill(); c.fillStyle = '#f7f2e8'; c.beginPath(); c.arc(cx, cy, 52, 0, 7); c.fill(); c.strokeStyle = INK; c.lineWidth = 7; c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx, cy - 36); c.moveTo(cx, cy); c.lineTo(cx + 26, cy + 8); c.stroke(); }
     if (t.decor >= 4) { plant(c, L.W - 90, L.base, 2.2); plant(c, 90, L.base, 2.2); }
+  }
+  function iznik(c, W, base) {
+    const s = 150;
+    for (let y = 0; y < base; y += s) for (let x = 0; x < W; x += s) {
+      c.fillStyle = '#f4f1ea'; c.fillRect(x, y, s, s);
+      c.strokeStyle = '#1f4f9a'; c.lineWidth = 6; c.strokeRect(x + 3, y + 3, s - 6, s - 6);
+      const cx = x + s / 2, cy = y + s / 2;
+      // four cobalt leaves in a quatrefoil, a red tulip in the middle, green stems
+      c.fillStyle = '#2a64b8'; for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4; c.beginPath(); c.ellipse(cx + Math.cos(a) * 42, cy + Math.sin(a) * 42, 26, 11, a, 0, 7); c.fill(); }
+      c.strokeStyle = '#3d8a5a'; c.lineWidth = 5; c.beginPath(); c.moveTo(cx, cy + 40); c.quadraticCurveTo(cx - 6, cy + 10, cx, cy - 4); c.stroke();
+      c.fillStyle = '#c8322b'; c.beginPath(); c.moveTo(cx - 16, cy - 4); c.lineTo(cx - 14, cy - 30); c.lineTo(cx - 5, cy - 18); c.lineTo(cx, cy - 34); c.lineTo(cx + 5, cy - 18); c.lineTo(cx + 14, cy - 30); c.lineTo(cx + 16, cy - 4); c.quadraticCurveTo(cx, cy + 8, cx - 16, cy - 4); c.fill();
+      c.fillStyle = '#2a64b8'; for (const [dx, dy] of [[-s / 2 + 3, -s / 2 + 3], [s / 2 - 3, -s / 2 + 3], [-s / 2 + 3, s / 2 - 3], [s / 2 - 3, s / 2 - 3]]) { c.beginPath(); c.arc(cx + dx, cy + dy, 14, 0, 7); c.fill(); }
+    }
+  }
+  // tulip-shaped Turkish tea glasses on saucers, with red tea
+  function teaGlass(c, x, y, k = 1) {
+    c.fillStyle = '#d8b04a'; c.beginPath(); c.ellipse(x, y - 4 * k, 34 * k, 8 * k, 0, 0, 7); c.fill();
+    c.fillStyle = 'rgba(160,40,20,.9)'; c.beginPath(); c.moveTo(x - 16 * k, y - 70 * k); c.quadraticCurveTo(x - 24 * k, y - 40 * k, x - 12 * k, y - 26 * k); c.quadraticCurveTo(x - 18 * k, y - 12 * k, x - 14 * k, y - 8 * k); c.lineTo(x + 14 * k, y - 8 * k); c.quadraticCurveTo(x + 18 * k, y - 12 * k, x + 12 * k, y - 26 * k); c.quadraticCurveTo(x + 24 * k, y - 40 * k, x + 16 * k, y - 70 * k); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 4 * k; c.stroke();
+  }
+  // a kolonya bottle (lemon cologne)
+  function kolonya(c, x, y, k = 1) {
+    c.fillStyle = 'rgba(250,240,180,.85)'; rr(c, x - 22 * k, y - 110 * k, 44 * k, 110 * k, 12 * k); c.fill();
+    c.fillStyle = '#f2d64e'; c.fillRect(x - 20 * k, y - 70 * k, 40 * k, 40 * k);
+    c.fillStyle = '#c9a24a'; c.fillRect(x - 10 * k, y - 132 * k, 20 * k, 24 * k);
   }
   function glow(c, x, y, r, col) { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(255,230,160,0)'); c.fillStyle = g; c.fillRect(x - r, y - r, 2 * r, 2 * r); }
   function plant(c, x, y, k) {
