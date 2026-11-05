@@ -113,8 +113,22 @@ async function privacy(layout) {
   };
   const before=await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair));
   // the wardrobe is in the menu (owner request, 5 November 2026)
-  await tap('#hsc-menu-btn');
-  await page.waitForFunction(()=>document.querySelector('#hsc-menu.open .hsc-rw'));
+  // Record where the native tap goes and every menu open/close, so a slow emulator's missed tap is evidence,
+  // not a silent timeout. One retry is allowed and reported; a second miss fails.
+  await page.evaluate(()=>{
+    const log=window.__menuTap=[];const m=document.getElementById('hsc-menu');
+    for(const type of ['pointerdown','pointerup','click'])addEventListener(type,e=>log.push(type+':'+(e.target.id||e.target.className?.baseVal||e.target.className||e.target.tagName)+':'+e.isTrusted),true);
+    new MutationObserver(()=>log.push('menu:'+m.className)).observe(m,{attributes:true,attributeFilter:['class']});
+  });
+  for(let attempt=1;;attempt++){
+    await tap('#hsc-menu-btn');
+    try{await page.waitForFunction(()=>document.querySelector('#hsc-menu.open .hsc-rw'),undefined,{timeout:10000});break;}
+    catch(error){
+      const log=await page.evaluate(()=>__menuTap.slice());
+      (layout.menuTapMisses??=[]).push({attempt,log});console.log('menu tap missed',attempt,JSON.stringify(log));
+      if(attempt===2)throw error;
+    }
+  }
   await tap('#hsc-menu .hsc-rw');
   await page.waitForFunction(()=>document.querySelector('#hsc-panel.open .hsc-privacy')&&skinFadeStudio.getView().paused);
   await page.evaluate(()=>{

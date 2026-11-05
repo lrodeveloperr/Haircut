@@ -25,7 +25,8 @@ The existing version 1.0.12 (13) was submitted for review earlier today. Prepare
 ## Banner implementation (5 November 2026)
 
 - `MainActivity`: the WebView sits in a vertical column above a 16dp gap view that consumes every touch, then a banner slot. The slot is sized to the anchored adaptive banner's height for the current width before any ad loads, and keeps that height on no fill, failure and refresh. The system/cutout insets on the root are unchanged.
-- `AdsController`: an `AdView` loads only after UMP allows ads and the SDK is initialized. It reloads when the width changes (rotation, folding, resize) and is torn down when consent changes. It pauses, resumes and is destroyed with the activity. Refresh follows the ad unit's refresh rate in the AdMob console.
+- `AdsController`: an `AdView` loads only after UMP allows ads and the SDK is initialized. It reloads when the banner size changes (rotation, folding, resize) and is torn down when consent changes. It pauses, resumes and is destroyed with the activity. Refresh follows the ad unit's refresh rate in the AdMob console.
+- Landscape cap (owner decision, 4 November 2026): in landscape the anchored adaptive banner was about 64dp tall on a phone (about 80dp with the gap, a fifth of the screen), so any landscape window uses the standard 320×50dp banner instead. Portrait keeps the anchored adaptive banner.
 - `build.gradle.kts`: debug uses Google's adaptive-banner test unit `ca-app-pub-3940256099942544/9214589741`. Release reads `admobBannerId` from `admob-production.properties`, and release tasks now require three distinct production unit IDs: rewarded, interstitial and banner.
 
 ## Verification
@@ -33,7 +34,9 @@ The existing version 1.0.12 (13) was submitted for review earlier today. Prepare
 - Local: `compileDebugJavaWithJavac`, `testDebugUnitTest` and `lintDebug` pass with 0 lint errors.
 - Local emulator (5 November 2026). The original `MonkeyPost_API36` emulator crash-looped on boot (`BOOTCLASSPATH is not defined`) because the Mac was low on disk. A clean `Barber_API36` emulator (Pixel 7, API 36, 3 GB data partition) was created for this app, and the debug build was run on it with test IDs only.
   - Phone portrait: the strip holds its height with no fill (network unavailable at first). Google's test banner then loaded in the same strip below the 16dp gap, and no game control overlaps it.
-  - Phone landscape: the strip resizes to the landscape adaptive height (about 80dp including the gap, about a fifth of a 412dp-tall screen).
-  - Screenshots are in `qa/results/banner-phone-*.png`.
-- Not yet checked: tablet layouts, and a landscape test banner actually loaded after rotation.
+  - Phone landscape, before the cap: the strip resized to the landscape adaptive height (about 80dp including the gap, about a fifth of a 412dp-tall screen). The cap above replaced this.
+  - Phone landscape, with the cap (4 November 2026): after rotating from portrait, the banner reloaded at 320×50dp and Google's test banner filled it, centred. The native strip is 65dp including the gap (about 16% of a 411dp-tall screen), down from about 80dp.
+  - Screenshots are in `qa/results/banner-phone-*.png` (`banner-phone-landscape-capped.png` for the cap).
+- Local installed-APK test (`android/tests/apk.cjs`, 4 November 2026, same emulator, test IDs only): all 29 checks pass, covering phone and tablet portrait and landscape, live resizes to 1600×2560 and 2560×1600, background and resume, offline test ad, and disk save after force-stop. The menu opened on the first native tap in every layout. Two local-only setup steps were needed: Chrome's first-run screen was turned off on the emulator (it hid the privacy link), and adb ran as a persistent server.
+- Not yet checked: a test banner loaded on a tablet-sized window.
 - Live ads were not requested.

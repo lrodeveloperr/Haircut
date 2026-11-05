@@ -42,7 +42,7 @@ final class AdsController {
     private final WebView web;
     private final FrameLayout bannerSlot;
     private AdView banner;
-    private int bannerWidthDp = -1;
+    private int bannerKey = -1;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private ConsentInformation consent;
@@ -67,30 +67,34 @@ final class AdsController {
         this.web = web;
         this.bannerSlot = bannerSlot;
         // the strip is sized for the adaptive banner straight away (and on every width change), before any ad loads
-        bannerSlot.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> { if (r - l != or - ol) ui.post(this::sizeBanner); });
+        bannerSlot.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> { if (r - l != or - ol || b - t != ob - ot) ui.post(this::sizeBanner); });
         ui.post(this::sizeBanner);
     }
 
     // ---- the bottom banner: an anchored adaptive banner in a strip of fixed height; AdMob refreshes it on the
     // ad unit's refresh rate (set in the AdMob console). Nothing is requested before consent allows it. ----
+    // In landscape the anchored adaptive banner is up to 90dp tall (about a fifth of a phone's height with the
+    // reserved strip), so landscape uses the standard 320x50 banner instead (owner decision, 4 November 2026).
     private AdSize bannerSize() {
         DisplayMetrics m = activity.getResources().getDisplayMetrics();
+        if (m.widthPixels > m.heightPixels) return AdSize.BANNER;
         int widthPx = bannerSlot.getWidth() > 0 ? bannerSlot.getWidth() : m.widthPixels;
         return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(activity, Math.max(320, Math.round(widthPx / m.density)));
     }
+    private static int sizeKey(AdSize s) { return s.getWidth() * 1000 + s.getHeight(); }
     private void sizeBanner() {
         if (destroyed) return;
         AdSize size = bannerSize();
         ViewGroup.LayoutParams lp = bannerSlot.getLayoutParams();
         int h = size.getHeightInPixels(activity);
         if (lp != null && lp.height != h) { lp.height = h; bannerSlot.setLayoutParams(lp); }
-        if (sdkReady && size.getWidth() != bannerWidthDp) loadBanner();
+        if (sdkReady && sizeKey(size) != bannerKey) loadBanner();
     }
     private void loadBanner() {
         if (destroyed || !sdkReady || !canRequestAds() || BuildConfig.ADMOB_BANNER_ID.isEmpty()) return;
         AdSize size = bannerSize();
         if (banner != null) { bannerSlot.removeView(banner); banner.destroy(); banner = null; }
-        bannerWidthDp = size.getWidth();
+        bannerKey = sizeKey(size);
         banner = new AdView(activity);
         banner.setAdUnitId(BuildConfig.ADMOB_BANNER_ID);
         banner.setAdSize(size);
@@ -133,7 +137,7 @@ final class AdsController {
         rewarded = null;
         interstitial = null;
         loadingRewarded = loadingInterstitial = false;
-        if (banner != null) { bannerSlot.removeView(banner); banner.destroy(); banner = null; bannerWidthDp = -1; }
+        if (banner != null) { bannerSlot.removeView(banner); banner.destroy(); banner = null; bannerKey = -1; }
         UserMessagingPlatform.showPrivacyOptionsForm(activity, formError -> {
             if (destroyed) return;
             privacyOptionsShowing = false;
