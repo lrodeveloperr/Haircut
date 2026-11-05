@@ -50,6 +50,8 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
       page.setDefaultTimeout(120000);
       await page.goto('http://privacy.test/');
       await page.waitForFunction(()=>window.skinFadeStudio&&HSC.startupTiming?.firstPlayable&&!document.body.inert&&document.querySelector('.hsc-privacy'));
+      // the wardrobe lives in the menu (owner request, 5 November 2026)
+      await page.getByRole('button',{name:'Menu',exact:true}).click();
       await page.getByRole('button',{name:'Wardrobe',exact:true}).click();
       await page.waitForFunction(()=>document.querySelector('#hsc-panel.open')&&skinFadeStudio.getView().paused);
       assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Close','opening wardrobe retains its existing Close focus');

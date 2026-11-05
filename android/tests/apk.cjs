@@ -112,7 +112,10 @@ async function privacy(layout) {
     adb('shell','input','tap',String(Math.round(b.left+(p.x-v.offsetLeft)*(b.right-b.left)/v.width)),String(Math.round(b.top+(p.y-v.offsetTop)*(b.bottom-b.top)/v.height)));
   };
   const before=await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair));
-  await tap('.hsc-rw');
+  // the wardrobe is in the menu (owner request, 5 November 2026)
+  await tap('#hsc-menu-btn');
+  await page.waitForFunction(()=>document.querySelector('#hsc-menu.open .hsc-rw'));
+  await tap('#hsc-menu .hsc-rw');
   await page.waitForFunction(()=>document.querySelector('#hsc-panel.open .hsc-privacy')&&skinFadeStudio.getView().paused);
   await page.evaluate(()=>{
     const style=document.createElement('style');style.id='privacy-capture-stability';

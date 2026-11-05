@@ -234,7 +234,7 @@ function fakeHost() {
     await page.evaluate(()=>{__native.failWrites=false;});passed++;
     // Reward receipts are real-earned only, and one earned ad unlocks the selected daily item.
     const key=await page.evaluate(()=>HSC.wardrobe.data.pick.clipper);
-    await page.locator('#hsc-hud .hsc-rw').click();
+    await page.locator('#hsc-menu-btn').click();await page.locator('#hsc-menu .hsc-rw').click(); // the wardrobe is in the menu
     for(const outcome of['dismiss','fail']){
       await page.evaluate(o=>{__native.outcome=o;},outcome);await page.locator('.hsc-vbtn').click();
       await page.waitForFunction(()=>!document.querySelector('.hsc-vbtn').disabled&&!document.body.inert);
@@ -244,7 +244,7 @@ function fakeHost() {
     await page.waitForFunction(k=>HSC.rewards.owns(k),key);
     await page.evaluate(async()=>(await HSC.youtubeClientPromise).flushProgress());
     await boot();assert.equal(await page.evaluate(k=>HSC.rewards.owns(k),key),true);passed++;
-    await page.locator('#hsc-hud .hsc-rw').click();
+    await page.locator('#hsc-menu-btn').click();await page.locator('#hsc-menu .hsc-rw').click(); // the wardrobe is in the menu
     assert.equal(await page.evaluate(()=>__androidHost.back()),true);
     await page.locator('#hsc-panel.open').waitFor({state:'hidden'});passed++;
     await page.evaluate(()=>__androidHost.pause(true));assert.equal(await page.evaluate(()=>skinFadeStudio.getView().paused),true);
