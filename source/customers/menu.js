@@ -52,7 +52,7 @@
 #hsc-menu .page.back-in{animation:hsc-pageback .42s cubic-bezier(.2,1.3,.4,1)}
 @keyframes hsc-pagein{from{transform:translateX(16%) scale(.96);opacity:0}}
 @keyframes hsc-pageback{from{transform:translateX(-16%) scale(.96);opacity:0}}
-#hsc-menu .home{grid-template-rows:48px minmax(120px,1fr) minmax(180px,1.3fr)}
+#hsc-menu .home{grid-template-rows:48px auto minmax(120px,1fr) minmax(180px,1.3fr)}
 #hsc-menu .modes{grid-template-rows:48px minmax(0,1fr)}
 /* ---- jelly: the shared button ---- */
 #hsc-menu .j{position:relative;box-sizing:border-box;border:3px solid ${K};border-radius:22px;box-shadow:inset 0 -7px 0 #0003,inset 0 3px 0 #fff6,0 6px 0 ${K},0 10px 14px #0005;cursor:pointer;color:${K};font:inherit;padding:0;transition:transform .32s cubic-bezier(.3,1.8,.5,1),box-shadow .2s}
@@ -141,8 +141,8 @@
 /* wide screens (phones on their side, tablets on their side, PC): the play card on the left, the blocks on the right */
 @media (orientation:landscape){
   #hsc-menu .page{max-width:1280px}
-  #hsc-menu .home{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);grid-template-rows:48px minmax(0,1fr)}
-  #hsc-menu .home .top{grid-column:1/3}
+  #hsc-menu .home{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);grid-template-rows:48px auto minmax(0,1fr)}
+  #hsc-menu .home .top,#hsc-menu .home .career{grid-column:1/3}
   #hsc-menu .mgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
   #hsc-menu .mgrid .mode:last-child:nth-child(odd){grid-column:auto}
   #hsc-menu .mgrid .mode:last-child:nth-child(4n+3){grid-column:span 2}
@@ -186,6 +186,7 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       m.innerHTML = `<div class="hold"></div>
         <div class="page home" role="dialog" aria-label="Menu">
           <div class="top"><div class="lvl"><div class="xp"><i></i></div></div><div class="chip flame">${I('flame')}<span></span></div><div class="chip coins">${I('coin')}<bdi></bdi></div><div class="gear"></div></div>
+          <div class="career"></div>
           <button class="j c-green hero" type="button" aria-label="Play"><span class="clip"></span><span class="hin"><img alt=""><span class="go">${I('play')}<span class="hsc-lbl" data-k="play"></span></span></span></button>
           <div class="blocks hsc-same">${BLOCKS.map(([k, c]) => (['wardrobe', 'salon', 'styles'].includes(k)
             ? `<div class="slot" data-b="${k}" data-c="${c}"></div>`
@@ -196,13 +197,14 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
           <div class="mgrid hsc-same"></div>
         </div>`;
       document.body.appendChild(m);
-      m.querySelector('.hero').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('swish'); this.close(); });
+      // Play is the career: it seats the career's customer (or carries on with him)
+      m.querySelector('.hero').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('swish'); this.close(); if (HSC.salon) HSC.salon.reveal('career'); if (HSC.modes && HSC.careerRun && HSC.careerRun.ready()) HSC.modes.set('career'); });
       m.querySelector('[data-b=modes]').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('swish'); this.view('modes'); });
       m.querySelector('[data-b=daily]').addEventListener('click', () => this.play('daily'));
       m.querySelector('[data-b=gift]').addEventListener('click', (e) => { if (!(HSC.gift && HSC.gift.open()) && HSC.nope) HSC.nope(e.currentTarget); });
       m.querySelector('.back').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('back'); this.view('home', true); });
       // back (Escape) closes only the top layer: a panel over the home screen handles it first
-      addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('open') && !e.defaultPrevented && !document.querySelector('#hsc-panel.open,#hsc-goals.open,#hsc-salon.open,.hsc-coll-panel.open,#hsc-set.open,#hsc-gift.open')) { e.preventDefault(); if (!m.querySelector('.modes').hidden) this.view('home', true); else this.close(); } });
+      addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('open') && !e.defaultPrevented && !document.querySelector('#hsc-panel.open,#hsc-goals.open,#hsc-salon.open,.hsc-coll-panel.open,#hsc-set.open,#hsc-gift.open')) { e.preventDefault(); if (m.querySelector('.page.home').hidden) this.view('home', true); else this.close(); } });
       addEventListener('resize', () => { if (m.classList.contains('open')) requestAnimationFrame(() => HSC.fitLabels && HSC.fitLabels(m)); });
       Object.assign(this.el, { btn: b, menu: m, row });
       this.tick();
@@ -223,8 +225,8 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       requestAnimationFrame(() => HSC.fitLabels && HSC.fitLabels(m));
     },
     open() {
-      this.view('home');
       this.el.menu.classList.add('open');
+      this.view('home');
       this.refresh();
       this.portrait();
     },
@@ -238,12 +240,14 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
         if (on && m.classList.contains('open')) { void p.offsetWidth; p.classList.add(back ? 'back-in' : 'in'); }
       }
       if (v === 'modes') this.modes();
+      if (HSC.careerUI) HSC.careerUI.render(v);
       this.labels();
     },
     async play(mode) {
       if (HSC.modes && !HSC.modes.unlocked(mode)) return;
       if (HSC.fx) HSC.fx.play('swish');
       this.close();
+      if (HSC.salon) HSC.salon.reveal(mode);
       if (HSC.modes) await HSC.modes.set(mode);
     },
     // the customer waiting in the chair, rendered by the game
@@ -279,7 +283,7 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
     refresh() {
       const d = HSC.meta && HSC.meta.data, m = this.el.menu;
       if (!d) return;
-      m.querySelectorAll('.coins bdi').forEach((el) => { el.textContent = d.coins || 0; });
+      m.querySelectorAll('.coins bdi').forEach((el) => { el.textContent = HSC.coins ? HSC.coins.get() : d.coins || 0; });
       const streak = HSC.meta.streakNow ? HSC.meta.streakNow() : d.streak || 0;
       m.querySelector('.flame').hidden = !(streak > 0);
       m.querySelector('.flame span').textContent = streak;
@@ -340,7 +344,7 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
   // the features put their buttons in the HUD row; once it exists the home screen takes them in
   const boot = () => { const row = document.querySelector('#hsc-hud .hsc-row'); if (row && document.getElementById('hsc-hud')) ui.build(row); else setTimeout(boot, 200); };
   boot();
-  HSC.menu = { open: () => ui.open(), close: () => ui.close(), view: (v) => ui.view(v) };
+  HSC.menu = { open: () => ui.open(), close: () => ui.close(), view: (v, back) => ui.view(v, back) };
   // the Android back button: close the top panel, then the modes screen back to home; from the chair it opens the home
   // screen; on the home screen it is not handled (Android leaves the app as usual)
   HSC.menuBack = function () {
@@ -353,7 +357,7 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       if (x) { x.click(); return true; }
     }
     if (m.classList.contains('open')) {
-      if (!m.querySelector('.modes').hidden) { ui.view('home', true); return true; }
+      if (m.querySelector('.page.home').hidden) { ui.view('home', true); return true; }
       return false;
     }
     ui.open();

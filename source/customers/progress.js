@@ -4,10 +4,10 @@
 //   unlock bar   every finished customer fills the next clipper or robe a little (8% for 1 star, 12% for 2,
 //                16% for 3). At 100% it is yours; a rewarded video also gives the one after it.
 //   level badge  the barber level on a medal in the top bar; reaching a new level pays 20 coins per level.
-//   calendar     7 tiles (50, 75, 100, 150, 200, 300 coins, then a chest with the next clipper or robe and 100
+//   calendar     7 tiles (20, 25, 30, 35, 40, 50 coins, then a chest with the next clipper or robe and 80
 //                coins), one a day. A missed day pauses the calendar, it never resets. A video doubles a day.
 //   daily tasks  3 small goals a day (fades, beards, regulars, 3-star cuts, customers, tips), 40 coins each;
-//                15 finished in a week open a chest (300 coins and a clipper or robe).
+//                15 finished in a week open a chest (200 coins and a clipper or robe). Values: economy.js.
 // Everything is wordless: icons, numbers, bars and pictures. Saved through the platform storage.
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
@@ -20,7 +20,9 @@
   const weekKey = (d = new Date()) => { const t = new Date(d); t.setHours(0, 0, 0, 0); t.setDate(t.getDate() - ((t.getDay() + 6) % 7)); return dayKey(t); };
   const hash = (str) => { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
 
-  const CAL = [50, 75, 100, 150, 200, 300, 'chest'];
+  // the economy's values (economy.js, balance model section 11): 20..50 coins, then a chest of 80 and an item
+  const CAL = [20, 25, 30, 35, 40, 50, 'chest'];
+  const CHEST_PAY = 80;
   const TASKS = {
     fade: { goal: 3, test: (e) => e.fade },
     beard: { goal: 2, test: (e) => e.beard },
@@ -29,7 +31,7 @@
     customers: { goal: 5, test: () => true },
     tips: { goal: 120, amount: (e) => e.tips },
   };
-  const TASK_PAY = 40, WEEK_GOAL = 15, WEEK_PAY = 300;
+  const TASK_PAY = 25, WEEK_GOAL = 15, WEEK_PAY = 200;
 
   // ---- saved state ----
   let P = null, client = null;
@@ -118,7 +120,8 @@
   }
 
   // rewards from goals (tips from customers count toward the tips task in afterCut)
-  const pay = (n) => HSC.coins.add(n);
+  // every claim is one idempotent transaction keyed by its claim id (economy.js)
+  const pay = (n, cat, key) => HSC.coins.add(n, cat, key);
 
   // ---- the calendar ----
   const calReady = () => !!P && P.cal.last !== dayKey();
@@ -126,8 +129,8 @@
     if (!calReady()) return null;
     const tile = CAL[P.cal.idx];
     let item = null;
-    if (tile === 'chest') { pay(100); const k = nextPrize(); if (k && A().award(k, 'calendar')) item = k; }
-    else pay(tile);
+    if (tile === 'chest') { pay(CHEST_PAY, 'calendar', 'calendar:' + dayKey()); const k = nextPrize(); if (k && A().award(k, 'calendar')) item = k; }
+    else pay(tile, 'calendar', 'calendar:' + dayKey());
     P.cal.last = dayKey();
     P.cal.claimedIdx = P.cal.idx;
     P.cal.idx = (P.cal.idx + 1) % CAL.length;
@@ -140,7 +143,7 @@
     const ok = HSC.watchVideo ? await HSC.watchVideo('double-daily') : false;
     if (ok && P.cal.doubled !== dayKey()) {
       const i = (P.cal.idx + CAL.length - 1) % CAL.length, tile = CAL[i];
-      pay(tile === 'chest' ? 100 : tile);
+      pay(tile === 'chest' ? CHEST_PAY : tile, 'rewarded', 'calendar-double:' + dayKey()); // a video doubles the coin portion only
       P.cal.doubled = dayKey();
       save();
     } else if (!ok) HSC.nope && HSC.nope(btn);
@@ -283,7 +286,7 @@
       pn.querySelectorAll('.tasks .claim').forEach((btn) => btn.addEventListener('click', () => {
         const t = P.tasks.list[+btn.closest('.row').dataset.i];
         if (!t || t.claimed || !taskDone(t)) return;
-        t.claimed = true; P.week.done++; pay(TASK_PAY); save(); this.burst(btn); this.panel(); this.button();
+        t.claimed = true; P.week.done++; pay(TASK_PAY, 'goal', 'goal:' + dayKey() + ':' + t.k); save(); this.burst(btn); this.panel(); this.button();
       }));
       // week
       const w = pn.querySelector('.week');
@@ -295,7 +298,7 @@
     openWeek() {
       if (!(P.week.done >= WEEK_GOAL && !P.week.opened)) return;
       P.week.opened = true;
-      pay(WEEK_PAY);
+      pay(WEEK_PAY, 'weekly', 'weekly:' + P.week.key);
       const k = nextPrize();
       if (k) A().award(k, 'week');
       save();
@@ -353,13 +356,14 @@
       if (this.won) this.showPrize(this.won, this.prizeFrom || 0, 100, true);
       else if (P.prize) this.showPrize(P.prize.key, this.prizeKey === P.prize.key && this.prizeFrom != null ? this.prizeFrom : P.prize.pct, P.prize.pct, false);
       else this.el.prize.hidden = true;
-      // a new level: the medal and 20 coins per level
+      // a new level: the medal and the economy's one-time level coins (50 / 75 / 100; none after level 12)
       const lv = M().level();
       if (lv > P.level) {
         const gained = lv - Math.max(1, P.level);
-        if (P.level > 0 && gained > 0) pay(20 * lv);
+        let got = 0;
+        if (P.level > 0 && gained > 0) for (let l = Math.max(2, P.level + 1); l <= lv; l++) { const n = HSC.economy ? HSC.economy.levelReward(l) : 0; if (n) { pay(n, 'level', 'level:' + l); got += n; } }
         P.level = lv; save();
-        if (gained > 0) { this.el.lvl.innerHTML = MEDAL(lv) + '<span>+' + 20 * lv + '</span>' + COIN(26); this.el.lvl.hidden = false; }
+        if (gained > 0) { this.el.lvl.innerHTML = MEDAL(lv) + (got ? '<span>+' + got + '</span>' + COIN(26) : ''); this.el.lvl.hidden = false; }
       } else this.el.lvl.hidden = true;
     },
     tick() {

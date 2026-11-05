@@ -46,8 +46,8 @@
       if (!ok) return false;
       n *= 2;
     }
+    if (HSC.coins) HSC.coins.add(n, 'gift', 'gift:' + g.day + ':' + g.got); // keyed: a repeated claim pays once
     g.got++;
-    if (HSC.coins) HSC.coins.add(n);
     M().save();
     return n;
   }

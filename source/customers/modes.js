@@ -22,7 +22,7 @@
   const INK = '#10223f';
   const M = () => HSC.meta, G = () => globalThis.skinFadeStudio;
   const LIST = ['requests', 'free', 'fix', 'daily', 'beard', 'relax', 'rush'];
-  const LEVEL = { requests: 1, free: 1, fix: 2, daily: 2, beard: 2, relax: 3, rush: 4 };
+  const LEVEL = { career: 1, requests: 1, free: 1, fix: 2, daily: 2, beard: 2, relax: 3, rush: 4 };
   const data = () => {
     const d = M() && M().data;
     if (!d) return null;
@@ -31,7 +31,9 @@
   };
   const level = () => (M() && M().data ? M().level() : 1);
   const unlocked = (m) => level() >= LEVEL[m];
-  const current = () => { const md = data(); const m = md && LIST.includes(md.mode) ? md.mode : 'requests'; return unlocked(m) ? m : 'requests'; };
+  // 'career' (career-run.js) is the main game; the listed modes are also playable on their own
+  const CR = () => HSC.careerRun && HSC.careerRun.ready() ? HSC.careerRun : null;
+  const current = () => { const md = data(); if (md && md.mode === 'career' && CR()) return 'career'; const m = md && LIST.includes(md.mode) ? md.mode : 'requests'; return unlocked(m) ? m : 'requests'; };
   const hash = (str) => { let h = 2166136261; for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619); return h >>> 0 || 1; };
   const today = () => (M() && M().today ? M().today() : new Date().toISOString().slice(0, 10));
   const K = () => HSC.requestKit;
@@ -165,6 +167,7 @@
     const pfj = HSC.personForJob;
     HSC.personForJob = function (s, seed) {
       const d = M() && M().data, m = current();
+      if (m === 'career') { const p = CR().person(s.jobId); if (p) return p; }
       if (wantsPerson(m) && !(d && d.queue && d.queue.job === s.jobId)) { const p = modePerson(m, s.jobId, seed); if (p) return p; }
       return pfj.apply(this, arguments);
     };
@@ -191,6 +194,7 @@
       const m = current(), lv = level();
       // the ritual in order, as far as the barber's level has the services (services.js unlock levels)
       const AT = { towel: 2, lather: 9, massage: 3, aftershave: 1, talc: 3, pomade: 4 };
+      if (m === 'career') { const c = CR().services(p, job); if (c) return c; }
       if (m === 'relax') return ['towel', 'lather', 'massage', 'aftershave', 'talc', 'pomade'].filter((k) => (k !== 'lather' || p.beard.style === 'clean' || /^stubble/.test(p.beard.style)) && lv >= AT[k]).slice(0, 4);
       if (m === 'beard') return ['towel'];
       return sw.apply(this, arguments);
@@ -198,6 +202,7 @@
   }
   function start(s) {
     const m = current(), md = data();
+    if (m === 'career') return CR().start(s);
     if (!md || !s || s.status !== 'cutting' || s.cutStrokeCount || !s.look || !s.look.person || s.look.person.first) return null;
     if (md.job && md.job.n === s.jobId) return null; // this job's start is already made (also after a reload)
     const p = s.look.person;
@@ -230,6 +235,7 @@
   const reqCache = { key: null, val: undefined };
   function request(s) {
     const m = current(), md = data(), p = s.look && s.look.person;
+    if (m === 'career') { const r = CR().request(s); if (r !== undefined) return r; }
     if (m === 'free' || m === 'relax') return null;
     if (p && p.challenge) {
       // the daily challenge: the same cut for everyone today
@@ -252,17 +258,20 @@
   // ---- tips and results ----
   const rush = { job: null, t0: 0, LIMIT: 45000 };
   const timeLeft = () => (rush.job == null ? 0 : Math.max(0, rush.LIMIT - (performance.now() - rush.t0)));
-  function tips(base, stars, s) {
+  // the economy (economy.js) prices every mode by its fee: no mode multiplies tips any more
+  function tips(base) { return base; }
+  // what the economy needs to know about this job's mode: the kind, a Rush time bonus (0-12), a first Daily
+  function econJob(s) {
     const m = current(), p = s.look && s.look.person, md = data();
-    if (p && p.challenge) return md && md.daily && md.daily.day === p.challenge && md.daily.paid ? base : base * 2;
-    if (m === 'fix') return Math.round(base * 1.5);
-    if (m === 'beard') return Math.round(base * 1.2);
-    if (m === 'rush' && rush.job === s.jobId) return base + Math.ceil(timeLeft() / 3000);
-    return base;
+    const out = { kind: m === 'daily' || m === 'requests' || m === 'career' ? 'requests' : m };
+    if (p && p.challenge) { out.kind = 'requests'; out.dailyFirst = !(md && md.daily && md.daily.day === p.challenge && md.daily.paid); }
+    if (m === 'rush' && rush.job === s.jobId) out.rushBonus = Math.round(12 * timeLeft() / rush.LIMIT);
+    return out;
   }
   function done(s, stars) {
     const md = data(), p = s.look && s.look.person;
     if (!md) return;
+    if (current() === 'career') CR().done(s, stars);
     if (p && p.challenge) {
       const was = md.daily && md.daily.day === p.challenge ? md.daily : null;
       md.daily = { day: p.challenge, stars: Math.max(was ? was.stars : 0, stars), paid: true };
@@ -270,15 +279,15 @@
     }
     if (current() === 'rush' && rush.job === s.jobId) {
       rush.job = null;
-      md.rush = (md.rush || 0) + 1;
-      if (md.rush % 3 === 0 && HSC.coins) { HSC.coins.add(50); ui.toast('round'); }
+      md.rush = (md.rush || 0) + 1; // (the economy pays Rush by its fee and time bonus; no round bonus)
     }
   }
 
   // ---- switching ----
   async function setMode(m) {
     const md = data(), g = G();
-    if (!md || !LIST.includes(m) || !unlocked(m)) return false;
+    if (m === 'career') { if (!CR()) return false; await CR().ensure(); }
+    else if (!md || !LIST.includes(m) || !unlocked(m)) return false;
     const was = current();
     md.mode = m;
     md.tried = Array.isArray(md.tried) ? md.tried : [];
@@ -288,7 +297,7 @@
     if (!g) return true;
     const s = g.getState();
     // a new customer for the new mode (the one in the chair keeps his cut in freestyle and the career)
-    const keep = s.status === 'cutting' && was === m && m !== 'daily';
+    const keep = s.status === 'cutting' && was === m && m !== 'daily' && (m !== 'career' || !!(CR().active() && CR().active().job === s.jobId));
     if (!keep && s.status === 'cutting' && g.skip) { md.job = null; if (M().data.queue && M().data.queue.job === s.jobId + 1) M().data.queue = null; await g.skip(); }
     else if (!keep && s.status === 'reveal' && g.next) { if (M().data.queue && M().data.queue.job === s.jobId + 1) M().data.queue = null; await g.next(); }
     return true;
@@ -375,9 +384,11 @@ body.hsc-reveal #hsc-rush,body.hsc-reveal #hsc-newc,body.hsc-spin #hsc-newc{disp
   boot();
   HSC.modes = {
     current, unlocked, list: LIST, level: LEVEL, set: setMode, newCustomer,
-    request: (s) => request(s), tips, done, beardStars,
-    unscored: () => { const m = current(); return m === 'free' || m === 'relax'; },
+    request: (s) => request(s), tips, done, beardStars, econJob,
+    unscored: () => { const m = current(); return m === 'free' || m === 'relax' || (m === 'career' && CR().unscored()); },
     icon: (m) => ICON[m],
+    // the job builders, for the career catalog (career-catalog.js)
+    build: { options, disaster, tidy, beardJob, beardGrid },
     // today's daily challenge: done (and its best stars) or not
     // a mode just unlocked and not played yet
     isNew: (m) => { const md = data(); return m !== 'requests' && unlocked(m) && !(md && Array.isArray(md.tried) && md.tried.includes(m)); },

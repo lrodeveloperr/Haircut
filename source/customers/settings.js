@@ -80,7 +80,7 @@
 
   const CSS = `
 #hsc-set-btn svg{width:40px;height:40px}
-#hsc-set{position:fixed;inset:0;z-index:30;display:none;background:#0d3f86b8;font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color:${INK};touch-action:manipulation;zoom:var(--hsc-s,1)}
+#hsc-set{position:fixed;inset:0;z-index:32;display:none;background:#0d3f86b8;font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color:${INK};touch-action:manipulation;zoom:var(--hsc-s,1)}
 #hsc-set.open{display:flex;align-items:flex-end;justify-content:center}
 #hsc-set .sheet{position:relative;width:min(100%,520px);max-height:92%;overflow-y:auto;display:flex;flex-direction:column;gap:10px;background:#fff6e6;border:3px solid ${INK};border-bottom:0;border-radius:26px 26px 0 0;box-shadow:0 -4px 0 ${INK};padding:14px max(14px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
 @media (orientation:landscape){#hsc-set.open{align-items:center}#hsc-set .sheet{border-radius:26px;border-bottom:3px solid ${INK};box-shadow:0 5px 0 ${INK}}}
@@ -98,6 +98,11 @@
 #hsc-set input[type=range]{flex:1;height:48px;margin:0;background:transparent;-webkit-appearance:none;appearance:none;touch-action:none}
 #hsc-set input[type=range]::-webkit-slider-runnable-track{height:12px;border-radius:6px;background:#e9dcc4;border:2.5px solid ${INK}}
 #hsc-set input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:40px;height:40px;margin-top:-16px;border-radius:50%;background:#ffb627;border:3px solid ${INK};box-shadow:0 3px 0 ${INK}}
+#hsc-set .row.nm input{flex:1;min-width:0;height:48px;box-sizing:border-box;border-radius:14px;border:3px solid ${INK};background:#fff;padding:0 12px;font:900 20px "Arial Rounded MT Bold","Nunito",system-ui,sans-serif;color:${INK};letter-spacing:.5px;unicode-bidi:plaintext}
+#hsc-set .row.nm input:focus{outline:none;border-color:#3aa2f2;box-shadow:0 0 0 4px #3aa2f233}
+#hsc-set .row.nm .cnt{flex:none;min-width:44px;text-align:end;font:700 14px system-ui,sans-serif;opacity:.55;font-variant-numeric:tabular-nums}
+#hsc-set .row.nm.bad input{border-color:#f04436;animation:hsc-shake .3s}
+@keyframes hsc-shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 #hsc-set .sw{position:relative;width:88px;height:48px;border-radius:24px;border:3px solid ${INK};background:#e9dcc4;cursor:pointer;padding:0;flex:none}
 #hsc-set .sw .k{position:absolute;top:3px;left:3px;width:36px;height:36px;border-radius:50%;background:#fff;border:2.5px solid ${INK};display:flex;align-items:center;justify-content:center;transition:left .15s}
 #hsc-set .sw[aria-checked=true]{background:#8fd18f}
@@ -130,6 +135,7 @@ body.hsc-calm #hsc-pulse.on path{animation:none!important;opacity:1}
       const p = document.createElement('div'); p.id = 'hsc-set';
       p.innerHTML = `<div class="sheet" role="dialog" aria-label="Settings">
         <div class="head"><span class="ic">${GEAR}</span><button class="x" type="button" aria-label="Close">${CLOSE}</button></div>
+        <div class="row nm" hidden><span class="ic"></span><input type="text" maxlength="64" enterkeyhint="done" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Shop name"><span class="cnt"></span></div>
         <div class="row"><div class="hands">
           <button class="hand" type="button" data-left="1" aria-label="Left-handed">${HAND(true)}<span class="ok">${TICK}</span></button>
           <button class="hand" type="button" data-left="0" aria-label="Right-handed">${HAND(false)}<span class="ok">${TICK}</span></button></div></div>
@@ -146,6 +152,15 @@ body.hsc-calm #hsc-pulse.on path{animation:none!important;opacity:1}
       p.querySelectorAll('.hand').forEach((b) => b.addEventListener('click', () => set('left', b.dataset.left === '1')));
       p.querySelectorAll('input[type=range]').forEach((r) => r.addEventListener('input', () => set(r.dataset.k, +r.value)));
       p.querySelectorAll('.sw').forEach((b) => b.addEventListener('click', () => set(b.dataset.k, !get()[b.dataset.k])));
+      // the shop's name (salon.js): shown on the TV and when a session opens; at most 16 letters in any script
+      const nm = p.querySelector('.row.nm'), inp = nm.querySelector('input'), cnt = nm.querySelector('.cnt');
+      let wait = 0;
+      const count = () => { const S = HSC.salon; if (!S) return; let v = inp.value; const segs = typeof Intl !== 'undefined' && Intl.Segmenter ? [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(v)].map((x) => x.segment) : Array.from(v); if (segs.length > S.NAME_MAX) { v = segs.slice(0, S.NAME_MAX).join(''); inp.value = v; } cnt.textContent = Math.min(segs.length, S.NAME_MAX) + '/' + S.NAME_MAX; };
+      const commit = () => { const S = HSC.salon; if (!S) return; const want = inp.value.trim(), got = S.setName(want); const def = HSC.t ? HSC.t('shopname') : ''; nm.classList.toggle('bad', !!want && !got && want !== def); if (want && !got && want !== def) { inp.value = S.shown(); count(); } };
+      inp.addEventListener('input', () => { nm.classList.remove('bad'); count(); clearTimeout(wait); wait = setTimeout(commit, 700); });
+      inp.addEventListener('change', () => { clearTimeout(wait); commit(); });
+      inp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { inp.blur(); } });
+      inp.addEventListener('keyup', (e) => e.stopPropagation());
       addEventListener('keydown', (e) => { if (e.key === 'Escape' && p.classList.contains('open')) { e.preventDefault(); this.close(); } });
       const pulse = document.createElement('div'); pulse.id = 'hsc-pulse'; pulse.setAttribute('aria-hidden', 'true'); pulse.innerHTML = WAVES(36);
       document.body.appendChild(pulse);
@@ -159,7 +174,12 @@ body.hsc-calm #hsc-pulse.on path{animation:none!important;opacity:1}
       p.querySelectorAll('input[type=range]').forEach((r) => { if (+r.value !== s[r.dataset.k]) r.value = s[r.dataset.k]; });
       p.querySelectorAll('.sw').forEach((b) => { const on = !!s[b.dataset.k]; b.setAttribute('aria-checked', String(on)); b.querySelector('.k').innerHTML = on ? TICK : CROSS; });
     },
-    open() { this.render(); this.el.panel.classList.add('open'); },
+    open() {
+      this.render();
+      const nm = this.el.panel.querySelector('.row.nm');
+      if (HSC.salon) { nm.hidden = false; nm.querySelector('.ic').innerHTML = HSC.icon ? HSC.icon('salon', 34) : ''; const inp = nm.querySelector('input'); if (document.activeElement !== inp) inp.value = HSC.salon.shown(); inp.placeholder = HSC.t ? HSC.t('shopname') : 'Barbershop'; nm.querySelector('.cnt').textContent = HSC.salon.graphemes(inp.value) + '/' + HSC.salon.NAME_MAX; }
+      this.el.panel.classList.add('open');
+    },
     close() { this.el.panel.classList.remove('open'); },
     tick() {
       // the settings button goes in the HUD row; the menu (menu.js) takes it in as a tile

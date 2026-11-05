@@ -151,15 +151,22 @@
   const tipsFor = (p, stars) => (stars ? (10 + 5 * stars + (p && p.regular ? 5 : 0)) * (p && p.vip ? 2 : 1) : 0);
 
   // ---- coins ----
-  const coins = () => (M() && M().data ? M().data.coins || 0 : 0);
-  function addCoins(n) {
+  // the balance lives in the economy (economy.js, kept in the career journal) once it is up; until then (and in
+  // other builds) the progress save holds it
+  const EC = () => (HSC.econ && HSC.econ.ready() ? HSC.econ : null);
+  const coins = () => (EC() ? EC().balance() : M() && M().data ? M().data.coins || 0 : 0);
+  let miscKey = 0;
+  function addCoins(n, cat, key) {
+    if (!(n > 0)) return;
+    if (EC()) { EC().earn(key || 'misc:' + Date.now().toString(36) + ':' + (miscKey++), cat || 'misc', Math.round(n)).then(() => ui.coinPill(true)); return; }
     const d = M() && M().data;
-    if (!d || !(n > 0)) return;
+    if (!d) return;
     d.coins = Math.min(99999999, (d.coins || 0) + Math.round(n));
     M().save();
     ui.coinPill(true);
   }
-  HSC.coins = { get: coins, add: addCoins };
+  function spendCoins(price, cat, key) { if (EC()) return EC().spend(key, cat, price).then((ok) => { ui.coinPill(true); return ok; }); const d = M().data; d.coins -= price; M().save(); return Promise.resolve(true); }
+  HSC.coins = { get: coins, add: addCoins, spend: spendCoins };
 
   // a finished haircut: score it and pay (once per customer; a replay with more stars pays the extra stars)
   const done = HSC.onHaircutDone;
@@ -175,6 +182,8 @@
     const stars = free ? (s.cutStrokeCount > 0 ? 1 : 0) : starsFor(s), p = s.look && s.look.person;
     const last = d.lastRound && d.lastRound.job === s.jobId ? d.lastRound : null;
     const svc = HSC.serviceTips ? HSC.serviceTips(s.jobId, wanted(s)) : { coins: 0, done: [] };
+    // the economy pays the job (economy.js): fee - cost + services + tip (stars, regular, VIP, combo; capped)
+    if (EC() && HSC.economy) { econRound(s, d, stars, free, p, last, svc); return finishRound(s, d, stars, free, svc); }
     let base = free ? (stars ? 10 + svc.coins : 0) : tipsFor(p, stars) + (stars ? svc.coins : 0);
     if (HSC.modes && stars) base = HSC.modes.tips(base, stars, s);
     if (!last) {
@@ -192,6 +201,34 @@
       Object.assign(last, { stars, tips, mult, paid: last.paid + Math.max(0, extra) });
       addCoins(Math.max(0, extra) * (last.tripled ? 3 : 1));
     }
+    return finishRound(s, d, stars, free, svc);
+  }
+  // the economy's round: one idempotent transaction per job (career jobs pay inside the career's own commit)
+  function econRound(s, d, stars, free, p, last, svc) {
+    const careerJob = HSC.careerRun && HSC.careerRun.active() && HSC.careerRun.active().job === s.jobId ? HSC.careerRun.active() : null;
+    const mj = HSC.modes ? HSC.modes.econJob(s) : { kind: 'requests' };
+    const kind = careerJob ? (careerJob.role === 'showcase' ? 'showcase' : careerJob.mode) : HSC.modes && HSC.modes.current() === 'free' ? 'free' : mj.kind;
+    const valid = kind === 'relax' ? svc.done.length > 0 : s.cutStrokeCount > 0;
+    const asked = wanted(s), doneAsked = svc.done.filter((k) => asked.includes(k)).length;
+    const prev = d.combo || 0;
+    const combo = free || kind === 'relax' ? 0 : stars === 3 ? prev + 1 : 0;
+    const job = { kind, stars, valid, regular: !!(p && p.regular) || !!(careerJob && careerJob.regular), vip: !!(p && p.vip), combo, servicesRequested: asked, servicesDone: svc.done, relaxShare: asked.length ? doneAsked / asked.length : svc.done.length ? 1 : 0, rushBonus: mj.rushBonus || 0, dailyFirst: !!mj.dailyFirst };
+    const key = careerJob ? careerJob.id : 'job:' + (d.firstDay || '') + ':' + s.jobId;
+    const pay = HSC.economy.payout(job);
+    if (!last) {
+      if (!free && kind !== 'relax') d.combo = combo; // Relax and Freestyle pause the combo
+      d.lastRound = { job: s.jobId, key, stars, tips: pay.tip, tip: pay.tip, paid: pay.total, lines: pay.lines, tripled: false, prev, mult: HSC.economy.CONFIG.combo[Math.min(combo, 4)] || 1, free: free || kind === 'free' };
+      HSC.lastJob = { key, job, s };
+      if (!careerJob && valid && pay.total) EC().payJob(key, job).then(() => ui.coinPill(true));
+    } else if (stars > last.stars && valid) {
+      // a replay pays only the positive tip difference, never a second fee
+      const extra = pay.tip - (last.tip || 0);
+      if (extra > 0) { EC().earn(last.key + ':replay:' + stars, 'job', extra).then(() => ui.coinPill(true)); last.paid += extra; last.tip = pay.tip; last.tips = pay.tip; last.lines = pay.lines; }
+      last.stars = stars;
+      if (stars === 3 && !free) d.combo = (last.prev || 0) + 1;
+    }
+  }
+  function finishRound(s, d, stars, free, svc) {
     d.lastRound.shownStars = stars;
     // the lookbook keeps the best stars for each cut asked for
     const r = HSC.requestFor(s);
@@ -284,13 +321,16 @@
   async function triple() {
     const d = M() && M().data, b = ui.el.x3;
     const last = d && d.lastRound;
-    if (!last || last.tripled || !last.paid || b.disabled) return;
+    if (!last || last.tripled || !(last.key ? last.tip : last.paid) || b.disabled) return;
     b.disabled = true;
     const ok = HSC.watchVideo ? await HSC.watchVideo('triple-tips') : false;
     if (ok && d.lastRound === last && !last.tripled) {
       last.tripled = true;
-      addCoins(last.paid * 2);
-      ui.coinBurst(last.paid * 2, b);
+      // the economy triples the disclosed tip only (two more tips; keyed so a repeated callback pays once)
+      const add = EC() && last.key ? 2 * (last.tip || 0) : last.paid * 2;
+      if (EC() && last.key) EC().triple(last.key, last.tip || 0).then(() => ui.coinPill(true)); else addCoins(add);
+      if (last.key) last.paid += add; // the economy's round shows the running total; the old round multiplies on show
+      ui.coinBurst(add, b);
     } else if (!ok) { HSC.nope && HSC.nope(b); b.disabled = false; }
     ui.scoreView();
   }
@@ -342,6 +382,11 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
 #hsc-score .stars svg:nth-child(3){animation-delay:.5s}
 @keyframes hsc-starin{to{transform:scale(1)}}
 #hsc-score .row{display:flex;gap:10px;align-items:center}
+#hsc-score .rcpt{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;max-width:300px;direction:ltr}
+#hsc-score .rcpt span{display:flex;align-items:center;gap:3px;height:28px;padding:0 9px 0 5px;border-radius:14px;background:#fff6e6;border:2px solid ${INK};font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;opacity:0;animation:hsc-rcpt .3s ease-out forwards}
+#hsc-score .rcpt span.neg{background:#e9eef6;color:#4a5872}
+#hsc-score .rcpt svg{width:20px;height:20px}
+@keyframes hsc-rcpt{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 #hsc-score .tip{display:flex;gap:6px;align-items:center;height:48px;padding:0 14px 0 10px;border-radius:24px;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};font-weight:900;font-size:22px;font-variant-numeric:tabular-nums}
 #hsc-score .x3{pointer-events:auto;position:relative;display:flex;gap:4px;align-items:center;height:52px;padding:0 16px 0 10px;border-radius:26px;background:#ffb627;border:3px solid ${INK};box-shadow:0 4px 0 ${INK};font-weight:900;font-size:24px;color:${INK};cursor:pointer;animation:hsc-rbreathe 1.3s ease-in-out infinite}
 #hsc-score .x3:disabled{animation:none;opacity:.55;cursor:default}
@@ -364,10 +409,10 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
       undoEl.addEventListener('click', doUndo);
       const score = document.createElement('div'); score.id = 'hsc-score'; score.hidden = true;
       score.innerHTML = `<div class="stars"></div><div class="svc"></div><div class="row"><div class="tip">${COIN(28)}<span></span><div class="hsc-combo" hidden>${FLAME(20)}<b></b></div></div>
-        <button class="x3" type="button" aria-label="Watch a video to triple the tips">${COIN(30)}<span>×3</span><span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}</span></button></div>`;
+        <button class="x3" type="button" aria-label="Watch a video to triple the tips">${COIN(30)}<span>×3</span><span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}</span></button></div><div class="rcpt"></div>`;
       score.querySelector('.x3').addEventListener('click', triple);
       document.body.append(reqEl, undoEl, score);
-      Object.assign(this.el, { req: reqEl, undo: undoEl, score, stars: score.querySelector('.stars'), tip: score.querySelector('.tip span'), tipCombo: score.querySelector('.tip .hsc-combo'), x3: score.querySelector('.x3') });
+      Object.assign(this.el, { rcpt: score.querySelector('.rcpt'), req: reqEl, undo: undoEl, score, stars: score.querySelector('.stars'), tip: score.querySelector('.tip span'), tipCombo: score.querySelector('.tip .hsc-combo'), x3: score.querySelector('.x3') });
       const scene = document.getElementById('scene') || document;
       scene.addEventListener('pointerdown', onDown, true);
       addEventListener('pointerup', onUp, true);
@@ -470,13 +515,21 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
         this.starKey = key + ':' + !!last.free;
         this.el.stars.innerHTML = last.free ? '' : [1, 2, 3].map((n) => STAR(n <= stars)).join('');
       }
-      this.el.tip.textContent = '+' + last.paid * (last.tripled ? 3 : 1);
+      this.el.tip.textContent = '+' + (last.key ? last.paid : last.paid * (last.tripled ? 3 : 1));
       const ct = this.el.tipCombo, m = last.mult || 1;
       ct.hidden = !(m > 1);
       if (m > 1) ct.querySelector('b').textContent = '×' + m;
       const sv = this.el.score.querySelector('.svc'), key2 = (this.svcDone || []).join();
       if (sv.dataset.k !== key2) { sv.dataset.k = key2; sv.innerHTML = (this.svcDone || []).map((k) => `<span>${(HSC.SERVICE_ICON || {})[k] || ''}</span>`).join(''); }
-      const canX = !last.tripled && last.paid > 0 && !!(HSC.canVideo && HSC.canVideo());
+      // the exact breakdown (economy): fee, costs, services, tip and bonuses, each with its sign
+      const rk = last.key && last.lines ? last.job + ':' + last.paid + ':' + last.tripled : '';
+      if (this.el.rcpt.dataset.k !== rk) {
+        this.el.rcpt.dataset.k = rk;
+        const IC = { fee: 'salon', services: 'relax', rush: 'rush', demand: 'flame', daily: 'daily', triple: 'video' };
+        const lines = rk ? last.lines.concat(last.tripled ? [['triple', 2 * (last.tip || 0)]] : []) : [];
+        this.el.rcpt.innerHTML = lines.filter((l) => l[1]).map(([k, v], i) => `<span class="${v < 0 ? 'neg' : ''}" style="animation-delay:${0.6 + i * 0.08}s">${k === 'tip' ? STAR(true) : IC[k] && HSC.icon ? HSC.icon(IC[k], 20) : ''}${v > 0 ? '+' : '−'}${Math.abs(v)}</span>`).join('');
+      }
+      const canX = !last.tripled && (last.key ? last.tip > 0 : last.paid > 0) && !!(HSC.canVideo && HSC.canVideo());
       this.el.x3.hidden = !canX && !last.tripled;
       this.el.x3.disabled = !canX;
     },
