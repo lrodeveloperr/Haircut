@@ -26,6 +26,8 @@
 #hsc-menu .tiles .hsc-btn .hsc-dot{right:-6px;top:-6px;width:20px;height:20px}
 @media (prefers-reduced-motion:reduce){#hsc-menu .card{animation:none}}
 body.hsc-reveal #hsc-menu-btn{visibility:hidden}
+/* a feature button that appears in the top row before the menu takes it in is never shown there */
+#hsc-hud .hsc-row .hsc-rw,#hsc-hud .hsc-row #hsc-goals-btn,#hsc-hud .hsc-row #hsc-salon-btn{display:none!important}
 `;
   const ui = {
     el: {}, moved: new Set(),
@@ -44,6 +46,9 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       m.addEventListener('click', (e) => { if (e.target === m) this.close(); else if (e.target.closest('.tiles .hsc-btn')) this.close(); });
       addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('open')) { e.preventDefault(); this.close(); } });
       Object.assign(this.el, { btn: b, menu: m, tiles: m.querySelector('.tiles'), card: m.querySelector('.card'), row });
+      this.tick();
+      // take each feature button in as soon as it is added (no visible move in the top row)
+      try { new MutationObserver(() => this.tick()).observe(row, { childList: true }); } catch (e) {}
       setInterval(() => this.tick(), 250);
     },
     open() {
