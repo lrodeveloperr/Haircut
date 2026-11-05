@@ -8,10 +8,12 @@ const {chromium} = require('playwright');
 const root = path.resolve(__dirname, '../..'), build = path.join(root, 'source/build');
 const out = path.join(root, 'qa/results'); fs.mkdirSync(out, {recursive:true});
 const hash = p => crypto.createHash('sha256').update(fs.readFileSync(path.join(root,p))).digest('hex');
+// pins re-approved by the owner on 5 November 2026 for feature/head-shapes-36 (renderer and wardrobe hooks for the
+// approved Android features); android/clipper-input.js is unchanged since its October approval
 const frozen = {
   'android/clipper-input.js':'231830bf96d9e63b8a30832d75ca45399fb85e31affb8a02d47c4b7bdea115ca',
-  'source/build/runtime/game.js':'d553e1a9109cbf79aae7d8f4b051e71c58244e4a729fcbdf953a4f26b62f590b',
-  'source/customers/wardrobe.js':'82c57c8d2debee22a8817e52654709889587c5ffd39a326c2603505748f5d4a8',
+  'source/build/runtime/game.js':'489f971e82774b6e882b64ead1120bfa50eff981579f7bd8f446d062cd466490',
+  'source/customers/wardrobe.js':'b6b0cb1d438cb8da4f4a0ca754a27ca02e2df25cffd4811835608420ab0948e6',
 };
 for(const [p,expected] of Object.entries(frozen)) assert.equal(hash(p),expected,'owner-approved source must remain byte-identical: '+p);
 const types = {'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp','.json':'application/json'};
