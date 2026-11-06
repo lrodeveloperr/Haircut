@@ -43,7 +43,7 @@
     const out = [];
     for (const st of K().STYLES) {
       if (st.fam === 'trim') continue;
-      const w = K().suit(st, person);
+      const w = K().askFor(st, person, start);
       if (!w) continue;
       const t = K().targetFor(st, start);
       if (K().worthCutting(start, t)) out.push([w, st, t]);
@@ -87,7 +87,7 @@
     const at = () => cut[Math.floor(R.next() * cut.length)];
     const KINDS = {
       // a clipper slipped: a deep oval hole
-      gouge() { const c = at(), u0 = U(c), v0 = V(c), ru = R.range(0.035, 0.06), rv = R.range(0.08, 0.13); for (const i of cut) { const a = du(U(i), u0) / ru, b = (V(i) - v0) / rv; if (a * a + b * b < 1) lower(i); } },
+      gouge() { const c = at(), u0 = U(c), v0 = V(c), ru = R.range(0.05, 0.08), rv = R.range(0.11, 0.17); for (const i of cut) { const a = du(U(i), u0) / ru, b = (V(i) - v0) / rv; if (a * a + b * b < 1) lower(i); } },
       // one side done, the other not
       side() { const u0 = R.next(), w = R.range(0.22, 0.32); for (const i of cut) if (du(U(i), u0) < w) lower(i); },
       // a ring cut at the wrong height: a step
@@ -97,7 +97,7 @@
       // bites taken out here and there
       chunks() { const n = R.int(5, 8); for (let k = 0; k < n; k++) { const c = at(), u0 = U(c), v0 = V(c), r = R.range(0.02, 0.035); for (const i of cut) { const a = du(U(i), u0) / r, b = (V(i) - v0) / (r * 2.2); if (a * a + b * b < 1) lower(i); } } },
       // parallel clipper tracks: guard lines left down the head
-      tracks() { const u0 = R.next(), n = R.int(3, 5), gap = R.range(0.03, 0.05), w = R.range(0.007, 0.012); for (const i of cut) for (let k = 0; k < n; k++) if (du(U(i), (u0 + k * gap) % 1) < w) lower(i); },
+      tracks() { const u0 = R.next(), n = R.int(3, 5), gap = R.range(0.05, 0.075), w = R.range(0.012, 0.02); for (const i of cut) for (let k = 0; k < n; k++) if (du(U(i), (u0 + k * gap) % 1) < w) lower(i); },
       // the job left unfinished: done everywhere except a few missed patches
       missed() { const ps = Array.from({ length: R.int(3, 5) }, () => { const c = at(); return [U(c), V(c), R.range(0.03, 0.05)]; }); for (const i of cut) if (!ps.some(([u0, v0, r]) => { const a = du(U(i), u0) / r, b = (V(i) - v0) / (r * 2); return a * a + b * b < 1; })) lower(i); },
       // a crooked neckline: the nape taken up unevenly

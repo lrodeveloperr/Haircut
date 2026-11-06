@@ -500,7 +500,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
       // even shadow of short stubble, fuller as it grows; only a soft, low-frequency variation
       float bcov = smoothstep(.1, 1.2, bmm) * mix(.72, 1.0, smoothstep(1.5, 4.0, bmm));
       // the skin under a beard takes the beard's own shade, so its edge never reads as a black line
-      tone = mix(tone, (uBeardDark * 1.6 + tone * .05) * (.85 + .3 * n3(P * 38.0)), (1.0 - .7 * uBeardGrey.z) * bz * bcov * bedge * mix(.82 + .18 * n3(P * 14.0), 1.0, smoothstep(2.0, 6.0, bmm)));
+      tone = mix(tone, (uBeardDark * 1.6 + tone * .05) * (.85 + .3 * n3(P * 38.0)), (1.0 - .85 * uBeardGrey.z) * bz * bcov * bedge * mix(.82 + .18 * n3(P * 14.0), 1.0, smoothstep(2.0, 6.0, bmm)));
       ${EX ? 'float foamM = foamAt(P); if (foamM > .01) { float fb = .55 * n3(P * 70.0) + .45 * n3(P * 160.0); tone = mix(tone, vec3(.86, .87, .9) * (.82 + .3 * fb), smoothstep(.0, .5, foamM) * .97); }' : 'float foamM = 0.0;'}
       // scalp / fade skin
       float Lh = hairLen(P);

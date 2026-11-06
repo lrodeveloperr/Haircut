@@ -35,6 +35,8 @@
   add('crew', 2, 3, 4, 'crew');
   add('hawk', 1, 3, 5, 'hawk');
   for (const t of [1, 2, 3]) add('buzz', t, t, t, 'even');
+  add('buzz', 0, 0, 0, 'even'); // shaved right down: what many men with hair loss ask for
+  for (const t of [3, 4]) add('caesar', 2, 2, t, 'low'); // short, even and neat all round
   STYLES.push({ id: 'trim', fam: 'trim' });
   const byId = new Map(STYLES.map((s) => [s.id, s]));
   HSC.REQUEST_STYLES = STYLES;
@@ -56,6 +58,7 @@
     const stage = { 1: 0, 2: 1, 3: 2, '3v': 2.5, 4: 3, 5: 4, 6: 5, 7: 6 }[b.norwood] || 0;
     const heavy = stage >= 3 || b.type === 'diffuse', coily = /^(3c|4)/.test(ty), straight = /^[12]/.test(ty);
     const f = style.fam;
+    if (f === 'buzz' && style.top === 0 && !heavy && age < 30) return 0.15; // shaved right down is rarer on a full young head
     if (heavy && !(f === 'buzz' || f === 'trim' || (f === 'skin' && style.top <= 3) || (f === 'fade' && style.top <= 3))) return 0;
     if ((f === 'classic' || f === 'crew') && !straight) return 0;
     if (f === 'undercut' && ty > '3a') return 0;
@@ -70,6 +73,33 @@
     if (style.contour === 'burst' && !coily) w *= 0.5;
     return w;
   }
+  // what a man asks for follows the hair he walks in with: a full head usually wants shape, not a shave; a fade comes back
+  // to be refreshed; a short even cut stays short. Read from the hair itself (side and top lengths). See docs/STYLE-MATRIX.md
+  const startKinds = new WeakMap();
+  function startKind(start) {
+    if (startKinds.has(start)) return startKinds.get(start);
+    let top = 0, nt = 0, side = 0, ns = 0;
+    for (let i = 0; i < start.length; i++) { const v = (i >> 7) / 64; if (v > 0.7) { top += start[i]; nt++; } else if (v < 0.3) { side += start[i]; ns++; } }
+    top /= nt || 1; side /= ns || 1;
+    const k = top - side > 1.2 ? (side <= 1.6 ? 'faded' : 'shaped') : top >= 3.5 ? 'full' : top >= 2 ? 'even' : 'short';
+    startKinds.set(start, k);
+    return k;
+  }
+  const FROM = {
+    full: { taper: 1.5, classic: 1.5, fade: 1.2, crew: 1.2, caesar: 1.1, undercut: 1.2, skin: 0.8, buzz: 0.6 },
+    shaped: { taper: 1.4, classic: 1.4, fade: 1.3, undercut: 1.2, skin: 1, caesar: 1, buzz: 0.7 },
+    faded: { skin: 1.6, fade: 1.6, temple: 1.4, hawk: 1.1, taper: 0.8, classic: 0.5, buzz: 0.6 },
+    even: { crew: 1.5, caesar: 1.5, buzz: 1.3, fade: 1.2, taper: 1.1, skin: 1 },
+    short: { buzz: 2, skin: 1.1, fade: 1 },
+  };
+  // and his hair type: what actually sits well on it
+  const TYPE = {
+    1: { classic: 1.3, crew: 1.3, undercut: 1.2, taper: 1.1, caesar: 1.1 }, 2: { taper: 1.2, fade: 1.2, undercut: 1.2, caesar: 1.1 },
+    3: { fade: 1.3, taper: 1.3, skin: 1.1, temple: 1.2, caesar: 1.1 }, 4: { buzz: 1.2, caesar: 1.3 },
+  };
+  // a family with many variants (15 fades) must not crowd out one with two (tapers): each family gets a fair share
+  const famSize = {}; for (const st of STYLES) famSize[st.fam] = (famSize[st.fam] || 0) + 1;
+  const askFor = (style, p, start) => suit(style, p) * ((FROM[startKind(start)] || {})[style.fam] || 1) * ((TYPE[((p.hair && p.hair.type) || '1b')[0]] || {})[style.fam] || 1) / Math.sqrt(famSize[style.fam] || 1);
   // enough to cut: at least about a fifth of the head shorter, and a real change on the sides or top
   // a customer asks for a style his hair can really make: at most a fifth of his head may already be shorter than it wants
   function fits(style, start) {
@@ -111,7 +141,7 @@
     if (!pick) {
       const opts = [];
       for (const st of STYLES) {
-        const w = suit(st, p);
+        const w = askFor(st, p, s.startHair);
         if (!w) continue;
         const t = targetFor(st, s.startHair);
         if (worthCutting(s.startHair, t)) opts.push([w, st, t]);
@@ -152,7 +182,7 @@
   // the style a customer asked for on a job (meta.js keeps it as a regular's usual)
   HSC.requestStyleFor = (job) => (req.job === job && req.style && byId.has(req.style.id) ? req.style.id : null);
   // for modes.js: the cut catalogue and its rules
-  HSC.requestKit = { STYLES, byId, targetFor, suit, worthCutting, fits };
+  HSC.requestKit = { STYLES, byId, targetFor, suit, askFor, startKind, worthCutting, fits };
 
   // ---- scoring (the engine's own match, patch18) ----
   function starsFor(s) {
