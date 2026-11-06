@@ -273,6 +273,41 @@ while the locked calendar, goal and weekly tables stay as they are, so the locke
 | 4.9 | **[OWNER, frozen controls]** guard arc hidden for scissors/razor and fine-trimmer labels for the beard trimmer | S |
 | 4.10 | **[OWNER, frozen renderer]** 0.01 mm fixed-point scalp storage; thinning shears; blade-height input for scissors | L |
 
+**Wave 4 status — implemented 5 November 2026 (branch `claude/wave4-tools-f8a1a2`, not merged).** Verification evidence is in §4b below. 4.9 was already done; 4.10 is out by the owner's decision (§3.3).
+
+| Item | State | Where |
+| --- | --- | --- |
+| 4.1 | Done. `applyTool(state, stroke) -> { state, effect }`: pure, integer, copy-on-write, one immutable effect record per committed stroke with hashes, per-field deltas, source units and the zero-effect reason. Beard, brow and every service go through it. The scalp keeps the frozen kernel. | `effects.js`, `visit.js`, `state.js` |
+| 4.2 | Done. Heat, moisture, wetness, lather, soap, cream, oil, balm, dry-shave stress, irritation, soothing, freshness and coverage on the beard grid; 30 s / 60 s active-play fade. Shader cue without touching the renderer: the foam texture became RGBA (no new sampler): redness, damp darkening, sheen, wet shrinkage on beard strands. | `effects.js`, `render.js`, `glsl.js` |
+| 4.3 | Done. Stable bundles from seed and age, strands past the rim only, cut at the aperture plane, internal hair kept, 90% by length, saved, undoable. The trimmer is back in the tray and customers may ask for it again. | `effects.js`, `services.js` |
+| 4.4 | Done. Ear hair is 8 saved bundles per ear, reached by the flame's zone. Threading takes only the stray mask: the frozen cheek line plus the brow's fringe; the brow body and bulk beard are not eligible. | `effects.js`, `render.js`, `services.js` |
+| 4.5 | Done for the batch named here: neck duster (the existing talc service, debris-linked), spray bottle, foil shaver, shaving soap, shaving cream, beard oil, beard balm, cold towel, alum. | `effects.js`, `toolart.js`, `services.js`, `tools.js` |
+| 4.6 | Done. `trayFor`: Quick Play shows everything owned, grouped; other modes show the cutters plus what was asked for and at most two tools useful now; soap/cream and oil/balm never together; Relax hides cutters unless a shave is asked for; Rush adds no preparation chain. Career opens with the location starter set; the loan mechanism exists. | `effects.js`, `tools.js` |
+| 4.7 | Done. One AudioContext (menus, reveal, tools and services), limiter, one cached noise buffer per recipe, cached envelopes, variation seeded by tool + sequence + layer, voice cap, stop on pause, switch and background. The result layer is reachable only from a committed record. The frozen engine's clipper motor keeps its own context. | `audio.js`, `fx.js`, `hub.js` |
+| 4.8 | Done. `android/tests/tools.cjs`: boundary, equation and completion proofs, then 100,000 randomized strokes per tool; `android/tests/tools-browser.cjs` proves the same chain on the real head with real handlers. | `android/tests/` |
+
+Implementation decisions worth reviewing:
+
+- **The 0.05 mm level is not a new `BEARD_MM` entry.** Levels are saved indexes: inserting one would renumber every saved regular, career contract and portfolio card. The engine keeps level 0 for skin; the exact 5 quanta live in the visit state. Regrowth between appointments is unchanged.
+- **Visit state has its own save key (`barber-visit-v1`),** written after strokes and on leaving the app, and verified against its hash and the seated customer's grids. A mismatch discards the record whole.
+- **Undo restores the visit by reference** (it is immutable), so source units, coverage and milestones return exactly. Undo still only appears for strokes that change hair; a product stroke does not add an undo video, because that would add a rewarded-ad opportunity.
+- **Aftershave stays eligible on any cell cut to 1 mm or less** (the Wave 1 rule), wider than the contract's "razor or foil only": aftershave unlocks at level 1 and the razor at 9, so the narrow rule would make every level 1-8 request impossible.
+- **The razor charges stress on any skin it touches,** as the contract says, including bare skin. That is a real but unrewarded effect: no hair delta, no completion, no result sound.
+
+Deferred, with the reason:
+
+| Deferred | Why |
+| --- | --- |
+| Paying or requesting the new tools | **[OWNER]** Tips and request tables are reward values. New tools complete `steps`, which reach no payout: only the nine existing services can enter `servicesDone`. |
+| Freshness in scoring and tips | **[OWNER]** The contract lowers tip potential for a dry shave. `HSC.effects.finish()` computes the bands and premium flag; nothing reads them for money. |
+| Facial steamer, beard scissors, moustache wax | Not in 4.5's batch. Their reducer entries, tray art and city rows wait for that batch so no half-tool is registered. |
+| Cold-towel, alum, oil and balm in authored chains | Needs the request work above. They work as free tools; the tray offers them when useful. |
+| Scalp wetness from the spray | The scalp's strand state is the frozen renderer's. The spray wets the beard grid only. |
+| Bowl/scuttle, pre-shave oil, comb, dryer | Not in the batch. The razor's formula keeps only the lather term until pre-shave oil exists. |
+| Scissor blade-plane geometry | 4.10 is out; the height arc from Wave 1 selects the plane and every drag sample counts as a closure. |
+| Foil and later tools in the portfolio cabinet | The cabinet's set is versioned and frozen; adding entries changes completion totals. The foil's mastery is recorded and shows when the set is next versioned. |
+| Any city's signature tool or loan | The overlay rows all have zero confidence until sourced and reviewed, so every city is neutral and no loan fires. The mechanism is tested with injected confidence. |
+
 ### Wave 5 — Customers, language and platform
 
 **Before starting Wave 5: remind the owner.** They will change the UI first so the translation work is efficient (asked 5 November 2026). Do not start 5.6 until they confirm.
@@ -331,6 +366,26 @@ while the locked calendar, goal and weekly tables stay as they are, so the locke
 | Headless real game: Home in 4 layouts and Russian; Quick Play; founding choice; 30-contract licence → map → next city; replace, suspend/resume across a mode switch, completion; damaged contract recovery after reload; newer-save update screen; regulars album; branch screen and branch salon; portfolio tabs, 24 cards, replacement; Wave 1 checks rerun | pass |
 | Known open item | once in four runs the home screen stayed open after the founding-city choice; not reproduced in three reruns |
 | bridge | not run: the other session's uncommitted graphics file (guard-tap timeout noted in Wave 1) |
+
+## 4b. Wave 4 verification (5 November 2026, on the Mac)
+
+| Check | Result |
+| --- | --- |
+| Full Android build (`TARGET=full`) | pass |
+| `tools` (new): 16 property groups, then 100,000 randomized strokes for each of 22 tools (2,200,000 strokes, 643,026 with a real effect) | pass, 11 min |
+| `tools-browser` (new): 9 groups on the real head with the game's own pointer handlers: foil, the full spray, soap, brush and razor chain, finish tools, nose hair, undo, reload, threading, towel, massage, pomade, duster, ear hair, one audio context, no page errors | pass, 13 min under software rendering |
+| economy 10, career 20, career-save 11, salon 5, portfolio 4, director 100,000 contracts, director-browser 320 contracts | pass |
+| rewards 8, share-trigger, completion-interstitial, viewport, graphics 85 | pass (graphics counts 85 on the untouched baseline too) |
+| monetization-browser | pass on the rerun; the first run timed out while other suites were loading the machine, and the baseline timed out too |
+| privacy | **fails at the frozen `game.js` hash, on the baseline commit as well.** Wave 4 and `685bc0f` build the identical `game.js` (`20fa35d1…`); the expected hash needs the graphics work, committed separately as `bdf6995`, which this branch does not contain. With that one line removed in a throwaway copy, the suite times out the same way on both trees. `wardrobe.js` and `clipper-input.js` hashes match. Re-run after the graphics merge. |
+| bridge | timed out in the full run, under the machine load of three sessions. Not chased further: the main session reports its 5-second guard-tap step fails at load average 12-15 and all 13 cases passed on a rerun there, and this branch lacks the graphics commit `bdf6995`. Re-run after the merge. |
+| review-trigger | not run: this older test ignores `CHROMIUM_EXECUTABLE_PATH` and Playwright's bundled browser is not installed here |
+| Screenshots reviewed | foil path and 3D tray picture, soap and foam, razor paths through the lather, nose hair before and after, threading, ear singeing |
+
+Found and fixed on the way: `cheekLine()` read `surface.positions`, which does not exist, so since Wave 1 threading had an empty eligible set in the real game and could never complete. It now reads the beard cell positions, and the suite proves hair is plucked.
+
+Not verified: real device audio quality (phone speakers, the 10-minute stress session), the installed APK, and frame rate on a real Adreno GPU with the new RGBA texture. Audio was tested with a fake context and in headless Chrome only.
+
 
 ## 4. How each wave is verified (on the Mac only)
 

@@ -15,19 +15,12 @@
   function ac() {
     const v = view();
     if (!v || !v.audio) return null;
-    if (!S.ctx) {
-      const C = globalThis.AudioContext || globalThis.webkitAudioContext;
-      if (!C) return null;
-      S.ctx = new C();
-      S.out = S.ctx.createGain();
-      S.out.connect(S.ctx.destination);
-      // a second of soft noise, reused for swishes and paper-like clicks
-      const n = S.ctx.createBuffer(1, S.ctx.sampleRate, S.ctx.sampleRate), d = n.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-      S.noise = n;
-    }
-    if (S.ctx.state === 'suspended') S.ctx.resume().catch(() => {});
-    S.out.gain.value = 0.5 * (typeof v.volume === 'number' ? v.volume : 1);
+    // the one audio engine (audio.js): its context and limiter, this file's own level
+    const A = HSC.audio;
+    S.ctx = A && A.ctx({ ui: true });
+    if (!S.ctx) return null;
+    S.out = A.bus('ui', 0.5);
+    if (!S.noise) S.noise = A.noiseBuffer('white');
     return S.ctx;
   }
   // a damped sine "tok": wood block on press, a higher, quieter tick on release

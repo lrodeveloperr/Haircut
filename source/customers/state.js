@@ -147,7 +147,7 @@
     // on a brow a barber works with the blade's corner: a razor or trimmer slit is 2-3 mm wide. Brows face forward,
     // so the stroke is a brush of that width along the drag, in the brow grid's own x / y (cells are about 1 mm)
     const R = { razor: 0.03, trimmer: 0.04, scissors: 0.11, beard: 0.09, clipper: 0.14 }[tool] || 0.14;
-    const next = s.brow.slice();
+    const next = s.brow.slice(), via = HSC.visit && HSC.visit.cutBrow, touched = via ? new Set() : null;
     let n = 0;
     const xy = (p) => (Number.isFinite(p.u) && Number.isFinite(p.v) ? [(p.u < 0.5 ? -1 : 1) * (0.2 + Math.abs(p.u - 0.5) * 2), 1.7 + p.v * 0.6] : null);
     const pts = points.map(xy).filter(Boolean);
@@ -166,10 +166,19 @@
           const t = Math.max(0, Math.min(1, ((cx - a[0]) * dx + (cy - a[1]) * dy) / ll));
           if (Math.hypot(cx - a[0] - dx * t, cy - a[1] - dy * t) > R) continue;
           const c = row * 128 + col;
+          if (touched) { touched.add(c); continue; }
           const tc = to == null ? HSC.toolBrow(next[c], s.selectedGuard) : to;
           if (next[c] > tc) { next[c] = tc; n++; }
         }
       }
+    }
+    if (touched) {
+      // one reducer for every surface but the scalp (effects.js): the visit holds the exact lengths
+      const r = via(s, [...touched]);
+      if (!r) return none;
+      HSC.setBrow && HSC.setBrow(r.brow);
+      HSC.noteTool && HSC.noteTool(s.jobId);
+      return { state: Object.assign({}, s, { brow: r.brow, cutStrokeCount: s.cutStrokeCount + 1 }), changed: true, changedCells: r.changed, removedLength: r.changed * 0.4, intensity: Math.min(1, r.changed / 60) };
     }
     if (!n) return none;
     HSC.setBrow && HSC.setBrow(next);
@@ -199,7 +208,7 @@
       }
     }
     const next = s.beard.slice();
-    const changed = new Set();
+    const changed = new Set(), via = HSC.visit && HSC.visit.cutBeard, touched = via ? new Set() : null;
     let removed = 0;
     const { positions: pos, spatial } = surface;
     const reach = Math.hypot(BLADE_W / 2, BLADE_D / 2, 0.1);
@@ -214,6 +223,7 @@
           const d = [pos[c * 3] - g[0], pos[c * 3 + 1] - g[1], pos[c * 3 + 2] - g[2]];
           const dot = (v) => d[0] * v[0] + d[1] * v[1] + d[2] * v[2];
           if (Math.abs(dot(across)) > BLADE_W / 2 || Math.abs(dot(along)) > BLADE_D / 2 || Math.abs(dot(nrm)) > 0.1) continue;
+          if (touched) { touched.add(c); continue; }
           const to = HSC.toolBeardCell ? HSC.toolBeardCell(next[c], guard) : guard;
           if (next[c] > to) {
             removed += HSC.BEARD_MM[next[c]] - HSC.BEARD_MM[to];
@@ -222,6 +232,14 @@
           }
         }
       }
+    }
+    if (touched) {
+      // the cells under the rendered blade, cut by the one reducer (effects.js); no cell is changed here
+      const r = touched.size ? via(s, [...touched]) : null;
+      if (!r) return none;
+      checked.add(r.beard);
+      HSC.noteTool && HSC.noteTool(s.jobId);
+      return { state: Object.assign({}, s, { beard: r.beard, cutStrokeCount: s.cutStrokeCount + 1 }), changed: true, changedCells: r.changed, removedLength: r.removedMm, intensity: Math.min(1, r.removedMm / Math.max(1, r.changed * 16)) };
     }
     if (!changed.size) return none;
     checked.add(next);
