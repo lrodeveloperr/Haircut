@@ -106,7 +106,7 @@ function simulate(name, days, seed = 7) {
         const u = R(), stars = u < A.stars[0] ? 1 : u < A.stars[0] + A.stars[1] ? 2 : 3;
         combo = stars === 3 ? combo + 1 : 0;
         const slot = (jobs - 1) % 5, kind = slot === 4 ? 'showcase' : KINDS[Math.floor(R() * KINDS.length)];
-        const job = { kind, stars, valid: true, regular: slot === 2 && jobs > 5, vip: R() < 0.05, combo, rushBonus: kind === 'rush' ? Math.floor(R() * 12) : 0, dailyFirst: k === 0 && R() < 0.6 };
+        const job = { kind, stars, valid: true, regular: slot === 2 && jobs > 5, vip: R() < 0.05, combo, rushBonus: kind === 'rush' ? Math.floor(R() * 12) : 0 };
         job.demandMatch = E.demandMatch(eco, kind === 'showcase' ? 'requests' : kind);
         const p = E.payJob(eco, 'job:' + jobs, job);
         eco = p.eco;

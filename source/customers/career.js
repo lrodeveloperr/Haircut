@@ -253,16 +253,6 @@
     n.last = out;
     return { state: n, result: out };
   }
-  // a side job (Daily): its valid result raises mastery only; it never takes a chapter slot or moves progress
-  // (map logic sections 6 and 14.9). Mastery keeps the best stars, so a repeated event changes nothing.
-  function side(s, r) {
-    if (!r || !r.valid || !r.mode) return { state: s, error: 'not-valid' };
-    const n = clone(s);
-    recordMastery(n, r);
-    if (JSON.stringify(n.mastery) === JSON.stringify(s.mastery) && n.completedModes.length === s.completedModes.length) return { state: s, duplicate: true };
-    n.rev++;
-    return { state: n };
-  }
   function showcase(n, city, stars, out, tourN) {
     const c = cityRec(n, city);
     c.showcaseBest = Math.max(c.showcaseBest, stars | 0);
@@ -353,7 +343,7 @@
     VERSION, LICENCE, SLOTS, ROLES, RANKS, MASTER_STARS,
     UNSET, needsFounding, found,
     setCities, enabledIds, create, phase, position, contractId, contractSeed, remaining, selectable, selectCity, setBase,
-    isDone, complete, side, reconcile, rank, rankIndex, stats, validate, hash32, clone,
+    isDone, complete, reconcile, rank, rankIndex, stats, validate, hash32, clone,
     city: (id) => registry.cities.get(id) || null,
   };
 })(globalThis.HSC || (globalThis.HSC = {}));

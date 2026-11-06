@@ -71,6 +71,14 @@
     return w;
   }
   // enough to cut: at least about a fifth of the head shorter, and a real change on the sides or top
+  // a customer asks for a style his hair can really make: at most a fifth of his head may already be shorter than it wants
+  function fits(style, start) {
+    if (style.fam === 'trim') return true;
+    const g = gridOf(style);
+    let hair = 0, short = 0;
+    for (let i = 0; i < start.length; i++) if (start[i] > 0) { hair++; if (g[i] > start[i]) short++; }
+    return !hair || short / hair <= 0.2;
+  }
   function worthCutting(start, target) {
     let cells = 0, drop = 0;
     for (let i = 0; i < start.length; i++) if (target[i] < start[i]) { cells++; drop += start[i] - target[i]; }
@@ -108,6 +116,11 @@
         const t = targetFor(st, s.startHair);
         if (worthCutting(s.startHair, t)) opts.push([w, st, t]);
       }
+      // only styles his hair can really make; if none fully fits, the closest list stays, so he always has a request
+      const honest = opts.filter((o) => fits(o[1], s.startHair));
+      if (honest.length) opts.splice(0, opts.length, ...honest);
+      // what was asked for lately is far less likely to come up again
+      if (HSC.modes && HSC.modes.recently) for (const o of opts) if (HSC.modes.recently(o[1])) o[0] *= 0.1;
       let r = R.next() * opts.reduce((a, o) => a + o[0], 0);
       for (const o of opts) if ((r -= o[0]) <= 0) { pick = { style: o[1], target: o[2] }; break; }
       if (!pick && opts.length) pick = { style: opts[opts.length - 1][1], target: opts[opts.length - 1][2] };
@@ -139,7 +152,7 @@
   // the style a customer asked for on a job (meta.js keeps it as a regular's usual)
   HSC.requestStyleFor = (job) => (req.job === job && req.style && byId.has(req.style.id) ? req.style.id : null);
   // for modes.js: the cut catalogue and its rules
-  HSC.requestKit = { STYLES, byId, targetFor, suit, worthCutting };
+  HSC.requestKit = { STYLES, byId, targetFor, suit, worthCutting, fits };
 
   // ---- scoring (the engine's own match, patch18) ----
   function starsFor(s) {
@@ -234,7 +247,7 @@
     const valid = s.cutStrokeCount > 0;
     const prev = d.combo || 0;
     const combo = free ? 0 : stars === 3 ? prev + 1 : 0;
-    const job = { kind, stars, valid, regular: !!(p && p.regular) || !!(careerJob && careerJob.regular), vip: !!(p && p.vip), combo, rushBonus: mj.rushBonus || 0, dailyFirst: !!mj.dailyFirst };
+    const job = { kind, stars, valid, regular: !!(p && p.regular) || !!(careerJob && careerJob.regular), vip: !!(p && p.vip), combo, rushBonus: mj.rushBonus || 0 };
     // a demand shift's highlighted mode pays its bonus (never Quick Play, never a replay)
     if (!last && valid && EC() && EC().demandMatch) job.demandMatch = EC().demandMatch(careerJob ? careerJob.mode : kind);
     // Quick Play: one thank-you for the first meaningful practice, then nothing (balance model section 3); keyed once
@@ -267,6 +280,7 @@
     // the lookbook keeps the best stars for each cut asked for
     const r = HSC.requestFor(s);
     if (!free && r && r.style && byId.has(r.style.id) && r.style.fam !== 'trim' && stars) { d.book = d.book || {}; d.book[r.style.id] = Math.max(d.book[r.style.id] || 0, stars); }
+    if (!free && r && r.style && HSC.modes && HSC.modes.noteAsk && !(HSC.modes.recently(r.style))) HSC.modes.noteAsk(r.style);
     ui.round = { job: s.jobId, stars };
     if (HSC.modes) HSC.modes.done(s, stars);
     M().save();
@@ -303,7 +317,7 @@
   }
   // keep frames coming while the face moves (the game draws only when something changes)
   const clipActive = HSC.clippingsActive;
-  HSC.clippingsActive = () => !!face.anim || ui.flying > 0 || (clipActive ? clipActive() : false);
+  HSC.clippingsActive = () => (compare.frames > 0 && compare.frames--) > 0 || !!face.anim || ui.flying > 0 || (clipActive ? clipActive() : false);
 
   // ---- undo: one rewarded video per stroke undone ----
   // the undo button is permanent while there is a stroke to take back: the player watches a video whenever it is
@@ -314,6 +328,7 @@
     if (!g || e.button > 0) return;
     const s = g.getState();
     if (s.status !== 'cutting') return;
+    if (s.interactionMode === 'cut') compareHide(); // the first stroke needs the real hair
     undo.snap = { job: s.jobId, hair: s.hair, beard: s.beard, brow: s.brow };
   }
   function onUp() {
@@ -328,6 +343,41 @@
       if (undo.stack.length > 20) undo.stack.shift();
       ui.undoButton();
     }
+  }
+  // compare: the finished cut on the real head, at the angle the barber is working from. A tap turns it on or off; it starts
+  // on the first time a mode is played in a session, and shows each new customer until the first cutting stroke, because
+  // the barber has to see the real hair to cut it. It only changes what is drawn: the haircut, score and save never see it.
+  const compare = { on: false, frames: 0, want: {}, job: null, beat: 0 };
+  const modeNow = () => (HSC.modes ? HSC.modes.current() : 'requests');
+  function compareShow() {
+    const g = G(), s = g && g.getState(), r = s && s.status === 'cutting' ? HSC.requestFor(s) : null, v = HSC.view;
+    if (!r || !v) return false;
+    compare.on = true; compare.frames = 12;
+    if (r.target) v.setHair(r.target);
+    if (r.beard) v.setBeard(r.beard);
+    ui.el.cmp.classList.add('on');
+    return true;
+  }
+  function compareHide() {
+    if (!compare.on) return;
+    compare.on = false; compare.frames = 12; // a few more drawn frames, however slow the device, so the real hair comes back
+    const g = G(), s = g && g.getState(), v = HSC.view;
+    if (s && v) { v.setHair(s.hair); v.setBeard(s.beard); }
+    ui.el.cmp.classList.remove('on');
+  }
+  function compareTap() {
+    if (compare.on) { compare.want[modeNow()] = false; compareHide(); }
+    else { compare.want[modeNow()] = true; compareShow(); }
+  }
+  // the button, a new customer, and keeping the picture on while it is on (a guard change redraws the real hair)
+  function compareTick(s) {
+    const r = s && s.status === 'cutting' ? HSC.requestFor(s) : null;
+    ui.el.cmp.hidden = !r;
+    if (!r) { compareHide(); compare.job = s ? s.jobId : null; return; }
+    if (compare.job !== s.jobId) {
+      compare.job = s.jobId;
+      if (compare.want[modeNow()] !== false && !(s.cutStrokeCount > 0)) compareShow(); else compareHide();
+    } else if (compare.on && ++compare.beat % 5 === 0) compareShow();
   }
   async function doUndo() {
     const g = G();
@@ -389,7 +439,11 @@
 #hsc-req.pop{animation:hsc-reqpop .6s ease-out}
 @keyframes hsc-reqpop{0%{transform:translateX(-50%) scale(.4);opacity:0}70%{transform:translateX(-50%) scale(1.1);opacity:1}100%{transform:translateX(-50%) scale(1)}}
 #hsc-req[hidden],#hsc-undo[hidden],#hsc-score[hidden],#hsc-score [hidden]{display:none}
-body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.hsc-spin #hsc-undo{display:none}
+body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.hsc-spin #hsc-undo,body.hsc-reveal #hsc-cmp,body.hsc-spin #hsc-cmp{display:none}
+#hsc-cmp{position:fixed;z-index:20;left:max(14px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));width:60px;height:60px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none;zoom:var(--hsc-s,1)}
+#hsc-cmp[hidden]{display:none}
+#hsc-cmp.on{background:linear-gradient(#fff,#bfe3ff)!important;transform:translateY(3px)}
+body.hsc-left #hsc-cmp{left:auto;right:max(14px,env(safe-area-inset-right))}
 #hsc-undo{position:fixed;z-index:20;width:56px;height:56px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;background:#fff6e6;color:${INK};border:3px solid ${INK};box-shadow:0 3px 0 ${INK};cursor:pointer}
 #hsc-undo:active{transform:translateY(3px);box-shadow:0 1px 0 ${INK}}
 #hsc-undo:disabled{opacity:.6}
@@ -438,11 +492,16 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
       undoEl.setAttribute('aria-label', 'Watch a video to undo the last stroke');
       undoEl.innerHTML = `${HSC.icon ? HSC.icon('undo', 32) : UNDO}<span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}</span>`;
       undoEl.addEventListener('click', doUndo);
+      const cmpEl = document.createElement('button'); cmpEl.id = 'hsc-cmp'; cmpEl.type = 'button'; cmpEl.hidden = true;
+      cmpEl.innerHTML = HSC.icon ? HSC.icon('compare', 34) : '';
+      if (HSC.setSpoken) HSC.setSpoken(cmpEl, 'a_compare'); else cmpEl.setAttribute('aria-label', 'See the finished cut');
+      cmpEl.addEventListener('click', compareTap);
+      this.el.cmp = cmpEl;
       const score = document.createElement('div'); score.id = 'hsc-score'; score.hidden = true;
       score.innerHTML = `<div class="stars"></div><div class="row"><div class="tip">${COIN(28)}<span></span><div class="hsc-combo" hidden>${FLAME(20)}<b></b></div></div>
         <button class="x3" type="button" aria-label="Watch a video to triple the tips">${COIN(30)}<span>×3</span><span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}</span></button></div><div class="rcpt"></div>`;
       score.querySelector('.x3').addEventListener('click', triple);
-      document.body.append(reqEl, undoEl, score);
+      document.body.append(reqEl, undoEl, cmpEl, score);
       Object.assign(this.el, { rcpt: score.querySelector('.rcpt'), req: reqEl, undo: undoEl, score, stars: score.querySelector('.stars'), tip: score.querySelector('.tip span'), tipCombo: score.querySelector('.tip .hsc-combo'), x3: score.querySelector('.x3') });
       const scene = document.getElementById('scene') || document;
       scene.addEventListener('pointerdown', onDown, true);
@@ -554,7 +613,7 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
       const rk = last.key && last.lines ? last.job + ':' + last.paid + ':' + last.tripled + ':' + (last.bill ? last.bill.key : '') : '';
       if (this.el.rcpt.dataset.k !== rk) {
         this.el.rcpt.dataset.k = rk;
-        const IC = { fee: 'salon', rush: 'rush', demand: 'flame', daily: 'daily', triple: 'video' };
+        const IC = { fee: 'salon', rush: 'rush', demand: 'flame', triple: 'video' };
         const lines = rk ? last.lines.concat(last.tripled ? [['triple', 2 * (last.tip || 0)]] : []) : [];
         this.el.rcpt.innerHTML = lines.filter((l) => l[1]).map(([k, v], i) => `<span class="${v < 0 ? 'neg' : ''}" style="animation-delay:${0.6 + i * 0.08}s">${k === 'tip' ? STAR(true) : IC[k] && HSC.icon ? HSC.icon(IC[k], 20) : ''}${v > 0 ? '+' : '−'}${Math.abs(v)}</span>`).join('');
       }
@@ -585,6 +644,7 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
         this.shownJob = null;
       } else this.el.req.hidden = true;
       this.undoButton();
+      { const g = G(); compareTick(g && g.getState()); }
       // the smile starts with the reveal spin: the camera passes his face half-way round (it ends behind him)
       const revealing = s.status === 'reveal';
       if (revealing && this.shownJob !== s.jobId + ':' + s.cutStrokeCount) {

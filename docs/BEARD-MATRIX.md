@@ -7,7 +7,7 @@ tool, and a customer's order can cover the hair, the beard, or both.
 
 - Guard 0 shaves a beard to the skin. Every beard a customer can arrive with can be removed completely, checked by
   `android/tests/beards-browser.cjs` on the real head from every camera angle.
-- A stroke along the chin or jaw also clears the hair under it, because no camera angle touches that skin.
+- The player can tilt the camera down to see and cut under the chin and jaw.
 - A style is a grooming choice and never depends on a customer's group. A group changes density, curl and patchiness, so
   the same style looks different on different men. A sparse grower rarely asks for a full cheek line.
 - Beards mode gives 35 styles an even turn (all but the two lightest stubbles). In Orders, about half of bearded customers also ask for a beard.

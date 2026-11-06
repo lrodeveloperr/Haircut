@@ -51,11 +51,11 @@
   HSC.TATTOOS = ['star', 'rose', 'blades', 'geo'];
   HSC.accessoriesOf = function (person) {
     if (!person || !HSC.rng) return null;
-    const y = person.years, key = 'a' + person.seed + ':' + y + ':' + person.skin.tone;
+    const y = person.years, L = person.local || {}, key = 'a' + person.seed + ':' + y + ':' + person.skin.tone + ':' + (L.tattoo || 1) + ':' + (L.ear || 1);
     if (cache.has(key)) return cache.get(key);
     const R = R0(person, 0x6c8e9cf5);
     let ear = null;
-    if (R.next() < (y <= 29 ? 0.16 : y <= 44 ? 0.09 : y <= 59 ? 0.04 : 0.015)) {
+    if (R.next() < (y <= 29 ? 0.16 : y <= 44 ? 0.09 : y <= 59 ? 0.04 : 0.015) * (L.ear || 1)) {
       const sides = R.pick({ L: 45, both: 45, R: 10 });
       const kind = R.next() < (y <= 29 ? 0.3 : 0.18) ? 'hoop' : 'stud';
       const metal = kind === 'stud' ? R.pick({ silver: 40, gold: 22, black: 13, gem: 25 }) : R.pick({ silver: 55, gold: 35, black: 10 });
@@ -67,7 +67,7 @@
       aid = { sides: R.next() < 0.72 ? [-1, 1] : [R.next() < 0.5 ? -1 : 1], colour: R.pick(deep ? { brown: 55, grey: 30, beige: 15 } : { beige: 50, grey: 35, brown: 15 }) };
     }
     let tattoo = null;
-    if (R.next() < (y <= 29 ? 0.07 : y <= 44 ? 0.05 : y <= 59 ? 0.02 : 0.008)) {
+    if (R.next() < (y <= 29 ? 0.07 : y <= 44 ? 0.05 : y <= 59 ? 0.02 : 0.008) * (L.tattoo || 1)) {
       const kind = HSC.TATTOOS[Math.floor(R.next() * HSC.TATTOOS.length)];
       // older ink is softer and a little green-blue
       tattoo = { kind, side: R.next() < 0.5 ? -1 : 1, size: R.range(0.85, 1.15), rot: R.range(-0.35, 0.35), fade: Math.min(1, R.range(0, 0.35) + 0.5 * sm(25, 65, y)) };

@@ -12,8 +12,8 @@ const frozen = {
   'android/clipper-input.js':'231830bf96d9e63b8a30832d75ca45399fb85e31affb8a02d47c4b7bdea115ca',
   // re-pinned 5 November 2026 for the result router (plan 3.2) only: reversing android/completion-interstitial.js and
   // its two splice points reproduces the previous approved hash bd68b869... exactly, so the renderer is unchanged.
-  // Re-pinned 6 November 2026 with the owner's approval for head form: source/patch21.py only
-  'source/build/runtime/game.js':'e12558f8067f07634256aed80565f37223492401e27188f4ac4680462fc2f8b3',
+  // Re-pinned 6 November 2026 with the owner's approval for head form and camera tilt: source/patch21.py only
+  'source/build/runtime/game.js':'3f8fc36c31672de8f7d86cf834b97d8d0c1dd557366ecca78f31e3bef2aa5a62',
   'source/customers/wardrobe.js':'b6b0cb1d438cb8da4f4a0ca754a27ca02e2df25cffd4811835608420ab0948e6',
 };
 for(const [p,expected] of Object.entries(frozen)) assert.equal(hash(p),expected,'owner-approved source must remain byte-identical: '+p);
@@ -50,7 +50,7 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
       assert.ok(await page.evaluate(()=>{const q=document.querySelector('#hsc-menu .qp'),c=document.querySelector('#hsc-menu .hero');return !!(q.compareDocumentPosition(c)&Node.DOCUMENT_POSITION_FOLLOWING);}),'Quick Play comes before Career');
       await page.locator('#hsc-menu [data-b="modes"]').click();
       await page.waitForFunction(()=>!document.querySelector('#hsc-menu .modes').hidden);
-      assert.equal(await page.locator('#hsc-menu .modes [data-m="daily"]').count(),1,'Daily lives once inside Modes');
+      assert.equal(await page.locator('#hsc-menu .modes [data-m="daily"]').count(),0,'Daily mode was removed');
       assert.equal(await page.locator('#hsc-menu .modes [data-m="free"]').count(),0,'Modes has no Freestyle or Quick Play tile');
       assert.equal(await page.locator('#hsc-menu .modes [data-m="career"]').count(),0,'Modes has no Career tile');
       await page.locator('#hsc-menu .page.modes > .mhead .back').click();

@@ -1,6 +1,6 @@
 'use strict';
 // Every beard a customer can walk in with can be taken off completely, with the clipper alone, on the real head. Sweeps
-// guard 0 over the screen from every angle the player can turn to, through the game's own hit test, on all 12 groups.
+// guard 0 over the screen from the angles the player can turn and tilt to, through the game's own hit test.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -30,17 +30,23 @@ const build = path.resolve(__dirname, '../../source/build');
         const all = new Array(8192).fill(0); for (const a of starts) for (let i = 0; i < 8192; i++) if (a[i] > all[i]) all[i] = a[i];
         let s = { status: 'cutting', interactionMode: 'cut', selectedGuard: 0, beard: all, cutStrokeCount: 0, jobId: -1 };
         const cut = HSC.cutBeard, keep = HSC.setBeard; HSC.setBeard = () => {};
-        for (let yaw = 0; yaw < 360; yaw += 30) {
-          g.turn(yaw - g.getState().cameraYawDeg); await new Promise((r) => setTimeout(r, 900));
-          for (let y = 300; y < 860; y += 7) for (let x = 12; x < 400; x += 7) {
-            const hit = HSC.view.raycast(x, y);
-            if (hit && hit.kind === 'beard') s = cut(s, [hit], S).state;
+        for (const elev of [10, -40]) for (let yaw = 0; yaw < 360; yaw += 45) {
+          const now = g.getState(); g.turn(yaw - now.cameraYawDeg, elev - now.cameraElevation); await new Promise((r) => setTimeout(r, 900));
+          // real strokes: each column is one continuous pass down the screen, as a finger makes
+          for (let x = 12; x < 400; x += 8) {
+            let prev = null;
+            for (let y = 120; y < 860; y += 8) {
+              const hit = HSC.view.raycast(x, y), on = hit && hit.kind === 'beard';
+              if (on) s = cut(s, prev ? [prev, hit] : [hit], S).state;
+              prev = on ? hit : null;
+            }
           }
         }
         HSC.setBeard = keep;
         const left = {}; let total = 0;
+        const where = []; for (let i = 0; i < 8192; i++) if (all[i] > 0 && s.beard[i] > 0) where.push([0, 1, 2].map((k) => +S.positions[i * 3 + k].toFixed(2)));
         styles.forEach((st, k) => { let n = 0; for (let i = 0; i < 8192; i++) if (starts[k][i] > 0 && s.beard[i] > 0) n++; if (n) left[st] = n; total += n; });
-        return { heritage: P.heritage, styles: styles.length, left, total, cells: all.filter((v) => v > 0).length };
+        return { heritage: P.heritage, styles: styles.length, left, total, where: where.slice(0, 6), cells: all.filter((v) => v > 0).length };
       }));
     }
     console.log(JSON.stringify(out));

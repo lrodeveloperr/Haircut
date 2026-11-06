@@ -102,4 +102,16 @@ let passed = 0;
   assert.ok(lid('east-asian') > 1 && lid('north-european') < 0.4, 'eye shape follows the group');
   passed++;
 }
-console.log('PASS: ' + passed + ' customer audits (' + N + ' per group; adults, determinism, population, style independent of heritage, selection, head form).');
+// 7. city habits: age and beards lean by city, never absolute, and only for residents
+{
+  const look = (city) => { const cat = H.careerCatalog.make({ pop: {}, regs: {}, recent: [] }); let young = 0, beard = 0; const n = 800; for (let i = 0; i < n; i++) { const c = cat.customer(R0(i * 5 + 3), { source: 'resident', city, mode: 'requests' }); if (c.person.years < 35) young++; if (c.person.beard.style !== 'clean') beard++; } return { young: young / n, beard: beard / n }; };
+  const karachi = look('karachi'), tokyo = look('tokyo'), lagos = look('lagos');
+  assert.ok(karachi.beard > tokyo.beard + 0.2, 'beards lean by city: ' + karachi.beard + ' / ' + tokyo.beard);
+  assert.ok(tokyo.beard > 0.1 && karachi.beard < 0.95, 'never absolute');
+  assert.ok(lagos.young > tokyo.young + 0.05, 'age leans by city: ' + lagos.young + ' / ' + tokyo.young);
+  const ink = (city) => { const cat = H.careerCatalog.make({ pop: {}, regs: {}, recent: [] }); let n = 0; for (let i = 0; i < 2500; i++) if (H.accessoriesOf(cat.customer(R0(i * 3 + 1), { source: 'resident', city, mode: 'requests' }).person).tattoo) n++; return n / 2500; };
+  assert.ok(ink('new-york') > ink('karachi') * 3 && ink('karachi') > 0, 'tattoos lean by city, never absolute');
+  for (const c of H.CITIES.filter((x) => x.enabled)) { assert.ok(c.habits, c.id + ' has its habits'); assert.ok(Math.abs(c.habits.age.reduce((a, b) => a + b, 0) - 1) < 1e-9, c.id + ' age mix sums to 1'); for (const v of Object.values(c.habits.cuts)) assert.ok(v >= 1 && v <= 1.6, 'a soft lean'); }
+  passed++;
+}
+console.log('PASS: ' + passed + ' customer audits (' + N + ' per group; adults, determinism, population, style independent of heritage, selection, head form, city habits).');

@@ -86,10 +86,15 @@
         // residents follow the city's population scheduler; visitors and VIPs use the neutral world table
         if (ctx.source === 'resident') opts.heritage = drawGroup(env.pop, ctx.city, R);
         const draw = ctx.source === 'resident' ? { city: ctx.city, group: opts.heritage } : null;
+        // residents also follow their city's habits: its age mix, and how many men wear facial hair
+        const home = ctx.source === 'resident' && HSC.career && HSC.career.city(ctx.city), habit = home && home.habits;
+        if (habit) { const a = R.next(), [y, m] = habit.age; opts.age = a < y ? 'young' : a < y + m ? 'middle' : 'old'; }
+        const bearded = habit && ctx.mode !== 'beard' ? R.next() < habit.beard : null;
         // Beards selects someone who already has a beard to shape; it never writes one onto a customer
         const want = ctx.mode === 'beard' ? HSC.BEARD_ARRIVALS[seed % HSC.BEARD_ARRIVALS.length] : null;
-        const p = want ? HSC.selectPerson(seed, opts, (x) => x.beard.style === want, 600) || HSC.makePerson(seed, Object.assign({}, opts, { beard: want })) : HSC.makePerson(seed, opts);
+        const p = want ? HSC.selectPerson(seed, opts, (x) => x.beard.style === want, 600) || HSC.makePerson(seed, Object.assign({}, opts, { beard: want })) : bearded != null ? HSC.selectPerson(seed, opts, (x) => (x.beard.style !== 'clean') === bearded, 60) || HSC.makePerson(seed, opts) : HSC.makePerson(seed, opts);
         if (!p) return null;
+        if (habit) p.local = { tattoo: habit.tattoo, ear: habit.ear }; // what is usual where he lives (extras.js)
         if (ctx.source === 'vip') p.vip = true;
         // a visitor's origin is recorded: the neutral world table until a city's visitor mix is researched
         if (ctx.source === 'visitor') p.visitor = { origin: 'neutral-world', v: 1 };
@@ -109,7 +114,7 @@
         if (!walk) { const w = HSC.pickWalkIn(p, (env.recent || []).slice(-4)); if (!w) return []; walk = W.build(w); profile = w.id; }
         const beard0 = cu.startBeard || HSC.beardStartFor(p);
         const base = { silhouette: profile, beard: p.beard.style, hair: walk, beardGrid: beard0, cost: {} };
-        if (mode === 'fix') { const j = B().disaster(p, walk, R); return j ? [Object.assign({}, base, { id: 'disaster', silhouette: profile + ':botched:' + j.flaws.join('+'), hair: j.start, job: j, cost: { repair: 1 } })] : []; }
+        if (mode === 'fix') { const j = B().disaster(p, walk, R, null, beard0); return j ? [Object.assign({}, base, { id: 'disaster', silhouette: profile + ':botched:' + j.flaws.join('+'), hair: j.start, beardGrid: j.beard ? j.beard.start : beard0, job: j, cost: { repair: 1 } })] : []; }
         if (mode === 'rush') { const j = B().tidy(p, walk, R); return j ? [Object.assign({}, base, { id: 'tidy', silhouette: profile + ':tidy', hair: j.start, job: j, cost: { time: 1 } })] : []; }
         if (mode === 'beard') return p.beard.style === 'clean' || /^stubble/.test(p.beard.style) ? [] : [Object.assign({}, base, { id: 'beard' })];
         return [Object.assign({}, base, { id: cu.regular ? 'regular' : 'walkin' })];
@@ -118,7 +123,7 @@
         const p = cu.person, kit = K();
         // a rescue's complexity is its repair (the start's cost), not a second precision charge, so the licence's
         // rescue chapter (bands 1-2, budget 1) offers real repairs instead of falling back to a trim
-        if (mode === 'fix' || mode === 'rush') return [{ id: st.job.style.id, family: st.job.style.fam || 'fix', target: st.job.target, drop: dropOf(st.hair, st.job.target), cost: { precision: 0 }, weight: 1 }];
+        if (mode === 'fix' || mode === 'rush') return [{ id: st.job.style.id, family: st.job.style.fam || 'fix', target: st.job.target, beardGoal: st.job.beard ? st.job.beard.style : undefined, beardTarget: st.job.beard ? st.job.beard.target : undefined, drop: dropOf(st.hair, st.job.target), cost: { precision: 0 }, weight: 1 }];
         if (mode === 'beard') {
           const j = B().beardJob(p, st.beardGrid, HSC.rng((p.seed ^ 0x51ed27) >>> 0));
           return j ? [{ id: 'beard:' + j.style, family: 'beard:' + j.style, beardGoal: j.style, beardTarget: j.target, cost: { precision: ['goatee', 'vandyke', 'anchor', 'balbo', 'circle'].includes(j.style) ? 1 : 0 }, weight: 1, drop: 0 }] : [];
@@ -127,7 +132,9 @@
         // variation of it (the same family), more often (director section 12)
         const R0 = cu.regular, fam = R0 && R0.usual && HSC.requestKit && HSC.requestKit.byId.get(R0.usual);
         const lean = (style) => (!R0 || (R0.visits | 0) < 2 ? 1 : R0.usual === style.id ? 4 : fam && fam.fam === style.fam ? 2 : 1);
-        const opts = B().options(p, st.hair).map(([w, style, target]) => ({ id: style.id, family: style.fam + ':' + (style.contour || ''), target, drop: dropOf(st.hair, target), cost: { precision: ['part', 'crew', 'temple', 'taper'].includes(style.contour) ? 1 : 0 }, weight: w * lean(style) }));
+        // the city's popular cuts lean up; every suitable cut stays possible
+        const home = ctx && ctx.city && HSC.career ? HSC.career.city(ctx.city) : null, cuts = (home && home.habits && home.habits.cuts) || {};
+        const opts = B().options(p, st.hair).map(([w, style, target]) => ({ id: style.id, family: style.fam + ':' + (style.contour || ''), target, drop: dropOf(st.hair, target), cost: { precision: ['part', 'crew', 'temple', 'taper'].includes(style.contour) ? 1 : 0 }, weight: w * lean(style) * (cuts[style.fam] || 1) }));
         // about half of the men with a beard want it done too: one order for the hair and the beard
         const bj = (p.seed & 1) === 0 ? B().beardJob(p, st.beardGrid, HSC.rng((p.seed ^ 0x51ed29) >>> 0)) : null;
         if (bj) for (const o of opts) Object.assign(o, { beardGoal: bj.style, beardTarget: bj.target });

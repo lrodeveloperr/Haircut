@@ -5,28 +5,26 @@
 //   requests  (M1) the career: a customer asks for a cut, 1-3 stars, tips, combo, regulars, VIPs
 //   free      (M2) Quick Play (the former freestyle; `free` stays the saved id): no request and no stars, no
 //             progression; a button seats a new customer. It is a Home action, not a Modes tile.
-//   fix       (M3) hair disasters: a botched cut walks in (a gouge, one side done, a step, a bowl, chunks, a crooked
+//   fix       (M3) hair disasters: a clipper job gone wrong walks in, hair and sometimes beard (a gouge, tracks, a step, a crooked
 //             line-up). The bubble shows the repaired cut. Every flaw is hair already cut to the repaired cut's own
 //             length, so the repair never needs hair that is not there. Tips x1.5. Level 2.
-//   daily     (M4) one customer and one request a day, the same for every player (seeded by the date). The best
-//             stars are kept; tips x2 the first time. After it, the career carries on.
 //   beard     (M5) beard studio: bearded customers ask for a beard style (boxed, goatee, Van Dyke, chinstrap, balbo,
 //             anchor, circle, stubble, a moustache, mutton chops or a clean shave). Scored on the beard. Level 2.
 //   rush      (M7) quick tidy-ups: a finished cut with a little regrowth, against a 45 s clock. Never fails: the time
 //             left adds coins, and every three tidy-ups pay a round bonus. Level 4.
-// The mode, its current job (the flawed start and its repair) and the daily result are saved with the progress.
+// The mode, its current job (the flawed start and its repair) are saved with the progress.
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
   'use strict';
   if (!HSC.PHENOTYPES) return;
   const INK = '#10223f';
   const M = () => HSC.meta, G = () => globalThis.skinFadeStudio;
-  const LIST = ['requests', 'free', 'fix', 'daily', 'beard', 'rush'];
-  const LEVEL = { career: 1, requests: 1, free: 1, fix: 2, daily: 2, beard: 2, rush: 4 };
+  const LIST = ['requests', 'free', 'fix', 'beard', 'rush'];
+  const LEVEL = { career: 1, requests: 1, free: 1, fix: 2, beard: 2, rush: 4 };
   const data = () => {
     const d = M() && M().data;
     if (!d) return null;
-    if (!d.modes || typeof d.modes !== 'object') d.modes = { mode: 'requests', job: null, daily: null, beforeDaily: null, rush: 0 };
+    if (!d.modes || typeof d.modes !== 'object') d.modes = { mode: 'requests', job: null, rush: 0 };
     return d.modes;
   };
   const level = () => (M() && M().data ? M().level() : 1);
@@ -50,11 +48,21 @@
       const t = K().targetFor(st, start);
       if (K().worthCutting(start, t)) out.push([w, st, t]);
     }
-    return out;
+    // only styles his hair can really make; if none fully fits, the closest list stays
+    const honest = out.filter((o) => K().fits(o[1], start));
+    return honest.length ? honest : out;
   }
+  // the game avoids repeating itself: what was asked for or botched lately is far less likely to come up again. The list
+  // is saved, and it only changes when a job is set or finished, so a request is the same after a reload. Career has its
+  // own repetition rules (director.js), so its contracts stay purely seeded.
+  const askId = (x) => (x && x.id) || x;
+  const asked = () => { const md = data(); if (!md || current() === 'career') return []; return Array.isArray(md.ask) ? md.ask : (md.ask = []); };
+  const recently = (x) => asked().includes(askId(x));
+  const noteAsk = (x) => { const a = asked(); if (!data() || current() === 'career') return; a.push(askId(x)); if (a.length > 14) a.splice(0, a.length - 14); };
   function choose(R, opts) {
-    let r = R.next() * opts.reduce((a, o) => a + o[0], 0);
-    for (const o of opts) if ((r -= o[0]) <= 0) return o;
+    const w = opts.map((o) => o[0] * (recently(o[1]) ? 0.1 : 1));
+    let r = R.next() * w.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < opts.length; i++) if ((r -= w[i]) <= 0) return opts[i];
     return opts[opts.length - 1];
   }
   const U = (i) => (i % 128) / 128, V = (i) => Math.floor(i / 128) / 64;
@@ -62,13 +70,19 @@
 
   // ---- M3: a hair disaster from the hair he walked in with ----
   // every flaw only lowers hair to the repair's own length there, so the repair is always possible
-  function disaster(person, start, R, force) {
-    const opts = options(person, start);
-    if (!opts.length) return null;
+  function disaster(person, start, R, force, beard) {
+    // a repair needs room to show a mistake: only styles that take a real amount off, the biggest change if none does
+    const room = (t) => { let n = 0; for (let i = 0; i < 8192; i++) if (start[i] - t[i] >= 2) n++; return n; };
+    const all = options(person, start).map((o) => [o, room(o[2])]);
+    if (!all.length) return null;
+    const big = all.filter((o) => o[1] >= 700), opts = big.length ? big.map((o) => o[0]) : [all.reduce((a, b) => (b[1] > a[1] ? b : a))[0]];
     const [, style, target] = choose(R, opts);
-    const bad = start.slice(), cut = [];
+    // mistakes land where a lot comes off, so they read clearly; a head with little to take works with what it has
+    const bad = start.slice();
+    let cut = [];
     for (let i = 0; i < 8192; i++) if (start[i] - target[i] >= 2) cut.push(i);
-    if (cut.length < 300) return null;
+    if (cut.length < 300) { cut = []; for (let i = 0; i < 8192; i++) if (start[i] > target[i]) cut.push(i); }
+    if (cut.length < 120) return null;
     const lower = (i) => { bad[i] = Math.min(bad[i], target[i]); };
     const at = () => cut[Math.floor(R.next() * cut.length)];
     const KINDS = {
@@ -82,15 +96,52 @@
       bowl() { const v0 = R.range(0.3, 0.5), tilt = R.range(-0.12, 0.12), ph = R.next(); for (const i of cut) if (V(i) < v0 + tilt * Math.sin((U(i) + ph) * Math.PI * 2)) lower(i); },
       // bites taken out here and there
       chunks() { const n = R.int(5, 8); for (let k = 0; k < n; k++) { const c = at(), u0 = U(c), v0 = V(c), r = R.range(0.02, 0.035); for (const i of cut) { const a = du(U(i), u0) / r, b = (V(i) - v0) / (r * 2.2); if (a * a + b * b < 1) lower(i); } } },
+      // parallel clipper tracks: guard lines left down the head
+      tracks() { const u0 = R.next(), n = R.int(3, 5), gap = R.range(0.03, 0.05), w = R.range(0.007, 0.012); for (const i of cut) for (let k = 0; k < n; k++) if (du(U(i), (u0 + k * gap) % 1) < w) lower(i); },
+      // the job left unfinished: done everywhere except a few missed patches
+      missed() { const ps = Array.from({ length: R.int(3, 5) }, () => { const c = at(); return [U(c), V(c), R.range(0.03, 0.05)]; }); for (const i of cut) if (!ps.some(([u0, v0, r]) => { const a = du(U(i), u0) / r, b = (V(i) - v0) / (r * 2); return a * a + b * b < 1; })) lower(i); },
+      // a crooked neckline: the nape taken up unevenly
+      nape() { const w = R.range(0.1, 0.18), top = R.range(0.14, 0.24), lean = R.range(-0.5, 0.5); for (const i of cut) { const d = du(U(i), 0.5); if (d < w && V(i) < top * (1 + lean * (U(i) - 0.5) / w)) lower(i); } },
+      // one sideburn taken higher than the other
+      sideburn() { const u0 = R.next() < 0.5 ? 0.25 : 0.75, w = R.range(0.04, 0.07), top = R.range(0.3, 0.42); for (const i of cut) if (du(U(i), u0) < w && V(i) < top) lower(i); },
       // a crooked line-up: the low edge cut up at a slant on one side
       lineup() { const u0 = R.next(), w = R.range(0.18, 0.3), top = R.range(0.12, 0.22); for (const i of cut) { const d = du(U(i), u0); if (d < w && V(i) < top * (1 - d / w)) lower(i); } },
     };
-    const names = force || Object.keys(KINDS).sort(() => R.next() - 0.5).slice(0, R.next() < 0.45 ? 2 : 1);
+    // what really goes wrong depends on the hair: clipper tracks show in straight hair, a line-up is where tight curls go wrong
+    const ty = (person.hair && person.hair.type) || '1b', coily = /^(3c|4)/.test(ty), straight = /^[12]/.test(ty);
+    const odds = { gouge: 2, side: 2, step: 2, missed: 2, nape: 1.5, sideburn: 1.2, chunks: 0.6, bowl: 0.4, tracks: straight ? 2.2 : 0.5, lineup: coily ? 3 : 0.8 };
+    const names = force || [];
+    if (!force) for (let n = R.next() < 0.45 ? 2 : 1; n > 0; n--) { const left = Object.entries(odds).filter(([k]) => !names.includes(k)); names.push(choose(R, left.map(([k, w]) => [w, k]))[1]); }
     for (const n of names) KINDS[n]();
     let changed = 0;
     for (let i = 0; i < 8192; i++) if (bad[i] !== start[i]) changed++;
-    if (changed < 120) KINDS.chunks();
-    return { start: bad, target, style, flaws: names };
+    for (let k = 0; k < 4 && changed < 120; k++) { KINDS.chunks(); changed = 0; for (let i = 0; i < 8192; i++) if (bad[i] !== start[i]) changed++; }
+    // a man with a beard may have had that botched too
+    const fixBeard = Array.isArray(beard) && !force && R.next() < 0.45 ? beardDisaster(person, beard, R) : null;
+    return { start: bad, target, style, flaws: names, beard: fixBeard };
+  }
+  // the same rule for a beard: a mistake only takes hair down to the beard he asks for, so the clipper can always even it out
+  function beardDisaster(person, start, R) {
+    const j = beardJob(person, start, R);
+    if (!j) return null;
+    const cut = [];
+    for (let i = 0; i < 8192; i++) if (start[i] - j.target[i] >= 2) cut.push(i);
+    if (cut.length < 150) return null;
+    const bad = start.slice(), lower = (i) => { bad[i] = Math.min(bad[i], j.target[i]); }, BU = (i) => ((i & 127) + 0.5) / 128, BV = (i) => ((i >> 7) + 0.5) / 64;
+    const vs = cut.map(BV), lo = Math.min(...vs), hi = Math.max(...vs), left = R.next() < 0.5, half = (i) => (BU(i) < 0.5) === left;
+    const KINDS = {
+      // one side taken down, the other not
+      lopsided() { for (const i of cut) if (half(i)) lower(i); },
+      // the cheek line pushed up on one side
+      cheek() { const top = hi - (hi - lo) * R.range(0.2, 0.34); for (const i of cut) if (half(i) && BV(i) > top) lower(i); },
+      // the neckline pushed too high
+      neck() { const low = lo + (hi - lo) * R.range(0.16, 0.3); for (const i of cut) if (BV(i) < low) lower(i); },
+      // the clipper slipped: a bald bite out of the beard
+      gouge() { const c = cut[Math.floor(R.next() * cut.length)], u0 = BU(c), v0 = BV(c), ru = R.range(0.03, 0.05), rv = R.range(0.05, 0.09); for (const i of cut) { const a = (BU(i) - u0) / ru, b = (BV(i) - v0) / rv; if (a * a + b * b < 1) lower(i); } },
+    };
+    const flaw = choose(R, [[2, 'lopsided'], [2, 'cheek'], [1.5, 'neck'], [2, 'gouge']])[1];
+    KINDS[flaw]();
+    return { start: bad, target: j.target, style: j.style, flaw };
   }
 
   // ---- M7: a tidy-up: a finished cut with a little regrowth in one or two places ----
@@ -162,14 +213,9 @@
       const p = HSC.selectPerson(seed >>> 0 || 1, {}, (x) => x.beard.style === want, 600) || HSC.makePerson(seed >>> 0 || 1, { beard: want });
       return Object.assign(p, { job });
     }
-    if (mode === 'daily') {
-      const day = today();
-      const p = HSC.makePerson(hash('challenge-' + day), { noLoss: true });
-      return Object.assign(p, { job, challenge: day });
-    }
     return null;
   }
-  const wantsPerson = (m) => m === 'beard' || m === 'daily';
+  const wantsPerson = (m) => m === 'beard';
   function hook() {
     // the customer for a new job (no queued customer) in a mode with its own customers
     const pfj = HSC.personForJob;
@@ -208,29 +254,26 @@
     if (!md || !s || s.status !== 'cutting' || s.cutStrokeCount || !s.look || !s.look.person || s.look.person.first) return null;
     if (md.job && md.job.n === s.jobId) return null; // this job's start is already made (also after a reload)
     const p = s.look.person;
-    if (p.challenge) {
-      // the daily challenge: everyone gets the same walk-in hair (the walk-in picked with no history)
-      const w = HSC.pickWalkIn(p, []);
-      md.job = { n: s.jobId, m: 'daily' };
-      M().save();
-      if (!w) return null;
-      const h = HSC.walkIns.build(w);
-      return Object.assign({}, s, { hair: h.slice(), startHair: h, look: Object.assign({}, s.look, { profile: w.id }) });
-    }
     if (m !== 'fix' && m !== 'rush' && m !== 'beard') return null;
     const R = HSC.rng(((p.seed >>> 0) ^ Math.imul((s.jobId | 0) + 11, 0x5851f42d)) >>> 0 || 1);
     if (m === 'beard') {
       if (!Array.isArray(s.startBeard)) return null;
       const b = beardJob(p, s.startBeard, R);
       md.job = b ? { n: s.jobId, m, st: b.style, b: pack(b.target) } : { n: s.jobId, m, none: true };
+      if (b) noteAsk(b.style);
       M().save();
       return null;
     }
-    const j = m === 'fix' ? disaster(p, s.startHair, R) : tidy(p, s.startHair, R);
+    const j = m === 'fix' ? disaster(p, s.startHair, R, null, s.startBeard) : tidy(p, s.startHair, R);
     if (!j) { md.job = { n: s.jobId, m, none: true }; M().save(); return null; }
     md.job = { n: s.jobId, m, st: j.style.id, t: pack(j.target) };
+    if (j.beard) md.job.b = pack(j.beard.target);
+    noteAsk(j.style); for (const f of j.flaws || []) noteAsk(f);
+    if (j.beard) { noteAsk(j.beard.style); noteAsk(j.beard.flaw); }
     M().save();
-    return Object.assign({}, s, { hair: j.start.slice(), startHair: j.start });
+    const out = Object.assign({}, s, { hair: j.start.slice(), startHair: j.start });
+    if (j.beard) Object.assign(out, { beard: j.beard.start.slice(), startBeard: j.beard.start });
+    return out;
   }
 
   // ---- what each mode asks for (requests.js) ----
@@ -240,20 +283,13 @@
     // a career chair without its contract (between chapters) asks for nothing
     if (m === 'career') { const r = CR().request(s); return r !== undefined ? r : null; }
     if (m === 'free') return null;
-    if (p && p.challenge) {
-      // the daily challenge: the same cut for everyone today
-      const R = HSC.rng(hash('challenge-cut-' + p.challenge)), opts = options(p, s.startHair);
-      if (!opts.length) return undefined;
-      const [, style, target] = choose(R, opts);
-      return { style, target };
-    }
     const j = md && md.job && md.job.n === s.jobId ? md.job : null;
     if (!j || j.none) return m === 'beard' || m === 'fix' || m === 'rush' ? null : undefined;
     const key = s.jobId + ':' + j.m + ':' + j.st;
     if (reqCache.key === key) return reqCache.val;
     let val;
     if (j.m === 'beard') { const b = unpack(j.b, BTOP()); val = b ? { style: { id: 'beard:' + j.st, fam: 'beard' }, beard: b } : null; }
-    else { const t = unpack(j.t, 5); val = t ? { style: K().byId.get(j.st) || { id: j.st, fam: 'fix' }, target: t } : null; }
+    else { const t = unpack(j.t, 5), b = j.b ? unpack(j.b, BTOP()) : null; val = t ? { style: K().byId.get(j.st) || { id: j.st, fam: 'fix' }, target: t, beard: b } : null; }
     reqCache.key = key; reqCache.val = val;
     return val;
   }
@@ -263,30 +299,18 @@
   const timeLeft = () => (rush.job == null ? 0 : Math.max(0, rush.LIMIT - (performance.now() - rush.t0)));
   // the economy (economy.js) prices every mode by its fee: no mode multiplies tips any more
   function tips(base) { return base; }
-  // what the economy needs to know about this job's mode: the kind, a Rush time bonus (0-12), a first Daily
+  // what the economy needs to know about this job's mode: the kind, a Rush time bonus (0-12)
   function econJob(s) {
-    const m = current(), p = s.look && s.look.person, md = data();
-    const out = { kind: m === 'daily' || m === 'requests' || m === 'career' ? 'requests' : m };
+    const m = current();
+    const out = { kind: m === 'requests' || m === 'career' ? 'requests' : m };
     if (m === 'career' && CR() && CR().unscored()) out.kind = 'free'; // no contract in the chair: practice, no pay
-    if (p && p.challenge) { out.kind = 'requests'; out.dailyFirst = !(md && md.daily && md.daily.day === p.challenge && md.daily.paid); }
     if (m === 'rush' && rush.job === s.jobId) out.rushBonus = Math.round(12 * timeLeft() / rush.LIMIT);
     return out;
   }
   function done(s, stars) {
-    const md = data(), p = s.look && s.look.person;
+    const md = data();
     if (!md) return;
     if (current() === 'career') CR().done(s, stars);
-    if (p && p.challenge) {
-      // the Daily also counts toward career mastery (its style, the tools that cut and the services done)
-      if (CR() && CR().side && s.cutStrokeCount > 0) {
-        const rq = request(s);
-        CR().side({ valid: true, stars: Math.max(1, stars | 0), mode: 'daily', style: rq && rq.style ? rq.style.id : null, tools: ['clipper'] });
-      }
-      const was = md.daily && md.daily.day === p.challenge ? md.daily : null;
-      md.daily = { day: p.challenge, stars: Math.max(was ? was.stars : 0, stars), paid: true };
-      md.mode = md.beforeDaily && md.beforeDaily !== 'daily' ? md.beforeDaily : 'requests';
-      md.beforeDaily = null;
-    }
     if (current() === 'rush' && rush.job === s.jobId) {
       rush.job = null;
       md.rush = (md.rush || 0) + 1; // (the economy pays Rush by its fee and time bonus; no round bonus)
@@ -301,17 +325,15 @@
     const was = current();
     // leaving the career chair: its contract keeps the work done so far and waits for the barber (suspended)
     if (was === 'career' && m !== 'career' && g) await CR().suspend(g.getState());
-    if (m === 'daily' && was !== 'daily') md.beforeDaily = was;
     md.mode = m;
     md.tried = Array.isArray(md.tried) ? md.tried : [];
     if (!md.tried.includes(m)) md.tried.push(m); // a mode is no longer new once played
-    if (m === 'daily') md.mode = 'daily';
     M().save();
     if (CR() && CR().syncLook) CR().syncLook(); // the salon behind the chair follows the mode (a branch in Career)
     if (!g) return true;
     const s = g.getState();
     // a new customer for the new mode (the one in the chair keeps his cut in freestyle and the career)
-    const keep = s.status === 'cutting' && was === m && m !== 'daily' && (m !== 'career' || !!(CR().active() && CR().active().job === s.jobId));
+    const keep = s.status === 'cutting' && was === m && (m !== 'career' || !!(CR().active() && CR().active().job === s.jobId));
     if (!keep && s.status === 'cutting' && g.skip) { md.job = null; if (M().data.queue && M().data.queue.job === s.jobId + 1) M().data.queue = null; await g.skip(); }
     else if (!keep && s.status === 'reveal' && g.next) { if (M().data.queue && M().data.queue.job === s.jobId + 1) M().data.queue = null; await g.next(); }
     return true;
@@ -330,11 +352,10 @@
     requests: `<svg viewBox="0 0 48 48" width="56" height="56"><circle cx="20" cy="27" r="11" fill="#e9c9a8" stroke="${INK}" stroke-width="2.4"/><path d="M9.5 25c0-7 4.5-11 10.5-11s10.5 4 10.5 11c-3-3-7-4.5-10.5-4.5S12.5 22 9.5 25z" fill="#5a3b1f" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/><path d="M28 6h14a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-7l-4 4v-4h-3a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3z" fill="#fff" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/><path d="M31.5 14.5c0-3 1.6-4.6 3.5-4.6s3.5 1.6 3.5 4.6" fill="#5a3b1f"/></svg>`,
     free: `<svg viewBox="0 0 48 48" width="56" height="56"><rect x="16" y="16" width="16" height="26" rx="5" fill="#ffb627" stroke="${INK}" stroke-width="2.4"/><path d="M15 17v-6h18v6" fill="#c9cfd6" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/><path d="M8 8l2 4M40 8l-2 4M6 20h4M42 20h-4M24 2v4" stroke="#ffb627" stroke-width="3" stroke-linecap="round"/></svg>`,
     fix: `<svg viewBox="0 0 48 48" width="56" height="56"><circle cx="24" cy="28" r="13" fill="#e9c9a8" stroke="${INK}" stroke-width="2.4"/><path d="M11.5 26c0-8 5.5-12.5 12.5-12.5S36.5 18 36.5 26l-4-3-2.5 4-3-5-3 6-3-6-2.5 3.5-3-3z" fill="#5a3b1f" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/><g transform="rotate(-35 34 12)"><rect x="25" y="8" width="18" height="8" rx="4" fill="#ffd9a8" stroke="${INK}" stroke-width="2.2"/><rect x="31" y="8" width="6" height="8" fill="#f2b880" stroke="${INK}" stroke-width="1.6"/></g></svg>`,
-    daily: `<svg viewBox="0 0 48 48" width="56" height="56"><rect x="7" y="10" width="34" height="32" rx="5" fill="#fff" stroke="${INK}" stroke-width="2.4"/><path d="M7 19h34" stroke="${INK}" stroke-width="2.4"/><path d="M7 15a5 5 0 0 1 5-5h24a5 5 0 0 1 5 5v4H7z" fill="#ff5d73" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/><path d="M16 6v8M32 6v8" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/><path d="M24 23.5l2.4 4.8 5.3.7-3.9 3.7 1 5.2-4.8-2.6-4.8 2.6 1-5.2-3.9-3.7 5.3-.7z" fill="#ffc83d" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
     beard: `<svg viewBox="0 0 48 48" width="56" height="56"><circle cx="24" cy="20" r="13" fill="#e9c9a8" stroke="${INK}" stroke-width="2.4"/><path d="M11 18c0 15 6 25 13 25s13-10 13-25c-3 5-7 7-13 7s-10-2-13-7z" fill="#5a3b1f" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/><path d="M18 28c2 1.6 4 2 6 2s4-.4 6-2" stroke="#e9c9a8" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>`,
     rush: `<svg viewBox="0 0 48 48" width="56" height="56"><circle cx="24" cy="26" r="16" fill="#fff" stroke="${INK}" stroke-width="2.4"/><path d="M20 4h8M24 4v6M38 12l3-3" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/><path d="M26 14l-6 13h6l-3 11 9-15h-6l3-9z" fill="#ffc83d" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/></svg>`,
   };
-  const NAME = { requests: 'Customer requests', free: 'Quick Play', fix: 'Hair disasters', daily: 'Daily challenge', beard: 'Beard studio', rush: 'Rush hour' };
+  const NAME = { requests: 'Customer requests', free: 'Quick Play', fix: 'Hair disasters', beard: 'Beard studio', rush: 'Rush hour' };
   const LOCK = `<svg viewBox="0 0 24 24" width="22" height="22"><rect x="5" y="10.5" width="14" height="10" rx="2.4" fill="#ffc83d" stroke="${INK}" stroke-width="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="${INK}" stroke-width="2"/></svg>`;
   const STAR = (on) => `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc83d' : 'none'}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"${on ? '' : ' stroke-dasharray="2.6 2.2" opacity=".55"'}/></svg>`;
   const TICK = '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#10223f" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -397,14 +418,12 @@ body.hsc-reveal #hsc-rush,body.hsc-reveal #hsc-newc,body.hsc-spin #hsc-newc{disp
   boot();
   HSC.modes = {
     current, unlocked, list: LIST, level: LEVEL, set: setMode, newCustomer,
-    request: (s) => request(s), tips, done, beardStars, beardJob, econJob,
+    request: (s) => request(s), tips, done, beardStars, beardJob, econJob, recently, noteAsk,
     unscored: () => { const m = current(); return m === 'free' || (m === 'career' && CR().unscored()); },
     icon: (m) => ICON[m],
     // the job builders, for the career catalog (career-catalog.js)
-    build: { options, disaster, tidy, beardJob, beardGrid },
-    // today's daily challenge: done (and its best stars) or not
+    build: { options, disaster, beardDisaster, tidy, beardJob, beardGrid },
     // a mode just unlocked and not played yet
     isNew: (m) => { const md = data(); return m !== 'requests' && unlocked(m) && !(md && Array.isArray(md.tried) && md.tried.includes(m)); },
-    daily: () => { const md = data(), d = md && md.daily; return d && d.day === today() ? { done: true, stars: d.stars } : { done: false, stars: 0 }; },
   };
 })(globalThis.HSC || (globalThis.HSC = {}));

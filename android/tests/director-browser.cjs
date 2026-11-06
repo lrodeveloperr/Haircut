@@ -91,7 +91,7 @@ const PER_LEVEL = +process.env.DIRECTOR_BROWSER_CONTRACTS || 160;
       return out;
     }, PER_LEVEL);
     console.log(JSON.stringify(res));
-    assert.deepEqual(res.clipperOnly, { tools: [], modes: ['requests', 'free', 'fix', 'daily', 'beard', 'rush'], tray: false }, 'clipper only');
+    assert.deepEqual(res.clipperOnly, { tools: [], modes: ['requests', 'free', 'fix', 'beard', 'rush'], tray: false }, 'clipper only');
     delete res.clipperOnly;
     assert.ok(res.hitError < 1e-4, 'a hit maps back to the un-morphed head: ' + res.hitError);
     delete res.hitError;

@@ -13,5 +13,8 @@ def rep(old, new):
 rep('let hs_bh=Na(se,me,Fe)<.05?HSC.beardHit(se,me,Fe,be,hs_B===hs_I):null;if(Na(se,me,Fe)<.05&&!hs_bh)return w=null,null;',
     'let hs_b=HSC.warpBase(se,me,Fe,hs_A,hs_B,be),hs_bh=Na(...hs_b)<.05?HSC.beardHit(se,me,Fe,be,hs_B===hs_I):null;if(Na(...hs_b)<.05&&!hs_bh)return w=null,null;')
 rep('dl(Nn({},hs_bh||Tl(se,me,Fe)),{position:[se,me,Fe],', 'dl(Nn({},hs_bh||Tl(...hs_b)),{position:hs_bh?[se,me,Fe]:hs_b,')
+# the player can tilt down far enough to see and cut under the chin and jaw (owner, 6 November 2026)
+assert s.count('-5,70') == 2
+s = s.replace('-5,70', '-42,70')
 open(p, 'w').write(s)
 print('patched head form hit (Android)')

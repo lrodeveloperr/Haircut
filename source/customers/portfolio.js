@@ -21,7 +21,7 @@
   const I = (n, s) => (HSC.icon ? HSC.icon(n, s) : '');
   const C = () => HSC.career, CR = () => (HSC.careerRun && HSC.careerRun.ready() ? HSC.careerRun : null);
   const EDITION = 'p1', CARD_V = 1, CARDS = 24, CARD_MAX = 12 * 1024, CARDS_MAX = 384 * 1024;
-  const MODES = ['requests', 'fix', 'beard', 'rush', 'daily'];
+  const MODES = ['requests', 'fix', 'beard', 'rush'];
   const STAGES = ['recognized', 'familiar', 'trusted', 'signature'];
   const hash = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0).toString(36); };
 
@@ -266,7 +266,7 @@
     },
     cab(body) {
       const m = body.core.mastery, tile = (ic, key, v) => `<div class="tile${v ? '' : ' off'}" role="img" aria-label="${key}">${I(ic)}<span class="med">${[1, 2, 3].map((x) => STAR(x <= v)).join('')}</span></div>`;
-      return `<div class="pc grid2">${MODES.map((k) => tile({ requests: 'orders', fix: 'rescue', beard: 'beards', rush: 'rush', daily: 'daily' }[k], t({ requests: 'orders', fix: 'rescue', beard: 'beards', rush: 'rush', daily: 'daily' }[k]), m.mode[k] | 0)).join('')}</div>`;
+      return `<div class="pc grid2">${MODES.map((k) => tile({ requests: 'orders', fix: 'rescue', beard: 'beards', rush: 'rush' }[k], t({ requests: 'orders', fix: 'rescue', beard: 'beards', rush: 'rush' }[k]), m.mode[k] | 0)).join('')}</div>`;
     },
     fav(body) {
       const p = port(body), last = CR().lastCard && CR().lastCard();

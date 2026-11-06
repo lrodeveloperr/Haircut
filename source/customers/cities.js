@@ -71,16 +71,32 @@
     'mexico-city': ['latino', 'indigenous-american'], 'sao-paulo': ['latino', 'mixed'], 'buenos-aires': ['mediterranean', 'latino'], kingston: ['west-african', 'mixed'],
     sydney: ['mixed', 'pacific-islander'], auckland: ['pacific-islander', 'north-european'],
   };
+  // Local habits (owner-directed, 6 November 2026; provisional until sourced and reviewed): the age mix [young, middle, old],
+  // the share of men with facial hair, which haircut families lean up or down, and how much more or less often than the
+  // game's base rate men have a visible tattoo or an ear piercing. All are soft weights on residents: a city
+  // never fixes a man's age, beard or cut, and no cut is ever ruled out.
+  const YOUNG = [0.5, 0.38, 0.12], EVEN = [0.36, 0.42, 0.22], OLDER = [0.26, 0.42, 0.32];
+  const FADE = { fade: 1.6, skin: 1.4, temple: 1.3 }, CLASSIC = { classic: 1.5, taper: 1.3, crew: 1.2 }, NEAT = { taper: 1.5, classic: 1.3, trim: 1.2 }, MODERN = { undercut: 1.5, fade: 1.3, taper: 1.2 };
+  const HABITS = {
+    tokyo: { age: OLDER, beard: 0.3, cuts: NEAT, tattoo: 0.25, ear: 1 }, seoul: { age: OLDER, beard: 0.3, cuts: NEAT, tattoo: 0.3, ear: 1.2 }, jakarta: { age: YOUNG, beard: 0.35, cuts: MODERN, tattoo: 0.4, ear: 0.7 }, manila: { age: YOUNG, beard: 0.3, cuts: MODERN, tattoo: 0.8, ear: 0.9 },
+    mumbai: { age: YOUNG, beard: 0.6, cuts: MODERN, tattoo: 0.4, ear: 0.8 }, karachi: { age: YOUNG, beard: 0.7, cuts: NEAT, tattoo: 0.15, ear: 0.3 }, istanbul: { age: EVEN, beard: 0.6, cuts: MODERN, tattoo: 0.6, ear: 0.6 }, cairo: { age: YOUNG, beard: 0.6, cuts: NEAT, tattoo: 0.15, ear: 0.3 },
+    lagos: { age: YOUNG, beard: 0.5, cuts: FADE, tattoo: 0.5, ear: 1 }, kingston: { age: EVEN, beard: 0.5, cuts: FADE, tattoo: 1.1, ear: 1.8 }, nairobi: { age: YOUNG, beard: 0.5, cuts: FADE, tattoo: 0.5, ear: 0.9 }, london: { age: EVEN, beard: 0.5, cuts: CLASSIC, tattoo: 1.6, ear: 1.3 },
+    berlin: { age: OLDER, beard: 0.55, cuts: CLASSIC, tattoo: 1.8, ear: 1.3 }, madrid: { age: OLDER, beard: 0.55, cuts: CLASSIC, tattoo: 1.3, ear: 1.2 }, 'mexico-city': { age: EVEN, beard: 0.45, cuts: FADE, tattoo: 1.4, ear: 1 }, 'sao-paulo': { age: EVEN, beard: 0.5, cuts: FADE, tattoo: 1.8, ear: 1.5 },
+    'new-york': { age: EVEN, beard: 0.5, cuts: FADE, tattoo: 2.2, ear: 1.6 }, auckland: { age: EVEN, beard: 0.5, cuts: CLASSIC, tattoo: 2.2, ear: 1.1 },
+  };
+  // the 18 cities Career launches with (owner, 6 November 2026); the rest stay here, switched off, for later updates
+  const LAUNCH = new Set(['tokyo', 'seoul', 'jakarta', 'manila', 'mumbai', 'karachi', 'istanbul', 'cairo', 'lagos', 'kingston', 'nairobi', 'london', 'berlin', 'madrid', 'mexico-city', 'sao-paulo', 'new-york', 'auckland']);
   // one city record (CITY-CUSTOMER-VARIABILITY.md section 10). A null table means "use the neutral fallback";
   // every fallback field is low confidence and the record stays in research review until sourced.
   function record(row) {
     const [id, group] = row, names = {};
     LANGS.forEach((l, i) => { names[l] = row[2 + i]; });
     return {
-      id, group, names, enabled: true,
+      id, group, names, enabled: LAUNCH.has(id),
       geography: 'metro',
       population: null,               // resident community weights: null = the neutral global table
       people: PEOPLE[id] || null,     // the provisional main and second group (see PEOPLE)
+      habits: HABITS[id] || null,     // the provisional local age, beard and haircut weights (see HABITS)
       visitor: { share: 0.12, mix: null }, // bounded visitor share; mix null = neutral world table
       ages: null, styles: null, beards: null, practice: null, tattoo: null, motifs: null, piercing: null, culture: null,
       starter: 'universal',           // starter-set and unlock profile: the universal viability floor

@@ -19,13 +19,13 @@
   const I = (n, s) => (HSC.icon ? HSC.icon(n, s) : '');
   // each feature's own button and where it goes on the home screen
   const PLACE = [['#hsc-goals-btn', '.hold'], ['#hsc-set-btn', '.gear'], ['.hsc-rw', '.hold'], ['#hsc-salon-btn', '.hold'], ['#hsc-book-btn', '.hold'], ['#hsc-album-btn', '.hold']];
-  const MODE_ICON = { requests: 'orders', free: 'freestyle', fix: 'rescue', daily: 'daily', beard: 'beards', rush: 'rush' };
+  const MODE_ICON = { requests: 'orders', free: 'freestyle', fix: 'rescue', beard: 'beards', rush: 'rush' };
   const MODE_WORD = Object.assign({}, MODE_ICON, { free: 'quick_play' });
-  const MODE_COLOUR = { requests: 'green', free: 'yellow', fix: 'red', daily: 'white', beard: 'orange', rush: 'purple' };
+  const MODE_COLOUR = { requests: 'green', free: 'yellow', fix: 'red', beard: 'orange', rush: 'purple' };
   const STAR = (on) => `<svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc21a' : 'none'}" stroke="${on ? K : '#fff'}" stroke-width="2.4" stroke-linejoin="round"${on ? '' : ' stroke-dasharray="2.6 2.2"'}/></svg>`;
   // what each mode pays, shown on its card: numbers and icons only
   // Truthful minimums/bonuses from economy.js. A trailing + means skill, services or time can add more.
-  const REWARD = { requests: () => I('coin') + '24+', free: () => I('coin') + '0', fix: () => I('coin') + '34+', daily: () => I('coin') + '+30', beard: () => I('coin') + '22+', rush: () => I('coin') + '20+' };
+  const REWARD = { requests: () => I('coin') + '24+', free: () => I('coin') + '0', fix: () => I('coin') + '34+', beard: () => I('coin') + '22+', rush: () => I('coin') + '20+' };
   const CSS = `
 #hsc-menu-btn{padding:0}
 #hsc-menu{position:fixed;inset:0;z-index:29;zoom:var(--hsc-s,1);display:none;pointer-events:auto;touch-action:manipulation;font-family:"Arial Rounded MT Bold","Nunito","Baloo 2",system-ui,-apple-system,"Segoe UI",sans-serif;color:${K};-webkit-user-select:none;user-select:none;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,#38d1e8,#1679c9 55%,#0d3f86)}
@@ -147,7 +147,7 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
 #hsc-goals .sheet,#hsc-salon .sheet,.hsc-coll-panel .sheet,#hsc-set .sheet,#hsc-panel .hsc-sheet{background:linear-gradient(#ffffff,#e4f3ff)!important;border-color:${K}!important}
 #hsc-goals .x,#hsc-salon .x,.hsc-coll-panel .x,#hsc-set .x,#hsc-panel .hsc-x{background:linear-gradient(#fff,#dfe8f2)!important;border-color:${K}!important;box-shadow:inset 0 -4px 0 #0002,inset 0 2px 0 #fff9,0 3px 0 ${K}!important;color:${K}!important}
 /* ---- the cutting screen, in the same jelly style (looks only: every control keeps its size and place) ---- */
-#hsc-hud .hsc-btn,#hsc-undo,#hsc-newc,.ui .audio-toggle{background:linear-gradient(#fff,#dfe8f2)!important;border:3px solid ${K}!important;box-shadow:inset 0 -5px 0 #0002,inset 0 2px 0 #fff9,0 4px 0 ${K},0 6px 8px #0004!important;color:${K}}
+#hsc-hud .hsc-btn,#hsc-undo,#hsc-cmp,#hsc-newc,.ui .audio-toggle{background:linear-gradient(#fff,#dfe8f2)!important;border:3px solid ${K}!important;box-shadow:inset 0 -5px 0 #0002,inset 0 2px 0 #fff9,0 4px 0 ${K},0 6px 8px #0004!important;color:${K}}
 #hsc-menu-btn{background:linear-gradient(#ffe682,#ffb21a)!important}
 #hsc-undo{background:linear-gradient(#ffa59b,#f04436)!important;color:#fff}
 .ui .guard-arc .rung{background:linear-gradient(#fff,#dfe8f2)!important;border:3px solid ${K}!important;box-shadow:inset 0 -4px 0 #0002,inset 0 2px 0 #fff9,0 3px 0 ${K},0 5px 6px #0004!important;color:${K}}
@@ -164,7 +164,7 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
 .ui .audio-toggle[aria-pressed=false]{background:${HSC.iconCss ? HSC.iconCss('mute') : 'none'} center/66% no-repeat,linear-gradient(#fff,#dfe8f2)!important}
 .ui .ctl.finish.seal>svg{opacity:0}
 .ui .ctl.finish.seal,.ui[data-status=cutting] .ctl.finish.seal{border-radius:50%;border:3px solid ${K}!important;box-shadow:inset 0 -5px 0 #0002,inset 0 2px 0 #fff9,0 4px 0 ${K},0 6px 8px #0004!important;background:url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 12.5l4.6 4.6L19 7.5" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>')}") center/62% no-repeat,linear-gradient(#5fd06a,#2f9e44)!important}
-#hsc-hud .hsc-btn:active,#hsc-undo:active,#hsc-newc:active,.ui .audio-toggle:active,.ui .guard-arc .rung:active,.ui .clip-toggle:active{box-shadow:inset 0 -3px 0 #0002,inset 0 2px 0 #fff9,0 1px 0 ${K}!important}
+#hsc-hud .hsc-btn:active,#hsc-undo:active,#hsc-cmp:active,#hsc-newc:active,.ui .audio-toggle:active,.ui .guard-arc .rung:active,.ui .clip-toggle:active{box-shadow:inset 0 -3px 0 #0002,inset 0 2px 0 #fff9,0 1px 0 ${K}!important}
 /* a feature button that appears in the top row before the home screen takes it in is never shown there */
 #hsc-hud .hsc-row .hsc-rw,#hsc-hud .hsc-row #hsc-goals-btn,#hsc-hud .hsc-row #hsc-salon-btn,#hsc-hud .hsc-row #hsc-book-btn,#hsc-hud .hsc-row #hsc-album-btn,#hsc-hud .hsc-row #hsc-set-btn{display:none!important}
 `;
@@ -284,15 +284,15 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
     modes() {
       const M = HSC.modes, grid = this.el.menu.querySelector('.mgrid');
       if (!M) return;
-      const cur = M.current(), daily = M.daily ? M.daily() : null, lv = HSC.meta.level(), prog = HSC.meta.levelProgress ? HSC.meta.levelProgress() : 0;
+      const cur = M.current(), lv = HSC.meta.level(), prog = HSC.meta.levelProgress ? HSC.meta.levelProgress() : 0;
       // Quick Play is a Home card, never a Modes tile (its saved id `free` stays in the mode list)
       grid.innerHTML = M.list.filter((k) => k !== 'free').map((k) => {
         const lock = !M.unlocked(k);
         // a locked mode shows how close the barber is: the levels still to go, as a bar
         const need = M.level[k], frac = Math.max(0, Math.min(1, (lv - 1 + prog) / Math.max(1, need - 1)));
         const hot = !lock && HSC.econ && HSC.econ.demand && HSC.econ.demand().includes(k); // this shift's demand bonus
-        const reward = (k === 'daily' && daily && daily.done ? [1, 2, 3].map((x) => STAR(x <= daily.stars)).join('') : REWARD[k]()) + (hot ? I('flame') : '');
-        return `<button class="j mode c-${MODE_COLOUR[k]}${k === cur ? ' on' : ''}" type="button" data-m="${k}"${lock ? ' aria-disabled="true"' : ''}>${I(MODE_ICON[k])}<span class="hsc-lbl" data-k="${MODE_WORD[k]}"></span><span class="reward">${reward}</span>${k === 'daily' && !lock && !(daily && daily.done) ? '<span class="hsc-dot"></span>' : ''}${!lock && M.isNew && M.isNew(k) ? `<span class="new">${t('new')}</span>` : ''}${lock ? `<span class="lock">${I('lock')}<span>${need}</span><span class="bar"><i style="width:${Math.round(frac * 100)}%"></i></span></span>` : ''}</button>`;
+        const reward = REWARD[k]() + (hot ? I('flame') : '');
+        return `<button class="j mode c-${MODE_COLOUR[k]}${k === cur ? ' on' : ''}" type="button" data-m="${k}"${lock ? ' aria-disabled="true"' : ''}>${I(MODE_ICON[k])}<span class="hsc-lbl" data-k="${MODE_WORD[k]}"></span><span class="reward">${reward}</span>${!lock && M.isNew && M.isNew(k) ? `<span class="new">${t('new')}</span>` : ''}${lock ? `<span class="lock">${I('lock')}<span>${need}</span><span class="bar"><i style="width:${Math.round(frac * 100)}%"></i></span></span>` : ''}</button>`;
       }).join('');
       grid.querySelectorAll('.mode').forEach((b) => b.addEventListener('click', () => {
         if (b.getAttribute('aria-disabled')) { if (HSC.nope) HSC.nope(b); return; }
@@ -332,8 +332,8 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       const gear = m.querySelector('.gear .hsc-btn');
       if (gear && !gear.querySelector('.hsc-ic')) gear.insertAdjacentHTML('beforeend', I('gear'));
       // the home button's dot: anything waiting on the home screen
-      const gs = HSC.gift ? HSC.gift.state() : null, daily = HSC.modes && HSC.modes.daily ? HSC.modes.daily() : null;
-      const dot = [...m.querySelectorAll('.hsc-btn .hsc-dot')].some((d) => !d.hidden) || !!(gs && gs.ready) || !!(daily && !daily.done && HSC.modes.unlocked('daily'));
+      const gs = HSC.gift ? HSC.gift.state() : null;
+      const dot = [...m.querySelectorAll('.hsc-btn .hsc-dot')].some((d) => !d.hidden) || !!(gs && gs.ready);
       this.el.btn.querySelector('.hsc-dot').hidden = !dot;
       if (m.classList.contains('open')) this.refresh();
     },

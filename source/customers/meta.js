@@ -231,7 +231,7 @@
       (j.none === true || j.m === 'daily' || (typeof j.st === 'string' && j.st.length < 40 && (typeof j.t === 'string' ? j.t.length < 24000 : typeof j.b === 'string' && j.b.length < 24000)));
     const dl = o.daily, okDaily = dl && typeof dl === 'object' && typeof dl.day === 'string' && /^\d{4}-\d\d-\d\d$/.test(dl.day) && [0, 1, 2, 3].includes(dl.stars);
     return { mode: MODES.includes(o.mode) ? o.mode : 'requests', job: okJob ? { n: j.n, m: j.m, st: j.st, t: j.t, b: j.b, none: j.none === true || undefined } : null,
-      daily: okDaily ? { day: dl.day, stars: dl.stars, paid: dl.paid === true } : null, beforeDaily: MODES.includes(o.beforeDaily) && o.beforeDaily !== 'daily' ? o.beforeDaily : null, tried: Array.isArray(o.tried) ? o.tried.filter((m) => MODES.includes(m)).slice(0, 10) : [], rush: Number.isSafeInteger(o.rush) && o.rush >= 0 ? Math.min(o.rush, 1e6) : 0 };
+      ask: Array.isArray(o.ask) ? o.ask.filter((x) => typeof x === 'string' && x.length < 48).slice(-14) : [], daily: okDaily ? { day: dl.day, stars: dl.stars, paid: dl.paid === true } : null, beforeDaily: MODES.includes(o.beforeDaily) && o.beforeDaily !== 'daily' ? o.beforeDaily : null, tried: Array.isArray(o.tried) ? o.tried.filter((m) => MODES.includes(m)).slice(0, 10) : [], rush: Number.isSafeInteger(o.rush) && o.rush >= 0 ? Math.min(o.rush, 1e6) : 0 };
   }
   // the play-time gift: today's active play seconds and the gifts taken (session.js)
   function cleanGift(o) {
@@ -359,7 +359,9 @@
     const d = M.data;
     if (d && d.queue && d.queue.job === s.jobId && HSC.validPerson(d.queue.person)) return Object.assign({}, d.queue.person, { job: s.jobId });
     const first = !!d && d.cuts === 0 && s.jobId === 1;
-    return Object.assign(generate(seed, M.level(), first ? { first: true } : {}), { job: s.jobId });
+    // Quick Play is the open game: any customer can walk in at any level
+    const level = HSC.modes && HSC.modes.current() === 'free' ? 99 : M.level();
+    return Object.assign(generate(seed, level, first ? { first: true } : {}), { job: s.jobId });
   };
 
   // a haircut was finished: progress, streak, and who comes in next

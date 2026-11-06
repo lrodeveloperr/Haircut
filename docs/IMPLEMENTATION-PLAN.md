@@ -360,6 +360,15 @@ replaces every tool, service and ritual item in this plan and its contracts wher
   relationship. Career's cities add freshness, not tools.
 - Not to be built: comb, dryer, shampoo, sponge, wave brush, hair oil, steamer, pick, thinning shears, moustache wax.
 
+Further owner decisions, 6 November 2026: Daily mode is removed, leaving Career, Quick Play, Orders, Rescue, Beards and
+Rush. Quick Play brings any customer at any level. Career launches with 18 cities; the other 18 stay in the data, switched
+off, for later updates. Camera tilt reaches under the chin.
+
+Rescue (6 November 2026): a botched cut is a real clipper mistake, weighted by hair type, and a beard can be botched too.
+A mistake only takes hair down to the repaired length, so the clipper can always finish the job
+(`android/tests/rescue-browser.cjs`). Orders: customers only ask for styles their hair can make, and a tap toggle shows the
+finished cut on the real head. Each launch city also weights age, facial hair, popular cuts, tattoos and ear piercings.
+
 ## 3. Owner decisions (answered 5 November 2026)
 
 1. **Prices (3.7): fix both.** Re-price shop parts/regions to ≤ 60 jobs per stage and fold the play-time Gift

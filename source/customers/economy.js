@@ -27,7 +27,7 @@
     // Relax: ritual completion under 50% -> no tip, 50-99% -> 25%, 100% -> 50% of the net fee
     regular: 4, vipShare: 0.25, combo: [1, 1, 1.2, 1.5, 2], rushMax: 12,
     demand: { share: 0.2, max: 12, perShift: 3, shiftLength: 5 },
-    dailyFirst: 30, freestyleOnce: 5,
+    freestyleOnce: 5,
     bill: { every: 5, amount: 50, subsidised: 5, lines: { rent: 25, utilities: 12, cleaning: 8, tools: 5 } },
     // owner decision 5 November 2026 (economy simulator, plan 3.1/3.7): city chapter 75 -> 30, first showcase 150 -> 75,
     // so ordinary work carries more of the income; paid milestones keep their keys and are never repaid or taken back
@@ -65,7 +65,7 @@
 
   // ---- the job payout (balance model sections 2-7) ----
   // job: { kind (mode or 'showcase'), stars, valid, regular, vip, combo (3-star run including this job),
-  //        rushBonus (0..12), demandMatch, daily }
+  //        rushBonus (0..12), demandMatch }
   function payout(job) {
     const kind = job.kind in CONFIG.fee ? job.kind : 'requests';
     const [gross, cost] = CONFIG.fee[kind];
@@ -79,12 +79,10 @@
     tip = Math.round(Math.min(tip, net));
     const rush = kind === 'rush' ? Math.max(0, Math.min(CONFIG.rushMax, Math.round(job.rushBonus || 0))) : 0;
     const demand = job.demandMatch ? Math.min(CONFIG.demand.max, Math.round(net * CONFIG.demand.share)) : 0;
-    const daily = job.dailyFirst ? CONFIG.dailyFirst : 0;
     const lines = [['fee', gross], ['cost', -cost]];
     if (tip) lines.push(['tip', tip]);
     if (rush) lines.push(['rush', rush]);
     if (demand) lines.push(['demand', demand]);
-    if (daily) lines.push(['daily', daily]);
     const total = lines.reduce((a, l) => a + l[1], 0);
     return { total, net, tip, lines, kind };
   }

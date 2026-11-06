@@ -388,13 +388,6 @@
   }
   const pendingBase = () => { if (run.pendingBase) { const c = run.pendingBase; run.pendingBase = null; setBase(c); } };
 
-  // the Daily result attaches to career mastery (it never takes a slot); nothing is written when nothing improves
-  function side(r) {
-    if (!run.body || !r) return Promise.resolve(false);
-    const t = C().side(run.body.core, r);
-    if (t.error || t.duplicate) return Promise.resolve(false);
-    return commit((b) => { const x = C().side(b.core, r); if (x.error || x.duplicate) return b; const body = JSON.parse(JSON.stringify(b)); body.core = x.state; if (HSC.portfolio) HSC.portfolio.settle(body); return body; }).then(() => true);
-  }
   // Favourite work: save the last finished job's card (or replace one exact card when the 24 are full)
   async function saveCard(replaceId) {
     const P = HSC.portfolio, last = run.lastCard;
@@ -466,7 +459,7 @@
   HSC.careerRun = {
     saveCard, lastCard: () => run.lastCard || null,
     setBase, syncLook, branchLook, lookCity, branches: () => (run.body && run.body.branches) || {},
-    init, ensure, person, start, request, unscored, done, side, replace, canReplace, suspend, chooseCity, found, needsChoice,
+    init, ensure, person, start, request, unscored, done, replace, canReplace, suspend, chooseCity, found, needsChoice,
     body: () => run.body, ready: () => run.ready, active: act,
     // a career saved by a newer game version: kept untouched; Career asks for an update (save contract section 8)
     tooNew: () => !!run.tooNew,

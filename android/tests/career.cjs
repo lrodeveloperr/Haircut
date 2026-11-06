@@ -220,19 +220,6 @@ ok('pure');
   ok('registry');
 }
 
-// 18. a Daily result raises mastery only: no slot, no progress; the same result twice changes nothing
-{
-  C.setCities(CITIES, 6);
-  const st = C.create('ist', 31);
-  const r = C.side(st, { valid: true, stars: 3, mode: 'daily', style: 'crop', tools: ['clipper'] });
-  assert.equal(r.state.licence.next, 0, 'no progress');
-  assert.equal(C.contractId(r.state), C.contractId(st), 'the offered slot is unchanged');
-  assert.equal(r.state.mastery.style.crop, 3);
-  assert.equal(r.state.mastery.mode.daily, 3);
-  assert.equal(C.side(r.state, { valid: true, stars: 2, mode: 'daily', style: 'crop', tools: ['clipper'] }).duplicate, true);
-  assert.equal(C.side(st, { valid: false, mode: 'daily' }).error, 'not-valid');
-  ok('daily mastery');
-}
 
 // 19. four-part city mastery and branch states: completion alone is not mastery; all four parts are
 {
