@@ -112,9 +112,7 @@ async function privacy(layout) {
     adb('shell','input','tap',String(Math.round(b.left+(p.x-v.offsetLeft)*(b.right-b.left)/v.width)),String(Math.round(b.top+(p.y-v.offsetTop)*(b.bottom-b.top)/v.height)));
   };
   const before=await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair));
-  // the wardrobe is in the menu (owner request, 5 November 2026)
-  // Record where the native tap goes and every menu open/close, so a slow emulator's missed tap is evidence,
-  // not a silent timeout. One retry is allowed and reported; a second miss fails.
+  // Privacy is a readable action under Settings. Record slow-emulator menu misses as evidence.
   await page.evaluate(()=>{
     const log=window.__menuTap=[];const m=document.getElementById('hsc-menu');
     for(const type of ['pointerdown','pointerup','click'])addEventListener(type,e=>log.push(type+':'+(e.target.id||e.target.className?.baseVal||e.target.className||e.target.tagName)+':'+e.isTrusted),true);
@@ -123,45 +121,29 @@ async function privacy(layout) {
   for(let attempt=1;;attempt++){
     // a returning barber may already be on the home screen
     if(!await page.evaluate(()=>!!document.querySelector('#hsc-menu.open')))await tap('#hsc-menu-btn');
-    try{await page.waitForFunction(()=>document.querySelector('#hsc-menu.open .hsc-rw'),undefined,{timeout:10000});break;}
+    try{await page.waitForFunction(()=>document.querySelector('#hsc-menu.open #hsc-set-btn'),undefined,{timeout:10000});break;}
     catch(error){
       const log=await page.evaluate(()=>__menuTap.slice());
       (layout.menuTapMisses??=[]).push({attempt,log});console.log('menu tap missed',attempt,JSON.stringify(log));
       if(attempt===2)throw error;
     }
   }
-  await tap('#hsc-menu .hsc-rw');
-  await page.waitForFunction(()=>document.querySelector('#hsc-panel.open .hsc-privacy')&&skinFadeStudio.getView().paused);
+  await tap('#hsc-set-btn');
+  await page.waitForFunction(()=>document.querySelector('#hsc-set.open .hsc-privacy'));
   await page.evaluate(()=>{
     const style=document.createElement('style');style.id='privacy-capture-stability';
     style.textContent='*{animation:none!important;transition:none!important}';document.head.append(style);
     return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   });
-  const geometry=await page.evaluate(()=>{
+  const settings=await page.evaluate(()=>{
     const button=document.querySelector('.hsc-privacy');
-    const measure=()=>[...document.querySelectorAll('#hsc-panel button:not(.hsc-privacy),.hsc-sheet,.hsc-head,.hsc-pick,.hsc-coll,.hsc-grid')].map(el=>{const r=el.getBoundingClientRect();return[r.x,r.y,r.width,r.height];});
-    button.style.display='none';const before=measure();button.style.display='';const after=measure();
-    const p=button.getBoundingClientRect(),c=document.querySelector('.hsc-head .hsc-x:not(.hsc-privacy)').getBoundingClientRect();
-    return{before,after,privacy:[p.x,p.y,p.width,p.height],close:[c.x,c.y,c.width,c.height],gap:c.left-p.right};
+    const p=button.getBoundingClientRect(),text=document.querySelector('#hsc-set').innerText;
+    return{privacy:[p.x,p.y,p.width,p.height],text,underSettings:!!button.closest('#hsc-set'),underWardrobe:!!button.closest('#hsc-panel')};
   });
-  assert.deepEqual(geometry.after,geometry.before,'native privacy icon must not move existing wardrobe elements');
-  assert(Math.abs(geometry.privacy[1]-geometry.close[1])<.1&&Math.abs(geometry.privacy[2]-geometry.close[2])<.1&&Math.abs(geometry.privacy[3]-geometry.close[3])<.1&&geometry.gap>0,'native shield matches Close size and alignment');
-  await page.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
-  // A DOM-open state can precede the actual Android compositor frame. Require
-  // the cream shield target in native pixels before accepting the raw capture.
-  let painted=false;
-  for(let attempt=0;attempt<10;attempt++) {
-    const png=await screenshot(layout.name+'-wardrobe-privacy');
-    const image=require('pngjs').PNG.sync.read(png),b=layout.nativeBounds,v=layout.visualViewport,p=geometry.privacy;
-    let cream=0;
-    for(let n=0;n<8;n++) {
-      const angle=n*Math.PI/4,cx=p[0]+p[2]/2+Math.cos(angle)*p[2]*.30,cy=p[1]+p[3]/2+Math.sin(angle)*p[3]*.30;
-      const x=Math.round(b.left+(cx-v.offsetLeft)*(b.right-b.left)/v.width),y=Math.round(b.top+(cy-v.offsetTop)*(b.bottom-b.top)/v.height),i=(y*image.width+x)*4;
-      if(image.data[i]>235&&image.data[i+1]>220&&image.data[i+2]>195)cream++;
-    }
-    if(cream>=7){painted=true;break;}await pause(250);
-  }
-  assert(painted,'raw Android capture must actually show the cream privacy control');
+  assert(settings.underSettings&&!settings.underWardrobe,'privacy action belongs only to Settings');
+  for(const label of ['Settings','Salon name','Language','Hand','Tool width','Cut per pass','Vibration','Reduce motion','Sound cues','Privacy'])assert(settings.text.includes(label),'Settings shows '+label);
+  assert(settings.privacy[2]>=48&&settings.privacy[3]>=48,'native privacy action has a full touch target');
+  await screenshot(layout.name+'-settings-privacy');
   await tap('.hsc-privacy');
   let activities='';
   for(let attempt=0;attempt<20;attempt++) {
@@ -192,18 +174,17 @@ async function privacy(layout) {
     await pause(250);
   }
   assert(gameResumed,'game activity must be top-resumed before testing the returned privacy panel');
-  await page.waitForFunction(()=>document.querySelector('#hsc-panel.open')&&skinFadeStudio.getView().paused);
+  await page.waitForFunction(()=>document.querySelector('#hsc-set.open'));
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),before,'returning from the external policy preserves haircut');
-  await tap('.hsc-head .hsc-x:not(.hsc-privacy)');
-  await page.waitForFunction(()=>!skinFadeStudio.getView().paused);
-  // the wardrobe closes back to the home screen; Play returns to the chair
+  await tap('#hsc-set .x');
+  // Settings closes back to the home screen; Career returns to the chair.
   await tap('#hsc-menu .hero');
   await page.waitForFunction(()=>!document.querySelector('#hsc-menu.open'));
   await page.evaluate(()=>document.querySelector('#privacy-capture-stability')?.remove());
-  layout.privacy={existingBoundsUnchanged:true,alignment:geometry,externalPolicyOpened:true,hairPreserved:true};
-  check(layout.name+' privacy icon preserves all existing wardrobe bounds');
-  check(layout.name+' trusted native privacy tap opens external policy and preserves haircut/pause');
+  layout.privacy={underSettings:true,textSettings:true,target:settings.privacy,externalPolicyOpened:true,hairPreserved:true};
+  check(layout.name+' privacy policy is a readable Settings action');
+  check(layout.name+' trusted native privacy tap opens external policy and preserves haircut');
 }
 // Decode the actual Android PNG to require composited marker pixels, not merely DOM existence.
 function markerPixels(png,contact,teeth,scale){
@@ -370,7 +351,7 @@ async function nativeWebViewBounds(){
       assert(Math.abs(layout.visualViewport.scale-1)<.02,'fresh native viewport scale must be1');
       assert(Math.abs(layout.canvas.width-layout.visualViewport.width)<2&&Math.abs(layout.canvas.height-layout.visualViewport.height)<2,'canvas must fill visual viewport');
       assert(Math.abs((nativeBounds.right-nativeBounds.left)/layout.dpr-layout.visualViewport.width)<2,'native width, DPR and viewport must agree');
-      assert.equal(layout.level,'high');assert.equal(layout.strands,30000);assert.equal(layout.segments,8);
+      assert(['potato','balanced','high','ultra'].includes(layout.level));assert(layout.strands>=12000);assert(layout.segments>=5&&layout.segments<=8);
       for(const b of layout.controls)assert(b.x>=-1&&b.y>=-1&&b.x+b.width<=layout.width+1&&b.y+b.height<=layout.height+1,`control outside ${spec.name}: ${b.text}`);
       const finish=layout.controls.find(b=>b.text==='Finish haircut');
       assert(finish&&Math.abs(finish.x+finish.width-(layout.canvas.x+layout.canvas.width-layout.finishInset*layout.uiZoom))<2,'Finish must visually align with canvas right inset');
@@ -417,7 +398,7 @@ async function nativeWebViewBounds(){
       live.nativeBounds=await nativeWebViewBounds();
       assert.equal(live.hair,before,'same-density live orientation must preserve haircut');delete live.hair;
       assert.equal(live.gap,null,'configuration change releases real held stroke');
-      await page.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});assert.equal(live.level,'high');
+      await page.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});assert(['potato','balanced','high','ultra'].includes(live.level));
       assert(Math.abs(live.visualViewport.scale-1)<.02);
       assert(Math.abs(live.canvas.width-live.visualViewport.width)<2&&Math.abs(live.canvas.height-live.visualViewport.height)<2,'live canvas must fill viewport');
       assert(Math.abs((live.nativeBounds.right-live.nativeBounds.left)/live.dpr-live.visualViewport.width)<2,'live native/CSS mapping stays aligned');

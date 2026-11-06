@@ -44,7 +44,7 @@ function fakeHost() {
     const page=reviewPage=await ctx.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(120000);
     const boot=async()=>{
-      await page.goto('http://release.test/?detail=low');
+      await page.goto('http://release.test/?graphics=potato');
       await page.waitForFunction(()=>window.skinFadeStudio && HSC.startupTiming?.firstPlayable && !document.body.inert && __native.ready===1);
       await page.addStyleTag({content:'*{animation-play-state:paused!important}'});
     };
@@ -88,7 +88,7 @@ function fakeHost() {
     passed++;
     for(const [width,height]of(process.env.ANDROID_LAST_LAYOUT==='1'?[[1280,800]]:[[390,844],[844,390],[800,1280],[1280,800]])){
       await page.setViewportSize({width,height});await buffer();
-      assert.deepEqual(await page.evaluate(()=>[HSC.detail.level,HSC.detail.minStrands,HSC.detail.segments,HSC.detail.antialias]),['high',30000,8,true]);
+      assert.deepEqual(await page.evaluate(()=>[HSC.detail.level,HSC.detail.minStrands,HSC.detail.segments,HSC.detail.antialias]),['potato',12000,5,false]);
       const session=await ctx.newCDPSession(page);
       const zoomProbe=await page.evaluate(()=>{
         const parent=document.querySelector('.ui'),probe=document.createElement('div');

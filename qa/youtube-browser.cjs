@@ -86,7 +86,8 @@ async function fixture(options={}){
      health:{logWarning(){}},
      ads:{requestRewardedAd:async id=>{__yt.ads.push({kind:'rewarded',id});await new Promise(r=>setTimeout(r,100));if(__yt.rewardMode==='error')throw Error('no fill');return __yt.rewardMode==='earned';},requestInterstitialAd:async()=>{__yt.ads.push({kind:'interstitial'});await new Promise(r=>setTimeout(r,100));}}
    };` });});
- await page.goto('http://release.test/',{waitUntil:'load'});
+ const graphics=Object.hasOwn(options,'graphics')?options.graphics:'ultra';
+ await page.goto('http://release.test/'+(graphics?`?graphics=${graphics}`:''),{waitUntil:'load'});
  if(!options.blocked&&!options.missing&&!options.readFail&&!options.initialPause)await page.waitForFunction(()=>!!window.skinFadeStudio,null,{timeout:options.fenceNeverSignals?90000:45000});
  return {ctx,page,calls,errors,requests,startupMs:Math.round(performance.now()-started),raw:()=>raw,readFail(value){readFail=value;},writeFail(value){writeFail=value;},close:()=>ctx.close()};
 }
@@ -174,7 +175,7 @@ async function quality(){
     // Compare rendering with the same decoded session; the older reference protects v2 saves.
     const saved=await p.evaluate(async encoded=>{const slots={};for(const key of Object.keys(JSON.parse(encoded).slots))slots[key]=await HSC.wardrobe.client.loadProgress(key,null);return JSON.stringify({version:1,slots});},f.raw()),before=await state(p);
     const metrics=await p.evaluate(()=>{const c=document.getElementById('scene'),b=HSC.debugState.beardMesh;return{level:HSC.detail.level,shaderLow:HSC.detail.shaderLow,segments:HSC.detail.segments,beardSegments:b.geometry.attributes.position.count/2-1,beardCount:b.geometry.instanceCount,beardRoots:HSC.debugState.roots.count,antialias:c.getContext('webgl2').getContextAttributes().antialias,width:c.width,height:c.height,cssWidth:c.clientWidth,cssHeight:c.clientHeight};});
-    assert.equal(metrics.level,'high');assert.equal(metrics.shaderLow,false);assert.equal(metrics.segments,8);assert.equal(metrics.beardSegments,8);assert.equal(metrics.beardCount,metrics.beardRoots);assert.equal(metrics.antialias,true);assert(metrics.width*metrics.height<=4000000);assert(metrics.width/metrics.cssWidth>=Math.min(dpr,2)-0.01);
+    assert.equal(metrics.level,'ultra');assert.equal(metrics.shaderLow,false);assert.equal(metrics.segments,8);assert.equal(metrics.beardSegments,8);assert.equal(metrics.beardCount,metrics.beardRoots);assert.equal(metrics.antialias,true);assert(metrics.width*metrics.height<=4000000);assert(metrics.width/metrics.cssWidth>=Math.min(dpr,2)-0.01);
     await p.evaluate(()=>__yt.callbacks.pause());await p.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-high.png`)});
     const g=await fixture({viewport:{width,height},dpr,touch:true,saved,releaseRoot:baseline});
     try{assert.deepEqual((await state(g.page)).look,before.look);await g.page.evaluate(()=>__yt.callbacks.pause());await g.page.screenshot({timeout:60000,path:path.join(out,`${width}x${height}-baseline.png`)});assert.deepEqual(g.errors,[]);}finally{await g.close();}
@@ -212,7 +213,7 @@ async function startup(){
    assert(evidence.timing.gpuReady<=evidence.timing.firstPlayable);
    assert(evidence.timing.firstPlayable<=evidence.timing.gameReady);
    assert.equal(evidence.ready.loading,false);assert.equal(await p.locator('body').evaluate(b=>b.inert),false);
-   assert.deepEqual(evidence.quality,{level:'high',segments:8,shaderLow:false,maxStrands:30000});
+   assert.deepEqual(evidence.quality,{level:'ultra',segments:8,shaderLow:false,maxStrands:30000});
    if(process.env.ANGLE_D3D11==='1')assert.match(evidence.renderer,/Direct3D11|D3D11/i,'The shader regression must use the affected HLSL backend');
    if(process.env.PROFILE_STARTUP==='1')fs.writeFileSync(path.join(out,'gl-profile.json'),JSON.stringify(await p.evaluate(()=>({timing:HSC.startupTiming,gl:__glProfile})),null,2));
    assert.deepEqual(f.errors,[]);return evidence;
@@ -371,7 +372,7 @@ async function benchmark(){
  }
  fs.writeFileSync(path.join(out,'startup-benchmark.json'),JSON.stringify({environment:{browser:engine,viewport:[390,844],dpr:2,host:'controlled SDK fixture, no live platform/network latency',cold:'fresh browser process per sample'},samples},null,2));
 }
-if(require.main!==module)module.exports={start:async()=>{browser=await launch();return browser;},fixture,state,stroke,finish,next};
+if(require.main!==module)module.exports={start:async()=>{browser=await launch();return browser;},stop:async()=>{await browser?.close();browser=null;},fixture,state,stroke,finish,next};
 else (async()=>{
  browser=await launch();
  if(process.env.STANDALONE_PREVIEW==='1')await standalonePreview();else if(process.env.PARITY==='1')await test('All rendered pixels match baseline for seeded customer variants',parity);else if(process.env.MOBILE_STARTUP==='1')await mobileStartup();else if(process.env.BENCHMARK==='1')await benchmark();else if(process.env.STARTUP==='1')await startup();else if(process.env.QUALITY==='1')await quality();else if(process.env.LAYOUT==='1')await layouts();else if(process.env.SOAK==='1')await soak();else await standard();

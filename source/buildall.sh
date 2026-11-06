@@ -8,10 +8,10 @@ if [ "${TARGET:-playables}" = full ]; then
   python3 ../android/build-runtime.py
   exit
 fi
-# Keep publisher-specific graphics policy separate from the Android and legacy Playgama targets.
+# One adaptive policy serves every host: protected potato quality, full Ultra on proven capable devices.
 case "${TARGET:-playables}" in
-  youtube) DETAIL=detail-youtube ;;
-  *) DETAIL=detail-playables ;;
+  youtube) DETAIL=detail-adaptive ;;
+  *) DETAIL=detail-adaptive ;;
 esac
 mkdir -p build/runtime
 cp -r src/assets src/THIRD-PARTY-NOTICES.md src/styles.css build/

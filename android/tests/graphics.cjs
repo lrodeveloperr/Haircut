@@ -16,7 +16,7 @@ const defaultStartup = `  const visible=Zt.clone(false);
   await HSC.whenYouTubeResumed();`;
 const firstFrameDiagnostic = 'await n.waitForFirstFrame();HSC.startupTiming.gpuReady=performance.now();HSC.startupTiming.firstFrameConfirmed=performance.now();console.info("[HSC_STARTUP] first_frame_gpu_ready");HSC.dismissLoading();';
 const defaultFirstFrame = 'await n.waitForFirstFrame();HSC.startupTiming.gpuReady=performance.now();HSC.dismissLoading();';
-assert(game.includes(androidStartup), 'Android uses staged full-detail startup compilation');
+assert(game.includes(androidStartup), 'Android uses staged selected-profile startup compilation');
 assert(game.includes(firstFrameDiagnostic), 'Android records confirmed GPU first-frame completion');
 assert.match(androidStartup, /t\.compileAsync\(stage,ze,Zt\)/, 'each Android startup stage compiles the unchanged scene/camera');
 assert.match(androidStartup, /t\.getContext\(\)\.isContextLost\(\)/, 'each stage detects a lost graphics context');
@@ -25,8 +25,9 @@ assert(!androidStartup.includes('setPixelRatio') && !androidStartup.includes('se
 assert.match(styles, /\.guard-arc\{[^}]*right:max\(12px,env\(safe-area-inset-right\)\)/, 'default and landscape guard placement remains unchanged');
 assert.match(styles, /@media \(orientation:portrait\)\{\s*\.guard-arc\{right:max\(4px,env\(safe-area-inset-right\)\)\}/, 'portrait guard numbers move 8 CSS px right while respecting the safe area');
 assert.match(styles, /\.ui \.clip-toggle\{[^}]*right:max\(12px,env\(safe-area-inset-right\)\)/, 'clipper toggle placement remains unchanged');
-const profile = customers.slice(customers.indexOf('(function (HSC) {'), customers.indexOf('// ---------------------------------------------------------------------------------------------'));
-const sitesProfile = fs.readFileSync(path.join(root, 'source/customers/detail-youtube.js'), 'utf8');
+const profileMarker = '})(globalThis.HSC || (globalThis.HSC = {}));';
+const profileStart = customers.indexOf('(function (HSC) {');
+const profile = customers.slice(profileStart, customers.indexOf(profileMarker, profileStart) + profileMarker.length);
 const sitesGame = fs.readFileSync(path.join(root, 'source/src/runtime/game.js'), 'utf8');
 const aimStart = sitesGame.indexOf('function Ue(j){let ae=j.clientX');
 const sitesAim = sitesGame.slice(aimStart, sitesGame.indexOf('if(n.setClipper', aimStart)) + '}';
@@ -38,37 +39,43 @@ const cut = between('function Ue(j){', 'function Pe(j)');
 let passed = 0;
 const plain = x => JSON.parse(JSON.stringify(x));
 
-for (const ratio of [1, 1.25, 2, 3, 4]) {
-  const context = vm.createContext({ devicePixelRatio: ratio, innerWidth: 390, innerHeight: 844, location: { search: '?detail=low' },
-    navigator: new Proxy({}, { get() { throw Error('fixed High must not classify hardware'); } }) });
+const expectedProfiles = {
+  potato: { maxStrands: 14000, minStrands: 12000, segments: 5, beardSegments: 5, beardMax: 0.65, pixelMax: 1, pixelMin: 0.9, maxPixels: 1500000, antialias: false, shaderLow: true, fpsCap: 30 },
+  balanced: { maxStrands: 20000, minStrands: 16000, segments: 6, beardSegments: 6, beardMax: 0.8, pixelMax: 1.25, pixelMin: 1, maxPixels: 2250000, antialias: false, shaderLow: false, fpsCap: 60 },
+  high: { maxStrands: 26000, minStrands: 20000, segments: 7, beardSegments: 7, beardMax: 0.9, pixelMax: 1.5, pixelMin: 1.1, maxPixels: 3200000, antialias: true, shaderLow: false, fpsCap: 60 },
+  ultra: { maxStrands: 30000, minStrands: 24000, segments: 8, beardSegments: 8, beardMax: 1, pixelMax: 2, pixelMin: 1.25, maxPixels: 4000000, antialias: true, shaderLow: false, fpsCap: 60 },
+};
+const forcedContext = (level, ratio) => {
+  const context = vm.createContext({
+    devicePixelRatio: ratio, innerWidth: 390, innerHeight: 844,
+    location: { search: `?graphics=${level}` }, URLSearchParams,
+    navigator: { deviceMemory: 8, hardwareConcurrency: 8 },
+    setTimeout: () => 1, clearTimeout() {}, addEventListener() {}, console,
+    HSC: { lifecycle: { timeout: () => 1, clear() {} } },
+  });
   vm.runInContext(profile, context);
-  const sites = vm.createContext({ devicePixelRatio: ratio, innerWidth: 390, innerHeight: 844 });
-  vm.runInContext(sitesProfile, sites);
-  const expectedRatio = sites.HSC.detail.pixelRatio();
-  assert.equal(context.HSC.detail.pixelRatio(), expectedRatio, 'Android must match Sites High density');
-  for (const key of ['maxStrands', 'minStrands', 'segments', 'beardSegments', 'beardMax', 'clipMax', 'clipRate', 'pixelMax', 'pixelMin', 'maxPixels', 'antialias', 'shaderLow']) {
-    assert.equal(context.HSC.detail[key], sites.HSC.detail[key], `Sites High parity: ${key}`);
-  }
-  assert.equal(context.HSC.detail.level, 'high');
-  assert.equal(context.HSC.initDetail, undefined, 'old saved Low must not be loaded');
-  assert.equal(context.HSC.setDetailSetting, undefined, 'no Auto/Low control');
-  for (const interval of [1000 / 60, 25, 1000 / 30, 50, 100, 250]) {
-    vm.runInContext(`{
-      let $=HSC.detail.pixelRatio(),J=$,te=HSC.detail.maxStrands,Ae=0,Ue=16,Pe=0;
-      const Oi={setCount(n){globalThis.actualStrands=n}};
-      ${budget}${sampler}
-      for(let ms=${interval};ms<=1200000;ms+=${interval})he(ms);
-      globalThis.result={strands:te,pixel:$,ceiling:J};
-    }`, context);
-    assert.deepEqual(plain(context.result), { strands: 30000, pixel: expectedRatio, ceiling: expectedRatio });
-    assert.equal(context.actualStrands, 30000);
-    assert.equal(context.HSC.detail.segments, 8);
-    assert.equal(context.HSC.detail.beardSegments, 8);
-    assert.equal(context.HSC.detail.beardMax, 1);
-    assert.equal(context.HSC.detail.shaderLow, false);
-    assert.equal(context.HSC.detail.antialias, true);
-    passed++;
-  }
+  return context;
+};
+
+for (const level of Object.keys(expectedProfiles)) for (const ratio of [1, 1.25, 2, 3, 4]) {
+  const context = forcedContext(level, ratio), expected = expectedProfiles[level];
+  assert.equal(context.HSC.detail.level, level);
+  assert.equal(context.HSC.detail.setting, 'qa-forced');
+  for (const [key, value] of Object.entries(expected)) assert.equal(context.HSC.detail[key], value, `${level}: ${key}`);
+  const expectedRatio = context.HSC.detail.pixelRatio();
+  assert(expectedRatio <= Math.min(ratio, expected.pixelMax));
+  assert(Math.floor(390 * expectedRatio) * Math.floor(844 * expectedRatio) <= expected.maxPixels);
+  vm.runInContext(`{
+    let $=HSC.detail.pixelRatio(),J=$,te=HSC.detail.maxStrands,Ae=0,Ue=16,Pe=0;
+    const Oi={setCount(n){globalThis.actualStrands=n}};
+    ${budget}${sampler}
+    for(let ms=1000/60;ms<=60000;ms+=1000/60)he(ms);
+    globalThis.result={strands:te,pixel:$,ceiling:J};
+  }`, context);
+  assert.deepEqual(plain(context.result), { strands: expected.maxStrands, pixel: expectedRatio, ceiling: expectedRatio });
+  assert.equal(context.actualStrands, expected.maxStrands);
+  passed++;
+
   // Exercise the actual renderer resize code in portrait, landscape, and large viewports.
   vm.runInContext(`{
     let $=HSC.detail.pixelRatio(),J=$,O={};
@@ -80,12 +87,13 @@ for (const ratio of [1, 1.25, 2, 3, 4]) {
     globalThis.resizeTo=(w,h)=>{e.clientWidth=w;e.clientHeight=h;P();return{width:e.width,height:e.height,pixel:$}};
   }`, context);
   for (const [w, h] of [[390, 844], [844, 390], [1280, 800], [2560, 1600]]) {
-    const target = sites.HSC.detail.pixelRatio(w, h);
+    const target = context.HSC.detail.pixelRatio(w, h);
     assert.deepEqual(plain(context.resizeTo(w, h)), { width: Math.floor(w * target), height: Math.floor(h * target), pixel: target });
     passed++;
   }
   context.devicePixelRatio = 1.5;
-  assert.equal(context.resizeTo(844, 390).pixel, 1.5, 'display-density change must update the buffer');
+  const densityResize = context.resizeTo(844, 390).pixel;
+  assert(densityResize >= context.HSC.detail.pixelFloor(844, 390) && densityResize <= context.HSC.detail.pixelRatio(844, 390), 'display-density change stays inside the selected profile');
   passed++;
 }
 
@@ -131,4 +139,7 @@ assert.equal(game.split('n.touchTarget(j)').length-1,2,'cut and proximity share 
 assert(!game.includes('touchOffsetPx:0'));
 assert(!game.includes('Ue>24&&te>HSC.detail.minStrands'));
 assert(!customers.includes("const KEY = 'skin-fade-studio-detail-v1'"));
-console.log(`PASS: ${passed} Android graphics/input cases (working renderer parity, fixed High cadences, tablet resize, shared touch-target forwarding and direct mouse/pen).`);
+assert(game.includes('HSC.detail.shouldRender(j,true)'), 'low-end drawing is paced without slowing input');
+assert(game.includes('HSC.detail.noteContextLoss("runtime")'), 'runtime context loss records a safer next profile');
+assert(game.includes('HSC.detail.commitPending(true)'), 'profile changes occur at explicit safe boundaries');
+console.log(`PASS: ${passed} Android graphics/input cases (four adaptive profiles, quality floor/ceiling, resize, recovery, shared touch-target forwarding and direct mouse/pen).`);

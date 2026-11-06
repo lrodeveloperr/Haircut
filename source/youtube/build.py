@@ -1,4 +1,4 @@
-"""Create the direct-YouTube target; preserve the full-detail game on every device."""
+"""Create the direct-YouTube target with adaptive, gameplay-invariant graphics."""
 from pathlib import Path
 import shutil
 from asset_urls import version_asset_urls
@@ -42,7 +42,7 @@ s = replace(s, "    globalThis.addEventListener('pagehide', () => { unmount(); g
 s = replace(s, 'function showBootError(error) {', 'function showBootError(error) {\n  HSC.dismissLoading();')
 s = replace(s, "  const retry = document.createElement('button');", "  message.textContent = HSC.bootMessage(error);\n  const retry = document.createElement('button');")
 s = replace(s, '  panel.append(title, message, retry);', '  panel.append(title, message, retry, HSC.bootErrorCode(error));')
-# Full-fidelity geometry and shading remain enabled. Keep the drawing buffer bounded on resize.
+# Sample drawing performance without changing the logical haircut or tool model.
 start = s.index('function he(ue){Pe&&(Ue=Ue*.93+')
 end = s.index('function _(ue=!0)', start)
 s = replace(s, s[start:end], 'function he(ue){if(Pe){let quality=HSC.detail.sample(ue-Pe,te,$,J);if(quality){He(quality.strands);$=quality.pixel}}Pe=ue}')
@@ -50,8 +50,8 @@ s = replace(s, 'resetTiming(){Pe=0}', 'resetTiming(){Pe=0;HSC.detail.resetHistor
 s = replace(s, 'let ye=Math.max(1,e.clientWidth),Ie=Math.max(1,e.clientHeight),B=Math.floor(ye*$),E=Math.floor(Ie*$);',
     'let ye=Math.max(1,e.clientWidth),Ie=Math.max(1,e.clientHeight);J=HSC.detail.pixelRatio(ye,Ie);$=Math.min(J,Math.max(HSC.detail.pixelFloor(ye,Ie),$));let B=Math.floor(ye*$),E=Math.floor(Ie*$);')
 # A static customer needs no recurring GPU redraw. Keep clocks/input responsive in RAF, and
-# redraw on scene changes or active cutting/rotation/reveal/clippings. Full-detail idle frames
-# otherwise waste GPU time while bypassing the active-animation quality sampler.
+# redraw on scene changes or active cutting/rotation/reveal/clippings. Idle frames otherwise waste
+# GPU time, while the protected low-end profile may pace drawing at 30 fps without reducing input.
 s = replace(s, 'function J(){var j,ae;s=HSC.ensure(s)', 'let initialBoot=true,needsRender=true;function J(){needsRender=true;var j,ae;s=HSC.ensure(s)')
 s = replace(s, 'function Ae(){if(f)try{a.releasePointerCapture(f.id)}', 'function Ae(){needsRender=true;if(f)try{a.releasePointerCapture(f.id)}')
 s = replace(s, 'let ce=()=>{if(c)return;Ae(),C||n.render(!1)}',
@@ -59,8 +59,12 @@ s = replace(s, 'let ce=()=>{if(c)return;Ae(),C||n.render(!1)}',
 s = replace(s, 'else{ce();w=requestAnimationFrame(ve)}te();Z()}', 'else{if(!initialBoot)ce(true);w=requestAnimationFrame(ve)}te();Z()}')
 s = replace(s, 'setPaused(j){u=!!j,ge()}', 'setPaused(j){if(u===!!j)return;u=!!j;ge()}')
 s = replace(s, 'if(s.status==="reveal"&&!x){D+=ae;', 'if(s.status==="reveal"&&!x){needsRender=true;D+=ae;')
+s = replace(s, 's=gt(rt({},Is(s)),{freeStyle:!0,adCadence:rt({},l)}),x=!1,y=!1,J()',
+    's=gt(rt({},Is(s)),{freeStyle:!0,adCadence:rt({},l)}),HSC.detail.commitPending(true),x=!1,y=!1,J()')
+s = replace(s, 's=Is(s),y=!1,x=!1,D=0,J()',
+    's=Is(s),HSC.detail.commitPending(true),y=!1,x=!1,D=0,J()')
 s = replace(s, '(f||s.status==="reveal"&&!x||j%66<20||HSC.clippingsActive&&HSC.clippingsActive())&&n.render(!!(f||s.status==="reveal"&&!x||HSC.clippingsActive&&HSC.clippingsActive()))',
-    '(()=>{let active=!!(f||s.status==="reveal"&&!x||HSC.clippingsActive&&HSC.clippingsActive());if(active||needsRender){n.render(active);needsRender=false}})()')
+    '(()=>{let active=!!(f||s.status==="reveal"&&!x||HSC.clippingsActive&&HSC.clippingsActive());if(needsRender||active&&HSC.detail.shouldRender(j,true)){n.render(active);needsRender=false}})()')
 s = replace(s, 'renderFirstPlayableFrame(){n.render()}',
     '''async renderFirstPlayableFrame(){
   HSC.startupTiming.materialsReady=performance.now();
@@ -82,6 +86,7 @@ s = replace(s, 'renderFirstPlayableFrame(){n.render()}',
       break;
     }catch(error){
       if(!(startupLost||n.isContextLost())||attempt>=2)throw error;
+      HSC.detail.noteContextLoss("startup");HSC.detail.commitPending(true);
       HSC.startupTiming.contextRestores=attempt+1;
       await new Promise((resolve,reject)=>{
         if(!n.isContextLost()){resolve();return}
@@ -99,6 +104,7 @@ s = replace(s, 'renderFirstPlayableFrame(){n.render()}',
 s = replace(s, 'globalThis.addEventListener("resize",ce);let L=', '''globalThis.addEventListener("resize",ce);
 let recoveryTimer=0,recovering=false;
 const lost=()=>{
+  HSC.detail.noteContextLoss("runtime");
   if(initialBoot){startupLost=true;return}
   t.setPauseReason("graphics",true);
   HSC.lifecycle.clear(recoveryTimer);
@@ -109,6 +115,7 @@ const restore=()=>{
   if(recovering)return;
   recovering=true;HSC.lifecycle.clear(recoveryTimer);
   (async()=>{
+    HSC.detail.commitPending(true);
     await t.whenResumed();await n.prepareFirstFrame();await t.whenResumed();
     n.render(false);await n.waitForFirstFrame();await t.whenResumed();
     if(n.isContextLost())throw HSC.graphicsError("GFX_LOST");
