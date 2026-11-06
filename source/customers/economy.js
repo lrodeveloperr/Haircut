@@ -28,6 +28,9 @@
     regular: 4, vipShare: 0.25, combo: [1, 1, 1.2, 1.5, 2], rushMax: 12,
     demand: { share: 0.2, max: 12, perShift: 3, shiftLength: 5 },
     freestyleOnce: 5,
+    // a video toward the wishlist, and the one-time Starter Pack for when Play Billing goes in (shown after the first shop
+    // visit or wishlist, once three customers are done; Monetization Strategy section 11)
+    wishVideo: { coins: 25, perDay: 3 }, starterPack: { coins: 2000, afterCustomers: 3 },
     bill: { every: 5, amount: 50, subsidised: 5, lines: { rent: 25, utilities: 12, cleaning: 8, tools: 5 } },
     // owner decision 5 November 2026 (economy simulator, plan 3.1/3.7): city chapter 75 -> 30, first showcase 150 -> 75,
     // so ordinary work carries more of the income; paid milestones keep their keys and are never repaid or taken back

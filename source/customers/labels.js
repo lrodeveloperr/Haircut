@@ -62,6 +62,8 @@
   // the button that shows the finished cut on the real head
   const COMPARE = { en: 'See the finished cut', es: 'Ver el corte final', pt: 'Ver o corte final', fr: 'Voir la coupe finale', de: 'Fertigen Schnitt ansehen', ar: 'عرض القصة النهائية', ja: '仕上がりを見る', ko: '완성된 커트 보기', id: 'Lihat hasil potongan', hi: 'तैयार कट देखें', tr: 'Bitmiş kesimi gör', ru: 'Показать готовую стрижку' };
   for (const l in COMPARE) T[l].a_compare = COMPARE[l];
+  const WISHVID = { en: 'Watch a video for coins toward your wishlist', es: 'Mira un vídeo para ganar monedas para tu lista', pt: 'Assista a um vídeo por moedas para sua lista', fr: 'Regardez une vidéo pour des pièces pour votre liste', de: 'Video ansehen für Münzen für deine Wunschliste', ar: 'شاهد فيديو للحصول على عملات لقائمتك', ja: '動画を見てほしい物リストのコインを獲得', ko: '영상을 보고 위시리스트 코인 받기', id: 'Tonton video untuk koin daftar keinginan', hi: 'अपनी सूची के लिए सिक्कों का वीडियो देखें', tr: 'İstek listen için video izle, para kazan', ru: 'Посмотреть видео и получить монеты на желаемое' };
+  for (const l in WISHVID) T[l].a_wishvid = WISHVID[l];
   // locale routing (language contract section 2): regional Spanish and Portuguese use their packs; Chinese goes
   // to Simplified or Traditional by region or script; Norwegian to Bokmål; Hebrew's legacy tag `iw` to `he`.
   // A pack that is not shipped yet falls back to English.

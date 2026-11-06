@@ -291,7 +291,9 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
         // a locked mode shows how close the barber is: the levels still to go, as a bar
         const need = M.level[k], frac = Math.max(0, Math.min(1, (lv - 1 + prog) / Math.max(1, need - 1)));
         const hot = !lock && HSC.econ && HSC.econ.demand && HSC.econ.demand().includes(k); // this shift's demand bonus
-        const reward = REWARD[k]() + (hot ? I('flame') : '');
+        // a mode in demand shows its bonus, so the player can see why to go there
+        const eco = HSC.economy && HSC.economy.CONFIG, fee = eco && eco.fee[k], bonus = hot && fee ? Math.min(eco.demand.max, Math.round((fee[0] - fee[1]) * eco.demand.share)) : 0;
+        const reward = REWARD[k]() + (hot ? I('flame') + (bonus ? `+${bonus}` : '') : '');
         return `<button class="j mode c-${MODE_COLOUR[k]}${k === cur ? ' on' : ''}" type="button" data-m="${k}"${lock ? ' aria-disabled="true"' : ''}>${I(MODE_ICON[k])}<span class="hsc-lbl" data-k="${MODE_WORD[k]}"></span><span class="reward">${reward}</span>${!lock && M.isNew && M.isNew(k) ? `<span class="new">${t('new')}</span>` : ''}${lock ? `<span class="lock">${I('lock')}<span>${need}</span><span class="bar"><i style="width:${Math.round(frac * 100)}%"></i></span></span>` : ''}</button>`;
       }).join('');
       grid.querySelectorAll('.mode').forEach((b) => b.addEventListener('click', () => {

@@ -379,6 +379,18 @@
       if (compare.want[modeNow()] !== false && !(s.cutStrokeCount > 0)) compareShow(); else compareHide();
     } else if (compare.on && ++compare.beat % 5 === 0) compareShow();
   }
+  // a video toward the wishlist: a few coins at the moment the player wants them, a few times a day
+  const wishDay = () => { const md = M().data.modes, day = new Date().toISOString().slice(0, 10); if (!md.wv || md.wv.day !== day) md.wv = { day, n: 0 }; return md.wv; };
+  const canWishVideo = () => { const c = HSC.economy && HSC.economy.CONFIG.wishVideo; return !!(c && M() && M().data && M().data.modes && HSC.canVideo && HSC.canVideo() && wishDay().n < c.perDay); };
+  async function wishVideo() {
+    if (!canWishVideo()) return;
+    const ok = HSC.watchVideo ? await HSC.watchVideo('wish-coins') : false;
+    if (!ok) return; // only a really earned video pays
+    const w = wishDay(), c = HSC.economy.CONFIG.wishVideo;
+    w.n++;
+    await addCoins(c.coins, 'rewarded', 'wish:' + w.day + ':' + w.n);
+    M().save();
+  }
   async function doUndo() {
     const g = G();
     if (!g || undo.busy || !undo.stack.length) return;
@@ -470,6 +482,7 @@ body.hsc-left #hsc-cmp{left:auto;right:max(14px,env(safe-area-inset-right))}
 #hsc-score .cyc i{width:12px;height:12px;border-radius:50%;background:#fff6e6;border:2px solid ${INK};box-sizing:border-box}
 #hsc-score .cyc i.on{background:#36b83a}
 #hsc-score .cyc b{margin-inline-start:4px}
+#hsc-score .cyc .wv{display:inline-flex;align-items:center;gap:3px;margin-inline-start:6px;padding:3px 8px;border-radius:14px;background:linear-gradient(#ffe682,#ffb21a);border:2px solid ${INK};font:inherit;color:${INK}}
 #hsc-hud .hsc-gap{font-style:normal;font-size:13px;font-weight:800;opacity:.9;margin-inline-start:4px;white-space:nowrap}
 @keyframes hsc-rcpt{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 #hsc-score .tip{display:flex;gap:6px;align-items:center;height:48px;padding:0 14px 0 10px;border-radius:24px;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};font-weight:900;font-size:22px;font-variant-numeric:tabular-nums}
@@ -621,11 +634,11 @@ body.hsc-left #hsc-cmp{left:auto;right:max(14px,env(safe-area-inset-right))}
       const bl = EC() && EC().bill ? EC().bill() : null;
       if (bl) {
         let cy = this.el.score.querySelector('.cyc');
-        if (!cy) { cy = document.createElement('div'); cy.className = 'cyc'; this.el.rcpt.after(cy); }
+        if (!cy) { cy = document.createElement('div'); cy.className = 'cyc'; this.el.rcpt.after(cy); cy.addEventListener('click', (e) => { if (e.target.closest('.wv')) wishVideo(); }); }
         const doneN = bl.sponsored != null ? 5 - bl.sponsored : 5 - bl.inJobs, wish = EC().wishes ? EC().wishes().salon : null, gap = wish ? wish.price - coins() : 0;
         cy.setAttribute('role', 'img');
         cy.setAttribute('aria-label', t2('a_bill').replace('{n}', bl.sponsored != null ? bl.sponsored : bl.inJobs).replace('{c}', bl.amount));
-        cy.innerHTML = [0, 1, 2, 3, 4].map((i) => `<i class="${i < doneN ? 'on' : ''}"></i>`).join('') + `<b>−${bl.amount}</b>` + (gap > 0 ? `<b>♥ −${HSC.num ? HSC.num(gap) : gap}</b>` : '');
+        cy.innerHTML = [0, 1, 2, 3, 4].map((i) => `<i class="${i < doneN ? 'on' : ''}"></i>`).join('') + `<b>−${bl.amount}</b>` + (gap > 0 ? `<b>♥ −${HSC.num ? HSC.num(gap) : gap}</b>` : '') + (gap > 0 && canWishVideo() ? `<button class="wv" type="button" aria-label="${t2('a_wishvid')}">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}<span>+${HSC.economy.CONFIG.wishVideo.coins}</span></button>` : '');
       }
       const canX = !last.tripled && (last.key ? last.tip > 0 : last.paid > 0) && !!(HSC.canVideo && HSC.canVideo());
       this.el.x3.hidden = !canX && !last.tripled;

@@ -95,6 +95,7 @@ function simulate(name, days, seed = 7) {
       const cal = CFG.calendar[calDay % 7]; calDay++;
       credit('cal:' + day, 'calendar', cal * (A.ads && R() < A.ads ? 2 : 1));
       if (calDay % 7 === 0) credit('cal-item:' + day, 'calendar', 0);
+      if (A.ads) for (let v = 0; v < CFG.wishVideo.perDay; v++) if (R() < A.ads) credit('wish:' + day + ':' + v, 'rewarded', CFG.wishVideo.coins);
       const goals = A.perDay >= 4 ? 2 : 1; goalsWeek += goals;
       credit('goals:' + day, 'goals', goals * CFG.goal);
       if (day % 7 === 0) { if (goalsWeek >= CFG.weeklyGoal) credit('weekly:' + day, 'weekly', CFG.weekly); goalsWeek = 0; }
