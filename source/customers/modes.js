@@ -152,7 +152,9 @@
   function modePerson(mode, job, seed) {
     const R = HSC.rng((seed ^ 0x6a09e667) >>> 0 || 1);
     if (mode === 'beard') {
-      const p = HSC.makePerson(seed >>> 0 || 1, { beard: BEARDED[Math.floor(R.next() * BEARDED.length)], age: R.next() < 0.5 ? 'young' : 'middle', beardGrey: 0 });
+      // the beard studio selects a customer who already has a beard (never rewrites one); the fallback is only for an
+      // impossible run of seeds, so the mode can never stall
+      const p = HSC.selectPerson(seed >>> 0 || 1, {}, (x) => BEARDED.includes(x.beard.style)) || HSC.makePerson(seed >>> 0 || 1, { beard: BEARDED[Math.floor(R.next() * BEARDED.length)] });
       return Object.assign(p, { job });
     }
     if (mode === 'daily') {
@@ -367,7 +369,7 @@ body.hsc-reveal #hsc-rush,body.hsc-reveal #hsc-newc,body.hsc-spin #hsc-newc{disp
       this.built = true;
       const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
       const r = document.createElement('div'); r.id = 'hsc-rush'; r.setAttribute('aria-hidden', 'true'); r.innerHTML = ICON.rush + '<span></span>';
-      const n = document.createElement('button'); n.id = 'hsc-newc'; n.type = 'button'; n.setAttribute('aria-label', 'New customer'); n.innerHTML = NEWC;
+      const n = document.createElement('button'); n.id = 'hsc-newc'; n.type = 'button'; n.setAttribute('aria-label', 'New customer'); n.innerHTML = HSC.icon ? HSC.icon('newc', 32) : NEWC;
       n.addEventListener('click', newCustomer);
       document.body.append(r, n);
       Object.assign(this.el, { rush: r, newc: n });

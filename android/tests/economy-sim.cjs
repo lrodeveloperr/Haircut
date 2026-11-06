@@ -204,7 +204,7 @@ for (const r of report.runs) assert.ok(r.jobs > 0);
 const T = (ok) => (ok ? 'PASS' : 'MISS');
 const lines = [];
 const nm = report.runs.filter((r) => r.name === 'normal');
-for (const r of nm) lines.push(`normal ${r.days}d: sink/source 7-day ${r.sinkRatio7.toFixed(2)} [0.65-0.80 ${T(r.sinkRatio7 >= 0.65 && r.sinkRatio7 <= 0.8)}], core share ${(r.coreShare * 100).toFixed(0)}% [55-65% ${T(r.coreShare >= 0.55 && r.coreShare <= 0.65)}], gift share ${(r.giftShare * 100).toFixed(0)}%, bill ${(r.billShareOfWork * 100).toFixed(0)}% of work [25-35% ${T(r.billShareOfWork >= 0.25 && r.billShareOfWork <= 0.35)}], wallet ${r.wallet}, bought ${r.boughtCount}, salon complete ${r.salonComplete}`);
+for (const r of nm) lines.push(`normal ${r.days}d: sink/source 7-day ${r.sinkRatio7.toFixed(2)} [0.65-0.80 ${T(r.sinkRatio7 >= 0.65 && r.sinkRatio7 <= 0.8)}], core share ${(r.coreShare * 100).toFixed(0)}% [45-55% ${T(r.coreShare >= 0.45 && r.coreShare <= 0.55)}], gift share ${(r.giftShare * 100).toFixed(0)}%, bill ${(r.billShareOfWork * 100).toFixed(0)}% of work [about 20% ${T(r.billShareOfWork >= 0.15 && r.billShareOfWork <= 0.25)}], wallet ${r.wallet}, bought ${r.boughtCount}, salon complete ${r.salonComplete}`);
 const n90 = nm.find((r) => r.days === 90);
 lines.push(`job distance: ordinary work nets ${n90.perJobNet}/contract; longest single stage ${n90.longestStageJobs} contracts [<=60 ${T(n90.longestStageJobs <= 60)}]; first purchase at contract ${n90.firstBuyJob} [<=3 ${T(n90.firstBuyJob != null && n90.firstBuyJob <= 3)}]`);
 lines.push(`debt from zero (1/2/3-star Orders): ${report.debtFromZero.join('/')} contracts [median 1-3 ${T(report.debtFromZero[1] <= 3)}]`);

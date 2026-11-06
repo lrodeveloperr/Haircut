@@ -494,6 +494,19 @@
     revealKey = key;
     return revealPic;
   }
+  // the Home screen's picture: the player's current shop, whole and unzoomed, with no customer in it
+  let homePic = null, homeKey = null;
+  function homePicture() {
+    if (!S || failed || !S3()) return null;
+    const land = innerWidth > innerHeight, key = land + ':' + innerWidth + 'x' + innerHeight + JSON.stringify([cur().parts, cur().region, shown(), S.year]);
+    if (homePic && homeKey === key) return homePic;
+    try {
+      const dpr = Math.min(devicePixelRatio || 1, 2), w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+      homePic = S3().render(look(), land ? 'homeL' : 'homeP', w, h, info()).canvas.toDataURL('image/jpeg', 0.9);
+      homeKey = key;
+    } catch (e) { console.warn('shop: home picture unavailable', e); return null; }
+    return homePic;
+  }
   function reveal(mode) {
     if (revealed || !S || failed || !S3()) return;
     revealed = true;
@@ -523,7 +536,7 @@
     name: () => (S ? S.name : ''), shown: () => (S ? shown() : ''), setName, cleanName, graphemes,
     buyPart, buyRegion, equip, useRegion, open: () => { reconcile(); ui.open(); }, reveal, reconcile,
     // a career branch's look in place of the founding salon (null: the founding salon); which city is on show
-    setContext, context: () => (ctx ? ctx.city : null), look: () => ({ parts: Object.assign({}, cur().parts), region: cur().region }),
+    homePicture, setContext, context: () => (ctx ? ctx.city : null), look: () => ({ parts: Object.assign({}, cur().parts), region: cur().region }),
     // tests
     _sanitize: sanitize, _migrate: migrate, _load: (d) => { S = sanitize(d); return S; },
   };

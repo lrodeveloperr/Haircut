@@ -222,9 +222,7 @@ while the locked calendar, goal and weekly tables stay as they are, so the locke
   callbacks are unchanged (the router only notes that a video started). **Revenue effect:** interstitials shown
   fall by the share of results where a video is tried, and players who leave from the result screen without
   tapping Continue no longer see one. Debug stays on Google's test IDs; tested only with a fake native host.
-- **3.3 Undo:** one rewarded undo per customer, offered only after a measurable mistake (a stroke that takes 40+
-  cells below the request; any stroke when there is no request). **Revenue effect:** fewer undo videos than the old
-  one-per-stroke rule. A new owner review item.
+- **3.3 Undo:** owner decision below: a permanent button, one rewarded video per undo, whenever the player wants.
 - **3.4 Wishlist and distances:** one salon target and one cosmetic in the journal; heart button in the shop;
   coin gap beside the balance and on the result; five-dot bill cycle on the result; bill / near / long distances
   in the portfolio overview.
@@ -243,8 +241,22 @@ while the locked calendar, goal and weekly tables stay as they are, so the locke
 - **3.9 Sponsor slots** (`sponsor.js`): `presented by` line, wall panel and shelf hooks, empty so normal art shows;
   a campaign needs a name, an allowed category and a written-rights reference; no URL field exists.
 
-Open: haircut income share is 51–52% (target 55–65%) while the calendar, goal and weekly tables stay locked; bill
-share 19–20% (target 25–35%). Set rewards in the portfolio still pay 0 coins. A saver's wallet grows by choice.
+**Owner decisions after Wave 3 (5 November 2026):**
+
+| Topic | Decision |
+| --- | --- |
+| Income mix | Target relaxed to 45–55% haircut share; daily reward tables stay |
+| Bill | Stays 50 coins; target relaxed to match (about 20% of work income) |
+| Portfolio set rewards | 0 coins; seals only |
+| Undo | Permanent button; the player watches a video whenever relevant (overrides the friction doc's one-per-customer) |
+| Regional shops | Keep missing-parts pricing; the bundle may exceed 60 jobs |
+| Branch fit-outs | Keep paid stages |
+| City mastery | Keep the four parts |
+| Wave 1 tool calls | Keep all |
+| Other session's files | Reviewed, tested and committed separately; research docs stay out |
+| Wave 5 | Non-language parts start after Wave 4 merges; language packs wait for the UI change |
+| Installed-app check | After Wave 4 merges (debug build, Google test ads) |
+| Wave 4 merge | Review first, then the owner approves |
 
 ### Wave 4 — Tools, anatomy, services and audio
 
@@ -277,6 +289,24 @@ share 19–20% (target 25–35%). Set rewards in the portfolio still pay 0 coins
 | 5.8 | Play Billing products **[EXTERNAL]**: cards stay hidden until the native host reports Billing | — |
 
 ---
+
+**Wave 5 status — in progress 5 November 2026 (not committed).** Language packs (5.6) wait for the final interface.
+
+- **5.1** Each trait group draws from its own label-hashed stream, and a person has a stable id (version 2). Saved
+  version-1 customers stay valid and are never regenerated, so saved regulars look identical. New seeds draw
+  different faces than before; nothing stored changes.
+- **5.2** Beard style no longer depends on heritage (table no longer applied, in people.js and the deck in meta.js);
+  heritage keeps physical density only. Tattoo label `tribal` renamed `blades` (art and order unchanged).
+- **5.3** Beards mode and level gates select a naturally generated customer (`HSC.selectPerson`) instead of rewriting
+  one. A VIP no longer forces full hair or a big beard: VIP is context only. The first tutorial customer keeps a full
+  head of hair.
+- **5.4** Partial: visitors record their origin (`neutral-world`). The per-city visitor share is not applied yet,
+  and the cultural-presentation profile waits for research.
+- **5.5** `android/tests/customers.cjs`: adults, determinism, population fairness, style independent of heritage,
+  selection, stream independence, old saves. `CUSTOMERS=10000` runs the full size. Contact sheet not built.
+- **5.7** Plain Java, switched off while the id is empty: `PlayGamesController`, `PlayGamesCatalog` (27 of the 40
+  achievements, allowlisted metrics), `PlayGamesOutbox`, `PlayGamesSnapshotPolicy`, `PlayGamesTest`. The Google SDK,
+  the HostBridge operation and the web envelope are added with the Console ids, because the SDK needs an APP_ID.
 
 ## 3. Owner decisions (answered 5 November 2026)
 

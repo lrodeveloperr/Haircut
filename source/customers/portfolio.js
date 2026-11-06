@@ -209,7 +209,7 @@
       const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
       const pg = document.createElement('div');
       pg.className = 'page port'; pg.hidden = true; pg.setAttribute('role', 'dialog');
-      pg.innerHTML = `<div class="mhead"><button class="j c-white back" type="button" aria-label="Back">${I('back')}</button><div class="title">${I('medal')}<span class="hsc-lbl" data-k="p_portfolio"></span></div></div>
+      pg.innerHTML = `<div class="mhead"><button class="j c-white back" type="button" aria-label="Back">${I('back')}</button><div class="title">${I('medal')}<span class="hsc-lbl" data-k="collection"></span></div></div>
         <div class="tabs" role="tablist">${TABS.map(([k, ic, lbl]) => `<button class="j c-white" type="button" role="tab" data-t="${k}" data-l="${lbl}">${I(ic)}</button>`).join('')}</div><div class="pbody"></div>`;
       m.appendChild(pg);
       pg.querySelector('.back').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('back'); HSC.menu.view('home', true); });
@@ -219,7 +219,7 @@
     render() {
       if (!this.build()) return;
       const pg = document.querySelector('#hsc-menu .page.port'), cr = CR(), body = cr && cr.body();
-      pg.setAttribute('aria-label', t('p_portfolio'));
+      pg.setAttribute('aria-label', t('collection'));
       pg.querySelectorAll('.tabs .j').forEach((b) => { b.classList.toggle('on', b.dataset.t === this.tab); b.setAttribute('aria-selected', b.dataset.t === this.tab); b.setAttribute('aria-label', t(b.dataset.l)); });
       const box = pg.querySelector('.pbody');
       if (!body) { box.innerHTML = ''; return; }

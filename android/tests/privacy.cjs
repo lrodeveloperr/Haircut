@@ -45,7 +45,7 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
       if(!await page.locator('#hsc-menu.open').count()) await page.getByRole('button',{name:'Menu',exact:true}).click();
       assert.equal(await page.locator('#hsc-menu .home [data-b="daily"]').count(),0,'Daily has no duplicate Home shortcut');
       assert.equal((await page.locator('#hsc-menu .qp').innerText()).trim(),'Quick Play','Quick Play is the first Home action');
-      assert.equal((await page.locator('#hsc-menu .hero').innerText()).trim(),'Career','the second Home action names its Career outcome');
+      assert.equal((await page.locator('#hsc-menu .hero .hsc-lbl').innerText()).trim(),'Career','the second Home action names its Career outcome');
       assert.ok(await page.evaluate(()=>{const q=document.querySelector('#hsc-menu .qp'),c=document.querySelector('#hsc-menu .hero');return !!(q.compareDocumentPosition(c)&Node.DOCUMENT_POSITION_FOLLOWING);}),'Quick Play comes before Career');
       await page.locator('#hsc-menu [data-b="modes"]').click();
       await page.waitForFunction(()=>!document.querySelector('#hsc-menu .modes').hidden);

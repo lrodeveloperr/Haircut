@@ -235,7 +235,7 @@ function fakeHost() {
     // Reward receipts are real-earned only, and one earned ad unlocks the selected daily item.
     const key=await page.evaluate(()=>HSC.wardrobe.data.pick.clipper);
     await page.evaluate(()=>{for(const s of ['#hsc-goals.open .x','#hsc-salon.open .x','.hsc-coll-panel.open .x','#hsc-set.open .x']){const x=document.querySelector(s);if(x)x.click();}}); // the once-a-day goals may open over home
-    if(!await page.locator('#hsc-menu.open').count())await page.locator('#hsc-menu-btn').click();await page.locator('#hsc-menu .hsc-rw').click(); // the wardrobe is on the home screen
+    if(!await page.locator('#hsc-menu.open').count())await page.locator('#hsc-menu-btn').click();await page.locator('#hsc-menu [data-b="shop"]').click();await page.locator('#hsc-menu [data-s="wardrobe"]').click(); // the wardrobe is in the Shop
     for(const outcome of['dismiss','fail']){
       await page.evaluate(o=>{__native.outcome=o;},outcome);await page.locator('.hsc-vbtn').click();
       await page.waitForFunction(()=>!document.querySelector('.hsc-vbtn').disabled&&!document.body.inert);
@@ -246,7 +246,7 @@ function fakeHost() {
     await page.evaluate(async()=>(await HSC.youtubeClientPromise).flushProgress());
     await boot();assert.equal(await page.evaluate(k=>HSC.rewards.owns(k),key),true);passed++;
     await page.evaluate(()=>{for(const s of ['#hsc-goals.open .x','#hsc-salon.open .x','.hsc-coll-panel.open .x','#hsc-set.open .x']){const x=document.querySelector(s);if(x)x.click();}}); // the once-a-day goals may open over home
-    if(!await page.locator('#hsc-menu.open').count())await page.locator('#hsc-menu-btn').click();await page.locator('#hsc-menu .hsc-rw').click(); // the wardrobe is on the home screen
+    if(!await page.locator('#hsc-menu.open').count())await page.locator('#hsc-menu-btn').click();await page.locator('#hsc-menu [data-b="shop"]').click();await page.locator('#hsc-menu [data-s="wardrobe"]').click(); // the wardrobe is in the Shop
     assert.equal(await page.evaluate(()=>__androidHost.back()),true);
     await page.locator('#hsc-panel.open').waitFor({state:'hidden'});await page.locator('#hsc-menu .hero').click();passed++; // back to the chair
     await page.evaluate(()=>__androidHost.pause(true));assert.equal(await page.evaluate(()=>skinFadeStudio.getView().paused),true);

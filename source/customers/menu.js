@@ -1,24 +1,14 @@
 // ---------------------------------------------------------------------------------------------
 // Android only (buildall.sh, HEAD_SHAPES=1; owner-chosen layout (option 2) and theme (Jelly Gold), 5 November 2026):
 // the home screen.
-// The cutting screen keeps only the cutting itself (the game's own sound, guards, clipper and finish), the coins and
-// one home button. The home screen has a top row and two parts, each a picture (icons.js) with a one-word label
-// (labels.js):
+// The cutting screen keeps only the cutting itself. Home is the owner-chosen Bottom Dock (docs/UI-OPTIONS.md):
 //
-//   top row  the level medal with its progress bar (goals: level, calendar, tasks), the day streak, the coins,
-//            and the settings gear
-//   play     two prominent cards side by side (docs/MAIN-MENU-AND-MODE-ROUTING-CONTRACT.md, owner-locked):
-//            Quick Play first (pressure-free play: the `free` mode, no request, no progression), then Career (the
-//            career's next customer; one tap resumes it, or opens the map when a city must be chosen first)
-//   blocks   Modes (Orders, Rescue, Daily, Beards, Relax, Rush: never Quick Play or Career), Gift, Wardrobe,
-//            Salon and Styles
-// The look: glossy jelly buttons with a thick base that squash when pressed and spring back, a gold-rimmed play card
-// with a shine sweeping across it, and barber-pole stripes drifting behind; taps sound and ripple (fx.js).
-// Alignment: every block and card puts its icon and its label on the same fixed rows, and labels in a row share one
-// size (labels.js), so baselines line up. It scales with the screen: tall screens stack, wide screens put the play
-// card on the left, and tablets and PCs draw it larger (--hsc-s); everything is vector.
-// The wardrobe, salon, lookbook, goals and settings buttons are the features' own buttons moved here, so each works
-// exactly as before; their panels open over the home screen and close back to it.
+//   picture  the player's current barbershop, whole and unzoomed, with no customer (salon.js homePicture)
+//   top row  the level badge and its progress, the day streak, the coins and the settings gear
+//   play     Quick Play first and Career second (docs/MAIN-MENU-AND-MODE-ROUTING-CONTRACT.md, owner-locked), in thumb reach
+//   dock     Modes, Shop, Collection, in that order. Shop holds everything earned or bought: the free bonuses (Gift,
+//            daily rewards) as well as Salon and Wardrobe. Collection is the career portfolio.
+// The features' own buttons wait out of sight in .hold, so each panel opens exactly as before.
 // A returning barber starts here; a first-time player goes straight to the first customer.
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
@@ -28,9 +18,7 @@
   const t = (k) => (HSC.t ? HSC.t(k) : k);
   const I = (n, s) => (HSC.icon ? HSC.icon(n, s) : '');
   // each feature's own button and where it goes on the home screen
-  const PLACE = [['#hsc-goals-btn', '.lvl'], ['#hsc-set-btn', '.gear'], ['.hsc-rw', '[data-b=wardrobe]'], ['#hsc-salon-btn', '[data-b=salon]'], ['#hsc-book-btn', '[data-b=styles]'], ['#hsc-album-btn', '.hold']];
-  // the blocks: [key, colour]
-  const BLOCKS = [['modes', 'yellow'], ['gift', 'pink'], ['wardrobe', 'blue'], ['salon', 'orange'], ['styles', 'mint']];
+  const PLACE = [['#hsc-goals-btn', '.hold'], ['#hsc-set-btn', '.gear'], ['.hsc-rw', '.hold'], ['#hsc-salon-btn', '.hold'], ['#hsc-book-btn', '.hold'], ['#hsc-album-btn', '.hold']];
   const MODE_ICON = { requests: 'orders', free: 'freestyle', fix: 'rescue', daily: 'daily', beard: 'beards', relax: 'relax', rush: 'rush' };
   const MODE_WORD = Object.assign({}, MODE_ICON, { free: 'quick_play' });
   const MODE_COLOUR = { requests: 'green', free: 'yellow', fix: 'red', daily: 'white', beard: 'orange', relax: 'blue', rush: 'purple' };
@@ -55,7 +43,7 @@
 #hsc-menu .page.back-in{animation:hsc-pageback .42s cubic-bezier(.2,1.3,.4,1)}
 @keyframes hsc-pagein{from{transform:translateX(16%) scale(.96);opacity:0}}
 @keyframes hsc-pageback{from{transform:translateX(-16%) scale(.96);opacity:0}}
-#hsc-menu .home{grid-template-rows:48px auto minmax(120px,1fr) minmax(180px,1.3fr)}
+#hsc-menu .home{grid-template-rows:48px minmax(0,1fr) auto auto}
 #hsc-menu .modes{grid-template-rows:48px minmax(0,1fr)}
 /* ---- jelly: the shared button ---- */
 #hsc-menu .j{position:relative;box-sizing:border-box;border:3px solid ${K};border-radius:22px;box-shadow:inset 0 -7px 0 #0003,inset 0 3px 0 #fff6,0 6px 0 ${K},0 10px 14px #0005;cursor:pointer;color:${K};font:inherit;padding:0;transition:transform .32s cubic-bezier(.3,1.8,.5,1),box-shadow .2s}
@@ -72,9 +60,8 @@
 #hsc-menu .chip{box-sizing:border-box;display:flex;align-items:center;gap:6px;height:44px;flex:none;padding:0 14px 0 6px;border-radius:22px;background:#10223fcc;border:2px solid #ffffff30;color:#fff;font-weight:900;font-size:18px;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;unicode-bidi:isolate}
 #hsc-menu .chip .hsc-ic{width:32px;height:32px}
 #hsc-menu .lvl{box-sizing:border-box;display:flex;align-items:center;gap:8px;height:48px;padding-inline-end:14px;border-radius:24px;background:#10223fcc;border:2px solid #ffffff30;flex:0 1 auto;min-width:0}
-#hsc-menu .lvl .hsc-btn{width:48px;height:48px;margin:-2px;flex:none;border-radius:50%;background:none;border:0;box-shadow:none;padding:0}
-#hsc-menu .lvl .hsc-btn .m{display:block;width:100%;height:100%}
-#hsc-menu .lvl .hsc-btn .m svg{width:100%!important;height:100%!important}
+#hsc-menu .lvl .lv{width:48px;height:48px;margin:-2px;flex:none}
+#hsc-menu .lvl .lv .hsc-ic{width:100%;height:100%}
 #hsc-menu .xp{width:clamp(32px,12vw,90px);height:12px;border-radius:6px;background:#ffffff35;overflow:hidden}
 #hsc-menu .xp i{display:block;height:100%;background:linear-gradient(#b5ff7a,#46c43a);border-radius:6px;transition:width .6s}
 #hsc-menu .coins{margin-inline-start:auto}
@@ -82,48 +69,35 @@
 #hsc-menu .gear .hsc-btn{width:48px;height:48px;border-radius:50%;background:#10223fcc;border:2px solid #ffffff30;box-shadow:none;display:flex;align-items:center;justify-content:center;padding:0}
 #hsc-menu .gear .hsc-btn > svg:not(.hsc-ic){display:none}
 #hsc-menu .gear .hsc-btn .hsc-ic{width:34px;height:34px}
-/* ---- the two play cards: Quick Play, then Career ---- */
-#hsc-menu .duo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:12px;min-height:0}
-#hsc-menu .qp{min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto;justify-items:center;align-items:center;row-gap:4px;padding:10px 8px 14px;container-type:size;overflow:hidden;border-radius:26px}
-#hsc-menu .qp .hsc-ic{width:min(72cqw,58cqh,150px);height:auto;aspect-ratio:1;align-self:end;filter:drop-shadow(0 4px 0 #0003);animation:hsc-float 3.2s ease-in-out infinite}
-#hsc-menu .qp .hsc-lbl{font-size:clamp(20px,min(15cqw,16cqh),64px);color:#fff;-webkit-text-stroke:3px ${K};paint-order:stroke fill;text-shadow:0 4px 0 ${K};overflow:visible;width:100%;align-self:start;white-space:normal;line-height:1.05;text-wrap:balance}
-#hsc-menu .hero img[hidden]{display:none}
-#hsc-menu .hero .hin img[hidden]+.go{flex:1;flex-direction:column;padding:0 0 4cqh}
-#hsc-menu .hero .hin img[hidden]+.go .hsc-ic{width:min(52cqw,46cqh,150px)}
-/* ---- the career card ---- */
-#hsc-menu .hero{min-height:0;overflow:visible;container-type:size;border-color:#7a4a00;border-radius:26px;box-shadow:inset 0 -7px 0 #0003,inset 0 3px 0 #fff6,0 0 0 4px #ffd34d,0 7px 0 4px #7a4a00,0 12px 18px #0006}
-#hsc-menu .hero:active{box-shadow:inset 0 -4px 0 #0003,inset 0 3px 0 #fff6,0 0 0 4px #ffd34d,0 2px 0 4px #7a4a00,0 4px 8px #0006}
-#hsc-menu .hero .clip{position:absolute;inset:0;border-radius:23px;overflow:hidden;pointer-events:none}
-#hsc-menu .hero .clip::after{content:"";position:absolute;top:0;bottom:0;width:30%;left:-40%;background:linear-gradient(100deg,#fff0,#fff8,#fff0);transform:skewX(-20deg);animation:hsc-shine 3.2s ease-in-out infinite}
-@keyframes hsc-shine{0%,55%{left:-40%}85%,100%{left:130%}}
-#hsc-menu .hero .hin{position:absolute;inset:0;display:flex;align-items:center}
-#hsc-menu .hero img{height:96%;width:min(52%,100cqh);object-fit:contain;object-position:50% 100%;align-self:flex-end;flex:none;animation:hsc-bob 3s ease-in-out infinite}
-@keyframes hsc-bob{50%{transform:translateY(-2.5%) rotate(-1deg)}}
-#hsc-menu .hero .go{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2cqh}
-#hsc-menu .hero .go .hsc-ic{width:clamp(44px,30cqh,150px);height:auto;aspect-ratio:1;filter:drop-shadow(0 4px 0 #0003);animation:hsc-playb 1.5s ease-in-out infinite}
-@keyframes hsc-playb{50%{transform:scale(1.07)}}
-#hsc-menu .hero .go .hsc-lbl{font-size:clamp(26px,20cqh,90px);color:#fff;-webkit-text-stroke:3px ${K};paint-order:stroke fill;text-shadow:0 4px 0 ${K};overflow:visible}
-@container (max-aspect-ratio: 6/5){
-  #hsc-menu .hero .hin{flex-direction:column}
-  #hsc-menu .hero img{width:100%;height:auto;flex:1;min-height:0}
-  #hsc-menu .hero .go{flex:none;flex-direction:row;padding:2cqh 0 6cqh;gap:3cqw}
-  #hsc-menu .hero .go .hsc-ic{width:clamp(40px,14cqw,110px)}
-  #hsc-menu .hero .go .hsc-lbl{font-size:clamp(26px,13cqw,80px)}
-}
-/* ---- the blocks: icon and label on the same rows in every block ---- */
-#hsc-menu .blocks{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:12px;min-height:0;padding-bottom:6px}
-#hsc-menu .blocks > *{min-width:0;min-height:0;grid-column:span 2}
-/* with five destinations, centre the final pair instead of leaving a visual hole */
-#hsc-menu .blocks > :nth-last-child(2):nth-child(3n+1){grid-column:2/span 2}
-#hsc-menu .blk,#hsc-menu .blocks .hsc-btn{width:100%;height:100%;display:grid;grid-template-rows:minmax(0,1fr) auto;justify-items:center;align-items:end;row-gap:6px;padding:12px 8px 14px;container-type:size}
-#hsc-menu .blocks .hsc-btn > svg:not(.hsc-ic),#hsc-menu .blocks .hsc-btn > .m,#hsc-menu .blocks .hsc-btn > svg:not(:last-of-type){display:none}
-#hsc-menu .blk .hsc-ic,#hsc-menu .blocks .hsc-btn .hsc-ic{width:min(62cqw,52cqh,120px);height:auto;aspect-ratio:1;align-self:end;filter:drop-shadow(0 3px 0 #0002)}
-#hsc-menu .blk .hsc-lbl,#hsc-menu .blocks .hsc-btn .hsc-lbl{font-size:clamp(13px,15cqmin,30px);align-self:start;width:100%}
-#hsc-menu .badge{position:absolute;left:8px;top:8px;z-index:2;padding:2px 8px;border-radius:12px;background:${K};color:#fff;font-size:clamp(12px,10cqmin,20px);font-weight:900;font-variant-numeric:tabular-nums;line-height:1.3}
-#hsc-menu .stars{position:absolute;left:0;right:0;top:8px;display:flex;justify-content:center;gap:2px;font-size:clamp(14px,11cqmin,22px)}
-#hsc-menu .blocks > *{animation:hsc-popin .5s cubic-bezier(.2,1.5,.4,1) both}
-#hsc-menu .blocks > *:nth-child(2){animation-delay:.05s}#hsc-menu .blocks > *:nth-child(3){animation-delay:.1s}#hsc-menu .blocks > *:nth-child(4){animation-delay:.15s}#hsc-menu .blocks > *:nth-child(5){animation-delay:.2s}#hsc-menu .blocks > *:nth-child(6){animation-delay:.25s}
-@keyframes hsc-popin{from{transform:scale(.6) translateY(12%);opacity:0}}
+/* ---- Home: the shop on show, the play cards in thumb reach, the dock ---- */
+#hsc-menu.athome{background:#2a2622 center/cover no-repeat}
+#hsc-menu.athome::before,#hsc-menu.athome::after{display:none}
+#hsc-menu .home{max-width:none}
+#hsc-menu .home .top{position:relative}
+#hsc-menu .grow{min-height:0}
+#hsc-menu .duo{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px;width:100%;max-width:640px;margin:0 auto;height:clamp(92px,14vh,132px)}
+#hsc-menu .qp,#hsc-menu .hero{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;border:0;border-radius:20px;color:#fff;box-shadow:inset 0 2px 0 #fff5,0 6px 0 var(--edge),0 10px 16px #0005}
+#hsc-menu .j.qp::before,#hsc-menu .j.hero::before{display:none}
+#hsc-menu .qp{--edge:#c9921a;background:linear-gradient(#ffd55c,#ffb820);color:${K}}
+#hsc-menu .hero{--edge:#2f8f3c;background:linear-gradient(#5fd06a,#37ae48)}
+#hsc-menu .j.qp:active,#hsc-menu .j.hero:active{box-shadow:inset 0 2px 0 #fff5,0 1px 0 var(--edge)}
+#hsc-menu .qp .hsc-lbl{font-size:clamp(19px,5.4vw,26px);white-space:normal;line-height:1.05;text-wrap:balance;padding:0 8px}
+#hsc-menu .hero .hsc-lbl{font-size:clamp(23px,6.6vw,32px)}
+#hsc-menu .hero .sub{font-size:14px;font-weight:800;opacity:.95;max-width:92%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hsc-menu .hero .sub:empty{display:none}
+#hsc-menu .dock{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:calc(100% + 24px + env(safe-area-inset-left) + env(safe-area-inset-right));margin:6px -12px calc(-14px - env(safe-area-inset-bottom));padding:6px 12px calc(8px + env(safe-area-inset-bottom));box-sizing:border-box;background:#fff;box-shadow:0 -3px 0 #d5dde8}
+#hsc-menu .dock button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;height:62px;background:none;border:0;padding:0;font:inherit;color:${K};cursor:pointer;border-radius:14px}
+#hsc-menu .dock button:active{background:#eef3fa}
+#hsc-menu .dock button:focus-visible{outline:4px solid #4fc3ff}
+#hsc-menu .dock .hsc-ic{width:32px;height:32px}
+#hsc-menu .dock .hsc-lbl{font-size:14px;width:100%}
+#hsc-menu .dock .hsc-dot{right:calc(50% - 26px);top:2px;width:14px;height:14px}
+/* ---- the Shop page: free bonuses first, then the two stores ---- */
+#hsc-menu .shop{grid-template-rows:48px minmax(0,1fr)}
+#hsc-menu .sgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:12px;min-height:0;padding:4px 2px 10px}
+#hsc-menu .tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:0;container-type:size}
+#hsc-menu .tile .hsc-ic{width:min(46cqw,46cqh,110px);height:auto;aspect-ratio:1}
+#hsc-menu .tile .hsc-lbl{font-size:clamp(15px,12cqmin,24px);width:100%}
 /* ---- the modes screen ---- */
 #hsc-menu .mhead{display:flex;align-items:center;gap:10px;height:48px}
 #hsc-menu .back{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center}
@@ -154,14 +128,18 @@
 /* wide screens (phones on their side, tablets on their side, PC): the play card on the left, the blocks on the right */
 @media (orientation:landscape){
   #hsc-menu .page{max-width:1280px}
-  #hsc-menu .home{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);grid-template-rows:48px auto minmax(0,1fr)}
-  #hsc-menu .home .top,#hsc-menu .home .career{grid-column:1/3}
+  #hsc-menu .sgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  /* a wide screen keeps the shop in view: slim cards and a one-line dock */
+  #hsc-menu .duo{height:clamp(68px,17vh,108px);max-width:560px}
+  #hsc-menu .dock button{flex-direction:row;gap:8px;height:44px}
+  #hsc-menu .dock .hsc-lbl{width:auto}
+  #hsc-menu .dock .hsc-ic{width:28px;height:28px}
   #hsc-menu .mgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
   #hsc-menu .mgrid .mode:last-child:nth-child(odd){grid-column:auto}
   #hsc-menu .mgrid .mode:last-child:nth-child(4n+3){grid-column:span 2}
 }
-@media (prefers-reduced-motion:reduce){#hsc-menu .qp .hsc-ic,#hsc-menu::before,#hsc-menu .page,#hsc-menu .hero img,#hsc-menu .hero .go .hsc-ic,#hsc-menu .hero .clip::after,#hsc-menu .blocks > *,#hsc-menu .mgrid > *,#hsc-menu .mode .hsc-ic{animation:none!important}}
-body.hsc-calm #hsc-menu .qp .hsc-ic,body.hsc-calm #hsc-menu::before,body.hsc-calm #hsc-menu .hero img,body.hsc-calm #hsc-menu .hero .go .hsc-ic,body.hsc-calm #hsc-menu .hero .clip::after,body.hsc-calm #hsc-menu .mode .hsc-ic{animation:none!important}
+@media (prefers-reduced-motion:reduce){#hsc-menu::before,#hsc-menu .page,#hsc-menu .mgrid > *,#hsc-menu .mode .hsc-ic{animation:none!important}}
+body.hsc-calm #hsc-menu::before,body.hsc-calm #hsc-menu .mode .hsc-ic{animation:none!important}
 body.hsc-reveal #hsc-menu-btn{visibility:hidden}
 /* ---- every panel in the same family: navy ink, a jelly-blue backdrop, white-to-blue sheets, the rounded type ---- */
 #hsc-goals,#hsc-salon,.hsc-coll-panel,#hsc-set,#hsc-gift,#hsc-panel{font-family:"Arial Rounded MT Bold","Nunito","Baloo 2",system-ui,-apple-system,"Segoe UI",sans-serif!important}
@@ -181,12 +159,18 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
 #hsc-hud .hsc-pill .hsc-combo{color:${K}}
 .ui .seal .seal-shape{filter:drop-shadow(0 5px 0 ${K}) drop-shadow(0 8px 6px #0004)}
 .ui .seal .seal-shape polygon{stroke:${K}}
+/* one icon set in the chair too: the frozen game's own glyphs are hidden and the set's drawn in their place */
+.ui .audio-toggle>svg{opacity:0}
+.ui .audio-toggle[aria-pressed=true]{background:${HSC.iconCss ? HSC.iconCss('sound') : 'none'} center/66% no-repeat,linear-gradient(#fff,#dfe8f2)!important}
+.ui .audio-toggle[aria-pressed=false]{background:${HSC.iconCss ? HSC.iconCss('mute') : 'none'} center/66% no-repeat,linear-gradient(#fff,#dfe8f2)!important}
+.ui .ctl.finish.seal>svg{opacity:0}
+.ui .ctl.finish.seal,.ui[data-status=cutting] .ctl.finish.seal{border-radius:50%;border:3px solid ${K}!important;box-shadow:inset 0 -5px 0 #0002,inset 0 2px 0 #fff9,0 4px 0 ${K},0 6px 8px #0004!important;background:url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 12.5l4.6 4.6L19 7.5" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>')}") center/62% no-repeat,linear-gradient(#5fd06a,#2f9e44)!important}
 #hsc-hud .hsc-btn:active,#hsc-undo:active,#hsc-tools button:active,#hsc-newc:active,.ui .audio-toggle:active,.ui .guard-arc .rung:active,.ui .clip-toggle:active{box-shadow:inset 0 -3px 0 #0002,inset 0 2px 0 #fff9,0 1px 0 ${K}!important}
 /* a feature button that appears in the top row before the home screen takes it in is never shown there */
 #hsc-hud .hsc-row .hsc-rw,#hsc-hud .hsc-row #hsc-goals-btn,#hsc-hud .hsc-row #hsc-salon-btn,#hsc-hud .hsc-row #hsc-book-btn,#hsc-hud .hsc-row #hsc-album-btn,#hsc-hud .hsc-row #hsc-set-btn{display:none!important}
 `;
   const ui = {
-    el: {}, shotKey: null,
+    el: {},
     build(row) {
       const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
       const b = document.createElement('button');
@@ -198,15 +182,23 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       const m = document.createElement('div'); m.id = 'hsc-menu';
       m.innerHTML = `<div class="hold"></div>
         <div class="page home" role="dialog" aria-label="Menu">
-          <div class="top"><div class="lvl"><div class="xp"><i></i></div></div><div class="chip flame">${I('flame')}<span></span></div><div class="chip coins">${I('coin')}<bdi></bdi></div><div class="gear"></div></div>
-          <div class="career"></div>
+          <div class="top"><div class="lvl"><span class="lv"></span><div class="xp"><i></i></div></div><div class="chip flame">${I('flame')}<span></span></div><div class="chip coins">${I('coin')}<bdi></bdi></div><div class="gear"></div></div>
+          <div class="grow"></div>
           <div class="duo">
-            <button class="j c-yellow qp" type="button" aria-label="Quick Play">${I('freestyle')}<span class="hsc-lbl" data-k="quick_play"></span></button>
-            <button class="j c-green hero" type="button" aria-label="Career"><span class="clip"></span><span class="hin"><img alt=""><span class="go">${I('play')}<span class="hsc-lbl" data-k="career"></span></span></span></button>
+            <button class="j qp" type="button" aria-label="Quick Play"><span class="hsc-lbl" data-k="quick_play"></span></button>
+            <button class="j hero" type="button" aria-label="Career"><span class="hsc-lbl" data-k="career"></span><span class="sub"></span></button>
+            <div class="career"></div>
           </div>
-          <div class="blocks hsc-same">${BLOCKS.map(([k, c]) => (['wardrobe', 'salon', 'styles'].includes(k)
-            ? `<div class="slot" data-b="${k}" data-c="${c}"></div>`
-            : `<button class="j blk c-${c}" type="button" data-b="${k}">${I(k)}<span class="hsc-lbl" data-k="${k}"></span></button>`)).join('')}</div>
+          <nav class="dock">${[['modes', 'modes', 'modes'], ['shop', 'salon', 'shop'], ['collection', 'styles', 'collection']].map(([b, ic, k]) => `<button type="button" data-b="${b}">${I(ic)}<span class="hsc-lbl" data-k="${k}"></span><span class="hsc-dot" hidden></span></button>`).join('')}</nav>
+        </div>
+        <div class="page shop" hidden role="dialog" aria-label="Shop">
+          <div class="mhead"><button class="j c-white back" type="button" aria-label="Back">${I('back')}</button><div class="title">${I('salon')}<span class="hsc-lbl" data-k="shop"></span></div><div class="chip coins">${I('coin')}<bdi></bdi></div></div>
+          <div class="sgrid">
+            <button class="j tile c-pink" type="button" data-s="gift">${I('gift')}<span class="hsc-lbl" data-k="gift"></span><span class="badge" hidden></span><span class="hsc-dot" hidden></span></button>
+            <button class="j tile c-yellow" type="button" data-s="daily">${I('daily')}<span class="hsc-lbl" data-k="daily"></span><span class="hsc-dot" hidden></span></button>
+            <button class="j tile c-orange" type="button" data-s="salon">${I('salon')}<span class="hsc-lbl" data-k="salon"></span></button>
+            <button class="j tile c-blue" type="button" data-s="wardrobe">${I('wardrobe')}<span class="hsc-lbl" data-k="wardrobe"></span></button>
+          </div>
         </div>
         <div class="page modes" hidden role="dialog" aria-label="Modes">
           <div class="mhead"><button class="j c-white back" type="button" aria-label="Back">${I('back')}</button><div class="title">${I('modes')}<span class="hsc-lbl" data-k="modes"></span></div><div class="chip coins">${I('coin')}<bdi></bdi></div></div>
@@ -217,11 +209,18 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       m.querySelector('.qp').addEventListener('click', () => this.play('free'));
       m.querySelector('.hero').addEventListener('click', () => this.play('career'));
       m.querySelector('[data-b=modes]').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('swish'); this.view('modes'); });
-      m.querySelector('[data-b=gift]').addEventListener('click', (e) => { if (!(HSC.gift && HSC.gift.open()) && HSC.nope) HSC.nope(e.currentTarget); });
-      m.querySelector('.back').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('back'); this.view('home', true); });
+      m.querySelector('[data-b=shop]').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('swish'); this.view('shop'); });
+      m.querySelector('[data-b=collection]').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('swish'); if (HSC.portfolio) HSC.portfolio.open(); });
+      m.querySelectorAll('.page.modes .back,.page.shop .back').forEach((b) => b.addEventListener('click', () => { if (HSC.fx) HSC.fx.play('back'); this.view('home', true); }));
+      // the Shop page: the free bonuses, then the two stores; each opens its own panel as before
+      const openBtn = (sel) => { const b = document.querySelector('#hsc-menu .hold ' + sel); if (b) b.click(); };
+      m.querySelector('[data-s=gift]').addEventListener('click', (e) => { if (!(HSC.gift && HSC.gift.open()) && HSC.nope) HSC.nope(e.currentTarget); });
+      m.querySelector('[data-s=daily]').addEventListener('click', () => openBtn('#hsc-goals-btn'));
+      m.querySelector('[data-s=salon]').addEventListener('click', () => openBtn('#hsc-salon-btn'));
+      m.querySelector('[data-s=wardrobe]').addEventListener('click', () => openBtn('.hsc-rw'));
       // back (Escape) closes only the top layer: a panel over the home screen handles it first
       addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('open') && !document.querySelector('#hsc-wshop.open,#hsc-panel.open,#hsc-goals.open,#hsc-salon.open,.hsc-coll-panel.open,#hsc-set.open,#hsc-gift.open')) { if (m.querySelector('.page.home').hidden) this.view('home', true); else this.close(); } });
-      addEventListener('resize', () => { if (m.classList.contains('open')) requestAnimationFrame(() => HSC.fitLabels && HSC.fitLabels(m)); });
+      addEventListener('resize', () => { if (m.classList.contains('open')) requestAnimationFrame(() => { if (HSC.fitLabels) HSC.fitLabels(m); this.backdrop(); }); });
       Object.assign(this.el, { btn: b, menu: m, row });
       this.tick();
       try { new MutationObserver(() => this.tick()).observe(row, { childList: true }); } catch (e) {}
@@ -247,7 +246,14 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       this.el.menu.classList.add('open');
       this.view('home');
       this.refresh();
-      this.portrait();
+    },
+    // Home shows the shop itself: the same 3D room the player furnishes, drawn wide
+    backdrop() {
+      const m = this.el.menu, home = !m.querySelector('.page.home').hidden;
+      m.classList.toggle('athome', home);
+      if (!home) { m.style.backgroundImage = ''; return; }
+      const url = HSC.salon && HSC.salon.homePicture ? HSC.salon.homePicture() : null;
+      if (url) m.style.backgroundImage = `url("${url}")`; else m.classList.remove('athome'); // no 3D: the theme's own background
     },
     close() { this.el.menu.classList.remove('open'); },
     view(v, back) {
@@ -259,6 +265,7 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
         if (on && m.classList.contains('open')) { void p.offsetWidth; p.classList.add(back ? 'back-in' : 'in'); }
       }
       if (v === 'modes') this.modes();
+      this.backdrop();
       if (HSC.careerUI) HSC.careerUI.render(v);
       this.labels();
     },
@@ -274,24 +281,6 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       this.close();
       if (HSC.salon) HSC.salon.reveal(mode);
       return true;
-    },
-    // the career's customer, rendered by the game: the contract's customer as he is now (in the chair) or as he
-    // walks in; no picture while the career waits for a city choice
-    portrait() {
-      const g = globalThis.skinFadeStudio, img = this.el.menu.querySelector('.hero img'), cr = HSC.careerRun;
-      if (!g || !HSC.portrait) return;
-      const s = g.getState(), a = cr && cr.ready() ? cr.active() : null;
-      if (!a || !a.person || cr.needsChoice()) { img.hidden = true; this.shotKey = null; return; }
-      img.hidden = false;
-      const inChair = a.job === s.jobId && s.look && s.look.person && s.look.person.seed === a.person.seed;
-      const key = a.id + ':' + (inChair ? s.cutStrokeCount : 'start');
-      if (this.shotKey === key) return;
-      requestAnimationFrame(() => {
-        const hair = inChair ? s.hair : HSC.gridUnpack(a.start.h, 5), beard = inChair ? s.beard : HSC.gridUnpack(a.start.b, HSC.BEARD_MM.length - 1);
-        if (!hair) return;
-        const url = HSC.portrait(a.person, hair, beard || s.beard, 160, 360);
-        if (url) { img.onload = () => HSC.fitLabels && HSC.fitLabels(this.el.menu); img.src = url; this.shotKey = key; }
-      });
     },
     modes() {
       const M = HSC.modes, grid = this.el.menu.querySelector('.mgrid');
@@ -320,15 +309,17 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       m.querySelector('.flame').hidden = !(streak > 0);
       m.querySelector('.flame span').textContent = streak;
       m.querySelector('.xp i').style.width = Math.round((HSC.meta.levelProgress ? HSC.meta.levelProgress() : 0) * 100) + '%';
-      // gift: the time left, or a dot when it is ready
-      const gb = m.querySelector('[data-b=gift]'), gs = HSC.gift ? HSC.gift.state() : null;
-      let gt = gb.querySelector('.badge'), gd = gb.querySelector('.hsc-dot');
-      if (!gt) { gt = document.createElement('span'); gt.className = 'badge'; gb.appendChild(gt); }
-      if (!gd) { gd = document.createElement('span'); gd.className = 'hsc-dot'; gb.appendChild(gd); }
-      gd.hidden = !(gs && gs.ready);
+      // the level badge, and the Shop's free bonuses: the Gift's time left or a dot when ready, a dot for daily rewards
+      const lv = m.querySelector('.lvl .lv'), L = HSC.meta.level();
+      if (lv.dataset.n !== String(L) && HSC.levelBadge) { lv.dataset.n = String(L); lv.innerHTML = HSC.levelBadge(L); }
+      const gb = m.querySelector('[data-s=gift]'), gs = HSC.gift ? HSC.gift.state() : null, gt = gb.querySelector('.badge');
+      gb.querySelector('.hsc-dot').hidden = !(gs && gs.ready);
       gt.hidden = !gs || gs.ready || gs.done;
       if (gs && !gs.ready && !gs.done) gt.textContent = Math.floor(gs.left / 60) + ':' + String(gs.left % 60).padStart(2, '0');
       gb.style.opacity = gs && gs.done ? '.55' : '';
+      const gd = m.querySelector('.hold #hsc-goals-btn .hsc-dot'), daily = !!(gd && !gd.hidden);
+      m.querySelector('[data-s=daily] .hsc-dot').hidden = !daily;
+      m.querySelector('[data-b=shop] .hsc-dot').hidden = !((gs && gs.ready) || daily);
     },
     tick() {
       const m = this.el.menu;
@@ -337,25 +328,10 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       for (const [sel, slot] of PLACE) {
         const btn = document.querySelector('#hsc-hud .hsc-row ' + sel);
         if (!btn) continue;
-        const to = m.querySelector(slot);
-        if (to.classList.contains('slot')) {
-          // a feature button becomes a block: its own icon hides, this set's picture and a word show
-          btn.classList.add('j', 'c-' + to.dataset.c);
-          btn.dataset.b = to.dataset.b;
-          to.replaceWith(btn);
-        } else to.appendChild(btn);
-      }
-      for (const btn of m.querySelectorAll('.blocks .hsc-btn')) {
-        if (!btn.querySelector('.hsc-lbl')) {
-          const k = btn.dataset.b;
-          btn.insertAdjacentHTML('beforeend', `${I(k)}<span class="hsc-lbl" data-k="${k}">${t(k)}</span>`);
-          requestAnimationFrame(() => HSC.fitLabels && HSC.fitLabels(m));
-        }
+        m.querySelector(slot).appendChild(btn);
       }
       const gear = m.querySelector('.gear .hsc-btn');
       if (gear && !gear.querySelector('.hsc-ic')) gear.insertAdjacentHTML('beforeend', I('gear'));
-      const lvl = m.querySelector('.lvl'), gbtn = lvl.querySelector('#hsc-goals-btn');
-      if (gbtn && lvl.firstElementChild !== gbtn) lvl.insertBefore(gbtn, lvl.firstChild);
       // the home button's dot: anything waiting on the home screen
       const gs = HSC.gift ? HSC.gift.state() : null, daily = HSC.modes && HSC.modes.daily ? HSC.modes.daily() : null;
       const dot = [...m.querySelectorAll('.hsc-btn .hsc-dot')].some((d) => !d.hidden) || !!(gs && gs.ready) || !!(daily && !daily.done && HSC.modes.unlocked('daily'));
@@ -377,7 +353,7 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
     if (v && HSC.careerUI) HSC.careerUI.render(v);
   });
   // career(): the home screen on the world map (a city must be chosen before the career can seat anyone)
-  HSC.menu = { open: () => ui.open(), close: () => ui.close(), view: (v, back) => ui.view(v, back), career: () => { if (!ui.el.menu) return; ui.open(); ui.view('map'); }, play: (m) => ui.play(m), refreshPortrait: () => { ui.shotKey = null; ui.portrait(); } };
+  HSC.menu = { open: () => ui.open(), close: () => ui.close(), view: (v, back) => ui.view(v, back), career: () => { if (!ui.el.menu) return; ui.open(); ui.view('map'); }, play: (m) => ui.play(m) };
   // the Android back button: close the top panel, then the modes screen back to home; from the chair it opens the home
   // screen; on the home screen it is not handled (Android leaves the app as usual)
   HSC.menuBack = function () {

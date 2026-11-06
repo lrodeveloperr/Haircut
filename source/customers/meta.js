@@ -18,7 +18,6 @@
     while (l < 5 && cuts >= cutsFor(l + 1)) l++;
     return l;
   };
-  const VIP_BEARDS = ['full', 'long', 'boxed', 'mutton', 'full', 'long'];
 
   // ---- the variety director ----------------------------------------------------------------------
   // Customers are dealt, not rolled: each trait comes from a shuffled deck that is used up before it is
@@ -78,16 +77,16 @@
     d.last[name] = card;
     return card;
   }
-  // a beard style with its real odds for this age and heritage, never the same style twice in a row
-  function beardStyle(age, cls, R, big) {
+  // a beard style with its real odds for this age, never the same style twice in a row (a style is a grooming
+  // choice: it never depends on heritage)
+  function beardStyle(age, R, big) {
     const base = Object.assign({}, (HSC.BEARD_BY_AGE || {})[age] || {});
-    const mult = (HSC.BEARD_CLASS_MULT || {})[cls] || {};
     const recent = M.data.deck.beardRecent || [];
     const w = {};
     for (const [k, v] of Object.entries(base)) {
       if (k === 'clean' || k === 'stubble' || recent.includes(k)) continue;
       if (big && !['full', 'long', 'boxed', 'shenandoah', 'mutton', 'ducktail', 'garibaldi'].includes(k)) continue;
-      w[k] = v * (mult[k] || 1);
+      w[k] = v;
     }
     const style = Object.keys(w).length ? R.pick(w) : 'boxed';
     M.data.deck.beardRecent = [style];
@@ -118,7 +117,7 @@
     const shave = H.shave != null ? H.shave : cls === 'east-asian' ? 0.45 : 0;
     if (shave && beard === 'style' && R.next() < shave) beard = 'clean';
     if (level >= 2 && streak('beard', beard !== 'clean')) beard = beard === 'clean' ? (o.age === 'young' ? 'stubble' : 'style') : 'clean';
-    o.beard = beard === 'style' ? beardStyle(o.age, cls, R) : beard === 'stubble' && PH && PH.stubble ? R.pick(PH.stubble) : beard;
+    o.beard = beard === 'style' ? beardStyle(o.age, R) : beard === 'stubble' && PH && PH.stubble ? R.pick(PH.stubble) : beard;
     return o;
   }
   // no more than three in a row of the same kind (bearded / clean-shaven, hair loss / none): `kind` says
@@ -134,8 +133,6 @@
     const r = d.runs[name] || [0, 0];
     d.runs[name] = kind ? [Math.min(9, r[0] + 1), 0] : [0, Math.min(9, r[1] + 1)];
   }
-  // a VIP's big beard, with the heritage's odds
-  function vipBeard(age, cls, R) { return beardStyle(age === 'old' ? 'old' : age, cls, R, true); }
   // the haircut family for a customer: dealt too, from what suits them (no long or full tops on a bald crown)
   function dealFamily(person, R) {
     const b = person.bald || {};
@@ -326,21 +323,17 @@
   function generate(seed, level, extra = {}) {
     const R = HSC.rng((seed ^ 0x2c1b3c6d) >>> 0 || 1);
     const opts = extra.first ? {} : dealt(level, R);
-    if (level < 2) opts.beard = 'clean';
     if (level < 3) { if (!opts.age || opts.age === 'old') opts.age = R.next() < 0.55 ? 'young' : 'middle'; opts.grey = 0; opts.beardGrey = 0; }
     if (level < 2) { opts.noLoss = true; delete opts.norwood; delete opts.baldType; }
-    if (extra.feature === 'beard') opts.beard = ['full', 'boxed', 'goatee', 'moustache', 'vandyke', 'chinstrap'][Math.floor(R.next() * 6)];
     if (extra.feature === 'old') { opts.age = 'old'; delete opts.grey; delete opts.beardGrey; }
     if (extra.feature === 'loss') { delete opts.noLoss; delete opts.baldType; opts.norwood = ['3', '3v', '4', '5'][Math.floor(R.next() * 4)]; }
-    if (extra.vip || extra.first) {
-      // the most satisfying cut: a full, thick head of hair (and a big beard once beards are in)
-      opts.noLoss = true;
-      delete opts.norwood; delete opts.baldType;
-      opts.age = R.next() < 0.6 ? 'young' : 'middle';
-      opts.grey = 0; opts.beardGrey = 0;
-      opts.beard = extra.first || level < 2 ? 'clean' : M.data ? vipBeard(opts.age, ((HSC.HERITAGE || [])[opts.heritage] || {}).id, R) : VIP_BEARDS[Math.floor(R.next() * VIP_BEARDS.length)];
-    }
-    const p = HSC.makePerson(seed >>> 0 || 1, opts);
+    // the very first customer is the tutorial's full head of hair; a VIP is context, never a physical upgrade
+    if (extra.first) { opts.noLoss = true; delete opts.norwood; delete opts.baldType; opts.age = R.next() < 0.6 ? 'young' : 'middle'; opts.grey = 0; opts.beardGrey = 0; }
+    // what this level or feature needs is selected from naturally generated customers, never written onto one
+    const shaved = extra.first || level < 2, wantBeard = extra.feature === 'beard';
+    if (shaved || wantBeard) delete opts.beard; // the dealt style gives way: selection decides
+    const fits = (x) => (shaved ? x.beard.style === 'clean' : !wantBeard || !['clean', 'stubble'].includes(x.beard.style.replace(/\d+$/, '')));
+    const p = HSC.selectPerson(seed >>> 0 || 1, opts, fits) || HSC.makePerson(seed >>> 0 || 1, Object.assign({}, opts, shaved ? { beard: 'clean' } : {}));
     // the streaks count the customer as finally made (after the VIP and showcase rules)
     if (M.data && !extra.first && level >= 2) { note('loss', p.bald.norwood !== '1' || p.bald.type !== 'none'); note('beard', p.beard.style !== 'clean'); }
     // before level 4, hair loss stops at a Norwood 4 (the very bald crowns come later)

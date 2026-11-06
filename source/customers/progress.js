@@ -160,7 +160,7 @@
   // ---- icons ----
   const COIN_OLD = (s = 22) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><circle cx="12" cy="12" r="9.5" fill="#ffc83d" stroke="${INK}" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#c98a12" stroke-width="1.8"/><path d="M10.6 8.6h2.8v6.8" fill="none" stroke="#c98a12" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const COIN = (s = 22) => (HSC.icon ? HSC.icon('coin', s) : COIN_OLD(s)); // the theme's one coin (icons.js)
-  const MEDAL = (n) => `<svg viewBox="0 0 40 40" width="40" height="40"><path d="M12 2h6l3 9-6 2zM28 2h-6l-3 9 6 2z" fill="#4a90d9" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/><circle cx="20" cy="25" r="12" fill="#ffc83d" stroke="${INK}" stroke-width="2.4"/><text x="20" y="30" text-anchor="middle" font-family="DM Sans,system-ui,sans-serif" font-weight="900" font-size="${n > 99 ? 10 : n > 9 ? 13 : 15}" fill="${INK}">${n}</text></svg>`;
+  const MEDAL = (n) => (HSC.levelBadge ? HSC.levelBadge(n, 40) : String(n)); // one level badge everywhere (icons.js)
   const CHEST = (s = 34) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><path d="M3 10h18v10H3z" fill="#c9782e" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 10c0-4 3-6 9-6s9 2 9 6z" fill="#e0913b" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 12.5h18" stroke="#ffc83d" stroke-width="2"/><rect x="10" y="10.5" width="4" height="5" rx="1" fill="#ffc83d" stroke="${INK}" stroke-width="1.5"/></svg>`;
   const TICK = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#2f9e44" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   const CLOSE = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
@@ -384,7 +384,7 @@
       if (s.status === 'reveal') this.wonJob = s.jobId;
       // the first time each day, after the first customer ever: the calendar opens by itself
       if (s.status === 'cutting' && P.seenDay !== dayKey() && M().data.cuts >= 1 && calReady() && !document.querySelector('#hsc-panel.open')) {
-        P.seenDay = dayKey(); save(); this.open();
+        P.seenDay = dayKey(); save(); // the day's rewards wait behind a dot in the Shop; they no longer cover Home
       }
       this.panel();
     },

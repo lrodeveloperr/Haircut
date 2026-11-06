@@ -477,6 +477,9 @@
     shop: { pos: [0.1, 1.5, 5.0], look: [0.1, 1.5, 0], fov: 46.6 },
     floor: { pos: [0.5, 2.35, 3.6], look: [0.3, 0.55, 0.6], fov: 52 },
     thumb: { pos: [0, 1.55, 4.2], look: [0, 1.7, 0], fov: 42 },
+    // the Home screen: the whole shop, wide and unzoomed, with no customer
+    homeP: { pos: [-0.9, 1.75, 6.6], look: [1.25, 0.72, 0], fov: 62 },
+    homeL: { pos: [0.1, 1.42, 6.2], look: [0.1, 0.72, 0], fov: 42 },
     // the shop screen moves to the part being changed
     chair: { pos: [1.2, 1.35, 3.6], look: [2.3, 0.85, 0.5], fov: 40 },
     decor: { pos: [1.6, 1.5, 4.0], look: [2.7, 1.55, 0.1], fov: 38 },

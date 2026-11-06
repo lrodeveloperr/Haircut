@@ -47,7 +47,8 @@
   // ear piercings: roughly 1 in 6 young men, rarer with age (left ear alone, both, sometimes the right alone).
   // hearing aids: about 1 in 20 men in their 60s, 1 in 8 in their 70s, 1 in 5 over 80, usually both ears.
   // a visible neck tattoo: a few percent of young men, rarer with age. Designs are pictures, never lettering.
-  HSC.TATTOOS = ['star', 'rose', 'tribal', 'geo'];
+  // the art is abstract; the third motif's label names its shape only. Order is the saved identity: never reorder.
+  HSC.TATTOOS = ['star', 'rose', 'blades', 'geo'];
   HSC.accessoriesOf = function (person) {
     if (!person || !HSC.rng) return null;
     const y = person.years, key = 'a' + person.seed + ':' + y + ':' + person.skin.tone;

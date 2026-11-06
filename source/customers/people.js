@@ -10,7 +10,9 @@
 (function (HSC) {
   'use strict';
 
-  const PERSON_VERSION = 1;
+  // 2: each trait group draws from its own label-hashed stream (customer contract section 6), and a person carries a
+  // stable string id. Saved version-1 people stay valid and are never regenerated: they keep exactly how they look.
+  const PERSON_VERSION = 2;
 
   // small deterministic PRNG (mulberry32)
   function rng(seed) {
@@ -270,8 +272,11 @@
   }
   const TEX_FAMILY = { 1: 'straight', 2: 'wavy', 3: 'curly', 4: 'coily' };
 
+  const label = (seed, name) => { let h = 2166136261 ^ (seed >>> 0); for (let i = 0; i < name.length; i++) h = Math.imul(h ^ name.charCodeAt(i), 16777619); return (h >>> 0) || 1; };
   function makePerson(seed, opts = {}) {
-    const R = rng(seed);
+    // one stream per trait group: adding a roll to one group can never change another group's result
+    const stream = (name) => rng(label(seed, name));
+    let R = stream('identity');
     const weights = {};
     HERITAGE.forEach((h, i) => (weights[i] = h.w));
     const her = HERITAGE[opts.heritage != null ? opts.heritage : +R.pick(weights)];
@@ -288,12 +293,14 @@
     const band = P ? P.bandOf(years) : null;
     const age01 = clamp((years - 18) / (80 - 18), 0, 1);
 
+    R = stream('skin');
     // Monk Skin Tone 1-10 -> the game's 10 tones (tones 4-6 read light under the barber's bright ring light);
     // calibrated by eye against rendered tones: game tone 6 reads as Monk 5, 7 as Monk 6-7, 8 as Monk 7-8, 9.4 as
     // Monk 8-9; Android adds a deeper tone 10 for Monk 10
     const MONK_TONE = [[0, 0.4], [0.3, 0.9], [0.8, 1.6], [1.5, 2.8], [2.6, 4.6], [4.6, 6.6], [6.8, 7.8], [7.8, 8.7], [8.7, 9.5], [9.5, 10.3]];
     const skinT = Array.isArray(her.skin) ? R.range(her.skin[0], her.skin[1]) : R.range(...MONK_TONE[+R.pick(her.skin) - 1]);
     const under = R.pick(her.under);
+    R = stream('hair');
     let texture = opts.texture || R.pick(her.tex), hairType = null;
     if (P && /^[1-4][abc]$/.test(texture)) { hairType = texture; texture = TEX_FAMILY[texture[0]]; }
     else if (P && !TEX_FAMILY[texture] && her.tex && Object.keys(her.tex)[0].length === 2) {
@@ -314,6 +321,7 @@
     const hairColour = opts.hairColour != null ? opts.hairColour : HAIR[R.pick(hw)];
 
     // greying
+    R = stream('grey');
     const gc = GREY_BY_CLASS[cls] || GREY_BY_CLASS.white;
     const onset = gc.onset + R.gauss(gc.sd);
     let grey = Math.min(0.97, Math.pow(clamp((years - onset) / gc.span, 0, 1), 1.1));
@@ -329,6 +337,7 @@
     const beardGreyPattern = R.pick(BEARD_GREY_PATTERNS);
 
     // hair loss
+    R = stream('loss');
     const bc = BALD_BY_CLASS[cls] || BALD_BY_CLASS.white;
     const nwTable = Object.assign({}, P ? P.norwood[band] : NORWOOD[ageBand]);
     for (const k of Object.keys(nwTable)) if (k !== '1') nwTable[k] *= bc.prevalence;
@@ -356,8 +365,10 @@
     }
 
     // facial hair
+    R = stream('beard');
+    // a beard style is a grooming choice: it follows age and (once researched) the city's cultural profile, never
+    // heritage (CITY-CUSTOMER-VARIABILITY.md section 13); heritage keeps physical density only (phenotypes.js)
     const bw = Object.assign({}, BEARD_BY_AGE[ageBand]);
-    for (const [k, m] of Object.entries(BEARD_CLASS_MULT[cls] || {})) if (bw[k] != null) bw[k] *= m;
     const beardStyle = opts.beard || R.pick(bw);
     const style = BEARD_STYLES[beardStyle];
     const beard = {};
@@ -368,6 +379,7 @@
     const neckLine = R.range(-1, 1);
     const patchy = clamp(her.patchy + R.gauss(0.08) + (ageBand === 'young' ? 0.12 : 0), 0, 0.85);
 
+    R = stream('face');
     // face shape: group tendency (subtle) + individual variation (larger)
     const morph = {};
     for (const k of MORPHS) morph[k] = +clamp(P ? R.gauss(0.15) : 0.55 * (her.morph[k] || 0) + R.gauss(0.42), -1, 1).toFixed(3);
@@ -378,6 +390,7 @@
 
     return {
       v: PERSON_VERSION,
+      id: 'p' + (seed >>> 0).toString(36),
       seed: seed >>> 0,
       heritage: her.id,
       age: ageBand,
@@ -406,7 +419,7 @@
   function validPerson(p) {
     try {
       return (
-        isObj(p) && p.v === PERSON_VERSION && Number.isInteger(p.seed) &&
+        isObj(p) && (p.v === PERSON_VERSION || p.v === 1) && Number.isInteger(p.seed) &&
         Number.isInteger(p.years) && p.years >= 18 && p.years <= 95 && own(AGE_BANDS, p.age) &&
         isObj(p.skin) && num(p.skin.tone) && own(UNDERTONES, p.skin.under) &&
         isObj(p.hair) && ['straight', 'wavy', 'curly', 'coily'].includes(p.hair.texture) && Number.isInteger(p.hair.colour) &&
@@ -430,8 +443,20 @@
     return [0, 1, 2].map((k) => (SKIN_TONES[i][k] * (1 - f) + SKIN_TONES[i + 1][k] * f) * u[k]);
   }
 
+  // Select, never rewrite (customer contract section 12): a mode or level needing a kind of customer draws seeds in a
+  // fixed order until a naturally generated person fits; the same seed always selects the same person.
+  function selectPerson(seed, opts, fits, tries = 80) {
+    let s = seed >>> 0 || 1, p = null;
+    for (let i = 0; i < tries; i++) {
+      p = makePerson(s, opts);
+      if (fits(p)) return p;
+      s = (Math.imul(s ^ (s >>> 15), 0x2c1b3c6d) + i + 1) >>> 0 || 1;
+    }
+    return null;
+  }
+
   Object.assign(HSC, {
-    rng, clamp, smooth, makePerson, validPerson, skinColour,
+    rng, clamp, smooth, makePerson, selectPerson, validPerson, skinColour,
     SKIN_TONES, UNDERTONES, HAIR, HAIR_BY_CLASS, BEARD_BY_AGE, BEARD_CLASS_MULT, BALD_BY_CLASS, HAIR_DARK, EYES, MORPHS, HERITAGE, NORWOOD_SHAPE, BEARD_STYLES, PERSON_VERSION, baldShape,
   });
 })(globalThis.HSC || (globalThis.HSC = {}));

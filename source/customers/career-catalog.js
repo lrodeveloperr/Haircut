@@ -70,10 +70,13 @@
         // residents follow the city's population scheduler; visitors and VIPs use the neutral world table
         if (ctx.source === 'resident') opts.heritage = drawGroup(env.pop, ctx.city, R);
         const draw = ctx.source === 'resident' ? { city: ctx.city, group: opts.heritage } : null;
-        if (ctx.mode === 'beard') opts.beard = ['full', 'boxed', 'long', 'garibaldi', 'ducktail', 'shenandoah'][Math.floor(R.next() * 6)];
-        const p = HSC.makePerson(seed, opts);
+        // Beards selects someone who already has a beard to shape; it never writes one onto a customer
+        const BIG = ['full', 'boxed', 'long', 'garibaldi', 'ducktail', 'shenandoah'];
+        const p = ctx.mode === 'beard' ? HSC.selectPerson(seed, opts, (x) => BIG.includes(x.beard.style)) : HSC.makePerson(seed, opts);
+        if (!p) return null;
         if (ctx.source === 'vip') p.vip = true;
-        if (ctx.source === 'visitor') p.visitor = true;
+        // a visitor's origin is recorded: the neutral world table until a city's visitor mix is researched
+        if (ctx.source === 'visitor') p.visitor = { origin: 'neutral-world', v: 1 };
         return { person: p, traits: traitsOf(p, null), draw };
       },
       starts(cu, mode, ctx) {

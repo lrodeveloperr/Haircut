@@ -12,7 +12,7 @@
 //             x2 from the 4th (owner-approved item 18). A cut under 3 stars ends the run. A flame tag on the coin
 //             counter shows what the next 3-star cut pays.
 //   x3 tips   a rewarded video on the reveal triples that customer's tips (once per customer).
-//   undo      one rewarded video per customer, offered after a measurable mistake, restores that stroke.
+//   undo      a permanent button: each undo of the last stroke is a rewarded video (up to 20 strokes back).
 //   smile     at the reveal the customer smiles in his own ancestry mix of MakeHuman's expression units
 //             (render.js): a polite smile for 1 star, a warm one for 2, a big real smile for 3.
 // No text: icons, stars and numbers only. Every video is optional.
@@ -305,16 +305,9 @@
   HSC.clippingsActive = () => !!face.anim || ui.flying > 0 || (clipActive ? clipActive() : false);
 
   // ---- undo: one rewarded video per stroke undone ----
-  // one contextual offer per contract (friction contract section 6; plan 3.3): the undo appears only after a measurable
-  // mistake, a stroke that took hair below what was asked (with no request, any stroke), and once used it is gone
-  const undo = { job: null, stack: [], snap: null, busy: false, used: null };
-  const OVERCUT = 40; // cells newly below the target that make a stroke a measurable mistake
-  function mistake(s, snap) {
-    const rq = HSC.requestFor ? HSC.requestFor(s) : null;
-    if (!rq) return true;
-    const count = (now, was, t) => { let n = 0; if (!Array.isArray(now) || !Array.isArray(was) || !t) return 0; for (let i = 0; i < 8192; i++) if (now[i] < t[i] && was[i] >= t[i]) n++; return n; };
-    return count(s.hair, snap.hair, rq.target) + count(s.beard, snap.beard, rq.beard) >= OVERCUT;
-  }
+  // the undo button is permanent while there is a stroke to take back: the player watches a video whenever it is
+  // worth it to them (owner decision 5 November 2026, replacing the one-per-customer rule of plan 3.3)
+  const undo = { job: null, stack: [], snap: null, busy: false };
   function onDown(e) {
     const g = G();
     if (!g || e.button > 0) return;
@@ -330,7 +323,7 @@
     if (s.status !== 'cutting' || s.jobId !== snap.job) return;
     if (s.hair !== snap.hair || s.beard !== snap.beard || s.brow !== snap.brow) {
       if (undo.job !== s.jobId) { undo.job = s.jobId; undo.stack = []; }
-      undo.stack.push({ hair: snap.hair, beard: snap.beard, brow: snap.brow, svc: snap.svc, mistake: mistake(s, snap) });
+      undo.stack.push({ hair: snap.hair, beard: snap.beard, brow: snap.brow, svc: snap.svc });
       if (undo.stack.length > 20) undo.stack.shift();
       ui.undoButton();
     }
@@ -350,7 +343,7 @@
         let back = false;
         for (let k = 0; k < 40 && !back; k++) { back = g.restore ? await g.restore(prev.hair, prev.beard, prev.brow) : false; if (!back) await new Promise((r) => setTimeout(r, 150)); }
         if (!back) undo.stack.push(prev);
-        else { undo.used = job; if (HSC.servicesRestore) HSC.servicesRestore(prev.svc); } // a threaded line put back is no longer threaded
+        else if (HSC.servicesRestore) HSC.servicesRestore(prev.svc); // a threaded line put back is no longer threaded
       } else if (!ok) HSC.nope && HSC.nope(ui.el.undo);
     } finally {
       undo.busy = false;
@@ -452,7 +445,7 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
       reqEl.addEventListener('click', () => { reqEl.classList.toggle('big'); clearTimeout(this.bigT); if (reqEl.classList.contains('big')) this.bigT = setTimeout(() => reqEl.classList.remove('big'), 2600); });
       const undoEl = document.createElement('button'); undoEl.id = 'hsc-undo'; undoEl.type = 'button'; undoEl.hidden = true;
       undoEl.setAttribute('aria-label', 'Watch a video to undo the last stroke');
-      undoEl.innerHTML = `${UNDO}<span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}</span>`;
+      undoEl.innerHTML = `${HSC.icon ? HSC.icon('undo', 32) : UNDO}<span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}</span>`;
       undoEl.addEventListener('click', doUndo);
       const score = document.createElement('div'); score.id = 'hsc-score'; score.hidden = true;
       score.innerHTML = `<div class="stars"></div><div class="svc"></div><div class="row"><div class="tip">${COIN(28)}<span></span><div class="hsc-combo" hidden>${FLAME(20)}<b></b></div></div>
@@ -511,8 +504,7 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
       const g = G(), b = this.el.undo;
       if (!g || !b) return;
       const s = g.getState();
-      const top = undo.stack[undo.stack.length - 1];
-      const show = s.status === 'cutting' && undo.job === s.jobId && !!top && top.mistake && undo.used !== s.jobId && !!(HSC.canVideo && HSC.canVideo());
+      const show = s.status === 'cutting' && undo.job === s.jobId && undo.stack.length > 0 && !!(HSC.canVideo && HSC.canVideo());
       b.hidden = !show;
       if (!show) return;
       // under the top-left buttons

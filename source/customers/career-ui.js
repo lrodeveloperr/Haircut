@@ -2,9 +2,7 @@
 // Android only (buildall.sh, HEAD_SHAPES=1): the career on the home screen (docs/CAREER-MAP-LOGIC.md sections 3,
 // 7 and 13; CAREER-MODE-ARCHITECTURE.md "Map principles"; owner-approved 5 November 2026).
 //
-//   strip   under the top bar: the barber's rank (one word, a number for Legend), the current chapter as five
-//           role dots (local order, specialist, regular, surprise, showcase; done, current, to come), and a
-//           Map button
+//   card    on the Career card: the city and the chapter step, a replace button and the map
 //   map     every city as an equal tile, in alphabetical order of its name in the player's language: this tour's
 //           visit (done, in progress, to visit), its best showcase stars, an established branch and the regulars
 //           kept there; no city is ranked or shows income, difficulty or a reward multiplier.
@@ -20,31 +18,14 @@
   const t = (k) => (HSC.t ? HSC.t(k) : k);
   const I = (n, s) => (HSC.icon ? HSC.icon(n, s) : '');
   const CR = () => (HSC.careerRun && HSC.careerRun.ready() ? HSC.careerRun : null);
-  const ROLE_ICON = ['orders', 'modes', 'regulars', 'gift', 'medal'];
-  const STAR = (on) => `<svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc21a' : 'none'}" stroke="${on ? K : '#9fb0c4'}" stroke-width="2.4" stroke-linejoin="round"${on ? '' : ' stroke-dasharray="2.6 2.2"'}/></svg>`;
+    const STAR = (on) => `<svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc21a' : 'none'}" stroke="${on ? K : '#9fb0c4'}" stroke-width="2.4" stroke-linejoin="round"${on ? '' : ' stroke-dasharray="2.6 2.2"'}/></svg>`;
   const TICK = `<svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const CSS = `
-#hsc-menu .career{display:flex;align-items:center;gap:8px;min-width:0;height:56px}
+#hsc-menu .career{position:absolute;inset-inline-end:6px;top:6px;bottom:12px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+#hsc-menu .hero{padding-inline-end:46px}
 #hsc-menu .career:empty{display:none}
-#hsc-menu .career .rank{font:inherit;cursor:pointer;box-sizing:border-box;display:flex;align-items:center;gap:6px;height:48px;padding:0 14px 0 6px;border-radius:24px;background:#10223fcc;border:2px solid #ffffff30;color:#fff;font-weight:900;flex:0 1 auto;min-width:0;max-width:36%}
-#hsc-menu .career .rank .hsc-lbl{flex:1;min-width:0}
-#hsc-menu .career .rank .hsc-ic{width:36px;height:36px}
-#hsc-menu .career .rank .hsc-lbl{font-size:17px}
-#hsc-menu .career .dots{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:4px;min-width:0}
-#hsc-menu .career .dot{position:relative;flex:0 1 44px;aspect-ratio:1;max-width:44px;min-width:22px;border-radius:50%;background:#ffffffd0;border:3px solid ${K};display:flex;align-items:center;justify-content:center;box-sizing:border-box}
-#hsc-menu .career .dot .hsc-ic{width:70%;height:70%}
-#hsc-menu .career .dot.done{background:linear-gradient(#9cf06c,#36b83a)}
-#hsc-menu .career .dot.done .hsc-ic{opacity:.35}
-#hsc-menu .career .dot .ok{position:absolute;right:-5px;bottom:-5px;width:20px;height:20px;border-radius:50%;background:#36b83a;border:2px solid ${K};display:flex;align-items:center;justify-content:center;font-size:12px}
-#hsc-menu .career .dot.now{background:linear-gradient(#ffe682,#ffb21a);box-shadow:0 0 0 3px #fff;animation:hsc-dotnow 1.4s ease-in-out infinite}
-@keyframes hsc-dotnow{50%{transform:scale(1.1)}}
-#hsc-menu .career .repl{flex:none;width:48px;height:48px;border-radius:24px;display:flex;align-items:center;justify-content:center}
-#hsc-menu .career .repl .hsc-ic{width:34px;height:34px}
-#hsc-menu .career .mapb{flex:none;display:flex;align-items:center;justify-content:center;gap:6px;height:48px;min-width:48px;padding:0 14px 0 8px;border-radius:24px;max-width:30%}
-/* a narrow phone: the map button keeps its icon only (the word shows wherever there is room) */
-@media (max-width:519px){#hsc-menu .career .mapb{padding:0;width:52px}#hsc-menu .career .mapb .hsc-lbl{display:none}}
-#hsc-menu .career .mapb .hsc-ic{width:32px;height:32px}
-#hsc-menu .career .mapb .hsc-lbl{font-size:16px}
+#hsc-menu .career button{width:36px;height:36px;border:0;border-radius:12px;background:#ffffffd9;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#hsc-menu .career button .hsc-ic{width:26px;height:26px}
 #hsc-menu .map{grid-template-rows:48px minmax(0,1fr)}
 #hsc-menu .map .tourb{margin-inline-start:auto;display:flex;align-items:center;gap:6px;height:44px;padding:0 14px;border-radius:22px;background:#10223fcc;border:2px solid #ffffff30;color:#fff;font-weight:900;font-size:18px;white-space:nowrap}
 #hsc-menu .cities{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));grid-auto-rows:auto;gap:12px;min-height:0;overflow-y:auto;padding:4px 2px 10px;align-content:start}
@@ -87,8 +68,6 @@
 #hsc-menu .city .facts{display:flex;align-items:center;gap:10px;font-weight:900;font-size:16px;font-variant-numeric:tabular-nums}
 #hsc-menu .city .facts .hsc-ic{width:26px;height:26px}
 #hsc-menu .city .facts span{display:flex;align-items:center;gap:3px}
-@media (prefers-reduced-motion:reduce){#hsc-menu .career .dot.now{animation:none}}
-body.hsc-calm #hsc-menu .career .dot.now{animation:none}
 `;
   const ui = {
     built: false,
@@ -117,17 +96,13 @@ body.hsc-calm #hsc-menu .career .dot.now{animation:none}
       if (v === 'map' && HSC.careerRun && HSC.careerRun.tooNew()) { this.update(m.querySelector('.page.map')); return; }
       if (!cr || !strip) { if (strip) strip.innerHTML = ''; return; }
       const body = cr.body();
-      // the strip: rank, the five chapter roles, the map
-      const rk = cr.rank() || { id: 'apprentice' };
       const pos = body && !cr.needsChoice() ? HSC.career.position(body.core) : null;
       const slot = pos ? pos.slot : 0;
-      strip.innerHTML = `<button class="rank" type="button" aria-label="${t('p_portfolio')}">${I('medal')}<span class="hsc-lbl">${t('r_' + rk.id)}${rk.legend ? ' ' + rk.legend : ''}</span></button>
-        <div class="dots" aria-hidden="true">${ROLE_ICON.map((ic, i) => `<span class="dot${i < slot ? ' done' : i === slot && pos ? ' now' : ''}">${I(ic)}${i < slot ? `<span class="ok">${TICK}</span>` : ''}</span>`).join('')}</div>
-        ${cr.canReplace() && !cr.needsChoice() ? `<button class="j c-white repl" type="button" aria-label="${t('a_replace')}">${I('swap')}</button>` : ''}
-        <button class="j c-blue mapb" type="button" aria-label="Map">${I('map')}<span class="hsc-lbl" data-k="map">${t('map')}</span></button>`;
+      // the Career card carries where the career stands, and two small controls: replace an untouched offer, the map
+      const need = cr.needsChoice(), sub = m.querySelector('.hero .sub');
+      if (sub) sub.textContent = pos && !need && pos.city !== HSC.career.UNSET ? (HSC.cityName ? HSC.cityName(pos.city) : pos.city) + ' · ' + (slot + 1) + '/5' : '';
+      strip.innerHTML = `${cr.canReplace() && !need ? `<button class="repl" type="button" aria-label="${t('a_replace')}">${I('swap')}</button>` : ''}<button class="mapb" type="button" aria-label="${t('map')}">${I('map')}</button>`;
       strip.querySelector('.mapb').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('swish'); HSC.menu.view('map'); });
-      // the rank opens the career portfolio
-      strip.querySelector('.rank').addEventListener('click', () => { if (!HSC.portfolio) return; if (HSC.fx) HSC.fx.play('swish'); HSC.portfolio.open(); });
       // replace the offered contract (no work on it yet): another customer for the same slot, no penalty
       const rb = strip.querySelector('.repl');
       if (rb) rb.addEventListener('click', async () => {
@@ -138,7 +113,6 @@ body.hsc-calm #hsc-menu .career .dot.now{animation:none}
         if (HSC.fx) HSC.fx.play('swish');
         if (inChair && HSC.modes.newCustomer) await HSC.modes.newCustomer();
         this.render(v);
-        if (HSC.menu.refreshPortrait) HSC.menu.refreshPortrait();
       });
       if (v === 'map') this.map(m.querySelector('.page.map'), body);
       if (v === 'branch') this.branch(m.querySelector('.page.branch'), body);
