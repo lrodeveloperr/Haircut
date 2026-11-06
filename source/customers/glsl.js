@@ -498,7 +498,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
       // even shadow of short stubble, fuller as it grows; only a soft, low-frequency variation
       float bcov = smoothstep(.1, 1.2, bmm) * mix(.72, .95, smoothstep(1.5, 5.0, bmm));
       tone = mix(tone, uBeardDark * (.85 + .3 * n3(P * 38.0)), bz * bcov * bedge * mix(.82 + .18 * n3(P * 14.0), 1.0, smoothstep(2.0, 6.0, bmm)));
-      ${EX ? 'float foamM = foamAt(P); if (foamM > .01) { float fb = .55 * n3(P * 70.0) + .45 * n3(P * 160.0); tone = mix(tone, vec3(.86, .87, .9) * (.82 + .3 * fb), smoothstep(.0, .5, foamM) * .97); }' : 'float foamM = 0.0;'}
+      ${EX ? 'vec4 skinFx = texture2D(uFoam, beardUV(P)) * smoothstep(.05, .3, beardZoneS(P, 3.0)); float foamM = skinFx.r; tone = mix(tone, tone * vec3(1.05, .84, .82), skinFx.g * .6); tone *= 1.0 - .13 * skinFx.b + .05 * skinFx.a; if (foamM > .01) { float fb = .55 * n3(P * 70.0) + .45 * n3(P * 160.0); tone = mix(tone, vec3(.86, .87, .9) * (.82 + .3 * fb), smoothstep(.0, .5, foamM) * .97); }' : 'float foamM = 0.0;'}
       // scalp / fade skin
       float Lh = hairLen(P);
       float hm = hairMask(P);
@@ -691,7 +691,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
   float ptch=smoothstep(uBeardGrey.z-.15,uBeardGrey.z+.15,n3(B*3.4+aSeed.z*.3)+(1.0-cheekW)*.35);
   float keep=mix(1.0,ptch,uBeardGrey.z>.01?1.0:0.0)*areataKeep(B);
   float L=mm/42.0*(.82+.36*aSeed.x)*uBStyleB.z*keep;
-  ${EXH() ? 'L*=1.0-.9*texture2D(uFoam,beardUV(B)).r;' : ''}
+  ${EXH() ? 'vec4 skinFx=texture2D(uFoam,beardUV(B));L*=(1.0-.9*skinFx.r)*(1.0-.14*skinFx.b);' : ''}
   // growth direction: down the face; outward on the moustache; down the neck under the jaw
   vec3 down=vec3(0.0,-1.0,0.0);down-=n*dot(down,n);
   vec3 outw=vec3(sign(B.x),-.9,.0);outw-=n*dot(outw,n);

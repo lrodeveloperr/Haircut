@@ -7,9 +7,12 @@
 //   scissors       level 6   no guard: they cut every hair crossing the blades at the blade height (3-16 mm,
 //                            chosen on the scissors' own height arc)
 //   straight razor level 9   very narrow; shaves only stubble of 2 mm or less, to the skin; longer hair is untouched
+//   foil shaver    level 8   dry finishing: stubble of 1.5 mm or less, on dry skin, to 0.05 mm (beard only: the scalp
+//                            stays on the frozen renderer's 0.5 mm floor, owner decision 5 November 2026)
 //   beard trimmer  level 12  compact; its own guards (1, 2, 3, 4.5, 6 mm) apply to any hair it reaches
 // One millimetre target per tool applies identically to scalp, beard and brow (TOOL-PHYSICS contract 4, 7.1);
-// the clipper's own guards and behaviour are unchanged.
+// the clipper's own guards and behaviour are unchanged. The scalp stays on the frozen kernel below; beard, brow and
+// every service go through the one reducer (effects.js), which owns the targets this file only displays.
 //
 // The tool button sits bottom-left (it appears once a second tool is unlocked). Wordless: pictures only.
 // patch19 routes the engine's cut level, blade width and motor sound through here; the clipper is unchanged.
@@ -26,15 +29,35 @@
     // the scalp is stored at 0.5 mm and above: nothing there is short enough to change under the razor
     razor: { level: 9, width: 0.2, cut: (u) => u, gain: 0 },
     beard: { level: 12, width: 0.4, cut: (u, g) => scalpLevel(FINE[g] != null ? FINE[g] : 3), hz: (g) => 150 - g * 6, gain: 0.55 },
+    foil: { level: 8, width: 0.35, cut: (u) => u, hz: () => 205, gain: 0.5 },
   };
   // the stored scalp lengths (mm) and each tool's physical target
   const SCALP_MM = [0.5, 3, 6, 10, 13, 16];
-  const SCISSOR_MM = [3, 6, 10, 13, 16]; // the scissors' blade heights
+  const SCISSOR_MM = HSC.effects.TOOLS.scissors.planes.map((q) => q / 100); // the scissors' blade heights
   // the longest stored scalp length that is not above a target (never leaves more than the tool's length)
   const scalpLevel = (mm) => { let l = 0; for (let i = 0; i < SCALP_MM.length; i++) if (SCALP_MM[i] <= mm + 1e-9) l = i; return l; };
-  const ORDER = ['clipper', 'trimmer', 'scissors', 'razor', 'beard'];
+  const ORDER = ['clipper', 'trimmer', 'scissors', 'razor', 'foil', 'beard'];
   let tool = 'clipper';
-  const unlocked = () => { const lv = M() && M().data ? M().level() : 1; return ORDER.filter((k) => lv >= TOOLS[k].level); };
+  // a Career home city's opening set, and the one tool a reviewed city may loan for its first job there (easy-tool
+  // contract 9.2, anatomy contract section 6). Every city is provisional today: one neutral set, and no loan.
+  const opening = { job: null, list: [] };
+  function extras() {
+    const g = G(), job = g ? g.getState().jobId : null;
+    if (opening.job === job) return opening.list;
+    opening.job = job; opening.list = [];
+    try {
+      const cr = HSC.careerRun, E = HSC.effects;
+      if (HSC.modes && HSC.modes.current() === 'career' && cr && cr.ready() && HSC.career) {
+        const city = HSC.career.position(cr.body().core).city, d = M().data;
+        opening.list = E.starterFor(city);
+        const lv = M().level(), mine = ORDER.filter((k) => lv >= TOOLS[k].level).concat(opening.list);
+        const seen = (d.toolLoans && d.toolLoans.seen) || [], loan = E.loanFor(city, mine, seen);
+        if (loan) { opening.list = opening.list.concat(loan); d.toolLoans = { seen: seen.concat(city).slice(-64) }; M().save(); }
+      }
+    } catch (e) { opening.list = []; }
+    return opening.list;
+  }
+  const unlocked = () => { const lv = M() && M().data ? M().level() : 1, more = extras(); return ORDER.filter((k) => lv >= TOOLS[k].level || more.includes(k)); };
 
   // ---- cutting (patch19 and state.js) ----
   // rituals (turkish.js) join the tray; while one is in the hand nothing is cut and the motor is silent
@@ -57,13 +80,15 @@
   HSC.bladeWidth = () => TOOLS[tool].width;
   HSC.toolHz = (g) => (TOOLS[tool].hz ? TOOLS[tool].hz(g) : 118 - Math.max(0, g) * 9);
   HSC.toolGain = () => (TOOLS[tool].gain == null ? 1 : TOOLS[tool].gain);
-  const FINE = [1, 2, 3, 4.5, 6]; // the beard trimmer's guards, mm
+  const FINE = HSC.effects.TOOLS.beard.guards.map((q) => q / 100); // the beard trimmer's guards, mm
+  // the reducer's setting index for the selector position (the same fallbacks the old targets used)
+  HSC.toolSetting = (g) => (tool === 'beard' ? (FINE[g] != null ? g : 2) : tool === 'scissors' ? (SCISSOR_MM[g] != null ? g : 1) : g);
   const levelOfMm = (mm) => { const L = HSC.BEARD_MM; let best = 0; for (let i = 0; i < L.length; i++) if (Math.abs(L[i] - mm) < Math.abs(L[best] - mm)) best = i; return best; };
   // the tool's physical target in millimetres for a selector position (null: a ritual in hand, nothing cut)
   HSC.toolMm = (g) => {
     if (TOOLS[tool].ritual) return null;
     if (tool === 'trimmer') return 0.5;
-    if (tool === 'razor') return 0;
+    if (tool === 'razor' || tool === 'foil') return 0.05;
     if (tool === 'scissors') return SCISSOR_MM[g] != null ? SCISSOR_MM[g] : 6;
     if (tool === 'beard') return FINE[g] != null ? FINE[g] : 3;
     return HSC.GUARD_MM ? HSC.GUARD_MM[g] : null;
@@ -81,21 +106,24 @@
     }
     // the razor takes stubble of 2 mm or less to skin, so it reaches 0 once another tool can reach 2 mm
     if (u.includes('razor') && [...out].some((l) => HSC.BEARD_MM[l] <= 2)) out.add(0);
+    if (u.includes('foil') && [...out].some((l) => HSC.BEARD_MM[l] <= 1.5)) out.add(0);
     return [...out].sort((a, b) => a - b);
   };
   HSC.toolSelector = () => (tool === 'scissors' ? SCISSOR_MM : tool === 'beard' ? FINE : tool === 'clipper' ? null : []);
+  // the rest of this block is the path for a build without the reducer; on Android state.js goes through visit.js
   HSC.toolBeard = (g) => {
     if (TOOLS[tool].ritual) return HSC.BEARD_MM.length - 1;
-    if (tool === 'razor') return 0; // with toolBeardCell: only stubble of 2 mm or less goes
+    if (tool === 'razor' || tool === 'foil') return 0; // with toolBeardCell: only short stubble goes
     if (tool === 'clipper') return HSC.GUARD_LEVEL[g];
     return levelOfMm(HSC.toolMm(g));
   };
   // per beard cell: the razor's edge takes only short stubble; every other tool cuts to its target
-  HSC.toolBeardCell = (cur, guard) => (tool === 'razor' && !TOOLS[tool].ritual ? (HSC.BEARD_MM[cur] <= 2 ? 0 : cur) : guard);
+  HSC.toolBeardCell = (cur, guard) => (tool === 'razor' ? (HSC.BEARD_MM[cur] <= 2 ? 0 : cur) : tool === 'foil' ? (HSC.BEARD_MM[cur] <= 1.5 ? 0 : cur) : guard);
   // a brow cell (2 full, 1 short, 0 shaved) under the tool: the same millimetre target as everywhere else
   HSC.toolBrow = (cur, g) => {
     if (TOOLS[tool].ritual) return cur;
     if (tool === 'razor') return cur <= 1 ? 0 : cur; // a full brow is too long for the razor's edge
+    if (tool === 'foil') return cur;
     const mm = HSC.toolMm(g);
     if (mm == null) return cur;
     return Math.min(cur, mm < 1 ? 0 : mm < 5 ? 1 : 2);
@@ -187,7 +215,9 @@
     add(bt, new Box(0.56, 0.03, 0.12), chrome, 0, 0.06, 0);
     for (let k = 0; k < 16; k++) add(bt, new Box(0.02, 0.22, 0.012), mat({ color: '#6e7479', metalness: 0, roughness: 0.55, transparent: true, opacity: 0.85 }, Std), -0.26 + 0.52 * (k + 0.5) / 16, -0.02, -0.07, null, [0.35, 0, 0]);
     add(bt, new Box(0.12, 0.12, 0.03), blackM, 0, 0.85, 0.2);
-    for (const [k, g] of [['trimmer', tr], ['scissors', sc], ['razor', rz], ['beard', bt]]) { g.visible = false; group.add(g); models[k] = g; }
+    // the foil shaver: described once in toolart.js (hand model and tray picture)
+    const fo = HSC.toolArtBuild ? HSC.toolArtBuild('foil', { Group, Mesh, Lathe, Box, Phys, V2 }) : null;
+    for (const [k, g] of [['trimmer', tr], ['scissors', sc], ['razor', rz], ['beard', bt], ['foil', fo]]) { if (!g) continue; g.visible = false; group.add(g); models[k] = g; }
     return true;
   }
   function show() {
@@ -238,57 +268,36 @@
 
   // ---- feel: the scissors open and close as you drag, each close a crisp snip (a crunchier shear when it is
   // cutting hair), with a light tap of vibration; the razor scrapes. The clipper keeps the game's own motor. ----
-  let ac = null, out = null;
-  const view = () => { try { return G().getView(); } catch (e) { return null; } };
-  function audio() {
-    const v = view();
-    if (!v || !v.audio || v.paused) return null;
-    const C = globalThis.AudioContext || globalThis.webkitAudioContext;
-    if (!C) return null;
-    if (!ac) { ac = new C(); out = ac.createGain(); out.connect(ac.destination); }
-    if (ac.state === 'suspended') ac.resume().catch(() => {});
-    out.gain.value = 0.7 * (typeof v.volume === 'number' ? v.volume : 1);
-    return ac;
-  }
-  const noise = (a, len, shape) => { const b = a.createBuffer(1, Math.max(1, Math.round(a.sampleRate * len)), a.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * shape(i / d.length, i); return b; };
-  const stats = { snips: 0, cuts: 0, scrapes: 0 };
+  const stats = { snips: 0, cuts: 0 };
   HSC.toolsDebug = () => Object.assign({ open: feel.open, phase: feel.phase }, stats); // QA
+  let closes = 0;
+  // one blade closure: the click is the mechanism; the shear is a result, only when the stroke really cut. A beard or
+  // brow cut has its own record; the frozen scalp kernel's proof is its committed stroke count (cutting).
   function snip(cutting, strength) {
     stats.snips++; if (cutting) stats.cuts++;
-    const a = audio();
-    if (!a) return;
-    const t = a.currentTime, play = (buf, type, f, q, gain, at = 0) => { const s = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain(); s.buffer = buf; s.playbackRate.value = 0.92 + Math.random() * 0.16; fl.type = type; fl.frequency.value = f; fl.Q.value = q; g.gain.value = gain; s.connect(fl).connect(g).connect(out); s.start(t + at); };
-    // the blades sliding shut: a short metallic shear, grainy where they cut through strands
-    if (cutting) play(noise(a, 0.085, (u, i) => Math.pow(1 - u, 1.6) * (u < 0.04 ? u / 0.04 : 1) * (Math.floor(i / 70) % 3 === 0 ? 1.4 : 0.55 + 0.45 * Math.random())), 'bandpass', 6200, 1.1, 0.55 * strength);
-    else play(noise(a, 0.04, (u) => Math.pow(1 - u, 2.5)), 'bandpass', 7400, 1.6, 0.22);
-    // the blades meeting: a bright click and a faint ring of steel
-    play(noise(a, 0.007, (u) => 1 - u), 'highpass', 5000, 0.7, cutting ? 0.45 : 0.3, cutting ? 0.07 : 0.03);
-    for (const [f, g] of [[3150, 0.035], [4720, 0.022]]) { const o = a.createOscillator(), og = a.createGain(); o.frequency.value = f * (0.98 + Math.random() * 0.04); og.gain.setValueAtTime(g, t + 0.07); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.16); o.connect(og).connect(out); o.start(t + 0.07); o.stop(t + 0.17); }
-    if (cutting && navigator.vibrate) try { navigator.vibrate(6); } catch (e) {}
-  }
-  function scrape(strength) {
-    stats.scrapes++;
-    const a = audio();
-    if (!a) return;
-    const s = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain();
-    s.buffer = noise(a, 0.09, (u, i) => Math.sin(Math.PI * u) * (0.6 + 0.4 * Math.random()) * (Math.floor(i / 40) % 2 ? 1 : 0.7));
-    fl.type = 'bandpass'; fl.frequency.value = 3200 + Math.random() * 600; fl.Q.value = 2.4; g.gain.value = 0.28 * strength;
-    s.connect(fl).connect(g).connect(out); s.start();
+    const A = HSC.audio;
+    if (!A) return;
+    closes++;
+    A.mechanism('snipClick', ['scissors', closes, 'mech'], cutting);
+    if (cutting) {
+      A.effect({ toolId: 'scissors', changed: true, eventSequence: closes, hairCells: Math.round(40 * strength * strength), foamRemoved: 0, perFieldDeltas: {}, changedCount: 1, removedLengthQuanta: 0 });
+      if (navigator.vibrate) try { navigator.vibrate(6); } catch (e) {}
+    }
   }
   const ptr = { down: false, moved: 0, x: 0, y: 0, speed: 0 };
   addEventListener('pointerdown', (e) => { ptr.down = true; ptr.x = e.clientX; ptr.y = e.clientY; ptr.moved = performance.now(); }, true);
   addEventListener('pointermove', (e) => { if (!ptr.down) return; const now = performance.now(), d = Math.hypot(e.clientX - ptr.x, e.clientY - ptr.y); ptr.speed = 0.7 * ptr.speed + 0.3 * (d / Math.max(8, now - ptr.moved)) * 1000; ptr.x = e.clientX; ptr.y = e.clientY; ptr.moved = now; }, true);
   for (const ev of ['pointerup', 'pointercancel']) addEventListener(ev, () => { ptr.down = false; }, true);
-  const feel = { phase: 0, open: 0.3, last: performance.now(), lastStroke: 0, scrapeAt: 0 };
+  const feel = { phase: 0, open: 0.3, last: performance.now(), lastStroke: 0 };
   function animate() {
     const now = performance.now(), dt = Math.min(0.05, (now - feel.last) / 1000);
     feel.last = now;
     const g = G(), s = g && g.getState();
-    if (!s || (tool !== 'scissors' && tool !== 'razor')) { if (s) feel.lastStroke = s.cutStrokeCount; return; }
+    if (!s || tool !== 'scissors') { if (s) feel.lastStroke = s.cutStrokeCount; return; }
     const inHand = !!(HSC.clipperGroup && HSC.clipperGroup.visible) && ptr.down && s.status === 'cutting';
     const moving = inHand && now - ptr.moved < 140;
     const cut = s.cutStrokeCount > feel.lastStroke;
-    if (tool === 'scissors') {
+    {
       const halves = models.scissors && models.scissors.userData.halves;
       let ang;
       if (moving) {
@@ -307,9 +316,6 @@
         feel.lastStroke = s.cutStrokeCount;
       }
       if (halves) for (const [h, sx] of halves) h.rotation.z = -sx * ang;
-    } else {
-      if (moving && cut && now - feel.scrapeAt > 75) { scrape(Math.min(1, 0.5 + ptr.speed / 1500)); feel.scrapeAt = now; }
-      feel.lastStroke = s.cutStrokeCount;
     }
   }
   setInterval(animate, 16);
@@ -322,6 +328,30 @@
     razor: `<svg viewBox="0 0 24 24" width="30" height="30"><path d="M3 10h11v4H3z" fill="#d7dce0" stroke="${INK}" stroke-width="1.6"/><path d="M14 11.5l7-6.5 1.2 1.3-6.6 7.2z" fill="#3b2416" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
     beard: `<svg viewBox="0 0 24 24" width="30" height="30"><path d="M9 5h6a2 2 0 0 1 2 2v8H7V7a2 2 0 0 1 2-2z" fill="#b7bcc1" stroke="${INK}" stroke-width="1.6"/><path d="M6 15h12v2H6z" fill="#1b1c1e" stroke="${INK}" stroke-width="1.4"/><path d="M7 17l-1 3M9.5 17l-.5 3M12 17v3M14.5 17l.5 3M17 17l1 3" stroke="#6e7479" stroke-width="1.4"/></svg>`,
   };
+  // a tool without a drawn icon shows a lit picture of its own 3D model (toolart.js, shop3d.js); a device with no
+  // spare WebGL context falls back to a plain outline
+  const PLAIN = `<svg viewBox="0 0 24 24" width="30" height="30"><rect x="8" y="4" width="8" height="16" rx="3" fill="#d7dce0" stroke="${INK}" stroke-width="1.6"/></svg>`;
+  const pics = {};
+  function picture(k) {
+    if (ICON[k]) return ICON[k];
+    if (pics[k] !== undefined) return pics[k];
+    let url = '';
+    try { url = HSC.shop3d && HSC.toolArtBuild ? HSC.shop3d.product((C) => HSC.toolArtBuild(k, C), 112) : ''; } catch (e) {}
+    return (pics[k] = url ? `<img alt="" src="${url}" width="50" height="50">` : PLAIN);
+  }
+  // what the tray offers: everything owned in Quick Play; otherwise the cutters and the few tools useful right now
+  function trayNow(u) {
+    const E = HSC.effects, v = HSC.visit && HSC.visit.state(), g = G(), s = g && g.getState();
+    const cutters = ORDER.filter((k) => !TOOLS[k].ritual);
+    if (!E || !v || !s) return { cut: u.filter((k) => !TOOLS[k].ritual), care: u.filter((k) => TOOLS[k].ritual) };
+    const p = s.look && s.look.person;
+    let wanted = [];
+    try { wanted = HSC.servicesWanted && p && !p.first ? HSC.servicesWanted(p, s.jobId).filter((k) => !v.done.includes(k)) : []; } catch (e) {}
+    const cs = HSC.clippingsStats ? HSC.clippingsStats() : null;
+    return E.trayFor({ mode: HSC.modes ? HSC.modes.current() : 'free', owned: u, cutters, state: v, wanted, pinned: HSC.visit.pinned(),
+      ctx: { loose: cs ? cs.onShow - cs.swept : 0, cheekLine: !!(p && HSC.serviceFits && HSC.serviceFits(p, 'threading')) } });
+  }
+  HSC.trayNow = () => trayNow(unlocked()); // QA
   const CSS = `
 .guard-arc.hsc-arc-off{visibility:hidden;pointer-events:none}
 .guard-arc.hsc-arc-mm .rung{font-size:15px;letter-spacing:-.02em}
@@ -351,18 +381,20 @@ body.hsc-reveal #hsc-tools,body.hsc-spin #hsc-tools{display:none}
       if (!this.built) return;
       const u = unlocked();
       this.el.w.hidden = u.length < 2;
-      this.el.cur.innerHTML = ICON[tool];
+      this.el.cur.innerHTML = picture(tool);
       this.el.cur.setAttribute('aria-label', 'Tools');
       if (this.el.fan.hidden) return;
       this.el.fan.innerHTML = '';
-      let sep = false;
-      for (const k of u) {
-        if (k === tool) continue;
-        if (TOOLS[k].ritual && !sep) { sep = true; const d = document.createElement('div'); d.className = 'sep'; this.el.fan.appendChild(d); }
-        const b = document.createElement('button'); b.type = 'button'; b.innerHTML = ICON[k]; b.setAttribute('aria-label', k);
+      const tray = trayNow(u), spoken = (b, k) => (HSC.setSpoken ? HSC.setSpoken(b, 'tool_' + k) : b.setAttribute('aria-label', k));
+      const add = (k) => {
+        const b = document.createElement('button'); b.type = 'button'; b.innerHTML = picture(k); spoken(b, k);
         b.addEventListener('click', () => { HSC.setTool(k); this.el.fan.hidden = true; this.render(); });
         this.el.fan.appendChild(b);
-      }
+      };
+      for (const k of tray.cut) if (k !== tool) add(k);
+      const care = tray.care.filter((k) => k !== tool);
+      if (care.length) { const d = document.createElement('div'); d.className = 'sep'; this.el.fan.appendChild(d); }
+      for (const k of care) add(k);
     },
     tick() {
       const n = unlocked().length;

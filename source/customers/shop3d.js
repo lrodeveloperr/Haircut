@@ -555,5 +555,22 @@
     thumbs.set(k, url);
     return url;
   }
-  HSC.shop3d = { SLOTS, PARTS, OPTIONS, REGIONS, VIEWS, render, thumb, nameCanvas, drop, ok: () => { try { renderer(); return true; } catch (e) { return false; } } };
+  // a tool's tray picture: the same light as the shop's products (toolart.js builds the model)
+  function product(build, size = 120) {
+    const r = renderer(), scene = new THREE.Scene(); scene.environment = envTex; scene.environmentIntensity = 0.9;
+    const o = build({ Group: THREE.Group, Mesh: THREE.Mesh, Lathe: THREE.LatheGeometry, Box: THREE.BoxGeometry, Phys: THREE.MeshPhysicalMaterial, V2: THREE.Vector2 });
+    if (!o) return '';
+    o.rotation.set(0.28, -0.5, -0.32);
+    scene.add(o, new THREE.HemisphereLight('#ffffff', '#776655', 0.8));
+    const dl = new THREE.DirectionalLight('#fff4e6', 2); dl.position.set(-1.2, 2.4, 1.6); scene.add(dl);
+    o.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(o), c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3()), R0 = Math.max(s.x, s.y, s.z);
+    const cam = new THREE.PerspectiveCamera(30, 1, 0.01, 40), d = (R0 * 0.6) / Math.tan(THREE.MathUtils.degToRad(15));
+    cam.position.set(c.x, c.y, c.z + d); cam.lookAt(c); cam.updateMatrixWorld(true);
+    r.setClearColor(0x000000, 0); r.setSize(size, size, false); scene.background = null; r.render(scene, cam);
+    const url = r.domElement.toDataURL('image/png');
+    disposeScene(scene);
+    return url;
+  }
+  HSC.shop3d = { SLOTS, PARTS, OPTIONS, REGIONS, VIEWS, render, thumb, product, nameCanvas, drop, ok: () => { try { renderer(); return true; } catch (e) { return false; } } };
 })(globalThis.HSC || (globalThis.HSC = {}));

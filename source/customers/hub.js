@@ -70,6 +70,7 @@
   const view = () => { try { return globalThis.skinFadeStudio.getView(); } catch (e) { return null; } };
   const audible = () => { const v = view(); return !!(v && v.audio && !v.paused); };
   function ac() {
+    if (HSC.audio) { const c = HSC.audio.ctx({ ui: true }); if (c) { sfx.ctx = c; sfx.out = HSC.audio.bus('reveal', 0.55); } return c; } // Android: the one engine
     if (!sfx.ctx) {
       const C = globalThis.AudioContext || globalThis.webkitAudioContext;
       if (!C) return null;

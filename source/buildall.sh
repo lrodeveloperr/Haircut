@@ -41,7 +41,7 @@ python3 patch14.py build/runtime/game.js
 # Android only: Three.js r180 as a plain script for the 3D shop (generated from vendor/three-r180, not checked in)
 [ "${HEAD_SHAPES:-0}" = 1 ] && python3 tools/three_iife.py > customers/three-r180.js
 { echo "/* Haircut Studio customers: generated people, skin, hair textures, baldness, trimmable beards, face shapes. */"
-  SHAPES=""; PHENO=""; EXTRAS=""; LOOP=""; [ "${HEAD_SHAPES:-0}" = 1 ] && SHAPES="headshapes-data headshapes faces-data facegen expressions-data" && PHENO="phenotypes" && EXTRAS="extras" && LOOP="labels icons fx economy requests progress three-r180 shop3d salon tools services modes cities career director career-save career-catalog career-run career-ui portfolio session collection settings menu"
+  SHAPES=""; PHENO=""; EXTRAS=""; LOOP=""; [ "${HEAD_SHAPES:-0}" = 1 ] && SHAPES="headshapes-data headshapes faces-data facegen expressions-data" && PHENO="phenotypes" && EXTRAS="extras" && LOOP="audio labels icons fx economy requests progress three-r180 shop3d salon effects toolart visit tools services modes cities career director career-save career-catalog career-run career-ui portfolio session collection settings menu"
   for f in "$DETAIL" $PHENO people $EXTRAS glsl faces $SHAPES render state meta catalog patterns wardrobe hub clippings $LOOP; do cat customers/$f.js; echo; done; } > build/runtime/customers.js
 python3 - <<'PY'
 p='build/index.html'; s=open('src/index.html').read()
