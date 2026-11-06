@@ -113,7 +113,7 @@
 
   HSC.CITIES = CITIES;
   HSC.CITIES_VERSION = TABLE_VERSION;
-  HSC.cityRegistry = { TABLE_VERSION, LANGS, COVERAGE, validateCity, validateRegistry, record };
+  HSC.cityRegistry = { TABLE_VERSION, LANGS, COVERAGE, VISITOR_MAX, validateCity, validateRegistry, record };
   // the city's name in the player's language (English as the fallback; the stable id if unknown)
   HSC.cityName = (id) => {
     const c = CITIES.find((x) => x.id === id);

@@ -39,7 +39,7 @@ const PER_LEVEL = +process.env.DIRECTOR_BROWSER_CONTRACTS || 160;
       const realLevel = HSC.meta.level;
       for (const lv of [2, 40]) {
         HSC.meta.level = () => lv;
-        const st = { made: 0, unvalidated: 0, invalid: 0, growth: 0, beardUnreachable: 0, rushOver: 0, presence4: 0, presenceForced: 0, stages: {}, modes: {}, ms: 0 };
+        const st = { made: 0, unvalidated: 0, invalid: 0, growth: 0, beardUnreachable: 0, rushOver: 0, presence4: 0, presenceForced: 0, stages: {}, modes: {}, sources: {}, ms: 0 };
         const reach = HSC.beardReach();
         for (let career = 0; career < 2 && st.made < N; career++) {
           let s = C.found(C.create(C.UNSET, 1000 + lv * 31 + career), C.enabledIds()[(lv + career * 7) % 36]).state;
@@ -53,6 +53,8 @@ const PER_LEVEL = +process.env.DIRECTOR_BROWSER_CONTRACTS || 160;
             st.ms += performance.now() - t0;
             const c = g.contract; dir = g.dir; st.made++;
             st.stages[c.stage] = (st.stages[c.stage] || 0) + 1;
+            st.sources[c.source] = (st.sources[c.source] || 0) + 1;
+            if (c.source === 'visitor' && !(c.customer.person.visitor && c.customer.person.visitor.origin)) st.noOrigin = (st.noOrigin || 0) + 1;
             if (c.stage !== 'normal') { const k = c.role + ':' + c.mode + ':' + c.stage + ':' + Object.entries(c.reasons).sort((a, b) => b[1] - a[1]).slice(0, 3).map((e) => e.join('=')).join(','); st.why = st.why || {}; st.why[k] = (st.why[k] || 0) + 1; } st.modes[c.mode] = (st.modes[c.mode] || 0) + 1;
             if (!c.validated) st.unvalidated++;
             if (c.stage !== 'standard-orders' && catalog.validate(c).length) st.invalid++;
@@ -91,6 +93,10 @@ const PER_LEVEL = +process.env.DIRECTOR_BROWSER_CONTRACTS || 160;
       assert.equal(st.rushOver, 0, k + ': every Rush job fits its clock');
       assert.equal(st.presence4, 0, k + ': no avoidable fourth customer in a row with the same state');
       assert.ok(st.presenceForced <= Math.ceil(st.made * 0.05), k + ': forced state repeats stay rare');
+      const vis = (st.sources.visitor || 0) / st.made;
+      assert.ok(vis > 0.04 && vis <= 0.4, k + ': visitors stay visible and bounded (' + vis.toFixed(3) + ')');
+      assert.ok((st.sources.resident || 0) / st.made > 0.5, k + ': residents stay the majority');
+      assert.equal(st.noOrigin || 0, 0, k + ': every visitor records his origin');
     }
     assert.deepEqual(errors, []);
     console.log('PASS: director with the real catalog: ' + Object.values(res).reduce((a, s) => a + s.made, 0) + ' contracts at levels 2 and 40 (validated, achievable, owned tools, timers, state rotation).');

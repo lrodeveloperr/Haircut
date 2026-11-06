@@ -60,6 +60,11 @@
         relax: { lane: () => 'service', specialist: true, eligible: () => HSC.modes.unlocked('relax') },
         rush: { lane: () => 'pressure', specialist: true, eligible: () => HSC.modes.unlocked('rush') },
       },
+      // the city's own setting, kept inside the registry's bound; the 12% neutral fallback until a city is researched
+      visitorShare(cityId) {
+        const c = (HSC.CITIES || []).find((x) => x.id === cityId), v = c && c.visitor;
+        return v && v.share >= 0 ? Math.min(v.share, HSC.cityRegistry.VISITOR_MAX) : 0;
+      },
       customer(seed, ctx) {
         if (ctx.source === 'regular' && ctx.regular && ctx.regular.person) {
           const p = Object.assign({}, ctx.regular.person);

@@ -215,6 +215,10 @@
       if (pool.length && Ro.next() < 0.3) { regular = Ro.pick(pool); source = 'regular'; useCard(dir, 'regular', regular.key, pool.map((g) => g.key)); }
     }
 
+    // a city's bounded visitor share (CITY-CUSTOMER-VARIABILITY.md, residents and visitors): an ordinary resident slot
+    // may bring a visitor instead. Never in the licence's first chapter, and never in place of a regular or a VIP.
+    if (source === 'resident' && !regular && catalog.visitorShare && !(pos.licence && pos.chapter < 2) && stream(seed, 'visitor-share').next() < catalog.visitorShare(ctx.city)) source = 'visitor';
+
     // stages relax only soft rules; physical feasibility, tools, cultural rules and timers are never relaxed
     const STAGES = [
       { name: 'normal' },

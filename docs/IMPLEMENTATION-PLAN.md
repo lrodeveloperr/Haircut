@@ -325,7 +325,7 @@ Deferred, with the reason:
 
 ---
 
-**Wave 5 status — in progress 5 November 2026 (not committed).** Language packs (5.6) wait for the final interface.
+**Wave 5 status — 5 November 2026.** Everything that does not need outside input is done. Still open: language packs (after the owner approves the app), city research, and the Play Console ids.
 
 - **5.1** Each trait group draws from its own label-hashed stream, and a person has a stable id (version 2). Saved
   version-1 customers stay valid and are never regenerated, so saved regulars look identical. New seeds draw
@@ -335,10 +335,14 @@ Deferred, with the reason:
 - **5.3** Beards mode and level gates select a naturally generated customer (`HSC.selectPerson`) instead of rewriting
   one. A VIP no longer forces full hair or a big beard: VIP is context only. The first tutorial customer keeps a full
   head of hair.
-- **5.4** Partial: visitors record their origin (`neutral-world`). The per-city visitor share is not applied yet,
-  and the cultural-presentation profile waits for research.
+- **5.4** Visitors record their origin (`neutral-world`). Each city's bounded visitor share now applies: an ordinary
+  resident slot may bring a visitor at the city's share (12% neutral fallback, capped at 40%), never in the licence's
+  first chapter. The cultural-presentation profile stays on its neutral fallback until the research exists.
 - **5.5** `android/tests/customers.cjs`: adults, determinism, population fairness, style independent of heritage,
-  selection, stream independence, old saves. `CUSTOMERS=10000` runs the full size. Contact sheet not built.
+  selection, stream independence, old saves. `CUSTOMERS=10000` runs 10,000 customers in each of the 36 cities and
+  passes. `qa/customer-contact-sheet.cjs` draws a review sheet of real customers from the real game.
+- **5.6** Not started. The owner decided (5 November 2026) that language packs wait until they approve the app, so
+  translation is done once, on the final text.
 - **5.7** Plain Java, switched off while the id is empty: `PlayGamesController`, `PlayGamesCatalog` (27 of the 40
   achievements, allowlisted metrics), `PlayGamesOutbox`, `PlayGamesSnapshotPolicy`, `PlayGamesTest`. The Google SDK,
   the HostBridge operation and the web envelope are added with the Console ids, because the SDK needs an APP_ID.

@@ -19,16 +19,20 @@ let passed = 0;
 {
   let made = 0;
   for (const city of H.CITIES) {
-    const pop = {};
-    for (let i = 0; i < N / 10; i++) {
+    const pop = {}, per = process.env.CUSTOMERS ? N : N / 10, seen = {};
+    for (let i = 0; i < per; i++) {
       const seed = R0(made + i * 7), R = H.rng(seed), g = H.careerCatalog.drawGroup(pop, city.id, R);
       H.careerCatalog.commitGroup(pop, city.id, g);
       const p = H.makePerson(seed, { heritage: g });
       assert.ok(p.years >= 18, 'adults only: ' + p.years);
       assert.ok(H.validPerson(p), 'valid person');
       if (i % 50 === 0) assert.equal(JSON.stringify(H.makePerson(seed, { heritage: g })), JSON.stringify(p), 'the same seed makes the same person');
+      seen[g] = (seen[g] || 0) + 1;
       made++;
     }
+    // the audit is per city: each city's own run keeps every group's share
+    const t = H.careerCatalog.neutralTable().groups, tot = Object.values(t).reduce((a, b) => a + b, 0);
+    for (const [g, w] of Object.entries(t)) assert.ok(Math.abs((seen[g] || 0) / per - w / tot) < 0.02, city.id + ' keeps group ' + g + ' at its share');
   }
   passed++;
 }

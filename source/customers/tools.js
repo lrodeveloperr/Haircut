@@ -328,16 +328,15 @@
     razor: `<svg viewBox="0 0 24 24" width="30" height="30"><path d="M3 10h11v4H3z" fill="#d7dce0" stroke="${INK}" stroke-width="1.6"/><path d="M14 11.5l7-6.5 1.2 1.3-6.6 7.2z" fill="#3b2416" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
     beard: `<svg viewBox="0 0 24 24" width="30" height="30"><path d="M9 5h6a2 2 0 0 1 2 2v8H7V7a2 2 0 0 1 2-2z" fill="#b7bcc1" stroke="${INK}" stroke-width="1.6"/><path d="M6 15h12v2H6z" fill="#1b1c1e" stroke="${INK}" stroke-width="1.4"/><path d="M7 17l-1 3M9.5 17l-.5 3M12 17v3M14.5 17l.5 3M17 17l1 3" stroke="#6e7479" stroke-width="1.4"/></svg>`,
   };
-  // a tool without a drawn icon shows a lit picture of its own 3D model (toolart.js, shop3d.js); a device with no
-  // spare WebGL context falls back to a plain outline
+  // every tool shows a lit picture of its 3D model (toolart.js, shop3d.js), so the tray reads as one set; a device with
+  // no spare WebGL context falls back to the drawn icon, then a plain outline
   const PLAIN = `<svg viewBox="0 0 24 24" width="30" height="30"><rect x="8" y="4" width="8" height="16" rx="3" fill="#d7dce0" stroke="${INK}" stroke-width="1.6"/></svg>`;
   const pics = {};
   function picture(k) {
-    if (ICON[k]) return ICON[k];
-    if (pics[k] !== undefined) return pics[k];
+    if (pics[k]) return pics[k];
     let url = '';
     try { url = HSC.shop3d && HSC.toolArtBuild ? HSC.shop3d.product((C) => HSC.toolArtBuild(k, C), 112) : ''; } catch (e) {}
-    return (pics[k] = url ? `<img alt="" src="${url}" width="50" height="50">` : PLAIN);
+    return url ? (pics[k] = `<img alt="" src="${url}" width="50" height="50">`) : ICON[k] || PLAIN;
   }
   // what the tray offers: everything owned in Quick Play; otherwise the cutters and the few tools useful right now
   function trayNow(u) {
@@ -359,8 +358,8 @@
 #hsc-tools button{width:60px;height:60px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};cursor:pointer}
 #hsc-tools button.on{background:#ffb627}
 #hsc-tools button:active{transform:translateY(3px);box-shadow:0 1px 0 ${INK}}
-#hsc-tools .fan{display:grid;grid-template-columns:repeat(2,60px);grid-auto-flow:row;gap:10px;direction:ltr}
-#hsc-tools .fan .sep{grid-column:1/3;height:3px;border-radius:2px;background:#10223f;opacity:.25}
+#hsc-tools .fan{display:grid;grid-template-columns:repeat(var(--cols,2),60px);grid-auto-flow:row;gap:10px;direction:ltr;overflow-y:auto;scrollbar-width:none;padding-bottom:3px}
+#hsc-tools .fan .sep{grid-column:1/-1;height:3px;border-radius:2px;background:#10223f;opacity:.25}
 #hsc-tools .fan[hidden],#hsc-tools[hidden]{display:none}
 body.hsc-reveal #hsc-tools,body.hsc-spin #hsc-tools{display:none}
 `;
@@ -381,13 +380,14 @@ body.hsc-reveal #hsc-tools,body.hsc-spin #hsc-tools{display:none}
       if (!this.built) return;
       const u = unlocked();
       this.el.w.hidden = u.length < 2;
-      this.el.cur.innerHTML = picture(tool);
+      if (!this.el.w.hidden) this.el.cur.innerHTML = picture(tool);
       this.el.cur.setAttribute('aria-label', 'Tools');
       if (this.el.fan.hidden) return;
       this.el.fan.innerHTML = '';
-      const tray = trayNow(u), spoken = (b, k) => (HSC.setSpoken ? HSC.setSpoken(b, 'tool_' + k) : b.setAttribute('aria-label', k));
+      const todo = [], tray = trayNow(u), spoken = (b, k) => (HSC.setSpoken ? HSC.setSpoken(b, 'tool_' + k) : b.setAttribute('aria-label', k));
       const add = (k) => {
-        const b = document.createElement('button'); b.type = 'button'; b.innerHTML = picture(k); spoken(b, k);
+        const b = document.createElement('button'); b.type = 'button'; spoken(b, k);
+        if (pics[k]) b.innerHTML = pics[k]; else todo.push([b, k]);
         b.addEventListener('click', () => { HSC.setTool(k); this.el.fan.hidden = true; this.render(); });
         this.el.fan.appendChild(b);
       };
@@ -395,6 +395,20 @@ body.hsc-reveal #hsc-tools,body.hsc-spin #hsc-tools{display:none}
       const care = tray.care.filter((k) => k !== tool);
       if (care.length) { const d = document.createElement('div'); d.className = 'sep'; this.el.fan.appendChild(d); }
       for (const k of care) add(k);
+      this.fit();
+      // first opening: one picture a frame, so a phone never stalls on the whole tray at once
+      const next = () => { const q = todo.shift(); if (!q) return; q[0].innerHTML = picture(q[1]); requestAnimationFrame(next); };
+      next();
+    },
+    // the fan stays clear of the top bar and on screen: it gains columns on short screens, scrolling only as a last resort
+    fit() {
+      const fan = this.el.fan, z = parseFloat(getComputedStyle(this.el.w).getPropertyValue('--hsc-s')) || 1, CELL = 70;
+      const sep = fan.querySelector('.sep'), kids = [...fan.children], cut = sep ? kids.indexOf(sep) : kids.length, care = kids.length - cut - (sep ? 1 : 0);
+      const high = (innerHeight - 84) / z - 18 - CELL, wide = innerWidth / z - 28, most = Math.max(2, Math.floor((wide + 10) / CELL));
+      let cols = 2;
+      while (cols < most && Math.ceil(cut / cols) * CELL + Math.ceil(care / cols) * CELL + (sep ? 13 : 0) - 10 > high) cols++;
+      fan.style.setProperty('--cols', String(cols));
+      fan.style.maxHeight = Math.max(CELL, high) + 'px';
     },
     tick() {
       const n = unlocked().length;
