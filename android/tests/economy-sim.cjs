@@ -76,7 +76,7 @@ const ARCH = {
   optimizer: { perDay: 6, active: 0.9, stars: [0.1, 0.4, 0.5], ads: 0.3, spend: 'regions-first' },
   weak: { perDay: 4, active: 0.85, stars: [0.7, 0.3, 0], ads: 0, spend: 'cheapest' },
 };
-const KINDS = ['requests', 'requests', 'fix', 'beard', 'relax', 'rush'];
+const KINDS = ['requests', 'requests', 'fix', 'beard', 'rush'];
 const MIN_PER_JOB = 3, LEVEL_AT = (n) => n * n - 1;
 
 function simulate(name, days, seed = 7) {
@@ -106,8 +106,7 @@ function simulate(name, days, seed = 7) {
         const u = R(), stars = u < A.stars[0] ? 1 : u < A.stars[0] + A.stars[1] ? 2 : 3;
         combo = stars === 3 ? combo + 1 : 0;
         const slot = (jobs - 1) % 5, kind = slot === 4 ? 'showcase' : KINDS[Math.floor(R() * KINDS.length)];
-        const svcReq = kind === 'relax' ? ['towel', 'massage'] : R() < 0.3 ? ['aftershave'] : [];
-        const job = { kind, stars, valid: true, regular: slot === 2 && jobs > 5, vip: R() < 0.05, combo, servicesRequested: svcReq, servicesDone: R() < 0.85 ? svcReq : [], relaxShare: kind === 'relax' ? (R() < 0.8 ? 1 : 0.5) : 0, rushBonus: kind === 'rush' ? Math.floor(R() * 12) : 0, dailyFirst: k === 0 && R() < 0.6 };
+        const job = { kind, stars, valid: true, regular: slot === 2 && jobs > 5, vip: R() < 0.05, combo, rushBonus: kind === 'rush' ? Math.floor(R() * 12) : 0, dailyFirst: k === 0 && R() < 0.6 };
         job.demandMatch = E.demandMatch(eco, kind === 'showcase' ? 'requests' : kind);
         const p = E.payJob(eco, 'job:' + jobs, job);
         eco = p.eco;

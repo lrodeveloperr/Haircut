@@ -5,7 +5,7 @@
 // Pure logic: one versioned configuration holds every number, and every coin change is one transaction with an
 // idempotency key, so a replayed reveal, a duplicate ad callback or a reload can never pay twice.
 //
-//   job payout   net = service fee - operating cost + services + organic tip + demand bonus. Stars decide the
+//   job payout   net = haircut fee - operating cost + organic tip + demand bonus. Stars decide the
 //                tip (0 / 25 / 50% of the net fee); regular +4, VIP +25% of the net fee and the 3-star combo
 //                apply to the tip, which is then capped at the net fee. A rewarded triple adds two tips, as its
 //                own transaction.
@@ -22,11 +22,10 @@
   const CONFIG = {
     version: 2,
     // [gross fee, operating cost] per contract type (balance model section 3)
-    fee: { requests: [28, 4], fix: [40, 6], beard: [26, 4], relax: [36, 8], rush: [24, 4], showcase: [52, 8], free: [0, 0] },
+    fee: { requests: [28, 4], fix: [40, 6], beard: [26, 4], rush: [24, 4], showcase: [52, 8], free: [0, 0] },
     tipShare: { 1: 0, 2: 0.25, 3: 0.5 }, // of the net fee
     // Relax: ritual completion under 50% -> no tip, 50-99% -> 25%, 100% -> 50% of the net fee
     regular: 4, vipShare: 0.25, combo: [1, 1, 1.2, 1.5, 2], rushMax: 12,
-    service: { requested: [8, 2], extra: [4, 2], extraMax: 2 }, // [charge, supply cost]
     demand: { share: 0.2, max: 12, perShift: 3, shiftLength: 5 },
     dailyFirst: 30, freestyleOnce: 5,
     bill: { every: 5, amount: 50, subsidised: 5, lines: { rent: 25, utilities: 12, cleaning: 8, tools: 5 } },
@@ -66,32 +65,22 @@
 
   // ---- the job payout (balance model sections 2-7) ----
   // job: { kind (mode or 'showcase'), stars, valid, regular, vip, combo (3-star run including this job),
-  //        servicesRequested[], servicesDone[], relaxShare (0..1), rushBonus (0..12), demandMatch, daily }
+  //        rushBonus (0..12), demandMatch, daily }
   function payout(job) {
     const kind = job.kind in CONFIG.fee ? job.kind : 'requests';
     const [gross, cost] = CONFIG.fee[kind];
     const net = gross - cost;
     if (!job.valid || kind === 'free') return { total: 0, net: 0, tip: 0, lines: [], kind };
-    // the organic tip: from stars (or the ritual's completion), then regular, VIP and combo, capped at the net fee
-    let tip;
-    if (kind === 'relax') { const share = Math.max(0, job.relaxShare || 0); tip = net * (share >= 1 ? 0.5 : share >= 0.5 ? 0.25 : 0); }
-    else tip = net * (CONFIG.tipShare[job.stars] || 0);
-    if (job.combo && kind !== 'relax') tip *= CONFIG.combo[Math.min(job.combo, 4)] || 1;
+    // the organic tip: from stars, then regular, VIP and combo, capped at the net fee
+    let tip = net * (CONFIG.tipShare[job.stars] || 0);
+    if (job.combo) tip *= CONFIG.combo[Math.min(job.combo, 4)] || 1;
     if (job.regular) tip += CONFIG.regular;
     if (job.vip) tip += net * CONFIG.vipShare;
     tip = Math.round(Math.min(tip, net));
-    // services: requested ones pay 8 for 2 of supplies; up to two unrequested extras pay 4 for 2; once per id
-    const req = new Set(job.servicesRequested || []);
-    let svcCharge = 0, svcCost = 0, extras = 0;
-    for (const s of new Set(job.servicesDone || [])) {
-      if (req.has(s)) { svcCharge += CONFIG.service.requested[0]; svcCost += CONFIG.service.requested[1]; }
-      else if (extras < CONFIG.service.extraMax) { extras++; svcCharge += CONFIG.service.extra[0]; svcCost += CONFIG.service.extra[1]; }
-    }
     const rush = kind === 'rush' ? Math.max(0, Math.min(CONFIG.rushMax, Math.round(job.rushBonus || 0))) : 0;
     const demand = job.demandMatch ? Math.min(CONFIG.demand.max, Math.round(net * CONFIG.demand.share)) : 0;
     const daily = job.dailyFirst ? CONFIG.dailyFirst : 0;
     const lines = [['fee', gross], ['cost', -cost]];
-    if (svcCharge) lines.push(['services', svcCharge], ['supplies', -svcCost]);
     if (tip) lines.push(['tip', tip]);
     if (rush) lines.push(['rush', rush]);
     if (demand) lines.push(['demand', demand]);
@@ -104,7 +93,7 @@
   // Derived from the paid-contract count, so nothing to save and nothing a reload can re-roll: a seeded permutation
   // per pass of the list means every eligible mode appears before the deck repeats. Only the bonuses used this shift
   // are stored. Quick Play is never a target; demand never depends on who the customer is.
-  const DEMAND_MODES = ['requests', 'fix', 'beard', 'relax', 'rush'];
+  const DEMAND_MODES = ['requests', 'fix', 'beard', 'rush'];
   const shiftOf = (paid) => Math.floor(paid / CONFIG.demand.shiftLength);
   function demandModes(paid, eligible) {
     const list = DEMAND_MODES.filter((m) => !eligible || eligible.includes(m));

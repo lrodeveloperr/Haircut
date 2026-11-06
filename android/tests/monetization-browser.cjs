@@ -108,6 +108,8 @@ function hostFixture(){
     // a reveal restored after a reload shows no ad on Continue
     await work();await revealed();
     await page.evaluate(async()=>(await HSC.youtubeClientPromise).flushProgress());
+    // the fixture's host writes a few milliseconds later: reload only once the reveal is on its disk
+    await page.waitForFunction(()=>/status[\\"':]+reveal/.test(localStorage.getItem('android-test-envelope')||''));
     await page.reload();await ready();
     assert.equal(await page.evaluate(()=>skinFadeStudio.getState().status),'reveal');
     assert.equal(await page.evaluate(()=>__native.ads.length),0,'restoring a completed reveal does not show an ad');

@@ -126,7 +126,7 @@
     // ordinary work per paid contract after the bill: what a gap is measured in (a safe default before any history)
     perJob: () => { const e = run.body && run.body.eco; return e && e.paid >= 5 ? Math.max(10, Math.round(((e.sources.job || 0) - (e.sinks.bill || 0)) / e.paid)) : 30; },
   };
-  const eligibleModes = () => ['requests', 'fix', 'beard', 'relax', 'rush'].filter((m) => !HSC.modes || HSC.modes.unlocked(m));
+  const eligibleModes = () => ['requests', 'fix', 'beard', 'rush'].filter((m) => !HSC.modes || HSC.modes.unlocked(m));
   const commit = (fn) => (run.busy = (run.busy || Promise.resolve()).then(() => run.j.commit((b) => fn(b || run.body))).then((b) => { run.body = b; return b; }).catch(async (e) => {
     console.error('career: commit failed', e);
     // another surface wrote a newer career: take it (the event is not applied twice; the player repeats it)
@@ -244,7 +244,6 @@
   function request(s) {
     const a = act();
     if (!a || a.job !== s.jobId) return undefined;
-    if (a.mode === 'relax') return null;
     if (reqCache.key === a.id) return reqCache.val;
     let val = null;
     if (a.request.bt) { const bt = unpack(a.request.bt, BTOP()); val = bt ? { style: { id: a.request.id, fam: 'beard' }, beard: bt } : null; }
@@ -252,19 +251,17 @@
     reqCache.key = a.id; reqCache.val = val;
     return val;
   }
-  const services = (p, job) => { const a = act(); return a && a.job === job && a.request.services ? a.request.services.slice() : null; };
   // the chair holds no contract (between chapters, before a city is chosen): nothing is scored or paid
-  const unscored = () => { const a = act(), g = G(); return !a || !g || a.job !== g.getState().jobId || a.mode === 'relax'; };
+  const unscored = () => { const a = act(), g = G(); return !a || !g || a.job !== g.getState().jobId; };
 
   // ---- the reveal: commit the result, learn from it, prepare the next job ----
   function done(s, stars) {
     const a = act();
     if (!a || a.job !== s.jobId) return;
     let postedBill = null;
-    const doneSvc = HSC.servicesDone ? HSC.servicesDone(s.jobId) : [];
-    // meaningful work (map logic §5): a changed region (also before a suspension), or for Relax a completed service
-    const valid = a.mode === 'relax' ? doneSvc.length > 0 : s.cutStrokeCount > 0 || !!(a.work && a.work.changed);
-    const result = { id: a.id, stars: valid ? Math.max(1, stars | 0) : 0, valid, regular: !!a.regular, mode: a.mode, style: a.request.id, tools: HSC.toolsUsed ? HSC.toolsUsed(s.jobId) : HSC.tool ? [HSC.tool()] : [], services: doneSvc };
+    // meaningful work (map logic §5): a changed region (also before a suspension)
+    const valid = s.cutStrokeCount > 0 || !!(a.work && a.work.changed);
+    const result = { id: a.id, stars: valid ? Math.max(1, stars | 0) : 0, valid, regular: !!a.regular, mode: a.mode, style: a.request.id, tools: ['clipper'] };
     const lj = HSC.lastJob && HSC.lastJob.key === a.id ? HSC.lastJob : null;
     commit((b) => {
       const body = JSON.parse(JSON.stringify(withEco(b)));
@@ -467,7 +464,7 @@
   HSC.careerRun = {
     saveCard, lastCard: () => run.lastCard || null,
     setBase, syncLook, branchLook, lookCity, branches: () => (run.body && run.body.branches) || {},
-    init, ensure, person, start, request, services, unscored, done, side, replace, canReplace, suspend, chooseCity, found, needsChoice,
+    init, ensure, person, start, request, unscored, done, side, replace, canReplace, suspend, chooseCity, found, needsChoice,
     body: () => run.body, ready: () => run.ready, active: act,
     // a career saved by a newer game version: kept untouched; Career asks for an update (save contract section 8)
     tooNew: () => !!run.tooNew,

@@ -48,7 +48,6 @@ final class PlayGamesCatalog {
         add("perfect_ten", "perfectStreak", 10);
         add("rescue_specialist", "rescues", 25);
         add("beard_specialist", "beards", 25);
-        add("relax_specialist", "relaxes", 25);
         add("rush_specialist", "rushes", 25);
         add("trusted_barber", "regularReturns", 25);
         add("open_for_business", "branches", 1);

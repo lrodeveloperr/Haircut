@@ -17,16 +17,13 @@ const plain = (x) => JSON.parse(JSON.stringify(x));
 // 1. the balance model's worked examples
 assert.equal(E.payout({ kind: 'requests', stars: 3, valid: true }).total, 36, 'ordinary 3-star order pays 36');
 assert.equal(E.payout({ kind: 'requests', stars: 3, valid: true }).tip, 12);
-let p = E.payout({ kind: 'requests', stars: 3, valid: true, combo: 2, servicesRequested: ['towel'], servicesDone: ['towel'] });
-assert.equal(p.total, 44, '3-star order with one requested service, second combo result pays 44');
-assert.equal(p.total + 2 * p.tip, 72, 'and 72 with the rewarded triple');
+let p = E.payout({ kind: 'requests', stars: 3, valid: true, combo: 2 });
+assert.equal(p.total, 38, '3-star order, second combo result, pays 38');
+assert.equal(p.total + 2 * p.tip, 66, 'and 66 with the rewarded triple');
 p = E.payout({ kind: 'fix', stars: 3, valid: true, combo: 4, vip: true });
 assert.equal(p.tip, 34, 'the tip is capped at the net fee');
 assert.equal(p.total, 68, '3-star VIP rescue at maximum combo pays 68');
 assert.equal(p.total + 2 * p.tip, 136);
-p = E.payout({ kind: 'relax', valid: true, relaxShare: 1, servicesRequested: ['towel', 'massage'], servicesDone: ['towel', 'massage'] });
-assert.equal(p.total, 54, 'complete relax with two requested services pays 54');
-assert.equal(p.total + 2 * p.tip, 82);
 passed++;
 
 // 2. stars move the tip only; incomplete and freestyle pay nothing
@@ -36,9 +33,8 @@ assert.equal(E.payout({ kind: 'requests', stars: 3, valid: false }).total, 0, 'n
 assert.equal(E.payout({ kind: 'free', stars: 3, valid: true }).total, 0, 'freestyle cannot be farmed');
 passed++;
 
-// 3. services pay once per id; unrequested extras are capped at two
-p = E.payout({ kind: 'requests', stars: 1, valid: true, servicesRequested: ['towel'], servicesDone: ['towel', 'towel', 'talc', 'pomade', 'massage'] });
-assert.equal(p.total, 24 + 6 + 2 + 2, 'requested once, two extras, the third extra pays nothing');
+// 3. a haircut is the whole job: there is no service line and no Relax fee
+assert.ok(!('service' in E.CONFIG) && !('relax' in E.CONFIG.fee), 'no services and no Relax in the economy');
 passed++;
 
 // 4. transactions are idempotent: a duplicate reveal or ad callback pays once
@@ -118,7 +114,7 @@ passed++;
   const job = { kind: 'requests', stars: 2, valid: true };
   const seen = new Set();
   for (let s = 0; s < 3; s++) for (const m of E.demandModes(s * 5, null)) seen.add(m);
-  assert.equal(seen.size, 5, 'every mode appears before the deck repeats');
+  assert.equal(seen.size, 4, 'every mode appears before the deck repeats');
   assert.equal(JSON.stringify(plain(E.demandModes(7, null))), JSON.stringify(plain(E.demandModes(9, null))), 'a shift keeps its modes');
   assert.equal(E.demandModes(0, ['requests']).length, 1, 'only unlocked modes');
   assert.ok(!E.demandModes(0, null).includes('free'), 'Quick Play is never a target');
@@ -131,4 +127,4 @@ passed++;
   assert.equal(hits, 3, 'at most three demand bonuses per shift');
   passed++;
 }
-console.log('PASS: ' + passed + ' economy cases (worked examples, tips, services, idempotency, operating bill, debt, milestones, levels, migration).');
+console.log('PASS: ' + passed + ' economy cases (worked examples, tips, haircut-only pay, idempotency, operating bill, debt, milestones, levels, migration).');

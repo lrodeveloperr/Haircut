@@ -12,7 +12,6 @@
 //             stars are kept; tips x2 the first time. After it, the career carries on.
 //   beard     (M5) beard studio: bearded customers ask for a beard style (boxed, goatee, Van Dyke, chinstrap, balbo,
 //             anchor, circle, stubble, a moustache, mutton chops or a clean shave). Scored on the beard. Level 2.
-//   relax     (M6) the full ritual, no request and no clock: towel, lather, massage, aftershave, talc. Level 3.
 //   rush      (M7) quick tidy-ups: a finished cut with a little regrowth, against a 45 s clock. Never fails: the time
 //             left adds coins, and every three tidy-ups pay a round bonus. Level 4.
 // The mode, its current job (the flawed start and its repair) and the daily result are saved with the progress.
@@ -22,8 +21,8 @@
   if (!HSC.PHENOTYPES) return;
   const INK = '#10223f';
   const M = () => HSC.meta, G = () => globalThis.skinFadeStudio;
-  const LIST = ['requests', 'free', 'fix', 'daily', 'beard', 'relax', 'rush'];
-  const LEVEL = { career: 1, requests: 1, free: 1, fix: 2, daily: 2, beard: 2, relax: 3, rush: 4 };
+  const LIST = ['requests', 'free', 'fix', 'daily', 'beard', 'rush'];
+  const LEVEL = { career: 1, requests: 1, free: 1, fix: 2, daily: 2, beard: 2, rush: 4 };
   const data = () => {
     const d = M() && M().data;
     if (!d) return null;
@@ -196,18 +195,6 @@
       const out = ens.apply(this, arguments);
       try { return start(out) || out; } catch (e) { console.error('customers: mode start failed', e); return out; }
     };
-    // services: the relax mode asks for the whole ritual; the beard studio for a hot towel and lather on a shave
-    const sw = HSC.servicesWanted;
-    if (sw) HSC.servicesWanted = function (p, job) {
-      const m = current(), lv = level();
-      // the ritual in order, as far as the barber's level has the services (services.js unlock levels); no talc:
-      // a ritual cuts nothing, so there are no clippings for the neck duster to clear (tool contract 7.2)
-      const AT = { towel: 2, lather: 9, massage: 3, aftershave: 1, talc: 3, pomade: 4 };
-      if (m === 'career') { const c = CR().services(p, job); if (c) return c; }
-      if (m === 'relax') return ['towel', 'lather', 'massage', 'aftershave', 'pomade'].filter((k) => (HSC.serviceFits ? HSC.serviceFits(p, k) : k !== 'lather') && lv >= AT[k]).slice(0, 4);
-      if (m === 'beard') return ['towel'];
-      return sw.apply(this, arguments);
-    };
   }
   function start(s) {
     const m = current(), md = data();
@@ -246,7 +233,7 @@
     const m = current(), md = data(), p = s.look && s.look.person;
     // a career chair without its contract (between chapters) asks for nothing
     if (m === 'career') { const r = CR().request(s); return r !== undefined ? r : null; }
-    if (m === 'free' || m === 'relax') return null;
+    if (m === 'free') return null;
     if (p && p.challenge) {
       // the daily challenge: the same cut for everyone today
       const R = HSC.rng(hash('challenge-cut-' + p.challenge)), opts = options(p, s.startHair);
@@ -287,7 +274,7 @@
       // the Daily also counts toward career mastery (its style, the tools that cut and the services done)
       if (CR() && CR().side && s.cutStrokeCount > 0) {
         const rq = request(s);
-        CR().side({ valid: true, stars: Math.max(1, stars | 0), mode: 'daily', style: rq && rq.style ? rq.style.id : null, tools: HSC.toolsUsed ? HSC.toolsUsed(s.jobId) : [], services: HSC.servicesDone ? HSC.servicesDone(s.jobId) : [] });
+        CR().side({ valid: true, stars: Math.max(1, stars | 0), mode: 'daily', style: rq && rq.style ? rq.style.id : null, tools: ['clipper'] });
       }
       const was = md.daily && md.daily.day === p.challenge ? md.daily : null;
       md.daily = { day: p.challenge, stars: Math.max(was ? was.stars : 0, stars), paid: true };
@@ -339,10 +326,9 @@
     fix: `<svg viewBox="0 0 48 48" width="56" height="56"><circle cx="24" cy="28" r="13" fill="#e9c9a8" stroke="${INK}" stroke-width="2.4"/><path d="M11.5 26c0-8 5.5-12.5 12.5-12.5S36.5 18 36.5 26l-4-3-2.5 4-3-5-3 6-3-6-2.5 3.5-3-3z" fill="#5a3b1f" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/><g transform="rotate(-35 34 12)"><rect x="25" y="8" width="18" height="8" rx="4" fill="#ffd9a8" stroke="${INK}" stroke-width="2.2"/><rect x="31" y="8" width="6" height="8" fill="#f2b880" stroke="${INK}" stroke-width="1.6"/></g></svg>`,
     daily: `<svg viewBox="0 0 48 48" width="56" height="56"><rect x="7" y="10" width="34" height="32" rx="5" fill="#fff" stroke="${INK}" stroke-width="2.4"/><path d="M7 19h34" stroke="${INK}" stroke-width="2.4"/><path d="M7 15a5 5 0 0 1 5-5h24a5 5 0 0 1 5 5v4H7z" fill="#ff5d73" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/><path d="M16 6v8M32 6v8" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/><path d="M24 23.5l2.4 4.8 5.3.7-3.9 3.7 1 5.2-4.8-2.6-4.8 2.6 1-5.2-3.9-3.7 5.3-.7z" fill="#ffc83d" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
     beard: `<svg viewBox="0 0 48 48" width="56" height="56"><circle cx="24" cy="20" r="13" fill="#e9c9a8" stroke="${INK}" stroke-width="2.4"/><path d="M11 18c0 15 6 25 13 25s13-10 13-25c-3 5-7 7-13 7s-10-2-13-7z" fill="#5a3b1f" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/><path d="M18 28c2 1.6 4 2 6 2s4-.4 6-2" stroke="#e9c9a8" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>`,
-    relax: `<svg viewBox="0 0 48 48" width="56" height="56"><path d="M8 30h32a3 3 0 0 1 3 3v3a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-3a3 3 0 0 1 3-3z" fill="#fff" stroke="${INK}" stroke-width="2.4"/><path d="M8 34h32" stroke="#9cc9e8" stroke-width="2.4"/><path d="M16 24c-3-4 3-6 0-11M24 24c-3-4 3-6 0-11M32 24c-3-4 3-6 0-11" fill="none" stroke="#b9a68f" stroke-width="2.6" stroke-linecap="round"/></svg>`,
     rush: `<svg viewBox="0 0 48 48" width="56" height="56"><circle cx="24" cy="26" r="16" fill="#fff" stroke="${INK}" stroke-width="2.4"/><path d="M20 4h8M24 4v6M38 12l3-3" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/><path d="M26 14l-6 13h6l-3 11 9-15h-6l3-9z" fill="#ffc83d" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/></svg>`,
   };
-  const NAME = { requests: 'Customer requests', free: 'Quick Play', fix: 'Hair disasters', daily: 'Daily challenge', beard: 'Beard studio', relax: 'Relax', rush: 'Rush hour' };
+  const NAME = { requests: 'Customer requests', free: 'Quick Play', fix: 'Hair disasters', daily: 'Daily challenge', beard: 'Beard studio', rush: 'Rush hour' };
   const LOCK = `<svg viewBox="0 0 24 24" width="22" height="22"><rect x="5" y="10.5" width="14" height="10" rx="2.4" fill="#ffc83d" stroke="${INK}" stroke-width="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="${INK}" stroke-width="2"/></svg>`;
   const STAR = (on) => `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc83d' : 'none'}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"${on ? '' : ' stroke-dasharray="2.6 2.2" opacity=".55"'}/></svg>`;
   const TICK = '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#10223f" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -406,7 +392,7 @@ body.hsc-reveal #hsc-rush,body.hsc-reveal #hsc-newc,body.hsc-spin #hsc-newc{disp
   HSC.modes = {
     current, unlocked, list: LIST, level: LEVEL, set: setMode, newCustomer,
     request: (s) => request(s), tips, done, beardStars, econJob,
-    unscored: () => { const m = current(); return m === 'free' || m === 'relax' || (m === 'career' && CR().unscored()); },
+    unscored: () => { const m = current(); return m === 'free' || (m === 'career' && CR().unscored()); },
     icon: (m) => ICON[m],
     // the job builders, for the career catalog (career-catalog.js)
     build: { options, disaster, tidy, beardJob, beardGrid },

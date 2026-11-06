@@ -57,7 +57,6 @@
         requests: { lane: (st, rq) => (rq.drop >= BIG_DROP ? 'transformation' : 'precision') },
         fix: { lane: () => 'recovery', specialist: true, eligible: () => HSC.modes.unlocked('fix') },
         beard: { lane: () => 'precision', specialist: true, eligible: () => HSC.modes.unlocked('beard') },
-        relax: { lane: () => 'service', specialist: true, eligible: () => HSC.modes.unlocked('relax') },
         rush: { lane: () => 'pressure', specialist: true, eligible: () => HSC.modes.unlocked('rush') },
       },
       // the city's own setting, kept inside the registry's bound; the 12% neutral fallback until a city is researched
@@ -112,11 +111,6 @@
           const j = B().beardJob(p, st.beardGrid, HSC.rng((p.seed ^ 0x51ed27) >>> 0));
           return j ? [{ id: 'beard:' + j.style, family: 'beard:' + j.style, beardGoal: j.style, beardTarget: j.target, cost: { precision: ['goatee', 'vandyke', 'anchor', 'balbo', 'circle'].includes(j.style) ? 1 : 0 }, weight: 1, drop: 0 }] : [];
         }
-        if (mode === 'relax') {
-          const want = HSC.servicesWanted ? ['towel', 'lather', 'massage', 'aftershave', 'pomade'].filter((k) => (!HSC.serviceFits || HSC.serviceFits(p, k)) && level() >= ({ towel: 2, lather: 9, massage: 3, aftershave: 1, talc: 3, pomade: 4 })[k]).slice(0, 4) : [];
-          if (!want.length) return [];
-          return [{ id: 'ritual:' + want.join('+'), family: 'ritual', services: want, cost: { services: want.length >= 3 ? 1 : 0 }, weight: 1, drop: 0 }];
-        }
         // orders: every suitable, achievable cut. A Familiar regular (two visits) asks for his usual, or a mild
         // variation of it (the same family), more often (director section 12)
         const R0 = cu.regular, fam = R0 && R0.usual && HSC.requestKit && HSC.requestKit.byId.get(R0.usual);
@@ -131,8 +125,7 @@
         if (t) { for (let i = 0; i < 8192; i++) if (t[i] > h[i]) { r.push('needs-growth'); break; } }
         if (c.request.beardTarget) { const b = c.start.beardGrid; for (let i = 0; i < 8192; i++) if (c.request.beardTarget[i] > b[i]) { r.push('beard-needs-growth'); break; } }
         if (c.mode === 'beard' && !c.request.beardTarget) r.push('no-beard-target');
-        if (c.mode !== 'relax' && c.mode !== 'beard' && t && dropOf(h, t) < 150) r.push('nothing-to-cut');
-        if (c.mode === 'relax' && !(c.request.services && c.request.services.length)) r.push('no-service');
+        if (c.mode !== 'beard' && t && dropOf(h, t) < 150) r.push('nothing-to-cut');
         if (c.mode !== 'requests' && !HSC.modes.unlocked(c.mode)) r.push('mode-locked');
         // owned tools: a beard request is offered only if the unlocked tools can bring 85% of the beard it changes
         // within one length of the target (the 3-star line); the scalp is always reachable with the clipper's guards

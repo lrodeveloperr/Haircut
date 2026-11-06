@@ -105,7 +105,6 @@
 body.hsc-left .ui .guard-arc{right:auto;left:max(12px,env(safe-area-inset-left));transform:scaleX(-1)}
 body.hsc-left .ui .guard-arc .rung{scale:-1 1}
 body.hsc-left .ui .clip-toggle{right:auto;left:max(12px,env(safe-area-inset-left))}
-body.hsc-left #hsc-tools{left:auto;right:max(14px,env(safe-area-inset-right))}
 /* item 33: touch targets of at least 48dp; the guards and the share button (46dp) get a 2dp invisible margin, so
    nothing changes in how they look */
 .ui .guard-arc .rung::after,.hsc-native-share::after{content:"";position:absolute;inset:-2px;border-radius:50%}

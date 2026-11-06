@@ -76,8 +76,7 @@
         bt.minFilter = bt.magFilter = T.or; bt.needsUpdate = true;
         st.browTex = bt; HSC.U.uBrowMask.value = bt;
         // the shaving lather, on the beard grid
-        st.foamData = new Uint8Array(8192 * 4); const ft = new T.uu(st.foamData, 128, 64); // R foam, G irritation, B moisture, A sheen (visit.js)
-        ft.minFilter = ft.magFilter = T.or; ft.needsUpdate = true; st.foamTex = ft; HSC.U.uFoam.value = ft;
+        st.foamData = new Uint8Array(8192); const ft = new T.uu(st.foamData, 128, 64, T.Jn, T.cr); ft.minFilter = ft.magFilter = T.or; ft.needsUpdate = true; st.foamTex = ft; HSC.U.uFoam.value = ft;
         st.browCells = browCells(st.base);
         try { st.browMesh = makeBrowMesh(c); c.vt.add(st.browMesh); } catch (err) { console.error('customers: brow strands failed', err); }
       }
@@ -604,18 +603,6 @@
   HSC.earBowls = () => (st.extras ? st.extras.bowl : null);
   HSC.BROW_N = BROW_N;
   HSC.browCells = () => st.browCells;
-  // the customer's sparse stray brow hairs: the brow grid's fringe, beyond the designed body (anatomy contract
-  // section 7), picked by cell from the seed. Only these can be threaded.
-  HSC.browStrayMask = function (seed) {
-    const out = new Uint8Array(BROW_N), C = st.browCells;
-    if (!C || !HSC.U || !HSC.U.uBrowB) return out;
-    for (let c = 0; c < BROW_N; c++) {
-      if (!C.has[c]) continue;
-      const v = browShapeAt(C.pos[c * 3], C.pos[c * 3 + 1], C.pos[c * 3 + 2]);
-      if (v > 0.03 && v < 0.3) { const h = Math.imul(c ^ seed, 0x9e3779b1) >>> 0; if ((h >>> 28) < 7) out[c] = 1; }
-    }
-    return out;
-  };
   // a clipper hit on a brow (un-morphed head coordinates), or null
   HSC.browHit = function (x, y, z) {
     if (!st.browCells || z < 1.0) return null;

@@ -30,7 +30,7 @@
   const RING = 200; // effective-duplicate exclusion window
   const LANE_WINDOW = 8, LANE_MAX = 3;
   const BUDGET = [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6]; // band -> complexity budget (director section 6)
-  const SPECIALIST = ['fix', 'beard', 'relax', 'rush'];
+  const SPECIALIST = ['fix', 'beard', 'rush'];
   const SURPRISE = ['rescue', 'rush', 'visitor', 'vip'];
   const VIP_GAP = 8, REGULAR_GAP = 3;
   const ATTEMPTS = 6; // per relaxation stage: generation never loops indefinitely
@@ -116,8 +116,8 @@
 
   // ---- the role grammar (map logic section 6; director section 10) ----
   // the licence teaches in order: chapter themes decide which specialist and surprise jobs are allowed
-  // home chapter 3 teaches services and facial hair: the ritual is its specialist job, a beard its surprise
-  const LICENCE_SPEC = { 1: [], 2: [], 3: ['relax'], 4: ['fix'], 5: ['rush'], 6: SPECIALIST };
+  // home chapter 3 teaches repairs with a first beard as its surprise; chapter 4 makes beards the specialist job
+  const LICENCE_SPEC = { 1: [], 2: [], 3: ['fix'], 4: ['beard'], 5: ['rush'], 6: SPECIALIST };
   const LICENCE_SURPRISE = { 1: [], 2: ['visitor'], 3: ['beard'], 4: ['rescue', 'visitor'], 5: ['rush', 'visitor', 'vip'], 6: SURPRISE };
   function roleMode(pos, dir, catalog, R, ctx, chapterModes, chapterLanes) {
     const eligible = (m) => catalog.modes[m] && (!catalog.modes[m].eligible || catalog.modes[m].eligible(ctx));

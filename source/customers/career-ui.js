@@ -137,7 +137,7 @@
           <span class="cstars" aria-hidden="true">${[1, 2, 3].map((x) => STAR(x <= (c.showcaseBest || 0))).join('')}</span>
           <span class="fact">${I('orders')}${n(c.chapters | 0)}</span>${core.base === id ? `<span class="fact">${I('home')}</span>` : ''}</div>
         ${by ? `<div class="by">${t('presented_by')} <bdi>${by}</bdi></div>` : ''}
-        <div class="bcard">${row('medal', 'm_completion', m.completion)}${row('styles', 'm_style', m.style)}${row('modes', 'm_service', m.service)}${row('regulars', 'm_relation', m.relationship)}</div>
+        <div class="bcard">${row('medal', 'm_completion', m.completion)}${row('styles', 'm_style', m.style)}${row('regulars', 'm_relation', m.relationship)}</div>
         ${regs.length ? `<div class="bcard faces">${regs.map((g, k) => `<span class="face"><img alt="" data-r="${k}"><span>${n(g.visits | 0)}</span></span>`).join('')}</div>` : ''}
         <div class="acts"><button class="j c-orange sal" type="button">${I('salon')}<span class="hsc-lbl" data-k="salon">${t('salon')}</span></button>${fitNext != null ? `<button class="j c-yellow fit" type="button" aria-label="${t('a_fit')}">${I('coin')}<span class="num">${n(fitNext)}</span><span class="pips" aria-hidden="true">${curve.map((_, k) => `<i class="${k < fit ? 'on' : ''}"></i>`).join('')}</span></button>` : ''}${canBase ? `<button class="j c-blue bas" type="button">${I('home')}<span class="hsc-lbl" data-k="make_base">${t('make_base')}</span></button>` : ''}</div>`;
       // regulars' faces as they last left the chair

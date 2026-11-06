@@ -26,7 +26,6 @@ const catalog = {
     requests: { lane: (st, rq) => (rq.big ? 'transformation' : 'precision') },
     fix: { lane: () => 'recovery', specialist: true },
     beard: { lane: () => 'precision', specialist: true },
-    relax: { lane: () => 'service', specialist: true },
     rush: { lane: () => 'pressure', specialist: true },
   },
   customer(seed0, c) {
@@ -47,7 +46,6 @@ const catalog = {
   requests(cu, st, mode) {
     const t = cu.traits;
     if (mode === 'beard') return ['boxed', 'goatee', 'chinstrap', 'stubble'].map((g, i) => ({ id: 'beard:' + g, family: 'beard', beardGoal: g, cost: { precision: i % 2 }, weight: 1 }));
-    if (mode === 'relax') return [{ id: 'ritual', family: 'ritual', services: ['towel', 'massage'], cost: { services: 1 }, weight: 1 }];
     return FAMILIES.filter((f) => !(t.silhouette === 'thinning' && ['undercut', 'hawk', 'classic'].includes(f)) && !(t.texture === 'coily' && f === 'classic'))
       // a big change (to a skin fade, buzz, undercut, hawk or fade) is a transformation; the rest is precision work
       // budget is spent on complications only (director section 6): a readable transformation is free

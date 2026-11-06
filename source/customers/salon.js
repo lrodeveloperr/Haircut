@@ -514,8 +514,8 @@
     try { pic = revealPicture(); } catch (e) { return; }
     let el = document.getElementById('hsc-reveal');
     if (!el) { el = document.createElement('div'); el.id = 'hsc-reveal'; document.body.appendChild(el); }
-    const ICON = { career: 'play', requests: 'orders', free: 'freestyle', fix: 'rescue', daily: 'daily', beard: 'beards', relax: 'relax', rush: 'rush' };
-    const LBL = { career: 'career', requests: 'orders', free: 'quick_play', fix: 'rescue', daily: 'daily', beard: 'beards', relax: 'relax', rush: 'rush' };
+    const ICON = { career: 'play', requests: 'orders', free: 'freestyle', fix: 'rescue', daily: 'daily', beard: 'beards', rush: 'rush' };
+    const LBL = { career: 'career', requests: 'orders', free: 'quick_play', fix: 'rescue', daily: 'daily', beard: 'beards', rush: 'rush' };
     const sign = document.createTextNode(shown());
     el.innerHTML = `<img alt=""><div class="shade"></div><div class="sui"><div class="sign"><b></b><i class="hsc-lbl" data-k="open"></i></div>
       <div class="go"><div class="mode">${I(ICON[mode] || 'play', 34)}<span class="hsc-lbl" data-k="${LBL[mode] || 'play'}"></span></div><div class="bar"><i></i></div></div></div>`;

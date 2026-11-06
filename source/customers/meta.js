@@ -225,7 +225,7 @@
   // the game mode, its current job (a flawed start and its repair, packed) and the daily challenge (modes.js)
   function cleanModes(o) {
     if (!o || typeof o !== 'object') return null;
-    const MODES = ['career', 'requests', 'free', 'fix', 'daily', 'beard', 'relax', 'rush'];
+    const MODES = ['career', 'requests', 'free', 'fix', 'daily', 'beard', 'rush'];
     const j = o.job, okJob = j && typeof j === 'object' && Number.isSafeInteger(j.n) && MODES.includes(j.m) &&
       (j.none === true || j.m === 'daily' || (typeof j.st === 'string' && j.st.length < 40 && (typeof j.t === 'string' ? j.t.length < 24000 : typeof j.b === 'string' && j.b.length < 24000)));
     const dl = o.daily, okDaily = dl && typeof dl === 'object' && typeof dl.day === 'string' && /^\d{4}-\d\d-\d\d$/.test(dl.day) && [0, 1, 2, 3].includes(dl.stars);

@@ -21,9 +21,7 @@
   const I = (n, s) => (HSC.icon ? HSC.icon(n, s) : '');
   const C = () => HSC.career, CR = () => (HSC.careerRun && HSC.careerRun.ready() ? HSC.careerRun : null);
   const EDITION = 'p1', CARD_V = 1, CARDS = 24, CARD_MAX = 12 * 1024, CARDS_MAX = 384 * 1024;
-  const TOOLS = ['clipper', 'trimmer', 'scissors', 'razor', 'beard'];
-  const SERVICES = ['aftershave', 'towel', 'massage', 'talc', 'pomade', 'threading', 'singe', 'lather'];
-  const MODES = ['requests', 'fix', 'beard', 'relax', 'rush', 'daily'];
+  const MODES = ['requests', 'fix', 'beard', 'rush', 'daily'];
   const STAGES = ['recognized', 'familiar', 'trusted', 'signature'];
   const hash = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0).toString(36); };
 
@@ -37,8 +35,6 @@
     const cities = C() ? C().enabledIds() : [];
     for (const c of cities) add('city:' + c, ['visit:' + c, 'showcase:' + c, 'mastery:' + c]);
     add('passport', cities.map((c) => 'visit:' + c));
-    add('tools', TOOLS.map((x) => 'tool:' + x));
-    add('services', SERVICES.map((x) => 'service:' + x));
     add('relationship', STAGES.map((x) => 'stage:' + x));
     add('tour1', ['tour:1']);
     return out;
@@ -53,8 +49,6 @@
       if (c.established) have.add('showcase:' + id);
       if (C().cityMastery(core, id).all) have.add('mastery:' + id);
     }
-    for (const [k, v] of Object.entries(m.tool)) if (v >= 1) have.add('tool:' + k);
-    for (const [k, v] of Object.entries(m.service)) if (v >= 1) have.add('service:' + k);
     let best = 0;
     for (const list of Object.values(body.regs || {})) for (const g of list || []) best = Math.max(best, g.visits | 0);
     STAGES.forEach((s, i) => { if (best >= [1, 2, 4, 7][i]) have.add('stage:' + s); });
@@ -253,7 +247,7 @@
       const [kind, rest] = id.split(':');
       if (kind === 'city') return HSC.cityName ? HSC.cityName(rest) : rest;
       if (kind === 'style') return t('styles') + ' · ' + rest;
-      return t({ passport: 'map', tools: 'p_cabinet', services: 'p_cabinet', relationship: 'regulars', tour1: 'tour' }[kind] || 'p_portfolio') + (kind === 'tour1' ? ' 1' : '');
+      return t({ passport: 'map', relationship: 'regulars', tour1: 'tour' }[kind] || 'p_portfolio') + (kind === 'tour1' ? ' 1' : '');
     },
     styles(body) {
       const m = body.core.mastery.style;
@@ -272,9 +266,7 @@
     },
     cab(body) {
       const m = body.core.mastery, tile = (ic, key, v) => `<div class="tile${v ? '' : ' off'}" role="img" aria-label="${key}">${I(ic)}<span class="med">${[1, 2, 3].map((x) => STAR(x <= v)).join('')}</span></div>`;
-      return `<div class="pc grid2">${MODES.map((k) => tile({ requests: 'orders', fix: 'rescue', beard: 'beards', relax: 'relax', rush: 'rush', daily: 'daily' }[k], t({ requests: 'orders', fix: 'rescue', beard: 'beards', relax: 'relax', rush: 'rush', daily: 'daily' }[k]), m.mode[k] | 0)).join('')}</div>
-        <div class="pc grid2">${TOOLS.map((k) => tile('freestyle', k, m.tool[k] | 0)).join('')}</div>
-        <div class="pc grid2">${SERVICES.map((k) => tile('relax', k, m.service[k] | 0)).join('')}</div>`;
+      return `<div class="pc grid2">${MODES.map((k) => tile({ requests: 'orders', fix: 'rescue', beard: 'beards', rush: 'rush', daily: 'daily' }[k], t({ requests: 'orders', fix: 'rescue', beard: 'beards', rush: 'rush', daily: 'daily' }[k]), m.mode[k] | 0)).join('')}</div>`;
     },
     fav(body) {
       const p = port(body), last = CR().lastCard && CR().lastCard();

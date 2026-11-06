@@ -67,7 +67,6 @@
     // the four-part city mastery (branch plan section 10), bounded: 3-star styles cut here, the modes, tools and
     // services used validly here, returning-regular visits here, and the tours with a 3-star showcase here
     if (!Array.isArray(c.styles)) c.styles = [];
-    if (!Array.isArray(c.svc)) c.svc = [];
     if (!Number.isSafeInteger(c.regVisits)) c.regVisits = 0;
     if (!Number.isSafeInteger(c.gold)) c.gold = 0;
     return c;
@@ -115,7 +114,6 @@
       if (old.established && !c.established) { c.established = true; c.estTour = old.estTour; }
       c.awards = c.awards.concat(old.awards || []);
       for (const x of old.styles || []) if (!c.styles.includes(x) && c.styles.length < 64) c.styles.push(x);
-      for (const x of old.svc || []) if (!c.svc.includes(x) && c.svc.length < 32) c.svc.push(x);
       c.regVisits += old.regVisits | 0; c.gold += old.gold | 0;
     }
     if (UNSET in n.mastery.city) { n.mastery.city[cityId] = Math.max(n.mastery.city[cityId] || 0, n.mastery.city[UNSET]); delete n.mastery.city[UNSET]; }
@@ -178,29 +176,26 @@
     const up = (table, key) => { if (key == null) return; table[key] = Math.max(table[key] || 0, r.stars | 0); };
     up(n.mastery.style, r.style); up(n.mastery.mode, r.mode);
     for (const t of r.tools || []) up(n.mastery.tool, t);
-    for (const sv of r.services || []) up(n.mastery.service, sv);
     if (r.mode && !n.completedModes.includes(r.mode)) n.completedModes.push(r.mode);
   }
   // what a valid job in a city adds to that city's mastery record
   function cityWork(n, city, r) {
     const c = cityRec(n, city);
     if ((r.stars | 0) >= MASTER_STARS && r.style != null && !c.styles.includes(r.style) && c.styles.length < 64) c.styles.push(String(r.style));
-    for (const k of [r.mode ? 'm:' + r.mode : null].concat((r.tools || []).map((t) => 't:' + t), (r.services || []).map((x) => 's:' + x))) if (k && !c.svc.includes(k) && c.svc.length < 32) c.svc.push(k);
     if (r.regular) c.regVisits++;
   }
   // city mastery: every part complete (a city stays playable forever after; mastery adds no power)
-  const MASTERY_NEED = { chapters: CITY_MASTER_CHAPTERS, styles: 4, svc: 4, regVisits: 2 };
+  const MASTERY_NEED = { chapters: CITY_MASTER_CHAPTERS, styles: 4, regVisits: 2 };
   function cityMastery(s, id) {
     const c = s.cities[id];
-    if (!c) return { completion: 0, style: 0, service: 0, relationship: 0, all: false };
+    if (!c) return { completion: 0, style: 0, relationship: 0, all: false };
     const part = (v, need) => Math.max(0, Math.min(1, (v | 0) / need));
     const out = {
       completion: c.showcaseBest >= MASTER_STARS ? part(c.chapters, MASTERY_NEED.chapters) : Math.min(0.99, part(c.chapters, MASTERY_NEED.chapters)),
       style: part((c.styles || []).length, MASTERY_NEED.styles),
-      service: part((c.svc || []).length, MASTERY_NEED.svc),
       relationship: part(c.regVisits, MASTERY_NEED.regVisits),
     };
-    out.all = out.completion >= 1 && out.style >= 1 && out.service >= 1 && out.relationship >= 1;
+    out.all = out.completion >= 1 && out.style >= 1 && out.relationship >= 1;
     return out;
   }
   // the branch's state (branch plan section 4): unvisited, visiting, established, growing, mastered, legend

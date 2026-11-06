@@ -36,6 +36,8 @@ const PER_LEVEL = +process.env.DIRECTOR_BROWSER_CONTRACTS || 160;
     await page.waitForFunction(() => window.HSC && HSC.careerRun && HSC.careerRun.ready() && HSC.careerCatalog && HSC.beardReach, undefined, { timeout: 240000 });
     const res = await page.evaluate(async (N) => {
       const C = HSC.career, D = HSC.director, out = {};
+      // the clipper is the only tool, in every mode: no tray, no services, no Relax
+      out.clipperOnly = { tools: ['setTool', 'trayNow', 'effects', 'visit', 'servicesWanted', 'toolArtBuild'].filter((k) => HSC[k] !== undefined), modes: HSC.modes.list.slice(), tray: !!document.querySelector('#hsc-tools') };
       const realLevel = HSC.meta.level;
       for (const lv of [2, 40]) {
         HSC.meta.level = () => lv;
@@ -85,6 +87,8 @@ const PER_LEVEL = +process.env.DIRECTOR_BROWSER_CONTRACTS || 160;
       return out;
     }, PER_LEVEL);
     console.log(JSON.stringify(res));
+    assert.deepEqual(res.clipperOnly, { tools: [], modes: ['requests', 'free', 'fix', 'daily', 'beard', 'rush'], tray: false }, 'clipper only');
+    delete res.clipperOnly;
     for (const [k, st] of Object.entries(res)) {
       assert.equal(st.unvalidated, 0, k + ': every contract passes the second validation');
       assert.equal(st.invalid, 0, k + ': every contract passes the catalog validator');

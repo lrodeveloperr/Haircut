@@ -17,7 +17,7 @@ let passed = 0;
 // values from the sandbox are compared as plain JSON (a sandbox array is not this realm's Array)
 const plain = (x) => JSON.parse(JSON.stringify(x));
 const ok = (name) => { passed++; };
-const SPEC = ['fix', 'beard', 'relax', 'rush'];
+const SPEC = ['fix', 'beard', 'rush'];
 // complete the currently offered contract
 const finish = (s, stars = 1, extra = {}) => {
   const id = C.contractId(s), pos = C.position(s);
@@ -134,7 +134,7 @@ ok('pure');
   C.setCities(CITIES, 5);
   const base = C.create('ist', 99);
   const mk = (over) => Object.assign(C.clone(base), over);
-  const city = (est) => ({ visits: 3, chapters: 3, showcaseBest: 3, established: est, estTour: 1, awards: [], styles: ['a', 'b', 'c', 'd'], svc: ['m:requests', 't:clipper', 't:trimmer', 'm:fix'], regVisits: 2, gold: 1 });
+  const city = (est) => ({ visits: 3, chapters: 3, showcaseBest: 3, established: est, estTour: 1, awards: [], styles: ['a', 'b', 'c', 'd'], regVisits: 2, gold: 1 });
   const styles = Object.fromEntries(Array.from({ length: 12 }, (_, i) => ['s' + i, 3]));
   const common = { licence: { next: 30 }, current: null, tour: { n: 1, roster: ['ist', 'lon', 'lag', 'nyc', 'sao'], rosterVersion: 5, done: ['ist'], na: [] }, completedModes: SPEC.slice(), mastery: { style: styles, mode: {}, tool: {}, service: {}, city: {} } };
   const master = mk(Object.assign({}, common, { cities: { ist: city(true), lon: city(true), lag: city(true) } }));
@@ -224,12 +224,12 @@ ok('pure');
 {
   C.setCities(CITIES, 6);
   const st = C.create('ist', 31);
-  const r = C.side(st, { valid: true, stars: 3, mode: 'daily', style: 'crop', tools: ['clipper'], services: [] });
+  const r = C.side(st, { valid: true, stars: 3, mode: 'daily', style: 'crop', tools: ['clipper'] });
   assert.equal(r.state.licence.next, 0, 'no progress');
   assert.equal(C.contractId(r.state), C.contractId(st), 'the offered slot is unchanged');
   assert.equal(r.state.mastery.style.crop, 3);
   assert.equal(r.state.mastery.mode.daily, 3);
-  assert.equal(C.side(r.state, { valid: true, stars: 2, mode: 'daily', style: 'crop', tools: ['clipper'], services: [] }).duplicate, true);
+  assert.equal(C.side(r.state, { valid: true, stars: 2, mode: 'daily', style: 'crop', tools: ['clipper'] }).duplicate, true);
   assert.equal(C.side(st, { valid: false, mode: 'daily' }).error, 'not-valid');
   ok('daily mastery');
 }
@@ -238,17 +238,17 @@ ok('pure');
 {
   C.setCities(CITIES, 6);
   let st = C.create('ist', 55);
-  const kinds = ['requests', 'fix', 'beard', 'relax'];
+  const kinds = ['requests', 'fix', 'beard', 'rush'];
   for (let i = 0; i < 30; i++) {
     const id = C.contractId(st), pos = C.position(st);
-    st = C.complete(st, { id, stars: 3, valid: true, mode: kinds[i % 4], style: 'st' + (i % 6), tools: ['clipper'], services: [], regular: pos.role === 'relationship' && pos.visit > 0 }).state;
+    st = C.complete(st, { id, stars: 3, valid: true, mode: kinds[i % 4], style: 'st' + (i % 6), tools: ['clipper'], regular: pos.role === 'relationship' && pos.visit > 0 }).state;
   }
   const m = C.cityMastery(st, 'ist');
   assert.equal(m.all, true, 'six 3-star chapters with varied work and returning regulars master the home city');
   assert.equal(C.branchState(st, 'ist'), 'mastered');
   const plainWork = C.create('lon', 56);
   let pw = plainWork;
-  for (let i = 0; i < 30; i++) pw = C.complete(pw, { id: C.contractId(pw), stars: 3, valid: true, mode: 'requests', style: 'same', tools: ['clipper'], services: [] }).state;
+  for (let i = 0; i < 30; i++) pw = C.complete(pw, { id: C.contractId(pw), stars: 3, valid: true, mode: 'requests', style: 'same', tools: ['clipper'] }).state;
   const pm = C.cityMastery(pw, 'lon');
   assert.equal(pm.completion, 1);
   assert.equal(pm.all, false, 'completion alone is not city mastery');

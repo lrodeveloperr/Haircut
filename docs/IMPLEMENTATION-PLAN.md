@@ -343,9 +343,22 @@ Deferred, with the reason:
   passes. `qa/customer-contact-sheet.cjs` draws a review sheet of real customers from the real game.
 - **5.6** Not started. The owner decided (5 November 2026) that language packs wait until they approve the app, so
   translation is done once, on the final text.
-- **5.7** Plain Java, switched off while the id is empty: `PlayGamesController`, `PlayGamesCatalog` (27 of the 40
+- **5.7** Plain Java, switched off while the id is empty: `PlayGamesController`, `PlayGamesCatalog` (26 of the 40
   achievements, allowlisted metrics), `PlayGamesOutbox`, `PlayGamesSnapshotPolicy`, `PlayGamesTest`. The Google SDK,
   the HostBridge operation and the web envelope are added with the Console ids, because the SDK needs an APP_ID.
+
+## 3a. Clipper-only decision (owner, 6 November 2026)
+
+**The game is cutting hair, so the clipper with guards 0-4 is the only tool, in every mode, Career included.** This
+replaces every tool, service and ritual item in this plan and its contracts where they differ:
+
+- Deleted: every other tool (trimmer, scissors, razor, beard trimmer, foil, spray, soap, cream, brush, towels, massage,
+  aftershave, pomade, talc, oil, balm, alum, threading, singeing, nose trimmer), the tool tray and the skin state. The
+  renderer files are back to their state before Wave 4. Wave 4's tool work survives only in git history; its audio
+  engine stays.
+- Deleted: Relax mode, customer service requests and service pay. City mastery has three parts: completion, style and
+  relationship. Career's cities add freshness, not tools.
+- Not to be built: comb, dryer, shampoo, sponge, wave brush, hair oil, steamer, pick, thinning shears, moustache wax.
 
 ## 3. Owner decisions (answered 5 November 2026)
 
