@@ -246,8 +246,10 @@
     if (!a || a.job !== s.jobId) return undefined;
     if (reqCache.key === a.id) return reqCache.val;
     let val = null;
-    if (a.request.bt) { const bt = unpack(a.request.bt, BTOP()); val = bt ? { style: { id: a.request.id, fam: 'beard' }, beard: bt } : null; }
-    else if (a.request.t) { const t = unpack(a.request.t, 5); val = t ? { style: (HSC.requestKit && HSC.requestKit.byId.get(a.request.id)) || { id: a.request.id, fam: a.request.family }, target: t } : null; }
+    const bt = a.request.bt ? unpack(a.request.bt, BTOP()) : null, t = a.request.t ? unpack(a.request.t, 5) : null;
+    // an order may be for the hair, the beard, or both
+    if (t) val = { style: (HSC.requestKit && HSC.requestKit.byId.get(a.request.id)) || { id: a.request.id, fam: a.request.family }, target: t, beard: bt };
+    else if (bt) val = { style: { id: a.request.id, fam: 'beard' }, beard: bt };
     reqCache.key = a.id; reqCache.val = val;
     return val;
   }

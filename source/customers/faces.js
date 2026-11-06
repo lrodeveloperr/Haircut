@@ -41,7 +41,8 @@
     const yBot = -1.22 + (-0.8 + 1.22) * smooth(0.85, 1.6, ang);
     let m = smooth(yBot - 0.04, yBot + 0.08, y) * (1 - smooth(yTop - 0.08, yTop + 0.03, y));
     m *= 1 - smooth(1.5, 1.64, ang);
-    m *= 1 - smooth(0.15, 0.5, lipMask(x, y, z));
+    // the mouth's cut-out stops at the lips, so a full beard closes round the mouth corners
+    m *= 1 - smooth(0.15, 0.5, lipMask(x, y, z) * (1 - smooth(0.42, 0.58, ax)));
     return m;
   }
 
@@ -299,9 +300,15 @@
     const cells = beardCellPositions(S, P).positions;
     const raw = new Float32Array(8192);
     for (let c = 0; c < 8192; c++) {
-      if (S.offs[c] === S.offs[c + 1]) continue;
+      if (S.offs[c] === S.offs[c + 1] || (S.rooted && !S.rooted[c])) continue;
       const x = cells[c * 3], y = cells[c * 3 + 1], z = cells[c * 3 + 2];
       if (beardZone(x, y, z) < 0.05) continue;
+      // grid cells on the mesh's inner surfaces (inside the head or the mouth) never hold a beard: nothing there is seen or reached
+      if (y > -0.2 && Math.hypot(x / 1.7, (z - 0.1) / 2.2) < 0.78) continue;
+      if (y > -0.95 && z < 0.75 && Math.abs(x) < 0.9) continue;
+      // the very top of the sideburn belongs to the scalp hair, which the clipper cuts there
+      if (y > 1.38) continue;
+      if (lipMask(x, y, z) > 0.2 || (Math.abs(x) < 0.45 && Math.abs(y - 0.125) < 0.28 && z < 2.2)) continue;
       let region = beardRegion(x, y, z, person);
       // horseshoe: the moustache runs down past the mouth corners to the jaw
       if (style.horseshoe && region && region !== 'moustache' && region !== 'neck') {
@@ -321,6 +328,9 @@
         else if (region === 'jaw' && (ax > (style.anchor ? 0.72 : 0.88) || (style.anchor && Math.abs(y - jawY) > 0.1))) region = null;
         if (style.anchor && region === 'chin' && ax > 0.42) region = null;
       }
+      // only the sideburns; a goatee extended a little along the jaw
+      if (style.sideburn && y < 0.55) region = null;
+      if (style.extended && region === 'jaw' && Math.abs(x) > 0.74) region = null;
       // soul patch: a small tuft just under the lower lip
       if (style.soul && region && (region !== 'chin' || Math.abs(x) > 0.16 || y < -0.34)) region = null;
       if (!region) continue;
@@ -333,6 +343,9 @@
       if (v == null && region === 'jaw' && mm.cheeks) v = mm.cheeks;
       if (v == null && region === 'neck' && person.beard.style === 'chinstrap') v = null;
       if (v == null) continue;
+      // a fork splits the chin in two; a wild beard was never evened out
+      if (style.fork && region === 'chin' && Math.abs(x) < 0.12 && y < -0.3) v *= 0.45;
+      if (style.wild) v *= 0.8 + 0.5 * (0.5 + 0.25 * Math.sin(x * 9.1 + y * 5.3) + 0.25 * Math.sin(z * 7.7 - y * 6.1));
       raw[c] = v;
     }
     // soften length steps between regions (not the outer edges)

@@ -38,6 +38,7 @@ python3 patch14.py build/runtime/game.js
 [ "${HEAD_SHAPES:-0}" = 1 ] && python3 patch18.py build/runtime/game.js
 [ "${HEAD_SHAPES:-0}" = 1 ] && python3 patch19.py build/runtime/game.js
 [ "${HEAD_SHAPES:-0}" = 1 ] && python3 patch20.py build/runtime/game.js
+[ "${HEAD_SHAPES:-0}" = 1 ] && python3 patch21.py build/runtime/game.js
 # Android only: Three.js r180 as a plain script for the 3D shop (generated from vendor/three-r180, not checked in)
 [ "${HEAD_SHAPES:-0}" = 1 ] && python3 tools/three_iife.py > customers/three-r180.js
 { echo "/* Haircut Studio customers: generated people, skin, hair textures, baldness, trimmable beards, face shapes. */"

@@ -202,18 +202,23 @@
     const changed = new Set();
     let removed = 0;
     const { positions: pos, spatial } = surface;
-    const reach = Math.hypot(BLADE_W / 2, BLADE_D / 2, 0.1);
+    // how far past the touched surface the blade clears: Android reaches the hair under the jaw the camera never sees
+    const DEPTH = HSC.beardDepth || 0.1;
+    const reach = Math.hypot(BLADE_W / 2, BLADE_D / 2, DEPTH);
     const unit = (v) => { const l = Math.hypot(...v) || 1; return v.map((x) => x / l); };
     for (const p of steps) {
       const g = p.position, across = unit(p.bladeAcross), along = unit(p.bladeAlong), nrm = unit(p.normal);
-      const lo = g.map((x) => Math.floor((x - reach) / spatial.size)), hi = g.map((x) => Math.floor((x + reach) / spatial.size));
+      // Android: a stroke along the chin or jaw also takes the hair under it, which no camera angle can touch
+      const low = HSC.beardDepth && g[1] < -0.3, far = low ? 1.5 : reach;
+      const lo = g.map((x) => Math.floor((x - far) / spatial.size)), hi = g.map((x) => Math.floor((x + far) / spatial.size));
       for (let i = lo[0]; i <= hi[0]; i++) for (let j = lo[1]; j <= hi[1]; j++) for (let k = lo[2]; k <= hi[2]; k++) {
         const list = spatial.buckets.get(i + ',' + j + ',' + k);
         if (!list) continue;
         for (const c of list) {
           const d = [pos[c * 3] - g[0], pos[c * 3 + 1] - g[1], pos[c * 3 + 2] - g[2]];
           const dot = (v) => d[0] * v[0] + d[1] * v[1] + d[2] * v[2];
-          if (Math.abs(dot(across)) > BLADE_W / 2 || Math.abs(dot(along)) > BLADE_D / 2 || Math.abs(dot(nrm)) > 0.1) continue;
+          const under = low && pos[c * 3 + 1] < -0.5 && d[1] < 0.05 && Math.abs(d[0]) <= BLADE_W / 2 && Math.hypot(d[0], d[1], d[2]) <= far;
+          if (!under && (Math.abs(dot(across)) > BLADE_W / 2 || Math.abs(dot(along)) > BLADE_D / 2 || Math.abs(dot(nrm)) > DEPTH)) continue;
           const to = HSC.toolBeardCell ? HSC.toolBeardCell(next[c], guard) : guard;
           if (next[c] > to) {
             removed += HSC.BEARD_MM[next[c]] - HSC.BEARD_MM[to];

@@ -24,7 +24,19 @@
 
   // ---- the neutral population table (low confidence; city research replaces it per city) ----
   function neutralTable() { const t = {}; H().forEach((h, i) => { t[i] = h.w; }); return { groups: t, confidence: 'low', source: 'neutral-global' }; }
-  function tableFor(cityId) { const c = HSC.career && HSC.career.city(cityId); return (c && c.population) || neutralTable(); }
+  // a sourced population table wins; otherwise the city's main group is about two-thirds of its customers, a second group
+  // about one in seven, and the neutral table the rest, so no city is ever uniform
+  const MAIN = 0.65, SECOND = 0.15;
+  function tableFor(cityId) {
+    const c = HSC.career && HSC.career.city(cityId);
+    if (c && c.population) return c.population;
+    const n = neutralTable(), ids = H().map((h) => h.id), [a, b] = (c && c.people) || [];
+    if (ids.indexOf(a) < 0 || ids.indexOf(b) < 0) return n;
+    const tot = Object.values(n.groups).reduce((x, y) => x + y, 0), g = {};
+    for (const k in n.groups) g[k] = (1 - MAIN - SECOND) * (n.groups[k] / tot);
+    g[ids.indexOf(a)] += MAIN; g[ids.indexOf(b)] += SECOND;
+    return { groups: g, confidence: 'low', source: 'owner-provisional' };
+  }
   // the weighted-fair scheduler (variability section 4): each draw adds every group's share to its deficit, the
   // largest deficit is chosen (seeded tie-break) and loses one; deficits persist per city and are bounded
   // Choosing does not change the saved deficits: a generation transaction tries several candidates, and only the
@@ -75,8 +87,8 @@
         if (ctx.source === 'resident') opts.heritage = drawGroup(env.pop, ctx.city, R);
         const draw = ctx.source === 'resident' ? { city: ctx.city, group: opts.heritage } : null;
         // Beards selects someone who already has a beard to shape; it never writes one onto a customer
-        const BIG = ['full', 'boxed', 'long', 'garibaldi', 'ducktail', 'shenandoah'];
-        const p = ctx.mode === 'beard' ? HSC.selectPerson(seed, opts, (x) => BIG.includes(x.beard.style)) : HSC.makePerson(seed, opts);
+        const want = ctx.mode === 'beard' ? HSC.BEARD_ARRIVALS[seed % HSC.BEARD_ARRIVALS.length] : null;
+        const p = want ? HSC.selectPerson(seed, opts, (x) => x.beard.style === want, 600) || HSC.makePerson(seed, Object.assign({}, opts, { beard: want })) : HSC.makePerson(seed, opts);
         if (!p) return null;
         if (ctx.source === 'vip') p.vip = true;
         // a visitor's origin is recorded: the neutral world table until a city's visitor mix is researched
@@ -116,6 +128,9 @@
         const R0 = cu.regular, fam = R0 && R0.usual && HSC.requestKit && HSC.requestKit.byId.get(R0.usual);
         const lean = (style) => (!R0 || (R0.visits | 0) < 2 ? 1 : R0.usual === style.id ? 4 : fam && fam.fam === style.fam ? 2 : 1);
         const opts = B().options(p, st.hair).map(([w, style, target]) => ({ id: style.id, family: style.fam + ':' + (style.contour || ''), target, drop: dropOf(st.hair, target), cost: { precision: ['part', 'crew', 'temple', 'taper'].includes(style.contour) ? 1 : 0 }, weight: w * lean(style) }));
+        // about half of the men with a beard want it done too: one order for the hair and the beard
+        const bj = (p.seed & 1) === 0 ? B().beardJob(p, st.beardGrid, HSC.rng((p.seed ^ 0x51ed29) >>> 0)) : null;
+        if (bj) for (const o of opts) Object.assign(o, { beardGoal: bj.style, beardTarget: bj.target });
         // the broad stage (director fallback 5): a plausible style without its usual weighting, still feasible
         return ctx.broad ? opts.map((o) => Object.assign(o, { weight: 1 })) : opts;
       },
@@ -174,5 +189,5 @@
   }
   function dropOf(a, b) { let d = 0; for (let i = 0; i < 8192; i++) d += Math.max(0, a[i] - b[i]); return d; }
 
-  HSC.careerCatalog = { make: makeCatalog, neutralTable, drawGroup, commitGroup, dropOf };
+  HSC.careerCatalog = { make: makeCatalog, neutralTable, tableFor, drawGroup, commitGroup, dropOf };
 })(globalThis.HSC || (globalThis.HSC = {}));

@@ -38,10 +38,10 @@
     { id: 'east-african', w: 4, skin: monk(0, 0, 5, 52, 43), under: { neutral: 3, red: 2, golden: 1 },
       tex: tex('3b:5 3c:20 4a:35 4b:30 4c:10'), eyes: DARK,
       patchy: 0.15, brow: 1, coarse: 1, morph: { noseW: 0.2, noseBridge: 0.05, noseTip: 0, lips: 0.35, jaw: 0, chin: 0.05, cheek: 0.15, brow: 0.1 } },
-    { id: 'east-asian', w: 6, skin: monk(15, 60, 25, 0, 0), under: { golden: 4, neutral: 2, olive: 1 },
+    { id: 'east-asian', w: 6, skin: monk(15, 60, 25, 0, 0), under: { golden: 8, olive: 1 },
       tex: tex('1a:55 1b:30 1c:8 2a:5 2b:2'), eyes: DARK,
       patchy: 0.45, brow: 0.92, coarse: 1.15, shave: 0.45, morph: { noseW: 0.15, noseBridge: -0.5, noseTip: -0.2, lips: 0.1, jaw: 0.2, chin: -0.1, cheek: 0.4, brow: -0.4 } },
-    { id: 'southeast-asian', w: 9, skin: monk(0, 18, 67, 15, 0), under: { golden: 4, olive: 2, neutral: 1 },
+    { id: 'southeast-asian', w: 9, skin: monk(0, 18, 67, 15, 0), under: { golden: 6, olive: 2 },
       tex: tex('1a:35 1b:30 1c:12 2a:12 2b:7 2c:3 3a:1'), eyes: DARK,
       patchy: 0.4, brow: 0.95, coarse: 1.1, shave: 0.4, morph: { noseW: 0.25, noseBridge: -0.4, noseTip: -0.15, lips: 0.2, jaw: 0.1, chin: -0.1, cheek: 0.3, brow: -0.3 } },
     { id: 'south-asian', w: 11, skin: monk(0, 10, 50, 37, 3), under: { golden: 3, olive: 2, neutral: 2 },
@@ -215,9 +215,9 @@
 
   // new beard styles join the age odds (people.js BEARD_BY_AGE), and stubble comes in three lengths
   const beardByAge = {
-    young: { balbo: 2, anchor: 1.5, circle: 3, soulpatch: 1, handlebar: 0.3, ducktail: 1, garibaldi: 0.5 },
-    middle: { balbo: 3, anchor: 2, circle: 3.5, soulpatch: 0.5, handlebar: 1, ducktail: 2, garibaldi: 1.5 },
-    old: { balbo: 1.5, anchor: 1, circle: 2, soulpatch: 0.2, handlebar: 1.5, ducktail: 1.5, garibaldi: 1.5 },
+    young: { balbo: 2, anchor: 1.5, circle: 3, soulpatch: 1, handlebar: 0.3, ducktail: 1, garibaldi: 0.5, corporate: 5, rounded: 3, verdi: 0.5, bandholz: 0.3, longclipped: 0.5, frenchfork: 0.2, wild: 0.8, neckbeard: 0.8, chincurtain: 1, extended: 2, hollywood: 1.5, friendly: 0.3, sideburns: 1, patchy: 5, wispy: 4 },
+    middle: { balbo: 3, anchor: 2, circle: 3.5, soulpatch: 0.5, handlebar: 1, ducktail: 2, garibaldi: 1.5, corporate: 6, rounded: 3, verdi: 1.5, bandholz: 1, longclipped: 1.5, frenchfork: 0.4, wild: 1, neckbeard: 0.8, chincurtain: 1, extended: 2.5, hollywood: 2, friendly: 0.6, sideburns: 0.8, patchy: 2, wispy: 2 },
+    old: { balbo: 1.5, anchor: 1, circle: 2, soulpatch: 0.2, handlebar: 1.5, ducktail: 1.5, garibaldi: 1.5, corporate: 3, rounded: 1.5, verdi: 1.5, bandholz: 1.2, longclipped: 2, frenchfork: 0.2, wild: 1.5, neckbeard: 0.4, chincurtain: 1, extended: 1, hollywood: 0.8, friendly: 0.6, sideburns: 0.5, patchy: 0.5, wispy: 2 },
   };
   const stubble = { stubble1: 30, stubble: 45, stubble5: 25 };
 

@@ -110,8 +110,12 @@
   }
 
   // ---- M5: the beard he asks for, from the beard he walked in with ----
-  const BEARD_TO = ['boxed', 'goatee', 'vandyke', 'chinstrap', 'balbo', 'anchor', 'circle', 'stubble5', 'stubble', 'soulpatch', 'moustache', 'mutton', 'clean'];
-  const BEARDED = ['full', 'boxed', 'long', 'garibaldi', 'ducktail', 'shenandoah'];
+  // what a customer can ask for (docs/BEARD-MATRIX.md). Sparse growth asks for what it can really hold: a patchy beard
+  // rarely asks for a full cheek line. Growth comes from the person's own density, never directly from his group.
+  const BEARD_TO = ['corporate', 'boxed', 'rounded', 'hollywood', 'chincurtain', 'extended', 'goatee', 'vandyke', 'chinstrap', 'balbo', 'anchor', 'circle', 'stubble5', 'stubble1', 'soulpatch', 'moustache', 'mutton', 'friendly', 'sideburns', 'clean'];
+  const FULL_LINE = ['corporate', 'boxed', 'rounded', 'friendly', 'mutton'];
+  // every style with something to work on comes through the door
+  const BEARDED = HSC.BEARD_ARRIVALS = Object.keys(HSC.BEARD_STYLES || {}).filter((k) => k !== 'clean' && k !== 'stubble1' && k !== 'stubble');
   function beardGrid(person, style) {
     const S = HSC.BEARD_STYLES[style] || {}, mm = {};
     for (const k of ['moustache', 'chin', 'cheeks', 'jaw', 'neck']) mm[k] = S[k] ? Math.min(person.beard.mm[k] || 99, (S[k][0] + S[k][1]) / 2) : 0;
@@ -124,7 +128,7 @@
       const g = beardGrid(person, st), t = start.map((v, i) => Math.min(v, g[i]));
       let n = 0;
       for (let i = 0; i < 8192; i++) if (start[i] - t[i] >= 2) n++;
-      if (n >= 250) opts.push([st === 'clean' ? 0.6 : 1, st, t]);
+      if (n >= 120) opts.push([(st === 'clean' ? 1.6 : 1) * (FULL_LINE.includes(st) ? Math.max(0.1, 1 - 1.4 * (person.beard.patchy || 0)) : 1), st, t]);
     }
     if (!opts.length) return null;
     const [, style, target] = choose(R, opts);
@@ -153,7 +157,9 @@
     if (mode === 'beard') {
       // the beard studio selects a customer who already has a beard (never rewrites one); the fallback is only for an
       // impossible run of seeds, so the mode can never stall
-      const p = HSC.selectPerson(seed >>> 0 || 1, {}, (x) => BEARDED.includes(x.beard.style)) || HSC.makePerson(seed >>> 0 || 1, { beard: BEARDED[Math.floor(R.next() * BEARDED.length)] });
+      // every style has an even turn here, so a player meets the whole catalogue
+      const want = BEARDED[hash('beard-' + seed) % BEARDED.length];
+      const p = HSC.selectPerson(seed >>> 0 || 1, {}, (x) => x.beard.style === want, 600) || HSC.makePerson(seed >>> 0 || 1, { beard: want });
       return Object.assign(p, { job });
     }
     if (mode === 'daily') {
@@ -391,7 +397,7 @@ body.hsc-reveal #hsc-rush,body.hsc-reveal #hsc-newc,body.hsc-spin #hsc-newc{disp
   boot();
   HSC.modes = {
     current, unlocked, list: LIST, level: LEVEL, set: setMode, newCustomer,
-    request: (s) => request(s), tips, done, beardStars, econJob,
+    request: (s) => request(s), tips, done, beardStars, beardJob, econJob,
     unscored: () => { const m = current(); return m === 'free' || (m === 'career' && CR().unscored()); },
     icon: (m) => ICON[m],
     // the job builders, for the career catalog (career-catalog.js)

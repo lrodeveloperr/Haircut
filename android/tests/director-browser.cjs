@@ -36,6 +36,10 @@ const PER_LEVEL = +process.env.DIRECTOR_BROWSER_CONTRACTS || 160;
     await page.waitForFunction(() => window.HSC && HSC.careerRun && HSC.careerRun.ready() && HSC.careerCatalog && HSC.beardReach, undefined, { timeout: 240000 });
     const res = await page.evaluate(async (N) => {
       const C = HSC.career, D = HSC.director, out = {};
+      // a hit on a warped head maps back to the exact point on the un-morphed head (the scalp's cutting grid)
+      { const st = HSC.debugState, A = st.coarse.pos, I = st.coarse.idx, B = st.coarseBase; let worst = 0;
+        for (let k = 0; k < I.length; k += 300) { const [a, b, c] = [I[k] * 3, I[k + 1] * 3, I[k + 2] * 3], m = [0, 1, 2].map((j) => (A[a + j] + A[b + j] + A[c + j]) / 3), w = HSC.warpBase(m[0], m[1], m[2], A, I, k); worst = Math.max(worst, ...[0, 1, 2].map((j) => Math.abs(w[j] - (B[a + j] + B[b + j] + B[c + j]) / 3))); }
+        out.hitError = worst; }
       // the clipper is the only tool, in every mode: no tray, no services, no Relax
       out.clipperOnly = { tools: ['setTool', 'trayNow', 'effects', 'visit', 'servicesWanted', 'toolArtBuild'].filter((k) => HSC[k] !== undefined), modes: HSC.modes.list.slice(), tray: !!document.querySelector('#hsc-tools') };
       const realLevel = HSC.meta.level;
@@ -89,6 +93,8 @@ const PER_LEVEL = +process.env.DIRECTOR_BROWSER_CONTRACTS || 160;
     console.log(JSON.stringify(res));
     assert.deepEqual(res.clipperOnly, { tools: [], modes: ['requests', 'free', 'fix', 'daily', 'beard', 'rush'], tray: false }, 'clipper only');
     delete res.clipperOnly;
+    assert.ok(res.hitError < 1e-4, 'a hit maps back to the un-morphed head: ' + res.hitError);
+    delete res.hitError;
     for (const [k, st] of Object.entries(res)) {
       assert.equal(st.unvalidated, 0, k + ': every contract passes the second validation');
       assert.equal(st.invalid, 0, k + ': every contract passes the catalog validator');

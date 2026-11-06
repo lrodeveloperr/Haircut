@@ -70,7 +70,7 @@
     pink: [1.03, 0.97, 1.0],
     neutral: [1, 1, 1],
     olive: [0.98, 1.02, 0.94],
-    golden: [1.03, 1.0, 0.85],
+    golden: [1.04, 1.0, 0.78],
     red: [1.04, 0.96, 0.95],
   };
 
@@ -239,6 +239,22 @@
     handlebar: { moustache: [16, 24] }, // a long, wide moustache (its tips stay straight)
     ducktail: { moustache: [10, 14], chin: [24, 34], cheeks: [8, 12], jaw: [13, 20], neck: [6, 10] }, // full, pointed at the chin
     garibaldi: { moustache: [12, 18], chin: [30, 40], cheeks: [16, 22], jaw: [26, 36], neck: [14, 20] }, // wide, rounded and full
+    // the wider barbershop catalogue (owner, 6 November 2026; docs/BEARD-MATRIX.md): what men actually walk in with
+    corporate: { moustache: [4, 7], chin: [6, 9], cheeks: [4, 7], jaw: [6, 9], neck: [1, 3] }, // short and neat
+    rounded: { moustache: [7, 11], chin: [14, 20], cheeks: [11, 15], jaw: [13, 19], neck: [5, 9] }, // dense, round, tightly shaped
+    verdi: { moustache: [13, 18], chin: [20, 28], cheeks: [13, 18], jaw: [18, 26], neck: [8, 12] }, // rounded bottom, moustache kept apart
+    bandholz: { moustache: [18, 26], chin: [44, 50], cheeks: [24, 30], jaw: [38, 48], neck: [22, 30] }, // the biggest natural beard
+    longclipped: { moustache: [1, 3], chin: [30, 46], cheeks: [14, 20], jaw: [24, 38], neck: [12, 18] }, // long beard, moustache kept short
+    frenchfork: { moustache: [12, 18], chin: [34, 44], cheeks: [10, 14], jaw: [20, 28], neck: [8, 12], fork: true }, // the chin splits in two
+    wild: { moustache: [14, 24], chin: [24, 44], cheeks: [14, 26], jaw: [20, 38], neck: [14, 26], wild: true }, // grown out, never shaped
+    neckbeard: { chin: [6, 10], jaw: [6, 10], neck: [10, 16] }, // under the jaw, bare cheeks
+    chincurtain: { chin: [10, 16], jaw: [10, 16] }, // along the jaw, no moustache
+    extended: { moustache: [6, 11], chin: [9, 16], jaw: [5, 8], extended: true }, // a goatee running a little along the jaw
+    hollywood: { moustache: [6, 10], chin: [9, 14], jaw: [8, 12] }, // a full lower face, no sideburns
+    friendly: { moustache: [8, 14], cheeks: [10, 16], jaw: [8, 13] }, // mutton chops joined by a moustache
+    sideburns: { cheeks: [6, 11], sideburn: true }, // only the sideburns
+    patchy: { moustache: [3, 6], chin: [5, 10], cheeks: [1.5, 3], jaw: [3, 6], neck: [0.5, 2] }, // grown out where it grows
+    wispy: { moustache: [2, 4], chin: [5, 12] }, // a sparse moustache and chin tuft
   };
   // Baseline by age (UK YouGov): ~46% clean-shaven; beard + moustache 34%, stubble 13%, beard only 4%,
   // moustache only 2%. Young men lean to stubble, middle-aged men to beards, most men over 60 shave,
@@ -382,7 +398,8 @@
     R = stream('face');
     // face shape: group tendency (subtle) + individual variation (larger)
     const morph = {};
-    for (const k of MORPHS) morph[k] = +clamp(P ? R.gauss(0.15) : 0.55 * (her.morph[k] || 0) + R.gauss(0.42), -1, 1).toFixed(3);
+    // Android: the group's own tendency now shows clearly, with each person's variation on top
+    for (const k of MORPHS) morph[k] = +(P ? clamp(1.8 * (her.morph[k] || 0) + R.gauss(0.2), -1.4, 1.4) : clamp(0.55 * (her.morph[k] || 0) + R.gauss(0.42), -1, 1)).toFixed(3);
     if (opts.morph) Object.assign(morph, opts.morph);
 
     const eyes = R.pick(her.eyes);

@@ -55,9 +55,10 @@
     const pal = HSC.HAIR_BY_CLASS && HSC.HAIR_BY_CLASS[h.id];
     if (pal) DECKS['col' + i] = deckFrom(pal.base, 30);
   });
-  // Android: 12 phenotype groups dealt in their spawn shares, coarse ages and facial hair in real shares
+  // Android: 12 phenotype groups, one card each, coarse ages and facial hair in real shares
   if (PH) {
-    DECKS.her = deckFrom(Object.fromEntries((HSC.HERITAGE || []).map((h, i) => [i, h.w])), 40).map(Number);
+    // every group comes round in every pass: one card each, so nobody waits long to meet any of them
+    DECKS.her = (HSC.HERITAGE || []).map((h, i) => i);
     Object.assign(DECKS, PH.decks);
   }
   // draw the first allowed card (on the variety decks, one that differs from the last); refill (shuffled) when

@@ -114,6 +114,11 @@
     }
     if (!pick) return null;
     req.style = pick.style; req.target = pick.target;
+    // about half of the men with a beard want it done too: the order is for the hair and the beard together
+    if (HSC.modes && HSC.modes.beardJob && Array.isArray(s.startBeard) && R.next() < 0.5) {
+      const j = HSC.modes.beardJob(p, s.startBeard, R);
+      if (j) req.beard = j.target;
+    }
     return req;
   };
   // practise a cut from the lookbook (collection.js): switches to Quick Play; the customer in the chair practises
@@ -140,13 +145,15 @@
   function starsFor(s) {
     if (!s || !(s.cutStrokeCount > 0)) return 0;
     const r = HSC.requestFor(s);
-    if (r && r.beard && HSC.modes) return HSC.modes.beardStars(s, r);
+    const bs = r && r.beard && HSC.modes ? HSC.modes.beardStars(s, r) : null;
+    if (bs != null && !r.target) return bs;
     if (!r || !HSC.requests || !HSC.requests.match) return 3; // free style (the first customer): always a great cut
     let w;
     try { w = G().getView().surface.weights; } catch (e) {}
     const i = HSC.requests.match(s.hair, r.target, w), a = HSC.requests.match(s.startHair, r.target, w);
     const n = a >= 0.999 ? i : Math.max(0, Math.min(1, (i - a) / (1 - a)));
-    return n >= 0.85 ? 3 : n >= 0.6 ? 2 : 1;
+    const hs = n >= 0.85 ? 3 : n >= 0.6 ? 2 : 1;
+    return bs == null ? hs : Math.min(hs, bs); // hair and beard: the job is as good as its weaker half
   }
   const comboMult = (n) => (n >= 4 ? 2 : n === 3 ? 1.5 : n === 2 ? 1.2 : 1);
   HSC.combo = { now: () => (M() && M().data ? M().data.combo || 0 : 0), mult: comboMult };
@@ -509,8 +516,8 @@ body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.h
         try {
           // his own head with the cut he wants: from the side and from the back
           if (r.beard) {
-            a = HSC.portrait(s.look.person, s.hair, r.beard, 160, 160);
-            b = HSC.portrait(s.look.person, s.hair, r.beard, 105, 160);
+            a = HSC.portrait(s.look.person, r.target || s.hair, r.beard, 160, 160);
+            b = HSC.portrait(s.look.person, r.target || s.hair, r.beard, 105, 160);
           } else {
             a = v.thumbnail(r.target, 110, 4, { size: 160, headOnly: true });
             b = v.thumbnail(r.target, 10, 6, { size: 160, headOnly: true });

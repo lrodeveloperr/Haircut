@@ -48,7 +48,8 @@
         const ci = HSC.canonIds(st.base);
         const nBase = HSC.areaNormals(st.base, Pt.index.array, ci.canon, ci.count);
         const surface = HSC.buildBeardSurface(st.base, Pt.index.array);
-        const roots = HSC.sampleBeardRoots(st.base, Pt.index.array, surface, 14000, 0xbea7d);
+        // Android carries a denser beard; the lowest tier still draws today's count (HSC.setDetail)
+        const roots = HSC.sampleBeardRoots(st.base, Pt.index.array, surface, globalThis.AndroidHost ? 20000 : 14000, 0xbea7d);
         return { canon: ci.canon, canonCount: ci.count, nBase, surface, roots };
       };
       const model = HSC.geo ? HSC.geo.use('beard', baseModel) : baseModel();
@@ -84,6 +85,9 @@
       // beard surface + strands
       st.surface = model.surface;
       st.roots = model.roots;
+      // a cell with no roots holds no visible hair (the mesh's inner surfaces share the grid): no beard starts there
+      st.surface.rooted = new Uint8Array(8192);
+      for (let i = 0; i < model.roots.count; i++) { const c = HSC.beardCell(model.roots.base[i * 3], model.roots.base[i * 3 + 1], model.roots.base[i * 3 + 2]); if (c >= 0) st.surface.rooted[c] = 1; }
       st.beardCells = HSC.beardCellPositions(st.surface, st.base);
       HSC.beardSurface = st.beardCells;
       st.beardMesh = makeBeardMesh(c, st.roots);
@@ -598,6 +602,15 @@
     const b = (d11 * d20 - d01 * d21) / den, c = (d00 * d21 - d01 * d20) / den, a = 1 - b - c;
     return [0, 1, 2].map((k) => B[i0 + k] * a + B[i1 + k] * b + B[i2 + k] * c);
   };
+  // a hit on the drawn head back on the un-morphed head (engine, patch21): the scalp's cutting grid lives there
+  HSC.warpBase = function (x, y, z, A, I, k) {
+    const B = A === ctx.Pt.attributes.position.array ? st.base : st.coarseBase, a = I[k] * 3, b = I[k + 1] * 3, c = I[k + 2] * 3;
+    const ux = A[b] - A[a], uy = A[b + 1] - A[a + 1], uz = A[b + 2] - A[a + 2], vx = A[c] - A[a], vy = A[c + 1] - A[a + 1], vz = A[c + 2] - A[a + 2];
+    const px = x - A[a], py = y - A[a + 1], pz = z - A[a + 2];
+    const d00 = ux * ux + uy * uy + uz * uz, d01 = ux * vx + uy * vy + uz * vz, d11 = vx * vx + vy * vy + vz * vz, d20 = px * ux + py * uy + pz * uz, d21 = px * vx + py * vy + pz * vz;
+    const den = d00 * d11 - d01 * d01 || 1e-12, s = (d11 * d20 - d01 * d21) / den, t = (d00 * d21 - d01 * d20) / den, r = 1 - s - t;
+    return [B[a] * r + B[b] * s + B[c] * t, B[a + 1] * r + B[b + 1] * s + B[c + 1] * t, B[a + 2] * r + B[b + 2] * s + B[c + 2] * t];
+  };
   // the ear bowls (extras.js), for the ear hair and the flame
   HSC.foam = { data: () => st.foamData, update: () => { if (st.foamTex) st.foamTex.needsUpdate = true; } };
   HSC.earBowls = () => (st.extras ? st.extras.bowl : null);
@@ -655,6 +668,9 @@
       }));
     }
     if (HSC.U.uSmileA) HSC.U.uSmileA.value = [ex ? ex.w * Math.min(1, ex.amounts.folds || ex.amounts.smile || 0) : 0, 0, 0, 0];
+    // this customer's own skull, neck and eyelids (headshapes.js), over everything above
+    const F = HSC.headFormOf ? HSC.headFormOf(person) : null;
+    if (HSC.U.uHeadA && F) { HSC.U.uHeadA.value = [F.w, F.h, F.d, F.back]; HSC.U.uHeadB.value = [F.top, F.neck, 0, 0]; }
     const se = (v, a) => {
       if (!ex || !(st.eg[v] > 0)) return 0;
       let t = 0;
@@ -672,12 +688,26 @@
       const d = HSC.morphDelta(x, y, z, m, age, st.scalp[v]);
       P[v * 3] = x + (d ? d[0] : 0) + sd(v, 0) + se(v, 0); P[v * 3 + 1] = y + (d ? d[1] : 0) + sd(v, 1) + se(v, 1); P[v * 3 + 2] = z + (d ? d[2] : 0) + sd(v, 2) + se(v, 2);
       if (d || (shaped && st.sg[v] > 0) || (ex && st.eg[v] > 0)) moved = true;
+      if (F) {
+        // the lids stay clear of the eyeball itself
+        const l = HSC.lidDelta(x, y, z, F);
+        if (l) { const g = smooth(0.3, 0.34, Math.hypot(Math.abs(x) - 0.628, y - 1.624, z - 1.627)); P[v * 3] += l[0] * g; P[v * 3 + 1] += l[1] * g; P[v * 3 + 2] += l[2] * g; }
+        HSC.headWarp(P, v * 3, F);
+        moved = true;
+      }
     }
     const C = st.coarse.pos;
     for (let v = 0; v < C.length / 3; v++) {
       const x = st.coarseBase[v * 3], y = st.coarseBase[v * 3 + 1], z = st.coarseBase[v * 3 + 2];
       const d = HSC.morphDelta(x, y, z, m, age, st.scalpC[v]);
       C[v * 3] = x + (d ? d[0] : 0) + sdC(v, 0); C[v * 3 + 1] = y + (d ? d[1] : 0) + sdC(v, 1); C[v * 3 + 2] = z + (d ? d[2] : 0) + sdC(v, 2);
+      if (F) HSC.headWarp(C, v * 3, F);
+    }
+    // a longer or shorter neck: the whole head sits a little higher or lower in the collar
+    if (F && ctx.vt) {
+      if (st.headY == null) st.headY = ctx.vt.position.y;
+      ctx.vt.position.y = st.headY + 0.03 * F.lift;
+      ctx.vt.updateMatrixWorld(true);
     }
     // normals: the original (artist) normals plus the change the morph makes to the geometric normals
     if (moved) {
@@ -806,7 +836,9 @@
     U.uStyleA.value = ss.A; U.uStyleB.value = ss.B;
     U.uStyleC.value = tp && grp && grp.coarse !== 1 ? [ss.C[0], ss.C[1], ss.C[2], ss.C[3] * grp.coarse] : ss.C;
     const bs = BEARD_STYLE[person.hair.texture];
-    U.uBStyleA.value = bs.A; U.uBStyleB.value = bs.B;
+    U.uBStyleA.value = bs.A;
+    // the beard curls like his hair: 4C coils tighter than 4A, 3A looser than 3C
+    U.uBStyleB.value = tp ? [Math.max(bs.B[0], tp.C[0] * 0.95), Math.max(bs.B[1], tp.C[1] * 0.7), (bs.B[2] + tp.C[2]) / 2, bs.B[3]] : bs.B;
     // grey hair reads silver, pewter or white
     const toneB = { silver: 0.62, pewter: 0.46, white: 0.78 }[person.hair.greyTone] || 0.62;
     U.uGreyA.value = [person.hair.grey, 0, toneB + 0.05 * age, 0];
@@ -921,9 +953,10 @@
   HSC.setDetail = function (f) {
     if (!st.beardMesh || !st.roots) return;
     const k = Math.max(0.3, Math.min(1, f)) * HSC.detail.beardMax;
-    const n = Math.max(1, Math.round(st.roots.count * k));
+    // the lowest tier never draws more than it always has
+    const n = Math.max(1, Math.round((HSC.detail.level === 'potato' ? 14000 : st.roots.count) * k));
     st.beardMesh.geometry.instanceCount = n;
-    st.beardMesh.material.uniforms.uWidth.value = Math.sqrt(st.roots.count / n);
+    st.beardMesh.material.uniforms.uWidth.value = Math.max(0.9, Math.sqrt(14000 / n));
   };
 
   HSC.beardStartFor = (person) => (st.surface ? HSC.beardStart(person, st.surface, st.base) : new Array(8192).fill(0));

@@ -58,6 +58,19 @@
   // the handoff's internal coverage allocation (section 6.2): a registry that breaks it fails validation
   const COVERAGE = { africa: 6, europe: 5, 'west-asia': 4, 'south-asia': 5, 'east-asia': 6, 'north-america': 4, 'latin-america': 4, oceania: 2 };
 
+  // Who comes to each city (owner-directed, 6 November 2026): the city's main group and a strong second group. A city
+  // is never uniform: career-catalog.js blends these with the neutral table. Provisional until sourced and reviewed.
+  const PEOPLE = {
+    lagos: ['west-african', 'east-african'], kinshasa: ['west-african', 'east-african'], nairobi: ['east-african', 'south-asian'], johannesburg: ['east-african', 'north-european'],
+    cairo: ['mena', 'east-african'], casablanca: ['mena', 'mediterranean'], london: ['north-european', 'south-asian'], paris: ['mediterranean', 'mena'],
+    berlin: ['north-european', 'mena'], madrid: ['mediterranean', 'latino'], warsaw: ['north-european', 'mediterranean'], istanbul: ['mena', 'mediterranean'],
+    riyadh: ['mena', 'south-asian'], dubai: ['mena', 'south-asian'], amman: ['mena', 'mediterranean'], delhi: ['south-asian', 'mixed'], mumbai: ['south-asian', 'mixed'],
+    karachi: ['south-asian', 'mena'], dhaka: ['south-asian', 'southeast-asian'], colombo: ['south-asian', 'southeast-asian'], tokyo: ['east-asian', 'southeast-asian'],
+    seoul: ['east-asian', 'southeast-asian'], shanghai: ['east-asian', 'southeast-asian'], jakarta: ['southeast-asian', 'east-asian'], manila: ['southeast-asian', 'east-asian'],
+    bangkok: ['southeast-asian', 'east-asian'], 'new-york': ['mixed', 'latino'], 'los-angeles': ['mixed', 'latino'], toronto: ['mixed', 'south-asian'], montreal: ['mixed', 'mediterranean'],
+    'mexico-city': ['latino', 'indigenous-american'], 'sao-paulo': ['latino', 'mixed'], 'buenos-aires': ['mediterranean', 'latino'], kingston: ['west-african', 'mixed'],
+    sydney: ['mixed', 'pacific-islander'], auckland: ['pacific-islander', 'north-european'],
+  };
   // one city record (CITY-CUSTOMER-VARIABILITY.md section 10). A null table means "use the neutral fallback";
   // every fallback field is low confidence and the record stays in research review until sourced.
   function record(row) {
@@ -67,6 +80,7 @@
       id, group, names, enabled: true,
       geography: 'metro',
       population: null,               // resident community weights: null = the neutral global table
+      people: PEOPLE[id] || null,     // the provisional main and second group (see PEOPLE)
       visitor: { share: 0.12, mix: null }, // bounded visitor share; mix null = neutral world table
       ages: null, styles: null, beards: null, practice: null, tattoo: null, motifs: null, piercing: null, culture: null,
       starter: 'universal',           // starter-set and unlock profile: the universal viability floor
@@ -113,7 +127,7 @@
 
   HSC.CITIES = CITIES;
   HSC.CITIES_VERSION = TABLE_VERSION;
-  HSC.cityRegistry = { TABLE_VERSION, LANGS, COVERAGE, VISITOR_MAX, validateCity, validateRegistry, record };
+  HSC.cityRegistry = { TABLE_VERSION, LANGS, COVERAGE, VISITOR_MAX, PEOPLE, validateCity, validateRegistry, record };
   // the city's name in the player's language (English as the fallback; the stable id if unknown)
   HSC.cityName = (id) => {
     const c = CITIES.find((x) => x.id === id);
