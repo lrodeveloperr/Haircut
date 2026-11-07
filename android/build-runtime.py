@@ -47,6 +47,10 @@ game = replace(game, 'fe===1&&(x=!0,Z())',
                'fe===1&&androidRevealDone()')
 old_next_ad = 'let j=Cc(l);if(j.showInterstitial&&!y&&!(HSC.recentReward&&HSC.recentReward()))try{await $(!0);let ae=await t.showInterstitial("next-customer",{onDisplay:ie});t.lastInterstitialRequestAccepted&&(l=j.adSession),t.sendAnalytics("interstitial_outcome",{opened:ae,nextClick:s.jobId})}catch(ae){}'
 game = replace(game, old_next_ad, '')
+# Android customers have 18 hair colours (people.js HAIR_DARK), the engine's presets only 12. A saved
+# session whose customer has one of the newer colours must still load, not be replaced by a new session.
+game = replace(game, 'e.colour>=0&&e.colour<cc.length',
+               'e.colour>=0&&e.colour<Math.max(cc.length,globalThis.HSC&&HSC.HAIR_DARK?HSC.HAIR_DARK.length:0)')
 (out / 'runtime/game.js').write_text(game)
 
 client = (out / 'runtime/local-preview-client.js').read_text()

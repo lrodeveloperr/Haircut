@@ -13,7 +13,9 @@ const frozen = {
   // re-pinned 5 November 2026 for the result router (plan 3.2) only: reversing android/completion-interstitial.js and
   // its two splice points reproduces the previous approved hash bd68b869... exactly, so the renderer is unchanged.
   // Re-pinned 6 November 2026 with the owner's approval for head form and camera tilt: source/patch21.py only
-  'source/build/runtime/game.js':'3f8fc36c31672de8f7d86cf834b97d8d0c1dd557366ecca78f31e3bef2aa5a62',
+  // Re-pinned 7 November 2026 with the owner's approval for the save check only (android/build-runtime.py): it accepts
+  // Android's 18 hair colours. Reversing that one replacement reproduces the previous approved hash 3f8fc36c... exactly.
+  'source/build/runtime/game.js':'4e70f1db0fe45bba1670c28ae1fee91adac9109d2e0c2ce74d5f4c9eeb0ad2fc',
   'source/customers/wardrobe.js':'02dc5a1e503d9219c41dbd8eb8522685886475c62b500f3b2bfbd780d8a20291',
 };
 for(const [p,expected] of Object.entries(frozen)) assert.equal(hash(p),expected,'owner-approved source must remain byte-identical: '+p);

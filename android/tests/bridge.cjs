@@ -40,7 +40,7 @@ function fakeHost() {
       if(!file.startsWith(build+path.sep)||!fs.existsSync(file))return route.fulfill({status:404,body:''});
       return route.fulfill({path:file,contentType:types[path.extname(file)]||'application/octet-stream'});
     });
-    await ctx.addInitScript(fakeHost);
+    await ctx.addInitScript(fakeHost);await ctx.addInitScript(()=>{try{window.__bootEnvelope=localStorage.getItem('fake-android-envelope');}catch(e){}});
     const page=reviewPage=await ctx.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(120000);
     const boot=async()=>{
@@ -219,10 +219,41 @@ function fakeHost() {
     }
     if(process.env.ANDROID_GUARD_ONLY==='1'||process.env.ANDROID_PLACEMENT_SMOKE==='1'){assert.deepEqual(errors,[]);console.log(`PASS: ${passed} Android zoom/guard and ${process.env.ANDROID_PLACEMENT_SMOKE==='1'?'four-layout placement smoke':'compatibility'} cases with zero page errors.`);return;}
     fs.writeFileSync(placementReport,JSON.stringify(await page.evaluate(()=>window.__placementEvidence||[]),null,2));
-    const saved=await page.evaluate(async()=>{
-      const c=await HSC.youtubeClientPromise;await c.flushProgress();return JSON.stringify(skinFadeStudio.getState().hair);
+    const savedProbe=await page.evaluate(async()=>{
+      const pre=JSON.stringify(skinFadeStudio.getState().hair),st=skinFadeStudio.getState();
+      const c=await HSC.youtubeClientPromise;await c.flushProgress();
+      return{pre,hair:JSON.stringify(skinFadeStudio.getState().hair),status:st.status,job:st.jobId,clip:HSC.view.clipperScreen().visible,stored:localStorage.getItem('fake-android-envelope')};
     });
-    await boot();assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),saved);passed++;
+    const saved=savedProbe.hair;
+    await boot();
+    const reloaded=await page.evaluate(()=>{const st=skinFadeStudio.getState();return{hair:JSON.stringify(st.hair),status:st.status,job:st.jobId,bootEnvelope:__bootEnvelope,nowEnvelope:localStorage.getItem('fake-android-envelope')};});
+    if(reloaded.hair!==saved){
+      // Say which way the mismatch goes, so a rare failure can be diagnosed from one log.
+      const cells=s=>JSON.parse(s),diff=(a,b)=>{const A=cells(a),B=cells(b),d=[];for(let i=0;i<A.length;i++)if(A[i]!==B[i])d.push(i);return d;};
+      const d=diff(reloaded.hair,saved);
+      fs.writeFileSync(path.join(root,'qa/results','android-save-mismatch-envelope-'+process.pid+'.json'),savedProbe.stored||'');
+      console.log('SAVE-MISMATCH',JSON.stringify({cells:d.length,first:d.slice(0,8).map(i=>[i,cells(saved)[i],cells(reloaded.hair)[i]]),changedDuringFlush:diff(savedProbe.pre,saved).length,reloadEqualsPreFlush:reloaded.hair===savedProbe.pre,diskAtReloadEqualsFlushed:reloaded.bootEnvelope===savedProbe.stored,diskChangedAfterBoot:reloaded.nowEnvelope!==reloaded.bootEnvelope,before:{status:savedProbe.status,job:savedProbe.job,clipperVisible:savedProbe.clip,stored:savedProbe.stored?.length},after:{status:reloaded.status,job:reloaded.job}}));
+    }
+    assert.equal(reloaded.hair,saved,'flushed haircut survives a reload');passed++;
+    // Android customers can have six hair colours beyond the engine's 12 presets. A saved customer with
+    // any of them keeps his haircut and place in the queue across a reload (no silent new session).
+    const reference=await page.evaluate(()=>{const st=skinFadeStudio.getState();return{hair:JSON.stringify(st.hair),start:JSON.stringify(st.startHair),job:st.jobId,colours:HSC.HAIR_DARK.length};});
+    assert.notEqual(reference.hair,reference.start,'the colour check needs a haircut in progress');
+    assert.equal(reference.colours,18,'Android customers have 18 hair colours');
+    for(const colour of [12,13,14,15,16,17]){
+      await page.evaluate(c=>{
+        __native.failWrites=true; // keep the page's own exit save from replacing the prepared save
+        const k='fake-android-envelope',v=JSON.parse(localStorage.getItem(k)),s=v.slots['skin-fade-studio-session-v2'];
+        s.look.colour=c;if(s.look.person&&s.look.person.hair)s.look.person.hair.colour=c;
+        localStorage.setItem(k,JSON.stringify(v));
+      },colour);
+      await boot();
+      const after=await page.evaluate(()=>{const st=skinFadeStudio.getState();return{hair:JSON.stringify(st.hair),job:st.jobId,colour:st.look.colour};});
+      assert.equal(after.colour,colour,`hair colour ${colour} is kept`);
+      assert.equal(after.job,reference.job,`hair colour ${colour}: same customer after reload`);
+      assert.equal(after.hair,reference.hair,`hair colour ${colour}: haircut survives a reload`);
+    }
+    passed++;
     // A delayed durable acknowledgement must not block input/event-loop timers.
     assert.deepEqual(await page.evaluate(async()=>{
       __native.delay=250;let timer=false,done=false;
