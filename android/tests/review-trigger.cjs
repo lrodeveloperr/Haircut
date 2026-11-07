@@ -5,7 +5,7 @@ const {chromium}=require('playwright');
 const script=path.resolve(__dirname,'../review.js');
 
 (async()=>{
-  const browser=await chromium.launch({args:['--no-sandbox']});
+  const browser=await chromium.launch({...(process.env.CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.CHROMIUM_EXECUTABLE_PATH}:{}),args:['--no-sandbox']});
   try{
     const page=await browser.newPage();
     await page.setContent('<button class="training-continue" disabled>Next</button>');

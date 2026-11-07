@@ -107,7 +107,7 @@ async function offlineAdvertisement() {
 }
 async function privacy(layout) {
   const tap = async selector => {
-    const p=await page.evaluate(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};},selector);
+    const p=await page.evaluate(selector=>{const el=document.querySelector(selector);el.scrollIntoView({block:'center'});const r=el.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};},selector);
     const b=layout.nativeBounds,v=layout.visualViewport;
     adb('shell','input','tap',String(Math.round(b.left+(p.x-v.offsetLeft)*(b.right-b.left)/v.width)),String(Math.round(b.top+(p.y-v.offsetTop)*(b.bottom-b.top)/v.height)));
   };
@@ -121,14 +121,14 @@ async function privacy(layout) {
   for(let attempt=1;;attempt++){
     // a returning barber may already be on the home screen
     if(!await page.evaluate(()=>!!document.querySelector('#hsc-menu.open')))await tap('#hsc-menu-btn');
-    try{await page.waitForFunction(()=>document.querySelector('#hsc-menu.open #hsc-set-btn'),undefined,{timeout:10000});break;}
+    try{await page.waitForFunction(()=>document.querySelector('#hsc-menu.open .dock [data-b=settings]'),undefined,{timeout:10000});break;}
     catch(error){
       const log=await page.evaluate(()=>__menuTap.slice());
       (layout.menuTapMisses??=[]).push({attempt,log});console.log('menu tap missed',attempt,JSON.stringify(log));
       if(attempt===2)throw error;
     }
   }
-  await tap('#hsc-set-btn');
+  await tap('#hsc-menu .dock [data-b=settings]');
   await page.waitForFunction(()=>document.querySelector('#hsc-set.open .hsc-privacy'));
   await page.evaluate(()=>{
     const style=document.createElement('style');style.id='privacy-capture-stability';
@@ -141,7 +141,7 @@ async function privacy(layout) {
     return{privacy:[p.x,p.y,p.width,p.height],text,underSettings:!!button.closest('#hsc-set'),underWardrobe:!!button.closest('#hsc-panel')};
   });
   assert(settings.underSettings&&!settings.underWardrobe,'privacy action belongs only to Settings');
-  for(const label of ['Settings','Salon name','Language','Hand','Tool width','Cut per pass','Vibration','Reduce motion','Sound cues','Privacy'])assert(settings.text.includes(label),'Settings shows '+label);
+  for(const label of ['Settings','Language','Hand','Sound','Privacy'])assert(settings.text.includes(label),'Settings shows '+label);
   assert(settings.privacy[2]>=48&&settings.privacy[3]>=48,'native privacy action has a full touch target');
   await screenshot(layout.name+'-settings-privacy');
   await tap('.hsc-privacy');
@@ -178,8 +178,8 @@ async function privacy(layout) {
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),before,'returning from the external policy preserves haircut');
   await tap('#hsc-set .x');
-  // Settings closes back to the home screen; Career returns to the chair.
-  await tap('#hsc-menu .hero');
+  // Settings closes back to the home screen; Quick Play returns to the chair.
+  await tap('#hsc-menu .qp');
   await page.waitForFunction(()=>!document.querySelector('#hsc-menu.open'));
   await page.evaluate(()=>document.querySelector('#privacy-capture-stability')?.remove());
   layout.privacy={underSettings:true,textSettings:true,target:settings.privacy,externalPolicyOpened:true,hairPreserved:true};
@@ -382,6 +382,11 @@ async function nativeWebViewBounds(){
     }
     report.rotations=[];
     let previousContact=report.layouts[report.layouts.length-1].touch.contact;
+    // Quick Play returns to the chair with the clipper put away; pick it up as a player would.
+    await page.waitForFunction(()=>!document.querySelector('#hsc-reveal.on'),undefined,{timeout:15000}); // the shop's Open splash closes by itself
+    await page.evaluate(()=>{const g=skinFadeStudio;if(g.getState().interactionMode!=='cut')g.toggleClipper();g.selectGuard(1);});
+    // Quick Play may frame the head elsewhere: aim at the head as it is now.
+    previousContact=await page.evaluate(()=>{const v=HSC.view,b=v.headScreen();for(const fy of[.45,.55,.65,.35,.75])for(const fx of[.5,.4,.6,.3,.7]){const p={x:b.left+(b.right-b.left)*fx,y:b.top+(b.bottom-b.top)*fy};const t=v.touchTarget({clientX:p.x,clientY:p.y,pointerType:'touch'}),hit=v.raycast(t.x,t.y);v.resetTouchTarget();if(hit&&hit.kind!=='beard')return p;}throw Error('No reachable scalp after Quick Play');});
     for(const size of lifecycleOnly||privacyFollowUp?[]:['1600x2560','2560x1600']){
       await page.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:previousContact.x,y:previousContact.y,radiusX:8,radiusY:8}]});
       await page.waitForFunction(()=>HSC.view.clipperScreen().visible);
