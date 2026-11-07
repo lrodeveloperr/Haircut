@@ -6,15 +6,11 @@
 //             in with. A regular asks for his usual.
 //   stars     the finished cut is scored with the engine's own match (patch18): 1 star for any cut, 2 from a
 //             60% match, 3 from 85%. Never a fail.
-//   tips      coins at the reveal: 10 + 5 per star, +5 for a regular, x2 for a VIP. A replay that earns more
-//             stars pays the difference. Coins show in the top bar.
-//   combo     consecutive 3-star cuts raise that customer's tips: x1.2 for the 2nd in a row, x1.5 for the 3rd,
-//             x2 from the 4th (owner-approved item 18). A cut under 3 stars ends the run. A flame tag on the coin
-//             counter shows what the next 3-star cut pays.
-//   x3 tips   a rewarded video on the reveal triples that customer's tips (once per customer).
+//   tips      coins at the reveal: 10 + 5 per star, +5 for a regular, x2 for a VIP.
+//   video     a rewarded video on the result, in every mode, after a hidden random wait, so it can never be predicted (the first
+//             result always has it): two more tips, at least the floor. Quick Play pays nothing else, so its video needs
+//             real work and stops after a few a day. Next without a video watched: interstitial.
 //   undo      a permanent button: each undo of the last stroke is a rewarded video (up to 20 strokes back).
-//   smile     at the reveal the customer smiles in his own ancestry mix of MakeHuman's expression units
-//             (render.js): a polite smile for 1 star, a warm one for 2, a big real smile for 3.
 // No text: icons, stars and numbers only. Every video is optional.
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
@@ -121,16 +117,8 @@
     if (!s || !s.look || !s.look.person || !Array.isArray(s.startHair)) return null;
     if (req.job === s.jobId && req.start === s.startHair) return req.style ? req : null;
     const p = s.look.person;
-    // one practice customer: the next job is ordinary Quick Play again
-    if (practice.job != null && practice.job !== s.jobId) { practice.id = null; practice.job = null; }
     Object.assign(req, { job: s.jobId, start: s.startHair, style: null, target: null, beard: null });
     if (p.first || !HSC.walkIns) return null;
-    // Practice from the lookbook (portfolio contract section 5): Quick Play with the chosen cut as the target;
-    // the first customer it suits asks for it. Practice has no fee, payout, stars, mastery or unlock.
-    if (practice.id && HSC.modes && HSC.modes.current() === 'free') {
-      const want = byId.get(practice.id);
-      if (want && suit(want, p) > 0) { const t = targetFor(want, s.startHair); if (worthCutting(s.startHair, t)) { practice.job = s.jobId; Object.assign(req, { style: want, target: t }); return req; } }
-    }
     // a game mode (modes.js) may decide the request: null for none, or {style, target} / {style, beard}
     const mr = HSC.modes ? HSC.modes.request(s) : undefined;
     if (mr !== undefined) { if (!mr) return null; Object.assign(req, { style: mr.style, target: mr.target || null, beard: mr.beard || null }); return req; }
@@ -164,21 +152,6 @@
     }
     return req;
   };
-  // practise a cut from the lookbook (collection.js): switches to Quick Play; the customer in the chair practises
-  // it if it suits him and he has not been cut yet, otherwise the next customer it suits does. Returns 'now',
-  // 'next' or null. Nothing a practice job does is paid, scored or recorded (portfolio contract 4.1 and 5).
-  const practice = { id: null, job: null };
-  HSC.practise = function (id) {
-    const st = byId.get(id), g = G();
-    if (!st || st.fam === 'trim' || !g || !HSC.modes) return null;
-    practice.id = id; practice.job = null; req.job = null;
-    const s = g.getState(), p = s.look && s.look.person;
-    const now = s.status === 'cutting' && !(s.cutStrokeCount > 0) && p && !p.first && Array.isArray(s.startHair) && suit(st, p) > 0 && worthCutting(s.startHair, targetFor(st, s.startHair));
-    if (HSC.modes.current() !== 'free') HSC.modes.set('free').then(() => { req.job = null; });
-    return now ? 'now' : 'next';
-  };
-  HSC.practising = () => practice.id;
-  HSC.practiceJob = (job) => practice.job != null && practice.job === job;
   // the style a customer asked for on a job (meta.js keeps it as a regular's usual)
   HSC.requestStyleFor = (job) => (req.job === job && req.style && byId.has(req.style.id) ? req.style.id : null);
   // for modes.js: the cut catalogue and its rules
@@ -198,8 +171,6 @@
     const hs = n >= 0.85 ? 3 : n >= 0.6 ? 2 : 1;
     return bs == null ? hs : Math.min(hs, bs); // hair and beard: the job is as good as its weaker half
   }
-  const comboMult = (n) => (n >= 4 ? 2 : n === 3 ? 1.5 : n === 2 ? 1.2 : 1);
-  HSC.combo = { now: () => (M() && M().data ? M().data.combo || 0 : 0), mult: comboMult };
   const tipsFor = (p, stars) => (stars ? (10 + 5 * stars + (p && p.regular ? 5 : 0)) * (p && p.vip ? 2 : 1) : 0);
 
   // ---- coins ----
@@ -223,7 +194,7 @@
       waiting.push([n, cat, key || 'misc:' + Date.now().toString(36) + ':' + (miscKey++)]);
       return;
     }
-    if (EC()) { EC().earn(key || 'misc:' + Date.now().toString(36) + ':' + (miscKey++), cat || 'misc', Math.round(n)).then(() => ui.coinPill(true)); return; }
+    if (EC()) return EC().earn(key || 'misc:' + Date.now().toString(36) + ':' + (miscKey++), cat || 'misc', Math.round(n)).then(() => ui.coinPill(true));
     const d = M() && M().data;
     if (!d) return;
     d.coins = Math.min(99999999, (d.coins || 0) + Math.round(n));
@@ -235,119 +206,79 @@
   function buyItem(price, cat, key) { if (EC() && EC().buyItem) return EC().buyItem(key, cat, price).then((ok) => { ui.coinPill(true); return ok; }); return spendCoins(price, cat, key); }
   HSC.coins = { get: coins, add: addCoins, spend: spendCoins, buyItem };
 
-  // a finished haircut: score it and pay (once per customer; a replay with more stars pays the extra stars)
+  // a finished haircut: score it and pay, once per customer
   const done = HSC.onHaircutDone;
   HSC.onHaircutDone = function (state) {
     try { scoreRound(state); } catch (e) { console.error('customers: scoring failed', e); }
     return done ? done.apply(this, arguments) : undefined;
   };
+  // a job seen a second time (a reveal restored after a reload) pays nothing and is not a second customer
+  let repeat = null;
+  HSC.repeatJob = (job) => repeat === job;
   function scoreRound(s) {
     const d = M() && M().data;
     if (!d || !s) return;
-    // freestyle (modes.js) has no request: no stars, a flat tip, and the combo waits
+    // freestyle (modes.js) has no request: no stars, a flat tip
     const free = !!(HSC.modes && HSC.modes.unscored());
-    const stars = free ? (s.cutStrokeCount > 0 ? 1 : 0) : starsFor(s), p = s.look && s.look.person;
     const last = d.lastRound && d.lastRound.job === s.jobId ? d.lastRound : null;
-    // the economy pays the job (economy.js): fee - cost + tip (stars, regular, VIP, combo; capped)
-    if (EC() && HSC.economy) { econRound(s, d, stars, free, p, last); return finishRound(s, d, stars, free); }
+    if (last) { repeat = s.jobId; return finishRound(s, d, last.stars, free); }
+    // no order (Rescue, Beards): nothing is scored, and the set pay needs real work. The 2 is only a neutral record for Career
+    const judged = !free && !!(HSC.modes && HSC.modes.judged && HSC.modes.judged(s));
+    const stars = free ? (s.cutStrokeCount > 0 ? 1 : 0) : judged ? (HSC.modes.worked(s) ? 2 : 0) : starsFor(s), p = s.look && s.look.person;
+    // the economy pays the job (economy.js): fee - cost + tip (stars, regular, VIP; capped)
+    if (EC() && HSC.economy) { econRound(s, d, stars, free, p, judged); return finishRound(s, d, stars, free); }
     let base = free ? (stars ? 10 : 0) : tipsFor(p, stars);
     if (HSC.modes && stars) base = HSC.modes.tips(base, stars, s);
-    if (!last) {
-      // the combo: this cut extends the run of 3-star cuts or ends it
-      const prev = d.combo || 0;
-      if (!free) d.combo = stars === 3 ? prev + 1 : 0;
-      const mult = !free && stars === 3 ? comboMult(d.combo) : 1, tips = Math.round(base * mult);
-      d.lastRound = { job: s.jobId, stars, tips, paid: tips, tripled: false, prev, mult, free };
-      addCoins(tips);
-    } else if (stars > last.stars) {
-      // a replay that reaches 3 stars carries on the run he had before this customer
-      let mult = last.mult || 1;
-      if (stars === 3 && !free) { d.combo = (last.prev || 0) + 1; mult = comboMult(d.combo); }
-      const tips = Math.round(base * mult), extra = tips - last.paid;
-      Object.assign(last, { stars, tips, mult, paid: last.paid + Math.max(0, extra) });
-      addCoins(Math.max(0, extra) * (last.tripled ? 3 : 1));
-    }
+    d.lastRound = { job: s.jobId, stars, tips: base, paid: base, tripled: false, free };
+    addCoins(base);
     return finishRound(s, d, stars, free);
   }
   // the economy's round: one idempotent transaction per job (career jobs pay inside the career's own commit)
-  function econRound(s, d, stars, free, p, last) {
-    const careerJob = HSC.careerRun && HSC.careerRun.active() && HSC.careerRun.active().job === s.jobId ? HSC.careerRun.active() : null;
+  function econRound(s, d, stars, free, p, judged) {
+    // only the Career chair holds a contract: another mode's job may carry the same number
+    const careerJob = HSC.modes && HSC.modes.current() === 'career' && HSC.careerRun && HSC.careerRun.active() && HSC.careerRun.active().job === s.jobId ? HSC.careerRun.active() : null;
     const mj = HSC.modes ? HSC.modes.econJob(s) : { kind: 'requests' };
     const kind = careerJob ? (careerJob.role === 'showcase' ? 'showcase' : careerJob.mode) : HSC.modes && HSC.modes.current() === 'free' ? 'free' : mj.kind;
-    const valid = s.cutStrokeCount > 0;
-    const prev = d.combo || 0;
-    const combo = free ? 0 : stars === 3 ? prev + 1 : 0;
-    const job = { kind, stars, valid, regular: !!(p && p.regular) || !!(careerJob && careerJob.regular), vip: !!(p && p.vip), combo, rushBonus: mj.rushBonus || 0 };
-    // a demand shift's highlighted mode pays its bonus (never Quick Play, never a replay)
-    if (!last && valid && EC() && EC().demandMatch) job.demandMatch = EC().demandMatch(careerJob ? careerJob.mode : kind);
-    // Quick Play: one thank-you for the first meaningful practice, then nothing (balance model section 3); keyed once
-    if (!last && kind === 'free' && valid && !(HSC.practiceJob && HSC.practiceJob(s.jobId)) && EC()) EC().earn('quick-play-first', 'job', HSC.economy.CONFIG.freestyleOnce).then(() => ui.coinPill(true));
+    const valid = judged ? stars > 0 : s.cutStrokeCount > 0;
+    const job = { kind, stars, judged, valid, regular: !!(p && p.regular) || !!(careerJob && careerJob.regular), vip: !!(p && p.vip), rushBonus: mj.rushBonus || 0 };
+    // a demand shift's highlighted mode pays its bonus (never Quick Play)
+    if (valid && EC() && EC().demandMatch) job.demandMatch = EC().demandMatch(careerJob ? careerJob.mode : kind);
+    // Quick Play: a little for real work, up to a daily limit; keyed, so a reload cannot pay twice
+    const quick = HSC.modes && HSC.modes.current() === 'free' && valid && EC() && HSC.modes.worked(s) && quickDay().n < HSC.economy.CONFIG.quickPlay.perDay ? HSC.economy.CONFIG.quickPlay.pay : 0;
+    if (quick) { const q = quickDay(); q.n++; EC().earn('quick:' + q.day + ':' + q.n, 'job', quick).then(() => ui.coinPill(true)); }
     const key = careerJob ? careerJob.id : 'job:' + (d.firstDay || '') + ':' + s.jobId;
     const pay = HSC.economy.payout(job);
+    const practice = kind === 'free', earned = !valid ? 0 : !practice ? HSC.economy.videoPay(pay.tip) : HSC.modes.worked(s) && practiceDay().n < HSC.economy.CONFIG.video.practicePerDay ? HSC.economy.videoPay(0) : 0;
+    // the roll is made once and saved with the result, so a reload cannot change it
+    const md = d.modes, wait = md && Number.isSafeInteger(md.wait) ? md.wait : 0;
+    // a level-up is a moment of joy: the video is always there for it
+    const levelUp = !practice && HSC.meta && HSC.meta.levelOf(d.cuts + 1) > HSC.meta.levelOf(d.cuts);
+    const video = earned > 0 && (wait <= 0 || levelUp) ? earned : 0;
+    if (md && earned > 0) md.wait = video ? HSC.economy.videoWait(Math.random()) : wait - 1;
     // the result router (ad-router.js): a newly completed customer opens one commercial break; a customer finished
     // with no change from his start (incomplete) opens none
-    if (!last && HSC.adRouter) HSC.adRouter.completed(s.jobId, s.cutStrokeCount > 0 || (Array.isArray(s.hair) && Array.isArray(s.startHair) && s.hair.some((v, i) => v !== s.startHair[i])));
-    if (!last) {
-      if (!free) d.combo = combo; // Freestyle pauses the combo
-      d.lastRound = { job: s.jobId, key, stars, tips: pay.tip, tip: pay.tip, paid: pay.total, lines: pay.lines, tripled: false, prev, mult: HSC.economy.CONFIG.combo[Math.min(combo, 4)] || 1, free: free || kind === 'free' };
-      HSC.lastJob = { key, job, s };
-      if (!careerJob && valid && pay.total) EC().payJob(key, job).then((paid) => {
-        if (paid && paid.bill && d.lastRound && d.lastRound.key === key && !d.lastRound.bill) {
-          d.lastRound.bill = paid.bill; d.lastRound.lines = (d.lastRound.lines || []).concat(paid.bill.lines || []); M().save();
-        }
-        ui.coinPill(true);
-      });
-    } else if (stars > last.stars && valid) {
-      // a replay pays only the positive tip difference, never a second fee
-      const extra = pay.tip - (last.tip || 0);
-      if (extra > 0) { EC().earn(last.key + ':replay:' + stars, 'job', extra).then(() => ui.coinPill(true)); last.paid += extra; last.tip = pay.tip; last.tips = pay.tip; last.lines = pay.lines; }
-      last.stars = stars;
-      if (stars === 3 && !free) d.combo = (last.prev || 0) + 1;
-    }
+    if (HSC.adRouter) HSC.adRouter.completed(s.jobId, s.cutStrokeCount > 0 || (Array.isArray(s.hair) && Array.isArray(s.startHair) && s.hair.some((v, i) => v !== s.startHair[i])));
+    d.lastRound = { job: s.jobId, key, stars, tips: pay.tip, tip: pay.tip, paid: pay.total + quick, lines: pay.lines, tripled: false, free: free || kind === 'free', judged, video };
+    HSC.lastJob = { key, job, s };
+    if (!careerJob && valid && pay.total) EC().payJob(key, job).then((paid) => {
+      if (paid && paid.bill && d.lastRound && d.lastRound.key === key && !d.lastRound.bill) {
+        d.lastRound.bill = paid.bill; d.lastRound.lines = (d.lastRound.lines || []).concat(paid.bill.lines || []); M().save();
+      }
+      ui.coinPill(true);
+    });
   }
   function finishRound(s, d, stars, free) {
     d.lastRound.shownStars = stars;
-    // the lookbook keeps the best stars for each cut asked for
     const r = HSC.requestFor(s);
-    if (!free && r && r.style && byId.has(r.style.id) && r.style.fam !== 'trim' && stars) { d.book = d.book || {}; d.book[r.style.id] = Math.max(d.book[r.style.id] || 0, stars); }
     if (!free && r && r.style && HSC.modes && HSC.modes.noteAsk && !(HSC.modes.recently(r.style))) HSC.modes.noteAsk(r.style);
     ui.round = { job: s.jobId, stars };
     if (HSC.modes) HSC.modes.done(s, stars);
     M().save();
   }
 
-  // ---- the smile at the reveal ----
-  // compared with photos of smiling men of each phenotype: a polite closed smile, a warm smile, a real (Duchenne)
-  // smile with round cheeks, narrowed eyes, deep folds and slightly lowered brows
-  const SMILE = {
-    1: { smile: 0.42, widen: 0.12, cheekUp: 0.3, cheekFull: 0.05, squint: 0.15, folds: 0.3, lipsThin: 0.2 },
-    2: { smile: 0.72, widen: 0.24, cheekUp: 0.65, cheekFull: 0.15, squint: 0.45, lift: 0.05, folds: 0.6, browsDown: 0.1, lipsThin: 0.45 },
-    3: { smile: 1.0, widen: 0.34, cheekUp: 1.0, cheekFull: 0.25, squint: 0.75, lift: 0.08, folds: 1.0, browsDown: 0.2, lipsThin: 0.7 },
-  };
-  // (clearTimeout also clears intervals; the Android build maps it to its lifecycle scheduler, clearInterval it leaves alone)
-  const face = { anim: null, on: false };
-  function smile(p, stars) {
-    if (!HSC.setExpression || !p || !SMILE[stars]) return;
-    const R = HSC.rng(((p.seed >>> 0) ^ 0x51a11e) >>> 0 || 1), k = 0.85 + 0.3 * R.next();
-    const amounts = {};
-    for (const [u, v] of Object.entries(SMILE[stars])) amounts[u] = v * k;
-    clearTimeout(face.anim);
-    const t0 = performance.now();
-    face.on = true;
-    face.anim = setInterval(() => {
-      const t = Math.min(1, (performance.now() - t0) / 650), e = t * t * (3 - 2 * t);
-      HSC.setExpression(p, amounts, e);
-      if (t >= 1) { clearTimeout(face.anim); face.anim = null; }
-    }, 40);
-  }
-  function rest(p) {
-    clearTimeout(face.anim); face.anim = null;
-    if (face.on && p && HSC.setExpression) HSC.setExpression(p, {}, 0);
-    face.on = false;
-  }
-  // keep frames coming while the face moves (the game draws only when something changes)
+  // keep frames coming while coins fly (the game draws only when something changes)
   const clipActive = HSC.clippingsActive;
-  HSC.clippingsActive = () => (compare.frames > 0 && compare.frames--) > 0 || !!face.anim || ui.flying > 0 || (clipActive ? clipActive() : false);
+  HSC.clippingsActive = () => ui.flying > 0 || (clipActive ? clipActive() : false);
 
   // ---- undo: one rewarded video per stroke undone ----
   // the undo button is permanent while there is a stroke to take back: the player watches a video whenever it is
@@ -358,7 +289,6 @@
     if (!g || e.button > 0) return;
     const s = g.getState();
     if (s.status !== 'cutting') return;
-    if (s.interactionMode === 'cut') compareHide(); // the first stroke needs the real hair
     undo.snap = { job: s.jobId, hair: s.hair, beard: s.beard, brow: s.brow };
   }
   function onUp() {
@@ -374,44 +304,10 @@
       ui.undoButton();
     }
   }
-  // compare: the finished cut on the real head, at the angle the barber is working from. A tap turns it on or off; it starts
-  // on the first time a mode is played in a session, and shows each new customer until the first cutting stroke, because
-  // the barber has to see the real hair to cut it. It only changes what is drawn: the haircut, score and save never see it.
-  const compare = { on: false, frames: 0, want: {}, job: null, beat: 0 };
-  const modeNow = () => (HSC.modes ? HSC.modes.current() : 'requests');
-  function compareShow() {
-    const g = G(), s = g && g.getState(), r = s && s.status === 'cutting' ? HSC.requestFor(s) : null, v = HSC.view;
-    if (!r || !v) return false;
-    compare.on = true; compare.frames = 12;
-    if (r.target) v.setHair(r.target);
-    if (r.beard) v.setBeard(r.beard);
-    ui.el.cmp.classList.add('on');
-    return true;
-  }
-  function compareHide() {
-    if (!compare.on) return;
-    compare.on = false; compare.frames = 12; // a few more drawn frames, however slow the device, so the real hair comes back
-    const g = G(), s = g && g.getState(), v = HSC.view;
-    if (s && v) { v.setHair(s.hair); v.setBeard(s.beard); }
-    ui.el.cmp.classList.remove('on');
-  }
-  function compareTap() {
-    if (compare.on) { compare.want[modeNow()] = false; compareHide(); }
-    else { compare.want[modeNow()] = true; compareShow(); }
-  }
-  // the button, a new customer, and keeping the picture on while it is on (a guard change redraws the real hair)
-  function compareTick(s) {
-    const r = s && s.status === 'cutting' ? HSC.requestFor(s) : null;
-    ui.el.cmp.hidden = !r;
-    if (!r) { compareHide(); compare.job = s ? s.jobId : null; return; }
-    if (compare.job !== s.jobId) {
-      compare.job = s.jobId;
-      if (compare.want[modeNow()] !== false && !(s.cutStrokeCount > 0)) compareShow(); else compareHide();
-    } else if (compare.on && ++compare.beat % 5 === 0) compareShow();
-  }
   // a video toward the wishlist: a few coins at the moment the player wants them, a few times a day
-  const wishDay = () => { const md = M().data.modes, day = new Date().toISOString().slice(0, 10); if (!md.wv || md.wv.day !== day) md.wv = { day, n: 0 }; return md.wv; };
+  const wishDay = () => { const md = M().data.modes, day = M().today(); if (!md.wv || md.wv.day !== day) md.wv = { day, n: 0 }; return md.wv; };
   const canWishVideo = () => { const c = HSC.economy && HSC.economy.CONFIG.wishVideo; return !!(c && M() && M().data && M().data.modes && HSC.canVideo && HSC.canVideo() && wishDay().n < c.perDay); };
+  HSC.wishVideo = { state: () => { const c = HSC.economy && HSC.economy.CONFIG.wishVideo; return canWishVideo() ? { coins: c.coins, left: c.perDay - wishDay().n } : null; }, run: () => wishVideo() };
   async function wishVideo() {
     if (!canWishVideo()) return;
     const ok = HSC.watchVideo ? await HSC.watchVideo('wish-coins') : false;
@@ -444,20 +340,22 @@
     }
   }
 
-  // ---- x3 tips ----
+  // ---- the result video ----
+  const quickDay = () => { const md = M().data.modes, day = M().today(); if (!md.qp || md.qp.day !== day) md.qp = { day, n: 0 }; return md.qp; };
+  const practiceDay = () => { const md = M().data.modes, day = M().today(); if (!md.pv || md.pv.day !== day) md.pv = { day, n: 0 }; return md.pv; };
   async function triple() {
     const d = M() && M().data, b = ui.el.x3;
     const last = d && d.lastRound;
-    if (!last || last.tripled || !(last.key ? last.tip : last.paid) || b.disabled) return;
+    if (!last || last.tripled || !(last.key ? last.video : last.paid) || b.disabled) return;
     b.disabled = true;
     const ok = HSC.watchVideo ? await HSC.watchVideo('triple-tips') : false;
     if (ok && d.lastRound === last && !last.tripled) {
       last.tripled = true;
       // the economy triples the disclosed tip only (two more tips; keyed so a repeated callback pays once)
-      const add = EC() && last.key ? 2 * (last.tip || 0) : last.paid * 2;
+      const add = EC() && last.key ? last.video : last.paid * 2;
+      if (last.free) practiceDay().n++;
       if (EC() && last.key) EC().triple(last.key, last.tip || 0).then(() => ui.coinPill(true)); else addCoins(add);
       if (last.key) last.paid += add; // the economy's round shows the running total; the old round multiplies on show
-      ui.coinBurst(add, b);
     } else if (!ok) { HSC.nope && HSC.nope(b); b.disabled = false; }
     ui.scoreView();
   }
@@ -466,14 +364,12 @@
   const STAR = (on) => `<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc83d' : 'none'}" stroke="${INK}"${on ? '' : ' stroke-dasharray="2.6 2.2" opacity=".55"'} stroke-width="2" stroke-linejoin="round"/></svg>`;
   const COIN_OLD = (s = 26) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><circle cx="12" cy="12" r="9.5" fill="#ffc83d" stroke="${INK}" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#c98a12" stroke-width="1.8"/><path d="M10.6 8.6h2.8v6.8" fill="none" stroke="#c98a12" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const COIN = (s = 26) => (HSC.icon ? HSC.icon('coin', s) : COIN_OLD(s)); // the theme's one coin (icons.js)
-  // the combo: a flame with a star in it (the daily streak is a plain flame)
-  const FLAME = (sz = 20) => `<svg viewBox="0 0 24 24" width="${sz}" height="${sz}"><path d="M12 2.2c.6 3.2 3.4 4.6 4.9 7.3 1.6 2.9 1.4 6.6-1 8.9A6.8 6.8 0 0 1 5.4 16c-.9-2.7.1-5.2 1.9-7 .2 1.6.9 2.7 2 3.3-.5-3.8.7-7.4 2.7-10.1z" fill="#ff7a2f" stroke="${INK}" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 11.4l1.1 2.2 2.4.3-1.8 1.7.5 2.4-2.2-1.2-2.2 1.2.5-2.4-1.8-1.7 2.4-.3z" fill="#ffe14d" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
   const UNDO = '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7H15a5 5 0 0 1 0 10H8"/><path d="M11.5 3.5L7.5 7l4 3.5"/></svg>';
   const CSS = `
 #hsc-req,#hsc-undo,#hsc-score{zoom:var(--hsc-s,1);font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color:${INK};-webkit-user-select:none;user-select:none}
 #hsc-req{position:fixed;z-index:20;top:calc(env(safe-area-inset-top) + 72px);left:50%;transform:translateX(-50%);pointer-events:auto;cursor:pointer;
   display:flex;gap:4px;padding:6px;border-radius:22px;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};transition:transform .25s}
-#hsc-req img{width:66px;height:66px;border-radius:15px;display:block;background:radial-gradient(circle at 50% 35%,#fff,#e4d2b4)}
+#hsc-req img{width:88px;height:88px;border-radius:15px;display:block;background:radial-gradient(circle at 50% 35%,#fff,#e4d2b4)}
 #hsc-req::after,#hsc-req::before{content:"";position:absolute;border-radius:50%;background:#fff6e6;border:3px solid ${INK}}
 #hsc-req::after{width:14px;height:14px;left:calc(50% - 6px);bottom:-24px}
 #hsc-req::before{width:8px;height:8px;left:calc(50% + 8px);bottom:-38px}
@@ -481,118 +377,64 @@
 #hsc-req.pop{animation:hsc-reqpop .6s ease-out}
 @keyframes hsc-reqpop{0%{transform:translateX(-50%) scale(.4);opacity:0}70%{transform:translateX(-50%) scale(1.1);opacity:1}100%{transform:translateX(-50%) scale(1)}}
 #hsc-req[hidden],#hsc-undo[hidden],#hsc-score[hidden],#hsc-score [hidden]{display:none}
-body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.hsc-spin #hsc-undo,body.hsc-reveal #hsc-cmp,body.hsc-spin #hsc-cmp{display:none}
-#hsc-cmp{position:fixed;z-index:20;left:max(14px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));width:60px;height:60px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none;zoom:var(--hsc-s,1)}
-#hsc-cmp[hidden]{display:none}
-#hsc-cmp.on{background:linear-gradient(#fff,#bfe3ff)!important;transform:translateY(3px)}
-body.hsc-left #hsc-cmp{left:auto;right:max(14px,env(safe-area-inset-right))}
+body.hsc-reveal #hsc-req,body.hsc-spin #hsc-req,body.hsc-reveal #hsc-undo,body.hsc-spin #hsc-undo{display:none}
 #hsc-undo{position:fixed;z-index:20;width:56px;height:56px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;background:#fff6e6;color:${INK};border:3px solid ${INK};box-shadow:0 3px 0 ${INK};cursor:pointer}
 #hsc-undo:active{transform:translateY(3px);box-shadow:0 1px 0 ${INK}}
 #hsc-undo:disabled{opacity:.6}
 #hsc-undo .hsc-ad,#hsc-score .hsc-ad{position:absolute;right:-8px;bottom:-6px;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#ffb627;color:${INK};border:2.5px solid ${INK}}
 .hsc-coins{pointer-events:auto;position:relative}
-.hsc-combo{position:absolute;right:-10px;bottom:-20px;display:flex;align-items:center;gap:1px;height:28px;padding:0 7px 0 3px;border-radius:14px;background:#fff1d6;border:2.5px solid ${INK};font-weight:900;font-size:15px;color:${INK};white-space:nowrap;animation:hsc-combo 1.4s ease-in-out infinite}
-.hsc-combo[hidden]{display:none}
-@keyframes hsc-combo{50%{transform:scale(1.08)}}
-#hsc-score .tip .hsc-combo{position:static;animation:none;margin-left:4px}
 .hsc-coins svg{flex:none}
 .hsc-coins.bump{animation:hsc-pop .45s ease-out}
 #hsc-score{position:fixed;z-index:21;left:50%;top:calc(env(safe-area-inset-top) + 14px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
-#hsc-score .stars{display:flex;gap:6px}
-#hsc-score .stars svg{width:54px;height:54px;transform:scale(0);animation:hsc-starin .45s cubic-bezier(.3,1.6,.6,1) forwards}
-#hsc-score .stars svg:nth-child(2){width:66px;height:66px;margin-top:-10px;animation-delay:.25s}
+#hsc-score .stars{display:flex;gap:6px;height:46px}
+#hsc-score .stars svg{width:46px;height:46px;transform:scale(0);animation:hsc-starin .45s cubic-bezier(.3,1.6,.6,1) forwards}
+#hsc-score .stars svg:nth-child(2){animation-delay:.25s}
 #hsc-score .stars svg:nth-child(3){animation-delay:.5s}
 @keyframes hsc-starin{to{transform:scale(1)}}
-#hsc-score .row{display:flex;gap:10px;align-items:center}
-#hsc-score .rcpt{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;max-width:300px;direction:ltr}
-#hsc-score .rcpt span{display:flex;align-items:center;gap:3px;height:28px;padding:0 9px 0 5px;border-radius:14px;background:#fff6e6;border:2px solid ${INK};font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;opacity:0;animation:hsc-rcpt .3s ease-out forwards}
-#hsc-score .rcpt span.neg{background:#e9eef6;color:#4a5872}
-#hsc-score .rcpt svg{width:20px;height:20px}
-#hsc-score .cyc{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;direction:ltr}
-#hsc-score .cyc i{width:12px;height:12px;border-radius:50%;background:#fff6e6;border:2px solid ${INK};box-sizing:border-box}
-#hsc-score .cyc i.on{background:#36b83a}
-#hsc-score .cyc b{margin-inline-start:4px}
-#hsc-score .cyc .wv{display:inline-flex;align-items:center;gap:3px;margin-inline-start:6px;padding:3px 8px;border-radius:14px;background:linear-gradient(#ffe682,#ffb21a);border:2px solid ${INK};font:inherit;color:${INK}}
+#hsc-score .tip{position:relative}
+#hsc-score .line{position:absolute;left:calc(100% + 8px);top:6px;white-space:nowrap;display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:15px;background:#10223fcc;color:#fff;font-weight:900;font-size:16px;font-variant-numeric:tabular-nums;direction:ltr}
+#hsc-score .line[hidden]{display:none}
+#hsc-score .line .hsc-ic{width:22px;height:22px}
+#hsc-score .line span{display:flex;align-items:center;gap:3px}
 #hsc-hud .hsc-gap{font-style:normal;font-size:13px;font-weight:800;opacity:.9;margin-inline-start:4px;white-space:nowrap}
 @keyframes hsc-rcpt{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 #hsc-score .tip{display:flex;gap:6px;align-items:center;height:48px;padding:0 14px 0 10px;border-radius:24px;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};font-weight:900;font-size:22px;font-variant-numeric:tabular-nums}
-#hsc-score .x3{pointer-events:auto;position:relative;display:flex;gap:4px;align-items:center;height:52px;padding:0 16px 0 10px;border-radius:26px;background:#ffb627;border:3px solid ${INK};box-shadow:0 4px 0 ${INK};font-weight:900;font-size:24px;color:${INK};cursor:pointer;animation:hsc-rbreathe 1.3s ease-in-out infinite}
+#hsc-score .x3{pointer-events:auto;position:relative;display:flex;gap:4px;align-items:center;height:52px;padding:0 16px 0 10px;border-radius:26px;background:linear-gradient(#a8e4ff,#3aa2f2);border:3px solid ${INK};box-shadow:0 4px 0 ${INK};font-weight:900;font-size:24px;color:${INK};cursor:pointer;animation:hsc-rbreathe 1.3s ease-in-out infinite}
 #hsc-score .x3:disabled{animation:none;opacity:.55;cursor:default}
 #hsc-score .x3:not(:disabled):active{transform:translateY(3px);box-shadow:0 1px 0 ${INK}}
 .hsc-fly{position:fixed;z-index:40;pointer-events:none;transition:transform .7s cubic-bezier(.5,-0.2,.7,1),opacity .7s}
-@media (prefers-reduced-motion:reduce){#hsc-score .stars svg{animation-duration:.01s}#hsc-score .x3,.hsc-combo{animation:none}}
+@media (prefers-reduced-motion:reduce){#hsc-score .stars svg{animation-duration:.01s}#hsc-score .x3{animation:none}}
 `;
+  const TURN = 15, TURNS = 24; // the order's head turns with the customer in steps this small, in degrees
+  const LEVEL = 0; // and it always looks straight ahead, so a beard or a jawline can be read from the front
   const ui = {
-    el: {}, built: false, round: null, flying: 0, shownJob: null,
+    el: {}, built: false, ring: new Map(), touching: false, round: null, flying: 0, shownJob: null,
     build() {
       if (this.built || !document.body) return;
       this.built = true;
       const style = document.createElement('style'); style.textContent = CSS; document.head.appendChild(style);
       const reqEl = document.createElement('div'); reqEl.id = 'hsc-req'; reqEl.hidden = true; reqEl.setAttribute('aria-hidden', 'true');
-      reqEl.innerHTML = '<img alt=""><img alt="">';
+      reqEl.innerHTML = '<img alt="">';
       reqEl.addEventListener('click', () => { reqEl.classList.toggle('big'); clearTimeout(this.bigT); if (reqEl.classList.contains('big')) this.bigT = setTimeout(() => reqEl.classList.remove('big'), 2600); });
       const undoEl = document.createElement('button'); undoEl.id = 'hsc-undo'; undoEl.type = 'button'; undoEl.hidden = true;
       undoEl.setAttribute('aria-label', 'Watch a video to undo the last stroke');
       undoEl.innerHTML = `${HSC.icon ? HSC.icon('undo', 32) : UNDO}<span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}</span>`;
       undoEl.addEventListener('click', doUndo);
-      const cmpEl = document.createElement('button'); cmpEl.id = 'hsc-cmp'; cmpEl.type = 'button'; cmpEl.hidden = true;
-      cmpEl.innerHTML = HSC.icon ? HSC.icon('compare', 34) : '';
-      if (HSC.setSpoken) HSC.setSpoken(cmpEl, 'a_compare'); else cmpEl.setAttribute('aria-label', 'See the finished cut');
-      cmpEl.addEventListener('click', compareTap);
-      this.el.cmp = cmpEl;
       const score = document.createElement('div'); score.id = 'hsc-score'; score.hidden = true;
-      score.innerHTML = `<div class="stars"></div><div class="row"><div class="tip">${COIN(28)}<span></span><div class="hsc-combo" hidden>${FLAME(20)}<b></b></div></div>
-        <button class="x3" type="button" aria-label="Watch a video to triple the tips">${COIN(30)}<span>×3</span><span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}</span></button></div><div class="rcpt"></div>`;
+      score.innerHTML = `<div class="stars"></div><div class="tip">${COIN(30)}<span></span><div class="line" hidden></div></div>
+        <button class="x3" type="button" aria-label="Watch a video to triple the tips">${HSC.icon ? HSC.icon('video', 26) : ''}<span></span>${COIN(24)}</button>`;
       score.querySelector('.x3').addEventListener('click', triple);
-      document.body.append(reqEl, undoEl, cmpEl, score);
-      Object.assign(this.el, { rcpt: score.querySelector('.rcpt'), req: reqEl, undo: undoEl, score, stars: score.querySelector('.stars'), tip: score.querySelector('.tip span'), tipCombo: score.querySelector('.tip .hsc-combo'), x3: score.querySelector('.x3') });
+      document.body.append(reqEl, undoEl, score);
+      Object.assign(this.el, { line: score.querySelector('.line'), req: reqEl, undo: undoEl, score, stars: score.querySelector('.stars'), tip: score.querySelector('.tip span'), x3: score.querySelector('.x3') });
       const scene = document.getElementById('scene') || document;
       scene.addEventListener('pointerdown', onDown, true);
       addEventListener('pointerup', onUp, true);
       addEventListener('pointercancel', onUp, true);
       setInterval(() => this.tick(), 60);
+      addEventListener('pointerdown', () => { this.touching = true; }, true);
+      for (const e of ['pointerup', 'pointercancel']) addEventListener(e, () => { this.touching = false; }, true);
     },
-    coinPill(bump) {
-      const row = document.querySelector('#hsc-hud .hsc-row');
-      if (!row) return;
-      if (!this.el.coins || !this.el.coins.isConnected) {
-        const c = document.createElement('div');
-        c.className = 'hsc-pill hsc-coins';
-        c.setAttribute('aria-label', 'Coins');
-        c.innerHTML = `${COIN(26)}<span></span><div class="hsc-combo" hidden aria-hidden="true">${FLAME(20)}<b></b></div>`;
-        row.appendChild(c);
-        this.el.coins = c;
-      }
-      this.el.coins.querySelector('span').textContent = coins();
-      // the wishlist target: how many coins are still missing, beside the balance
-      const wishT = HSC.econ && HSC.econ.wishes ? HSC.econ.wishes().salon : null, gap = wishT ? wishT.price - coins() : 0;
-      let gapEl = this.el.coins.querySelector('.hsc-gap');
-      if (!gapEl) { gapEl = document.createElement('i'); gapEl.className = 'hsc-gap'; gapEl.setAttribute('aria-hidden', 'true'); this.el.coins.querySelector('span').after(gapEl); }
-      gapEl.hidden = !(gap > 0);
-      if (gap > 0) gapEl.textContent = '♥ −' + (HSC.num ? HSC.num(gap) : gap);
-      // what the next 3-star cut pays while a run of 3-star cuts is going
-      const run = HSC.combo.now(), tag = this.el.coins.querySelector('.hsc-combo');
-      tag.hidden = run < 1;
-      if (run >= 1) tag.querySelector('b').textContent = '×' + comboMult(run + 1);
-      if (bump) { this.el.coins.classList.remove('bump'); void this.el.coins.offsetWidth; this.el.coins.classList.add('bump'); }
-    },
-    coinBurst(n, from) {
-      // coins fly from the button to the coin counter
-      const to = this.el.coins && this.el.coins.getBoundingClientRect(), fr = from.getBoundingClientRect();
-      if (!to || !to.width) return;
-      const k = Math.min(10, 3 + Math.floor(n / 20));
-      for (let i = 0; i < k; i++) {
-        const c = document.createElement('div');
-        c.className = 'hsc-fly';
-        c.innerHTML = COIN(26);
-        c.style.left = fr.left + fr.width / 2 - 13 + (i % 3 - 1) * 10 + 'px';
-        c.style.top = fr.top + fr.height / 2 - 13 + 'px';
-        document.body.appendChild(c);
-        this.flying++;
-        setTimeout(() => { c.style.transform = `translate(${to.left + to.width / 2 - (fr.left + fr.width / 2)}px,${to.top + to.height / 2 - (fr.top + fr.height / 2)}px) scale(.7)`; c.style.opacity = '.2'; }, 40 + i * 60);
-        setTimeout(() => { c.remove(); this.flying--; }, 900 + i * 60);
-      }
-    },
+    coinPill() {},
     undoButton() {
       const g = G(), b = this.el.undo;
       if (!g || !b) return;
@@ -608,34 +450,48 @@ body.hsc-left #hsc-cmp{left:auto;right:max(14px,env(safe-area-inset-right))}
       const x = lr && lr.width ? lr.left : r ? r.left : 12, y = Math.max(r ? r.bottom : 0, lr ? lr.bottom : 0) + 14;
       Object.assign(b.style, { left: x / S + 'px', top: y / S + 'px' });
     },
+    // the order's head at one angle, drawn once per customer
+    reqPic(s, r, yaw) {
+      const v = HSC.view;
+      if (this.ring.has(yaw)) return this.ring.get(yaw);
+      let url = null;
+      try {
+        if (r.beard) v.setBeard(r.beard);
+        url = v.thumbnail(r.target || s.startHair, yaw * TURN, LEVEL, { size: 160, headOnly: true });
+      } catch (e) { console.error('customers: request picture failed', e); }
+      finally { if (r.beard) v.setBeard(s.beard); }
+      if (url) this.ring.set(yaw, url);
+      return url;
+    },
     request(s) {
       const r = HSC.requestFor(s), el = this.el.req;
       if (!r) { el.hidden = true; return; }
-      const v = HSC.view;
-      if (this.reqKey !== r.job + ':' + r.style.id) {
-        this.reqKey = r.job + ':' + r.style.id;
-        let a = null, b = null;
-        try {
-          // his own head with the cut he wants: from the side and from the back
-          if (r.beard) {
-            a = HSC.portrait(s.look.person, r.target || s.hair, r.beard, 160, 160);
-            b = HSC.portrait(s.look.person, r.target || s.hair, r.beard, 105, 160);
-          } else {
-            a = v.thumbnail(r.target, 110, 4, { size: 160, headOnly: true });
-            b = v.thumbnail(r.target, 10, 6, { size: 160, headOnly: true });
-          }
-        } catch (e) { console.error('customers: request picture failed', e); }
-        if (!a || !b) { el.hidden = true; this.reqKey = null; return; }
-        const imgs = el.querySelectorAll('img');
-        imgs[0].src = a; imgs[1].src = b;
-        el.hidden = false;
+      // one head with the cut he wants, always at the angle the barber is looking from
+      const yaw = ((Math.round(s.cameraYawDeg / TURN) % TURNS) + TURNS) % TURNS, fresh = this.reqKey !== r.job + ':' + r.style.id;
+      if (fresh) { this.reqKey = r.job + ':' + r.style.id; this.ring = new Map(); this.reqAt = null; }
+      if (this.reqAt !== yaw) {
+        const url = this.reqPic(s, r, yaw);
+        if (!url) { el.hidden = true; this.reqKey = null; return; }
+        el.querySelector('img').src = url;
+        this.reqAt = yaw;
+      }
+      el.hidden = false;
+      if (fresh) {
         el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
         el.classList.add('big'); clearTimeout(this.bigT); this.bigT = setTimeout(() => el.classList.remove('big'), 2600);
-      } else el.hidden = false;
+      }
+      // the other angles fill in quietly, nearest first, never under a finger, so turning the customer stays smooth
+      const now = performance.now();
+      if (!this.touching && now - (this.reqFill || 0) > 220) {
+        for (let d = 1; d <= TURNS / 2; d++) {
+          const near = [(yaw + d) % TURNS, (yaw - d + TURNS) % TURNS].find((n) => !this.ring.has(n));
+          if (near != null) { this.reqFill = now; this.reqPic(s, r, near); break; }
+        }
+      }
       // just below the top buttons (the coins and streak sit in that row)
       const row = document.querySelector('#hsc-hud .hsc-row'), top = document.querySelector('.ui .top'), S = HSC.S || 1;
       const b = Math.max(row ? row.getBoundingClientRect().bottom : 0, top ? top.getBoundingClientRect().bottom : 0);
-      if (b > 0) el.style.top = (b + 10) / S + 'px';
+      if (b > 0) el.style.top = (b + (document.querySelector('#hsc-rush.on') ? 22 : 10)) / S + 'px'; // clear of the Rush clock
     },
     scoreView() {
       const d = M() && M().data, last = d && d.lastRound, s = G() && G().getState();
@@ -644,35 +500,28 @@ body.hsc-left #hsc-cmp{left:auto;right:max(14px,env(safe-area-inset-right))}
       if (!show) return;
       const stars = last.shownStars || last.stars;
       const key = last.job + ':' + stars;
-      if (this.starKey !== key + ':' + !!last.free) {
-        this.starKey = key + ':' + !!last.free;
-        this.el.stars.innerHTML = last.free ? '' : [1, 2, 3].map((n) => STAR(n <= stars)).join('');
+      const plain = !!(last.free || last.judged); // no order to score: no stars, the coins and video stay in their place
+      if (this.starKey !== key + ':' + plain) {
+        this.starKey = key + ':' + plain;
+        this.el.stars.innerHTML = plain ? '' : [1, 2, 3].map((n) => STAR(n <= stars)).join('');
       }
-      this.el.tip.textContent = '+' + (last.key ? last.paid : last.paid * (last.tripled ? 3 : 1));
-      const ct = this.el.tipCombo, m = last.mult || 1;
-      ct.hidden = !(m > 1);
-      if (m > 1) ct.querySelector('b').textContent = '×' + m;
-      // the exact breakdown (economy): fee, costs, tip and bonuses, each with its sign
-      const rk = last.key && last.lines ? last.job + ':' + last.paid + ':' + last.tripled + ':' + (last.bill ? last.bill.key : '') : '';
-      if (this.el.rcpt.dataset.k !== rk) {
-        this.el.rcpt.dataset.k = rk;
-        const IC = { fee: 'salon', rush: 'rush', demand: 'flame', triple: 'video' };
-        const lines = rk ? last.lines.concat(last.tripled ? [['triple', 2 * (last.tip || 0)]] : []) : [];
-        this.el.rcpt.innerHTML = lines.filter((l) => l[1]).map(([k, v], i) => `<span class="${v < 0 ? 'neg' : ''}" style="animation-delay:${0.6 + i * 0.08}s">${k === 'tip' ? STAR(true) : IC[k] && HSC.icon ? HSC.icon(IC[k], 20) : ''}${v > 0 ? '+' : '−'}${Math.abs(v)}</span>`).join('');
+      this.el.tip.textContent = '+' + ((last.key ? last.paid : last.paid * (last.tripled ? 3 : 1)) + (last.mile || 0));
+      // one coin number: the job, plus any milestone or level coins it brought
+      const mile = EC() && EC().takeMilestones ? EC().takeMilestones() : 0;
+      if (mile) last.mile = (last.mile || 0) + mile;
+      // the shop bill, only on the job that charges it
+      const lk = String(last.bill ? last.bill.amount : 0);
+      if (this.el.line.dataset.k !== lk) {
+        this.el.line.dataset.k = lk;
+        this.el.line.innerHTML = last.bill ? `${HSC.icon ? HSC.icon('salon', 22) : ''}<span>−${last.bill.amount}</span>` : '';
+        this.el.line.hidden = !last.bill;
       }
-      // the operating cycle: five dots to the next bill, and the wishlist gap (friction contract section 5)
-      const bl = EC() && EC().bill ? EC().bill() : null;
-      if (bl) {
-        let cy = this.el.score.querySelector('.cyc');
-        if (!cy) { cy = document.createElement('div'); cy.className = 'cyc'; this.el.rcpt.after(cy); cy.addEventListener('click', (e) => { if (e.target.closest('.wv')) wishVideo(); }); }
-        const doneN = bl.sponsored != null ? 5 - bl.sponsored : 5 - bl.inJobs, wish = EC().wishes ? EC().wishes().salon : null, gap = wish ? wish.price - coins() : 0;
-        cy.setAttribute('role', 'img');
-        cy.setAttribute('aria-label', t2('a_bill').replace('{n}', bl.sponsored != null ? bl.sponsored : bl.inJobs).replace('{c}', bl.amount));
-        cy.innerHTML = [0, 1, 2, 3, 4].map((i) => `<i class="${i < doneN ? 'on' : ''}"></i>`).join('') + `<b>−${bl.amount}</b>` + (gap > 0 ? `<b>♥ −${HSC.num ? HSC.num(gap) : gap}</b>` : '') + (gap > 0 && canWishVideo() ? `<button class="wv" type="button" aria-label="${t2('a_wishvid')}">${HSC.AD_ICON ? HSC.AD_ICON(18) : ''}<span>+${HSC.economy.CONFIG.wishVideo.coins}</span></button>` : '');
-      }
-      const canX = !last.tripled && (last.key ? last.tip > 0 : last.paid > 0) && !!(HSC.canVideo && HSC.canVideo());
-      this.el.x3.hidden = !canX && !last.tripled;
-      this.el.x3.disabled = !canX;
+      const canX = !last.tripled && (last.key ? last.video > 0 : last.paid > 0) && !!(HSC.canVideo && HSC.canVideo());
+      // nothing moves between modes: what does not apply keeps its place empty
+      this.el.tip.parentNode.style.visibility = last.paid || last.mile ? '' : 'hidden';
+      this.el.x3.style.visibility = canX ? '' : 'hidden';
+      this.el.x3.hidden = false;
+      if (canX) this.el.x3.querySelector('span').textContent = '+' + (last.key ? last.video : 2 * last.paid);
     },
     tick() {
       const g = G();
@@ -680,21 +529,11 @@ body.hsc-left #hsc-cmp{left:auto;right:max(14px,env(safe-area-inset-right))}
       const s = g.getState();
       this.coinPill(false);
       if (s.status === 'cutting') {
-        if (face.on) rest(s.look && s.look.person);
         this.request(s);
         if (undo.job !== s.jobId) { undo.job = s.jobId; undo.stack = []; }
-        if (this.lastStatus === 'reveal') undo.stack = []; // a replay starts the haircut again
         this.shownJob = null;
       } else this.el.req.hidden = true;
       this.undoButton();
-      { const g = G(); compareTick(g && g.getState()); }
-      // the smile starts with the reveal spin: the camera passes his face half-way round (it ends behind him)
-      const revealing = s.status === 'reveal';
-      if (revealing && this.shownJob !== s.jobId + ':' + s.cutStrokeCount) {
-        this.shownJob = s.jobId + ':' + s.cutStrokeCount;
-        const last = M().data.lastRound;
-        if (last && last.job === s.jobId) smile(s.look && s.look.person, last.shownStars || last.stars);
-      }
       this.scoreView();
       this.lastStatus = s.status;
     },

@@ -500,7 +500,7 @@
     return R;
   }
   function disposeScene(s) { s.traverse((o) => { if (o.geometry) o.geometry.dispose(); const ms = o.material ? [].concat(o.material) : []; for (const m of ms) { for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose(); m.dispose(); } }); }
-  function drop() { for (const v of cache.values()) disposeScene(v.scene); cache.clear(); if (R) { R.dispose(); R = null; } envTex = null; }
+  function drop() { for (const v of cache.values()) disposeScene(v.scene); cache.clear(); if (R) { R.dispose(); R = null; } envTex = null; backdrop = null; }
   function sceneFor(parts, info) {
     const key = JSON.stringify([parts, info.name, info.year, info.shadows]);
     if (cache.has(key)) { const v = cache.get(key); cache.delete(key); cache.set(key, v); return v; }
@@ -558,5 +558,84 @@
     thumbs.set(k, url);
     return url;
   }
-  HSC.shop3d = { SLOTS, PARTS, OPTIONS, REGIONS, VIEWS, render, thumb, nameCanvas, drop, ok: () => { try { renderer(); return true; } catch (e) { return false; } } };
+  // ---- the store's product shots: a clipper or a gown from its design, lit like the shop, on a studio backdrop ----
+  const shots = new Map();
+  let backdrop = null;
+  function studio() {
+    if (backdrop) return backdrop;
+    const c = document.createElement('canvas'); c.width = c.height = 256;
+    const x = c.getContext('2d'), g = x.createRadialGradient(128, 104, 10, 128, 128, 190);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.55, '#e4f1fb'); g.addColorStop(1, '#a9cdf0');
+    x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+    backdrop = new THREE.CanvasTexture(c); backdrop.colorSpace = THREE.SRGBColorSpace;
+    return backdrop;
+  }
+  function pattern(name, a, b, rep) {
+    const c = document.createElement('canvas'); c.width = c.height = 256;
+    HSC.drawPattern(c.getContext('2d'), 256, name, a, b, 11);
+    return tex(c, rep);
+  }
+  function clipperShot(p, C) {
+    const hex = (id) => C.colourHex.get(id) || '#888888', fin = C.finishes.get(p.finish) || C.finishes.get('chrome');
+    const g = new THREE.Group(), W1 = 0.03, W2 = 0.023, H = 0.17, s = new THREE.Shape();
+    s.moveTo(-W2, 0); s.lineTo(W2, 0); s.quadraticCurveTo(W2 + 0.006, 0.01, W2 + 0.005, 0.03); s.lineTo(W1, H - 0.012); s.quadraticCurveTo(W1, H, W1 - 0.012, H);
+    s.lineTo(-W1 + 0.012, H); s.quadraticCurveTo(-W1, H, -W1, H - 0.012); s.lineTo(-W2 - 0.005, 0.03); s.quadraticCurveTo(-W2 - 0.006, 0.01, -W2, 0);
+    const geo = new THREE.ExtrudeGeometry(s, { depth: 0.03, bevelEnabled: true, bevelThickness: 0.011, bevelSize: 0.009, bevelSegments: 6, curveSegments: 14 });
+    geo.translate(0, 0, -0.015);
+    const pos = geo.attributes.position, uv = geo.attributes.uv; for (let i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) + 0.04) / 0.08, pos.getY(i) / H);
+    g.add(mesh(geo, new THREE.MeshPhysicalMaterial({ map: pattern(p.pattern, hex(p.body), hex(p.accent), [1, 2]), roughness: 0.34, clearcoat: 1, clearcoatRoughness: 0.18 })));
+    const metal = (c) => new THREE.MeshStandardMaterial({ color: c, metalness: Math.max(0.6, fin.metal), roughness: Math.min(0.4, fin.rough) });
+    const head = mesh(rbox(0.074, 0.026, 0.05, 0.008), metal(fin.light)); head.position.set(0, H + 0.02, 0); g.add(head);
+    const base = mesh(rbox(0.078, 0.009, 0.016, 0.003), metal(fin.dark)); base.position.set(0, H + 0.036, 0.008); g.add(base);
+    for (let i = 0; i < 19; i++) { const t = mesh(new THREE.BoxGeometry(0.0022, 0.01, 0.006), metal(fin.light)); t.position.set(-0.036 + i * 0.004, H + 0.045, 0.01); g.add(t); }
+    const acc = new THREE.MeshPhysicalMaterial({ color: hex(p.accent), roughness: 0.3, clearcoat: 1 });
+    const sw = mesh(rbox(0.018, 0.036, 0.012, 0.006), acc); sw.position.set(0, 0.112, 0.029); g.add(sw);
+    for (const sd of [-1, 1]) { const gr = mesh(rbox(0.008, 0.09, 0.006, 0.003), acc); gr.position.set(sd * 0.03, 0.08, 0.024); g.add(gr); }
+    g.rotation.set(-0.12, -0.5, -0.32);
+    return g;
+  }
+  // the gown as it is in the game (gown.js), on a plain form, turned to show its neck and closure
+  const made = new WeakMap();
+  function gownGeo(g) {
+    if (made.has(g)) return made.get(g);
+    const o = new THREE.BufferGeometry();
+    o.setAttribute('position', new THREE.BufferAttribute(g.pos, 3)); o.setAttribute('uv', new THREE.BufferAttribute(g.uv, 2)); o.setIndex(g.ix); o.computeVertexNormals();
+    o.userData.keep = true; made.set(g, o);
+    return o;
+  }
+  const PART = { paper: ['#f6f3ec', 0, 0.88], metal: ['#aab1b9', 0.6, 0.34], dark: ['#17191d', 0, 0.42], loop: ['#c9ccd0', 0, 0.95] };
+  function gownShot(d, C) {
+    const p = d.parts, hex = (id) => C.colourHex.get(id) || '#888888', s = HSC.gownShape(HSC.gownCut(d)), g = new THREE.Group();
+    const tall = p.pattern === 'yoke' || p.pattern === 'fade';
+    const std = (c, metal, rough) => new THREE.MeshStandardMaterial({ color: c, metalness: metal, roughness: rough, side: THREE.DoubleSide });
+    const cloth = new THREE.MeshStandardMaterial({ map: pattern(p.pattern, hex(p.main), hex(p.second), tall ? [6, 1] : [6, 1.4]), roughness: 0.62, side: THREE.DoubleSide });
+    g.add(new THREE.Mesh(gownGeo(s.cloth), cloth));
+    g.add(new THREE.Mesh(gownGeo(s.band), std(s.colour === 'main' ? hex(p.main) : hex(p.collar), 0, s.tex === 'terry' ? 0.96 : s.tex === 'smooth' ? 0.42 : 0.62)));
+    for (const x of s.parts) { const k = PART[x.kind], c = x.kind === 'self' ? hex(p.main) : x.kind === 'trim' ? hex(p.collar) : k[0]; g.add(new THREE.Mesh(gownGeo(x.grid), std(c, k ? k[1] : 0, k ? k[2] : 0.6))); }
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.25, 1.1, 40), std('#8e99a6', 0, 0.7));
+    neck.position.set(0, -0.72, -0.35); g.add(neck);
+    g.rotation.set(0.1, Math.PI - 0.55, 0);
+    g.scale.setScalar(0.2);
+    return g;
+  }
+  function item(d, size = 128) {
+    const k = d.key + ':' + size;
+    if (shots.has(k)) { const v = shots.get(k); shots.delete(k); shots.set(k, v); return v; }
+    const r = renderer(), C = HSC.catalog, scene = new THREE.Scene(); scene.environment = envTex; scene.environmentIntensity = 0.85; scene.background = studio();
+    const o = d.tool === 'clipper' ? clipperShot(d.parts, C) : gownShot(d, C);
+    scene.add(o);
+    scene.add(new THREE.HemisphereLight('#ffffff', '#99aabb', 0.7));
+    const dl = new THREE.DirectionalLight('#fff4e6', 2); dl.position.set(-1.2, 2.4, 2); scene.add(dl);
+    const box = new THREE.Box3().setFromObject(o), c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3()), R0 = Math.max(s.x, s.y);
+    const cam = new THREE.PerspectiveCamera(28, 1, 0.01, 20), dist = (R0 * 0.6) / Math.tan(THREE.MathUtils.degToRad(14));
+    cam.position.set(c.x, c.y + dist * 0.08, c.z + dist); cam.lookAt(c); cam.updateMatrixWorld(true);
+    r.setSize(size, size, false); r.render(scene, cam);
+    const url = r.domElement.toDataURL('image/jpeg', 0.88);
+    scene.background = null;
+    scene.traverse((x) => { if (x.geometry && !x.geometry.userData.keep) x.geometry.dispose(); if (x.material) { if (x.material.map) x.material.map.dispose(); x.material.dispose(); } });
+    shots.set(k, url);
+    while (shots.size > 300) shots.delete(shots.keys().next().value);
+    return url;
+  }
+  HSC.shop3d = { SLOTS, PARTS, OPTIONS, REGIONS, VIEWS, render, thumb, item, nameCanvas, drop, ok: () => { try { renderer(); return true; } catch (e) { return false; } } };
 })(globalThis.HSC || (globalThis.HSC = {}));

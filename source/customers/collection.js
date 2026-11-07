@@ -1,215 +1,134 @@
 // ---------------------------------------------------------------------------------------------
-// Android only (buildall.sh, HEAD_SHAPES=1; owner-approved items 14 and 15, 5 November 2026): two collections in
-// the menu.
+// Android only (buildall.sh, HEAD_SHAPES=1; owner decision 6 November 2026): the Collection.
 //
-//   lookbook  every cut customers ask for (requests.js), drawn on one model head. A cut you have not done yet is a
-//             faded grey picture; it colours in once you have done it, with its best stars under it and a gold frame
-//             for 3 stars. Tapping a cut practises it: the customer in the chair asks for it if it suits him and
-//             he has not been cut yet, otherwise the next customer it suits does.
-//   album     your regulars, each with his last cut, a heart and his visit count.
-// No text: pictures, stars, hearts and numbers only.
+// The customers the barber has really worked with, newest first, and nothing else: a customer appears only once he
+// has been cut. There are no placeholders and no totals, because a list of what is still to come would make the game
+// look scripted. Each entry keeps the before and after, the stars, the mode and the city; someone who comes back
+// moves to the top with his visit count. Every mode counts. The latest 24 are kept, in their own save.
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
   'use strict';
   if (!HSC.PHENOTYPES) return;
-  const INK = '#10223f';
+  const KEY = 'skin-fade-studio-customers-v1', MAX = 24, W = 64, H = 32;
+  const K = '#10223f';
   const M = () => HSC.meta;
-  const CLOSE = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
-  // an open book of cuts, and a photo album with a heart
-  const BOOK = `<svg viewBox="0 0 24 24" width="40" height="40"><path d="M2.5 5.5c3-1.4 6.3-1.3 9.5.8v13.4c-3.2-2-6.5-2.2-9.5-.8z" fill="#fff" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/><path d="M21.5 5.5c-3-1.4-6.3-1.3-9.5.8v13.4c3.2-2 6.5-2.2 9.5-.8z" fill="#fff" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 12.6c0-3 1.1-4.6 2.6-4.6s2.6 1.6 2.6 4.6" fill="#5a3b1f"/><path d="M5 12.8h5.2" stroke="#c3a789" stroke-width="1.4"/><path d="M14 12.6c0-3 1.1-4.6 2.6-4.6s2.6 1.6 2.6 4.6" fill="#5a3b1f" opacity=".25"/><path d="M14 12.8h5.2" stroke="#c3a789" stroke-width="1.4" opacity=".4"/></svg>`;
-  const ALBUM = `<svg viewBox="0 0 24 24" width="40" height="40"><rect x="3.5" y="2.8" width="17" height="18.4" rx="2.4" fill="#4a90d9" stroke="${INK}" stroke-width="1.8"/><rect x="6.5" y="5.6" width="11" height="9" rx="1.6" fill="#fff6e6" stroke="${INK}" stroke-width="1.5"/><circle cx="12" cy="9" r="1.9" fill="#c99a76"/><path d="M8.6 14.6c.5-2 1.8-3 3.4-3s2.9 1 3.4 3z" fill="#c99a76"/><path d="M12 19.6s-3.2-1.9-3.2-3.9a1.6 1.6 0 0 1 3.2-.6 1.6 1.6 0 0 1 3.2.6c0 2-3.2 3.9-3.2 3.9z" fill="#ff5d73" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
-  const STAR = (on, s = 16) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc83d' : 'none'}" stroke="${INK}"${on ? '' : ' stroke-dasharray="2.6 2.2" opacity=".55"'} stroke-width="2.2" stroke-linejoin="round"/></svg>`;
-  const HEART = (s = 22) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><path d="M12 20.5S3 15 3 8.8A4.6 4.6 0 0 1 12 6.6a4.6 4.6 0 0 1 9 2.2C21 15 12 20.5 12 20.5z" fill="#ff5d73" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/></svg>`;
-  // "the next customer": a person with an arrow, shown on a cut waiting to be practised
-  const NEXT = `<svg viewBox="0 0 24 24" width="22" height="22"><circle cx="9" cy="8" r="3.4" fill="#e9c9a8" stroke="${INK}" stroke-width="1.7"/><path d="M2.8 20c0-4 2.8-6 6.2-6s6.2 2 6.2 6z" fill="#4a90d9" stroke="${INK}" stroke-width="1.7" stroke-linejoin="round"/><path d="M15.5 9.5h5.5m-2.3-2.6l2.6 2.6-2.6 2.6" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const t = (k) => (HSC.t ? HSC.t(k) : k);
+  const I = (n, s) => (HSC.icon ? HSC.icon(n, s) : '');
+  const BTOP = () => (HSC.BEARD_MM ? HSC.BEARD_MM.length - 1 : 16);
+  const MODE_WORD = { career: 'career', requests: 'orders', free: 'quick_play', fix: 'rescue', beard: 'beards', rush: 'rush' };
+  const STAR = (on) => `<svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc21a' : 'none'}" stroke="${on ? K : '#9fb0c4'}" stroke-width="2.4" stroke-linejoin="round"/></svg>`;
 
+  // ---- a picture's worth of hair, small: each 128x64 grid as 64x32 cells of 3 bits ----
+  function encode(grid, top) {
+    if (!Array.isArray(grid) || grid.length !== 8192) return null;
+    const bits = new Uint8Array(Math.ceil(W * H * 3 / 8));
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = 2 * y * 128 + 2 * x, m = (grid[i] + grid[i + 1] + grid[i + 128] + grid[i + 129]) / 4;
+      const q = Math.max(0, Math.min(7, Math.round(top > 7 ? m * 7 / top : m)));
+      const b = (y * W + x) * 3;
+      for (let k = 0; k < 3; k++) if (q & (1 << k)) bits[(b + k) >> 3] |= 1 << ((b + k) & 7);
+    }
+    let bin = '';
+    for (const v of bits) bin += String.fromCharCode(v);
+    return btoa(bin);
+  }
+  function decode(str, top) {
+    if (typeof str !== 'string') return null;
+    let bin;
+    try { bin = atob(str); } catch (e) { return null; }
+    if (bin.length !== Math.ceil(W * H * 3 / 8)) return null;
+    const out = new Array(8192);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const b = (y * W + x) * 3;
+      let q = 0;
+      for (let k = 0; k < 3; k++) if (bin.charCodeAt((b + k) >> 3) & (1 << ((b + k) & 7))) q |= 1 << k;
+      const v = top > 7 ? Math.round(q * top / 7) : q, i = 2 * y * 128 + 2 * x;
+      out[i] = out[i + 1] = out[i + 128] = out[i + 129] = v;
+    }
+    return out;
+  }
+
+  // ---- the list ----
+  let list = [], client = null;
+  const valid = (c) => !!c && typeof c === 'object' && !!HSC.validPerson && HSC.validPerson(c.p) && Number.isSafeInteger(c.job) && typeof c.bh === 'string' && typeof c.ah === 'string' && Number.isSafeInteger(c.n) && c.n >= 1;
+  const save = () => { if (client && client.saveProgress) client.saveProgress(KEY, { v: 1, list }).catch(() => {}); };
+  // one finished customer: a retry updates his entry, someone coming back moves to the top with one more visit
+  function record(s, city) {
+    const p = s.look && s.look.person, d = M() && M().data, last = d && d.lastRound;
+    if (!p || !(s.cutStrokeCount > 0) || !last || last.job !== s.jobId) return;
+    const old = list.find((c) => c.p.seed === p.seed), again = !!(old && old.job === s.jobId);
+    const req = HSC.requestFor ? HSC.requestFor(s) : null, top = BTOP();
+    const rec = { job: s.jobId, p, n: old ? old.n + (again ? 0 : 1) : 1, stars: last.free || last.judged ? 0 : last.stars | 0, mode: HSC.modes ? HSC.modes.current() : 'requests',
+      city: city || null, style: req && req.style ? req.style.id : null, bh: encode(s.startHair, 5), ah: encode(s.hair, 5), bb: encode(s.startBeard, top), ab: encode(s.beard, top) };
+    if (!rec.bh || !rec.ah) return;
+    list = [rec].concat(list.filter((c) => c !== old)).slice(0, MAX);
+    save();
+  }
+  const done = HSC.onHaircutDone;
+  HSC.onHaircutDone = function (state) {
+    // the contract's city, before the career moves on to the next one
+    const a = HSC.modes && HSC.modes.current() === 'career' && HSC.careerRun ? HSC.careerRun.active() : null, city = a && a.job === state.jobId ? a.city : null;
+    const r = done ? done.apply(this, arguments) : undefined;
+    try { record(state, city); } catch (e) { console.error('customers: collection failed', e); }
+    return r;
+  };
+
+  // ---- the screen ----
   const CSS = `
-#hsc-book-btn svg,#hsc-album-btn svg{width:40px;height:40px}
-.hsc-coll-panel{position:fixed;inset:0;z-index:30;display:none;background:#0d3f86b8;font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color:${INK};touch-action:manipulation;zoom:var(--hsc-s,1)}
-.hsc-coll-panel.open{display:flex;align-items:flex-end;justify-content:center}
-.hsc-coll-panel .sheet{position:relative;width:min(100%,600px);max-height:92%;display:flex;flex-direction:column;gap:12px;background:#fff6e6;border:3px solid ${INK};border-bottom:0;border-radius:26px 26px 0 0;box-shadow:0 -4px 0 ${INK};padding:14px max(14px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
-@media (orientation:landscape){.hsc-coll-panel.open{align-items:center}.hsc-coll-panel .sheet{border-radius:26px;border-bottom:3px solid ${INK};box-shadow:0 5px 0 ${INK}}}
-.hsc-coll-panel .head{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;font-variant-numeric:tabular-nums}
-.hsc-coll-panel .head .ic{display:flex}
-.hsc-coll-panel .head .sp{flex:1}
-.hsc-coll-panel .swap{display:flex;align-items:center;gap:6px;height:48px;padding:0 12px 0 8px;border-radius:16px;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};background:#fff;cursor:pointer;color:${INK};font:900 15px "DM Sans",system-ui,sans-serif;max-width:46%;min-width:0}
-.hsc-coll-panel .swap svg{width:30px;height:30px;flex:none}
-.hsc-coll-panel .swap .hsc-lbl{display:block;min-width:0;white-space:nowrap;overflow:hidden}
-.hsc-coll-panel .x{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};cursor:pointer;color:${INK};padding:0}
-.hsc-coll-panel .grid{flex:1;min-height:0;display:grid;gap:12px 10px;overflow-y:auto;padding:8px 8px 6px;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));grid-auto-rows:max-content;justify-items:center}
-.hsc-coll-panel .cut{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 4px 5px;border-radius:18px;border:3px solid ${INK};background:#f1e4cc;cursor:pointer;color:${INK};min-height:48px}
-.hsc-coll-panel .cut .pic{width:86px;height:86px;border-radius:13px;background:radial-gradient(circle at 50% 35%,#fff,#e4d2b4);display:block;overflow:hidden}
-.hsc-coll-panel .cut img{width:86px;height:86px;display:block}
-.hsc-coll-panel .cut:not(.done) img{filter:grayscale(1) opacity(.42)}
-.hsc-coll-panel .cut.done{background:#fff}
-.hsc-coll-panel .cut.gold{border-color:#c98a12;box-shadow:0 0 0 3px #ffc83d,0 3px 0 ${INK};background:radial-gradient(circle at 50% 30%,#fff,#ffe9b0)}
-.hsc-coll-panel .cut .st{display:flex;gap:1px;height:16px}
-.hsc-coll-panel .cut .nx{position:absolute;right:-8px;top:-8px;width:32px;height:32px;border-radius:50%;background:#ffe08a;border:2.5px solid ${INK};display:flex;align-items:center;justify-content:center;animation:hsc-collp 1s ease-in-out infinite}
-.hsc-coll-panel .cut.pend{border-style:dashed}
-.hsc-coll-panel .cut:active{transform:translateY(2px)}
-@keyframes hsc-collp{50%{transform:scale(1.12)}}
-.hsc-coll-panel .face{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 4px 6px;border-radius:18px;border:3px solid ${INK};background:#fff}
-.hsc-coll-panel .face img{width:86px;height:86px;border-radius:13px;background:radial-gradient(circle at 50% 35%,#fff,#e4d2b4);display:block}
-.hsc-coll-panel .face .n{display:flex;align-items:center;gap:3px;font-weight:900;font-size:18px;font-variant-numeric:tabular-nums}
-.hsc-coll-panel .face .stg{display:flex;gap:3px}
-.hsc-coll-panel .face .stg i{width:10px;height:10px;border-radius:50%;border:2px solid ${INK};background:#fff}
-.hsc-coll-panel .face .stg i.on{background:#ff5c98}
-.hsc-coll-panel .face .city{max-width:92px;font-size:12px;font-weight:900;line-height:1.1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hsc-coll-panel .empty{display:flex;justify-content:center;padding:24px;opacity:.35}
-.hsc-coll-panel [hidden]{display:none}
-@media (prefers-reduced-motion:reduce){.hsc-coll-panel .cut .nx{animation:none}}
+#hsc-menu .port{grid-template-rows:48px minmax(0,1fr)}
+#hsc-menu .port .plist{min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));grid-auto-rows:max-content;gap:12px;padding:4px 2px 12px}
+#hsc-menu .port .pc{box-sizing:border-box;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;padding:6px;border-radius:20px;border:3px solid ${K};background:linear-gradient(#fff,#e4f3ff);color:${K};font-weight:900}
+#hsc-menu .port .pc img{width:100%;aspect-ratio:1;border-radius:14px;background:radial-gradient(circle at 50% 35%,#fff,#e4d2b4)}
+#hsc-menu .port .pc .to .hsc-ic{width:18px;height:18px}
+#hsc-menu .port .pc .facts{grid-column:1/-1;display:flex;align-items:center;gap:5px;font-size:13px;min-width:0;min-height:26px}
+#hsc-menu .port .pc .facts .hsc-ic{width:26px;height:26px}
+#hsc-menu .port .pc .st{display:flex;font-size:18px}
+#hsc-menu .port .pc .at{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hsc-menu .port .pc .n{margin-inline-start:auto;display:flex;align-items:center;gap:3px}
+#hsc-menu .port .none{grid-column:1/-1;align-self:center;margin:18vh auto 0;padding:18px 24px;border-radius:22px;border:3px solid ${K};background:linear-gradient(#fff,#e4f3ff);color:${K};font-weight:900;font-size:20px;text-align:center}
 `;
-
-  // ---- the lookbook ----
-  const styles = () => (HSC.REQUEST_STYLES || []).filter((s) => s.fam !== 'trim');
-  const book = () => (M() && M().data && M().data.book) || {};
-  // one model for every picture: a clean-shaven man of about 30 with straight hair and no hair loss
-  let model = null;
-  function modelPerson() {
-    if (model) return model;
-    for (let seed = 11; seed < 900 && !model; seed++) {
-      const p = HSC.makePerson(seed, {});
-      if (p.beard.style === 'clean' && /^[12]/.test(p.hair.type) && p.years >= 24 && p.years <= 38 && (p.bald.type !== 'norwood' || +p.bald.norwood <= 1) && p.hair.grey < 0.1) model = p;
-    }
-    return model || (model = HSC.makePerson(11, {}));
-  }
-  const pics = new Map();
-  function cutPicture(st) {
-    if (!pics.has(st.id)) {
-      const p = modelPerson();
-      let url = null;
-      try { url = HSC.portrait(p, HSC.walkIns.build(st), null, 110, 180); } catch (e) { console.error('customers: lookbook picture failed', e); }
-      if (url) pics.set(st.id, url);
-    }
-    return pics.get(st.id) || null;
-  }
-
-  // ---- the album ----
-  const facePics = new Map();
-  function facePicture(r) {
-    const key = r.p.seed + ':' + r.n;
-    if (!facePics.has(key)) {
-      const top = HSC.BEARD_MM ? HSC.BEARD_MM.length - 1 : 16;
-      const hair = HSC.gridUnpack(r.h, 5), beard = HSC.gridUnpack(r.b, top);
-      if (!hair || !beard) return null;
-      let url = null;
-      try { url = HSC.portrait(r.p, hair, beard, 160, 200); } catch (e) { console.error('customers: album picture failed', e); }
-      if (url) facePics.set(key, url);
-    }
-    return facePics.get(key) || null;
-  }
-
-  // one list of regulars: the career's own (career-run.js, kept per city in the career journal) first, then the
-  // regulars met in the other modes (meta.js); a customer who is both appears once, as the career's
-  function regulars() {
-    const body = HSC.careerRun && HSC.careerRun.body ? HSC.careerRun.body() : null, out = [], seen = new Set();
-    for (const [city, list] of Object.entries((body && body.regs) || {})) {
-      for (const g of list || []) {
-        if (!g || !g.person || typeof g.h !== 'string' || typeof g.b !== 'string' || seen.has(g.person.seed)) continue;
-        seen.add(g.person.seed);
-        out.push({ p: g.person, h: g.h, b: g.b, n: Math.max(1, g.visits | 0), city });
-      }
-    }
-    for (const r of (M() && M().data && M().data.regulars) || []) if (r && r.p && !seen.has(r.p.seed)) { seen.add(r.p.seed); out.push(r); }
-    return out.sort((a, b) => b.n - a.n);
-  }
-
   const ui = {
-    el: {}, built: false, job: 0,
+    built: false,
     build() {
-      if (this.built || !document.body) return;
+      const m = document.getElementById('hsc-menu');
+      if (this.built || !m) return !!this.built;
       this.built = true;
       const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
-      // each panel has a button to the other one (the lookbook and the regulars album sit side by side)
-      const mk = (id, icon, label, other, otherIcon, otherWord) => {
-        const p = document.createElement('div'); p.id = id; p.className = 'hsc-coll-panel';
-        p.innerHTML = `<div class="sheet" role="dialog" aria-label="${label}"><div class="head"><span class="ic">${icon}</span><span class="cnt"></span><span class="sp"></span><button class="swap" type="button" data-to="${other}">${otherIcon}<span class="hsc-lbl" data-k="${otherWord}">${HSC.t ? HSC.t(otherWord) : ''}</span></button><button class="x" type="button" aria-label="Close">${CLOSE}</button></div><div class="grid"></div></div>`;
-        p.querySelector('.swap').addEventListener('click', () => { this.close(p); if (other === 'album') this.openAlbum(); else this.openBook(); });
-        p.querySelector('.x').addEventListener('click', () => this.close(p));
-        p.addEventListener('click', (e) => { if (e.target === p) this.close(p); });
-        document.body.appendChild(p);
-        return p;
-      };
-      this.el.book = mk('hsc-book', BOOK, 'Lookbook', 'album', ALBUM, 'regulars');
-      this.el.album = mk('hsc-album', ALBUM, 'Regulars', 'book', BOOK, 'styles');
-      this.el.book.querySelector('.grid').addEventListener('click', (e) => { const c = e.target.closest('.cut'); if (c) this.practise(c); });
-      addEventListener('keydown', (e) => { if (e.key === 'Escape') for (const p of [this.el.book, this.el.album]) if (p.classList.contains('open')) { e.preventDefault(); this.close(p); } });
-      setInterval(() => this.buttons(), 300);
-      this.buttons();
+      const pg = document.createElement('div');
+      pg.className = 'page port'; pg.hidden = true; pg.setAttribute('role', 'dialog');
+      pg.innerHTML = `<div class="mhead"><button class="j c-white back" type="button" aria-label="Back">${I('back')}</button><div class="title">${I('styles')}<span class="hsc-lbl" data-k="collection"></span></div></div><div class="plist"></div>`;
+      m.appendChild(pg);
+      pg.querySelector('.back').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('back'); HSC.menu.view('home', true); });
+      return true;
     },
-    // the two buttons go in the HUD row; the menu (menu.js) takes them in as tiles
-    buttons() {
-      const row = document.querySelector('#hsc-hud .hsc-row');
-      if (!row) return;
-      for (const [id, icon, label, open] of [['hsc-book-btn', BOOK, 'Lookbook', () => this.openBook()], ['hsc-album-btn', ALBUM, 'Regulars', () => this.openAlbum()]]) {
-        if (document.getElementById(id)) continue;
-        const b = document.createElement('button');
-        b.className = 'hsc-btn'; b.id = id; b.type = 'button'; b.setAttribute('aria-label', label);
-        b.innerHTML = icon + '<span class="hsc-dot" hidden></span>';
-        b.addEventListener('click', open);
-        row.appendChild(b);
-      }
-    },
-    close(p) { p.classList.remove('open'); this.job++; },
-    // pictures render one per frame so the panel opens at once
-    fill(list, picture, job) {
-      let i = 0;
+    render() {
+      if (!this.build()) return;
+      const pg = document.querySelector('#hsc-menu .page.port'), box = pg.querySelector('.plist');
+      pg.setAttribute('aria-label', t('collection'));
+      if (!list.length) { box.innerHTML = `<div class="none">${t('no_customers')}</div>`; return; }
+      box.innerHTML = list.map((c, i) => `<div class="pc" data-i="${i}"><img alt="" data-s="b"><span class="to">${I('play')}</span><img alt="" data-s="a">
+        <div class="facts">${c.stars ? `<span class="st">${[1, 2, 3].map((x) => STAR(x <= c.stars)).join('')}</span>` : ''}<span class="at"><bdi>${c.city && HSC.cityName ? HSC.cityName(c.city) : t(MODE_WORD[c.mode] || 'orders')}</bdi></span>${c.n > 1 ? `<span class="n">${I('regulars')}${HSC.num ? HSC.num(c.n) : c.n}</span>` : ''}</div></div>`).join('');
+      const job = ++this.job, todo = [...box.querySelectorAll('img')];
+      // pictures render a few per frame so the page opens at once
       const step = () => {
         if (job !== this.job) return;
         const t0 = performance.now();
-        while (i < list.length && performance.now() - t0 < 24) {
-          const [el, item] = list[i++];
-          const url = picture(item);
-          if (url) el.src = url;
+        while (todo.length && performance.now() - t0 < 24) {
+          const img = todo.shift(), c = list[+img.closest('.pc').dataset.i], b = img.dataset.s === 'b';
+          try { const u = HSC.portrait(c.p, decode(b ? c.bh : c.ah, 5), decode(b ? c.bb : c.ab, BTOP()), 120, 160); if (u) img.src = u; } catch (e) { console.error('customers: collection picture failed', e); }
         }
-        if (i < list.length) requestAnimationFrame(step);
+        if (todo.length) requestAnimationFrame(step);
       };
       requestAnimationFrame(step);
     },
-    openBook() {
-      const p = this.el.book, grid = p.querySelector('.grid'), b = book(), list = [], pend = HSC.practising ? HSC.practising() : null;
-      const all = styles();
-      grid.innerHTML = all.map((s) => {
-        const n = b[s.id] || 0;
-        return `<button class="cut${n ? ' done' : ''}${n === 3 ? ' gold' : ''}${pend === s.id ? ' pend' : ''}" type="button" data-id="${s.id}" aria-label="Practise this cut"><span class="pic"><img alt=""></span><span class="st">${n ? [1, 2, 3].map((k) => STAR(k <= n)).join('') : ''}</span>${pend === s.id ? `<span class="nx">${NEXT}</span>` : ''}</button>`;
-      }).join('');
-      const done = all.filter((s) => b[s.id]).length;
-      p.querySelector('.cnt').textContent = done + ' / ' + all.length;
-      grid.querySelectorAll('.cut').forEach((el, k) => list.push([el.querySelector('img'), all[k]]));
-      p.classList.add('open');
-      requestAnimationFrame(() => HSC.fitLabels && HSC.fitLabels(p));
-      this.fill(list, cutPicture, ++this.job);
-    },
-    practise(el) {
-      const r = HSC.practise ? HSC.practise(el.dataset.id) : null;
-      if (r === 'now') { this.close(this.el.book); if (HSC.menu) HSC.menu.close(); return; }
-      if (r === 'next') {
-        this.el.book.querySelectorAll('.cut.pend').forEach((c) => { c.classList.remove('pend'); const x = c.querySelector('.nx'); if (x) x.remove(); });
-        el.classList.add('pend');
-        el.insertAdjacentHTML('beforeend', `<span class="nx">${NEXT}</span>`);
-      } else if (HSC.nope) HSC.nope(el);
-    },
-    openAlbum() {
-      const p = this.el.album, grid = p.querySelector('.grid');
-      const regs = regulars();
-      p.querySelector('.cnt').textContent = regs.length ? String(regs.length) : '';
-      grid.innerHTML = regs.length
-        ? regs.map((r) => {
-          // the relationship stage as four dots (Recognized, Familiar, Trusted, Signature) and the city he lives in
-          const stage = HSC.career && HSC.career.regularStage ? HSC.career.regularStage(r.n) : null, at = ['recognized', 'familiar', 'trusted', 'signature'].indexOf(stage);
-          const city = r.city && r.city !== (HSC.career && HSC.career.UNSET) && HSC.cityName ? HSC.cityName(r.city) : '';
-          const said = (stage ? HSC.t('s_' + stage) : '') + (city ? ', ' + city : '');
-          return `<div class="face" role="img" aria-label="${said.replace(/"/g, '')}"><img alt=""><span class="n">${HEART(20)}${HSC.num ? HSC.num(r.n) : r.n}</span>${stage ? `<span class="stg" aria-hidden="true">${[0, 1, 2, 3].map((k) => `<i class="${k <= at ? 'on' : ''}"></i>`).join('')}</span>` : ''}${city ? `<span class="city" aria-hidden="true"><bdi>${city}</bdi></span>` : ''}</div>`;
-        }).join('')
-        : `<div class="empty" style="grid-column:1/-1">${HEART(64)}</div>`;
-      const list = [];
-      grid.querySelectorAll('.face').forEach((el, k) => list.push([el.querySelector('img'), regs[k]]));
-      p.classList.add('open');
-      requestAnimationFrame(() => HSC.fitLabels && HSC.fitLabels(p));
-      this.fill(list, facePicture, ++this.job);
-    },
+    job: 0,
   };
-  const boot = () => { if (globalThis.skinFadeStudio && document.querySelector('#hsc-hud .hsc-row') && HSC.meta && HSC.meta.data) ui.build(); else setTimeout(boot, 300); };
+  async function boot() {
+    if (!M() || !M().client || !HSC.validPerson) { setTimeout(boot, 300); return; }
+    client = M().client;
+    const d = client.loadProgress ? await client.loadProgress(KEY, null).catch(() => null) : null;
+    list = d && Array.isArray(d.list) ? d.list.filter(valid).slice(0, MAX) : [];
+  }
   boot();
-  HSC.collection = { openBook: () => ui.openBook(), openAlbum: () => ui.openAlbum() };
+  HSC.collection = { open: () => { ui.build(); HSC.menu.view('port'); ui.render(); }, list: () => list, encode, decode };
 })(globalThis.HSC || (globalThis.HSC = {}));

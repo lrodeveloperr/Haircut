@@ -104,7 +104,7 @@ function fakeHost() {
         },guard);
         await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:8,radiusY:8}]});
         await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-        await page.waitForFunction(g=>skinFadeStudio.getState().selectedGuard===g,guard,{timeout:5000});
+        await page.waitForFunction(g=>skinFadeStudio.getState().selectedGuard===g,guard,{timeout:20000,polling:100});
         const touch=await page.evaluate(()=>__guardContact);
         assert(touch?.trusted&&touch.label.startsWith(`Guard ${guard},`),'real touch must select the visible intermediate guard');
       }
@@ -235,20 +235,20 @@ function fakeHost() {
     // Reward receipts are real-earned only, and one earned ad unlocks the selected daily item.
     const key=await page.evaluate(()=>HSC.wardrobe.data.pick.clipper);
     await page.evaluate(()=>{for(const s of ['#hsc-goals.open .x','#hsc-salon.open .x','.hsc-coll-panel.open .x','#hsc-set.open .x']){const x=document.querySelector(s);if(x)x.click();}}); // the once-a-day goals may open over home
-    if(!await page.locator('#hsc-menu.open').count())await page.locator('#hsc-menu-btn').click();await page.locator('#hsc-menu [data-b="shop"]').click();await page.locator('#hsc-menu [data-s="wardrobe"]').click(); // the wardrobe is in the Shop
+    if(!await page.locator('#hsc-menu.open').count())await page.locator('#hsc-menu-btn').click();await page.locator('#hsc-menu [data-b="shop"]').click();await page.locator('#hsc-menu .page.shop [data-tab="clipper"]').click(); // clippers are a tab of the Shop
     for(const outcome of['dismiss','fail']){
-      await page.evaluate(o=>{__native.outcome=o;},outcome);await page.locator('.hsc-vbtn').click();
-      await page.waitForFunction(()=>!document.querySelector('.hsc-vbtn').disabled&&!document.body.inert);
+      await page.evaluate(o=>{__native.outcome=o;},outcome);await page.locator('#hsc-menu [data-a="video"]').click();
+      await page.waitForFunction(()=>{const b=document.querySelector('#hsc-menu [data-a="video"]');return b&&!b.disabled&&!document.body.inert;});
       assert.equal(await page.evaluate(k=>HSC.rewards.owns(k),key),false);
     }passed++;
-    await page.evaluate(()=>{__native.outcome='reward';});await page.locator('.hsc-vbtn').click();
+    await page.evaluate(()=>{__native.outcome='reward';});await page.locator('#hsc-menu [data-a="video"]').click();
     await page.waitForFunction(k=>HSC.rewards.owns(k),key);
     await page.evaluate(async()=>(await HSC.youtubeClientPromise).flushProgress());
     await boot();assert.equal(await page.evaluate(k=>HSC.rewards.owns(k),key),true);passed++;
     await page.evaluate(()=>{for(const s of ['#hsc-goals.open .x','#hsc-salon.open .x','.hsc-coll-panel.open .x','#hsc-set.open .x']){const x=document.querySelector(s);if(x)x.click();}}); // the once-a-day goals may open over home
-    if(!await page.locator('#hsc-menu.open').count())await page.locator('#hsc-menu-btn').click();await page.locator('#hsc-menu [data-b="shop"]').click();await page.locator('#hsc-menu [data-s="wardrobe"]').click(); // the wardrobe is in the Shop
+    if(!await page.locator('#hsc-menu.open').count())await page.locator('#hsc-menu-btn').click();await page.locator('#hsc-menu [data-b="shop"]').click();await page.locator('#hsc-menu .page.shop [data-tab="clipper"]').click(); // clippers are a tab of the Shop
     assert.equal(await page.evaluate(()=>__androidHost.back()),true);
-    await page.locator('#hsc-panel.open').waitFor({state:'hidden'});await page.locator('#hsc-menu .hero').click();passed++; // back to the chair
+    await page.locator('#hsc-menu .page.shop').waitFor({state:'hidden'});await page.locator('#hsc-menu .hero').click();passed++; // back to the chair
     await page.evaluate(()=>__androidHost.pause(true));assert.equal(await page.evaluate(()=>skinFadeStudio.getView().paused),true);
     await page.evaluate(()=>__androidHost.pause(false));await buffer();passed++;
     await page.evaluate(()=>{

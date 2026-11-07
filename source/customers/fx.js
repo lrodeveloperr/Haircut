@@ -66,21 +66,24 @@
       o.start(t); o2.start(t); o.stop(t + 0.65); o2.stop(t + 0.65);
     });
   }
-  const buzz = (ms) => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
   const SND = {
-    down: () => { tok(420 + Math.random() * 40, 0.09, 0.32); buzz(8); },
+    down: () => { tok(420 + Math.random() * 40, 0.09, 0.32); },
     up: () => tok(980 + Math.random() * 60, 0.05, 0.12),
     swish: () => swish(2600, 700, 0.22, 0.16),
     back: () => swish(700, 2200, 0.2, 0.14),
     open: () => { swish(1800, 900, 0.18, 0.12); tok(620, 0.08, 0.18); },
-    nope: () => { tok(240, 0.08, 0.3); setTimeout(() => tok(200, 0.09, 0.26), 90); buzz([10, 40, 10]); },
+    nope: () => { tok(240, 0.08, 0.3); setTimeout(() => tok(200, 0.09, 0.26), 90); },
     reward: () => chime([1046.5, 1318.5, 1568, 2093], 0.07, 0.16),
     coin: () => { chime([2637, 3136], 0.05, 0.1); },
+    // the Rush clock: quiet enough to sit under the clipper
+    tick: () => tok(1500, 0.035, 0.1),
+    tock: () => tok(1120, 0.04, 0.1),
+    bell: () => chime([880, 1320], 0.14, 0.2),
   };
   HSC.fx = { play: (k) => { try { SND[k] && SND[k](); } catch (e) {} } };
 
   // ---- every button in the menus: sound, haptic tick and a ripple ----
-  const MENUS = '#hsc-menu,#hsc-gift,#hsc-goals,#hsc-salon,#hsc-panel,.hsc-coll-panel,#hsc-set,#hsc-score';
+  const MENUS = '#hsc-menu,#hsc-salon,#hsc-set,#hsc-score';
   const PRESSABLE = 'button,[role=button],.hsc-btn';
   const st = document.createElement('style');
   st.textContent = `
@@ -88,7 +91,7 @@
 .hsc-ripple{position:absolute;border-radius:50%;pointer-events:none;background:radial-gradient(circle,#ffffffb0 0,#ffffff60 45%,#ffffff00 70%);transform:scale(0);animation:hsc-ripple .55s cubic-bezier(.2,.7,.3,1) forwards;z-index:3;mix-blend-mode:soft-light}
 @keyframes hsc-ripple{to{transform:scale(1);opacity:0}}
 @media (prefers-reduced-motion:reduce){.hsc-ripple{display:none}}
-body.hsc-calm .hsc-ripple{display:none}`;
+`;
   (document.head || document.documentElement).appendChild(st);
   let pressed = null;
   addEventListener('pointerdown', (e) => {

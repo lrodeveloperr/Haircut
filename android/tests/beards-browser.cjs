@@ -22,7 +22,7 @@ const build = path.resolve(__dirname, '../../source/build');
     await page.evaluate(async () => { await HSC.menu.play('free'); });
     const out = [];
     for (const h of (process.env.BEARD_GROUPS || '0,3,5,8').split(',').map(Number)) {
-      await page.evaluate(async (hh) => { HSC.debugOverride = HSC.makePerson(777 + hh, { beard: 'bandholz', heritage: hh, age: 'middle', noLoss: true }); await HSC.modes.newCustomer(); }, h);
+      await page.evaluate(async (hh) => { HSC.debugOverride = HSC.makePerson(777 + hh, { beard: 'bandholz', heritage: hh, age: 'middle', noLoss: true }); await skinFadeStudio.skip(); }, h);
       await page.waitForFunction(() => { const s = skinFadeStudio.getState(); return s.status === 'cutting' && s.look.person === HSC.debugOverride; });
       out.push(await page.evaluate(async () => {
         const g = skinFadeStudio, S = HSC.beardSurface, P = HSC.debugOverride, styles = HSC.BEARD_ARRIVALS.concat('stubble', 'stubble1');

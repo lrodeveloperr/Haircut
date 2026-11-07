@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------------------------
 // Completion screen: after the reveal spin only the finished customer (in the robe they came in with)
-// and the next customer, docked against the next button, are left on screen; the top buttons hide (a replay button may take the top-left corner).
+// and the next customer, docked against the next button, are left on screen; the top buttons hide.
 // The next customer is a real 3D render; a chime plays
-// as the reveal lands, and the gown is brushed off. Also: the streak flame in the top bar.
+// as the reveal lands, and the gown is brushed off.
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
   'use strict';
@@ -130,7 +130,6 @@
 
   // ---------------- UI ----------------
   const ICON = {
-    replay: '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="translate(0 1.5)"><path d="M12 5A7 7 0 1 1 5 12"/><path d="M8.4 5L12.6 1.9V8.1Z" fill="currentColor" stroke-width="1.6"/></g></svg>',
     play: '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>',
     tick: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     star: '<svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="#ffc83d" stroke="#10223f" stroke-width="2" stroke-linejoin="round"/></svg>',
@@ -156,30 +155,15 @@
 @keyframes hsc-nudge{50%{transform:translateX(4px)}}
 .hsc-new{position:absolute;right:-12px;top:-12px;animation:hsc-spin 2.4s linear infinite}
 @keyframes hsc-spin{to{transform:rotate(360deg)}}
-.hsc-flag{position:absolute;left:-8px;top:-10px}
 .hsc-crown{position:absolute;left:50%;top:-20px;transform:translateX(-50%) rotate(-6deg)}
 .hsc-reg{position:absolute;left:-10px;bottom:-10px;animation:hsc-pop 1.6s ease-in-out infinite}
-/* replay this customer: the cream of the next row with an ink outline; the video badge in the next
-   button's yellow marks that it plays a video. The arrow is centred in its own box. */
-.hsc-replay{position:absolute;width:76px;height:76px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;background:#fff6e6;color:${INK};border:3px solid ${INK};box-shadow:0 4px 0 ${INK};cursor:pointer;animation:hsc-rbreathe 1.3s ease-in-out infinite}
-.hsc-replay>svg{display:block;width:44%;height:44%;flex:none}
-.hsc-replay .hsc-ad{position:absolute;right:-8px;bottom:-6px;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#ffb627;color:${INK};border:2.5px solid ${INK}}
-.hsc-replay .hsc-ad svg{display:block}
-.hsc-replay:disabled{animation:none;opacity:.6;cursor:default}
-.hsc-replay:not(:disabled):active{transform:translateY(3px);box-shadow:0 1px 0 ${INK}}
-@keyframes hsc-rbreathe{50%{transform:scale(1.05)}}
-.hsc-replay[hidden]{display:none}
-/* in the top-left corner: the same size as the other top-row buttons */
-.hsc-replay.top{border-width:3px;box-shadow:0 3px 0 ${INK};animation:none}
-.hsc-replay.top>svg{width:50%;height:50%}
-.hsc-replay.top .hsc-ad{width:24px;height:24px;right:-8px;bottom:-7px;border-width:2px}
-.hsc-replay.top .hsc-ad svg{width:16px;height:16px}
-@media (prefers-reduced-motion:reduce){.hsc-replay{animation:none}}
 body.hsc-reveal #hsc-hud,body.hsc-spin #hsc-hud{opacity:0;pointer-events:none;visibility:hidden}
 #hsc-hub .hsc-next.hsc-hit{cursor:pointer}
 body.hsc-reveal #hsc-hud *{pointer-events:none}
 body.hsc-reveal .ui .top{visibility:hidden}
-.hsc-streak[hidden],#hsc-hub [hidden]{display:none}
+#hsc-hub [hidden]{display:none}
+/* Next stays well clear of the banner strip below the game */
+body.hsc-reveal .training-continue{translate:0 -18px}
 `;
 
   const st = { job: null, round: null, el: {}, built: false };
@@ -195,15 +179,12 @@ body.hsc-reveal .ui .top{visibility:hidden}
     hub.innerHTML = `
       <div class="hsc-next hsc-hit" aria-hidden="true"><img alt=""></div>
       <span class="hsc-hint" aria-hidden="true">${ICON.chev}</span>
-      <button class="hsc-replay hsc-hit" type="button" aria-label="Watch a video to cut this customer again">${ICON.replay}<span class="hsc-ad">${HSC.AD_ICON ? HSC.AD_ICON(22) : ''}</span></button>
 `;
     document.body.appendChild(hub);
     st.el = {
       hub,
       next: hub.querySelector('.hsc-next'), nextImg: hub.querySelector('.hsc-next img'), hint: hub.querySelector('.hsc-hint'),
-      replay: hub.querySelector('.hsc-replay'),
     };
-    st.el.replay.addEventListener('click', replay);
     // the next customer's picture is part of the next button
     st.el.next.addEventListener('click', () => { const b = document.querySelector('.training-continue'); if (b && !b.disabled) b.click(); });
     // a mouse or touch press does not leave a top button focused (Space / Enter stay with the game)
@@ -221,29 +202,12 @@ body.hsc-reveal .ui .top{visibility:hidden}
     document.addEventListener('click', (e) => { if (e.target && e.target.closest && e.target.closest('.training-continue')) leaveReveal(); }, true);
     setInterval(tick, 150);
   }
-  function streakChip() {
-    const row = document.querySelector('#hsc-hud .hsc-row');
-    if (!row) return;
-    let chip = row.querySelector('.hsc-streak');
-    if (!chip) {
-      chip = document.createElement('div');
-      chip.className = 'hsc-pill hsc-streak';
-      chip.innerHTML = `${ICON.flame}<span></span>`;
-      row.appendChild(chip);
-    }
-    const n = M() && M().data ? (M().streakNow ? M().streakNow() : M().data.streak) : 0;
-    chip.hidden = n < 1;
-    chip.querySelector('span').textContent = n;
-    chip.setAttribute('aria-label', 'Days in a row: ' + n);
-  }
-
   HSC.onHaircutDone = function (state) {
     if (!M() || !M().data) return;
     build();
     const info = M().onFinish(state);
     st.round = { job: state.jobId, info, shown: false };
     render();
-    streakChip();
     HSC.brushClippings && HSC.brushClippings();
     whoosh();
   };
@@ -260,36 +224,13 @@ body.hsc-reveal .ui .top{visibility:hidden}
       if (url) st.el.nextImg.src = url;
       // no picture (the render failed): no card, never an older customer's picture
       else if (want) { st.el.next.hidden = true; return; }
-      st.el.next.querySelectorAll('.hsc-new,.hsc-flag,.hsc-crown,.hsc-reg').forEach((n) => n.remove());
+      st.el.next.querySelectorAll('.hsc-new,.hsc-crown,.hsc-reg').forEach((n) => n.remove());
       // a regular coming back: a heart on the card
       if (reg) st.el.next.insertAdjacentHTML('beforeend', `<span class="hsc-reg">${ICON.heart}</span>`);
       if (q.vip) st.el.next.insertAdjacentHTML('beforeend', `<span class="hsc-crown">${ICON.crown}</span>`);
       const isNew = st.round.info.levelUp || q.daily;
       if (isNew) st.el.next.insertAdjacentHTML('beforeend', `<span class="hsc-new">${ICON.spark}</span>`);
-      if (q.daily) st.el.next.insertAdjacentHTML('beforeend', `<span class="hsc-flag">${ICON.flame}</span>`);
     }
-  }
-
-  // one video, then the same customer walks back in with the hair they came with
-  async function replay() {
-    const g = globalThis.skinFadeStudio, b = st.el.replay, r = st.round;
-    if (!g || !g.replay || b.disabled || !r || r.left || g.getState().status !== 'reveal') return;
-    b.disabled = true;
-    const ok = HSC.watchVideo ? await HSC.watchVideo('replay-customer') : false;
-    const job = r.job, here = () => g.getState().status === 'reveal' && g.getState().jobId === job;
-    if (ok && here()) {
-      leaveReveal();
-      // the game can stay paused for a while after the video (the platform resumes it): the replay is paid
-      // for, so it waits until the game takes it, unless the player has moved on
-      let done = false;
-      const until = Date.now() + 120000;
-      while (!done && here() && Date.now() < until) {
-        done = await g.replay();
-        if (!done) await new Promise((res) => setTimeout(res, 150));
-      }
-      if (!done && here()) r.left = false;
-    } else if (!ok) HSC.nope && HSC.nope(b);
-    b.disabled = false;
   }
 
   // the next customer docks right against the game's next button
@@ -307,46 +248,6 @@ body.hsc-reveal .ui .top{visibility:hidden}
     Object.assign(st.el.hint.style, { left: px(r.left - gap), top: px(r.top + r.height / 2 - 11 * S) });
     const top = Math.min(cy, r.top) - pad, bottom = Math.max(cy + card, r.bottom) + pad;
     Object.assign(st.el.dock.style, { left: cx - pad + 'px', top: top + 'px', width: r.right + pad - (cx - pad) + 'px', height: bottom - top + 'px', borderRadius: 30 * S + 'px', borderWidth: Math.max(2, 3 * S) + 'px' });
-    // replay sits level with the next button, in the far corner from it
-    const rb = st.el.replay;
-    let size = Math.round(Math.max(64 * S, Math.min(80 * S, r.height)));
-    rb.hidden = !(HSC.canVideo && HSC.canVideo());
-    const vw = innerWidth, onLeft = (cx + r.right) / 2 > vw / 2, dockL = cx - pad, dockR = r.right + pad;
-    const midY = r.top + r.height / 2 - size / 2, sp = 16 * S, edgeMin = 12 * S;
-    let rx, ry, side, stacked = false;
-    if (innerHeight >= innerWidth) {
-      // portrait: the mirror image of the next row, as far from its edge as the row is from the other edge;
-      // too narrow to sit beside the row: above it, on the same side
-      const gap2 = Math.max(18 * S, onLeft ? vw - dockR : dockL);
-      rx = onLeft ? gap2 : vw - gap2 - size;
-      const clash = onLeft ? rx + size + 10 * S > dockL : rx - 10 * S < dockR;
-      ry = midY;
-      side = onLeft ? 'left' : 'right';
-      if (clash) stacked = true;
-    } else {
-      // landscape: the row sits beside the customer; replay joins it on its outer side (never over the
-      // customer), or sits right above its outer end when there is no room beside it
-      const outerLeft = (dockL + dockR) / 2 < vw / 2;
-      const beside = outerLeft ? dockL - sp - size >= edgeMin : dockR + sp + size <= vw - edgeMin;
-      if (beside) { rx = outerLeft ? dockL - sp - size : dockR + sp; ry = midY; }
-      else stacked = true;
-      side = 'left';
-    }
-    // no room beside the next row: the top-left corner instead (the top buttons are hidden on this screen),
-    // lined up with where the sound button sits
-    if (stacked) {
-      const a = document.querySelector('.ui .top');
-      const ar = a ? a.getBoundingClientRect() : null;
-      rx = ar && ar.width ? ar.left : 12 * S;
-      ry = ar && ar.height ? ar.top : 12 * S;
-      side = 'left';
-      size = 48 * S;
-    }
-    rb.classList.toggle('top', stacked);
-    const gapPx = side === 'left' ? rx : vw - rx - size;
-    side = `max(${gapPx / S}px, env(safe-area-inset-${side}))`;
-    const onLeftSide = stacked || innerHeight < innerWidth ? true : onLeft;
-    Object.assign(rb.style, { left: onLeftSide ? side : 'auto', right: onLeftSide ? 'auto' : side, top: px(ry), width: px(size), height: px(size) });
   }
 
   // a short pause on input after a screen goes away: the second tap of a double tap would land on what
@@ -372,8 +273,7 @@ body.hsc-reveal .ui .top{visibility:hidden}
     if (st.job !== s.jobId) {
       if (st.round && st.round.job !== s.jobId) { leaveReveal(); st.round = null; }
       st.job = s.jobId;
-      streakChip();
-    }
+      }
     const q0 = M().data.queue;
     if (s.status === 'reveal' && !st.round && (!q0 || q0.job !== s.jobId + 1) && !HSC.otherTab) {
       // a reload during the reveal, and the haircut never reached the progress save (the tab closed between
@@ -457,6 +357,5 @@ body.hsc-reveal .ui .top{visibility:hidden}
 
   HSC.hubInit = function () {
     build();
-    streakChip();
   };
 })(globalThis.HSC || (globalThis.HSC = {}));

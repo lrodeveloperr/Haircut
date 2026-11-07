@@ -1,14 +1,25 @@
-// Android-only completion share: four real renders of the finished haircut, then the native Sharesheet.
+// Android-only completion share: an advert for the game, then the native Sharesheet (owner choice: Flyer 2). The same
+// customer before and after, in the same pose, and the game's name exactly as Google Play shows it in the player's language
+// (android/store-listing/*/title.txt; a language with no listing of its own shows the default one, as Play does). Every
+// mode shares the same card, and there are no other words.
 (function (HSC) {
   'use strict';
   const host = globalThis.AndroidHost;
   const initialize = HSC.hubInit;
   if (!host || typeof host.shareGame !== 'function' || typeof initialize !== 'function') return;
 
-  const SIZE = 46;
-  const TOP_GAP_RATIO = .16;
-  const HEAD_SIDE_PADDING = 20;
-  const ANGLES = [180, 90, 0, -90]; // front, right profile, back, left profile
+  const SIZE = 64;
+  const YAW = 50; // a three-quarter view from behind: the angle barbers use to show a cut
+  const INK = '#10223f';
+  const TITLES = {
+    en: 'Barber Simulator: ASMR Haircut', ar: 'حلاق ASMR: لعبة قص الشعر', de: 'Barbier ASMR: Haare schneiden',
+    es: 'Barbero ASMR: Corte de Cabello', fr: 'Barbier ASMR : Coupe & Dégradé', hi: 'ASMR नाई: बाल काटने का गेम',
+    id: 'ASMR Barber: Potong Rambut', ja: 'ASMR理容室：ヘアカットシミュレーター', ko: 'ASMR 이발소: 헤어컷 시뮬레이터',
+    pt: 'Barbeiro ASMR: Corte de Cabelo',
+  };
+  // the name and its line: the two halves of the store title
+  const title = () => { const lang = HSC.lang ? HSC.lang() : 'en', [name, sub] = (TITLES[lang] || TITLES.en).split(/\s*[:：]\s*/); return { name, sub, rtl: lang === 'ar' }; };
+  const FONT = '"Arial Rounded MT Bold","Nunito","Baloo 2",system-ui,sans-serif';
   const image = (src) => new Promise((resolve, reject) => {
     const node = new Image();
     node.onload = () => resolve(node);
@@ -29,13 +40,6 @@
     ctx.lineTo(x, y + r);
     ctx.quadraticCurveTo(x, y, x + r, y);
     ctx.closePath();
-  }
-
-  function cover(ctx, img, x, y, width, height) {
-    const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
-    const scale = Math.max(width / iw, height / ih);
-    const sw = width / scale, sh = height / scale;
-    ctx.drawImage(img, (iw - sw) / 2, (ih - sh) / 2, sw, sh, x, y, width, height);
   }
 
   function alphaBounds(canvas, fromY = 0, toY = canvas.height) {
@@ -61,15 +65,16 @@
     return { image: canvas, bounds, head };
   }
 
-  function drawPortrait(ctx, cutout, x, y, width, height) {
-    const { image, bounds, head } = cutout;
-    const scale = (height * (1 - TOP_GAP_RATIO) + 3) / bounds.height;
-    const drawWidth = bounds.width * scale, drawHeight = bounds.height * scale;
-    const headCenter = (head.x - bounds.x + head.width / 2) * scale;
-    const drawX = x + width / 2 - headCenter;
-    const drawY = y + height * TOP_GAP_RATIO;
-    ctx.drawImage(image, bounds.x, bounds.y, bounds.width, bounds.height,
-      drawX, drawY, drawWidth, drawHeight);
+  // both heads at one scale and in one place, so only the hair changes; the top of the taller one sits GAP below the frame
+  const GAP = 46, CROP = 20; // CROP: the picture's lower edge stays below the frame
+  function fitHeads(heads, width) {
+    const widest = heads.reduce((a, b) => (b.head.width > a.head.width ? b : a));
+    const scale = width * .92 / widest.head.width;
+    const top = Math.min(...heads.map((h) => h.bounds.y)), bottom = Math.max(...heads.map((h) => h.bounds.y + h.bounds.height));
+    return { scale, top, centre: widest.head.x + widest.head.width / 2, height: (bottom - top) * scale + GAP - CROP };
+  }
+  function drawPortrait(ctx, image, x, y, width, fit) {
+    ctx.drawImage(image, x + width / 2 - fit.centre * fit.scale, y + GAP - fit.top * fit.scale, image.width * fit.scale, image.height * fit.scale);
   }
 
   function cleanCutout(img) {
@@ -109,22 +114,19 @@
     return canvas;
   }
 
-  function dividers(ctx, heroHeight, columns) {
+  function panel(ctx, x, y, width, height, inner, outer, image, fit) {
     ctx.save();
-    ctx.lineCap = 'butt';
-    ctx.strokeStyle = '#fff2d6';
-    ctx.lineWidth = 24;
-    ctx.beginPath();
-    ctx.moveTo(0, heroHeight);
-    ctx.lineTo(1080, heroHeight);
-    for (const x of columns) {
-      ctx.moveTo(x, heroHeight);
-      ctx.lineTo(x, 1920);
-    }
-    ctx.stroke();
-    ctx.strokeStyle = '#e9bd45';
-    ctx.lineWidth = 7;
-    ctx.stroke();
+    roundedRect(ctx, x, y + 16, width, height, 50);
+    ctx.fillStyle = INK; ctx.fill();
+    roundedRect(ctx, x, y, width, height, 50);
+    ctx.fill();
+    roundedRect(ctx, x + 10, y + 10, width - 20, height - 20, 42);
+    ctx.clip();
+    const glow = ctx.createRadialGradient(x + width / 2, y + height * .42, 40, x + width / 2, y + height * .42, height * .7);
+    glow.addColorStop(0, inner); glow.addColorStop(1, outer);
+    ctx.fillStyle = glow;
+    ctx.fillRect(x, y, width, height);
+    drawPortrait(ctx, image, x + 10, y + 10, width - 20, fit);
     ctx.restore();
   }
 
@@ -134,74 +136,56 @@
     const state = game.getState(), view = game.getView();
     if (!state || state.status !== 'reveal' || !view || !view.revealComplete) throw new Error('Haircut is not ready to share');
 
-    const urls = ANGLES.map((yaw) => renderer.thumbnail(state.hair, yaw, 8, { headOnly: false, size: 640 }));
-    if (urls.some((url) => typeof url !== 'string' || !url.startsWith('data:image/'))) throw new Error('Haircut capture failed');
-    const [background, ...loadedHeads] = await Promise.all([
-      image('./assets/backdrop-portrait.webp'),
-      ...urls.map(image),
-    ]);
-    const heads = loadedHeads.map(head => analyseCutout(cleanCutout(head)));
+    // the before needs the beard he came in with; the view goes back to the finished beard straight after
+    const beardBefore = Array.isArray(state.startBeard) && typeof renderer.setBeard === 'function';
+    if (beardBefore) renderer.setBeard(state.startBeard);
+    const before = renderer.thumbnail(state.startHair, YAW, 8, { headOnly: false, size: 1024 });
+    if (beardBefore) renderer.setBeard(state.beard);
+    const after = renderer.thumbnail(state.hair, YAW, 8, { headOnly: false, size: 1024 });
+    if (![before, after].every((url) => typeof url === 'string' && url.startsWith('data:image/'))) throw new Error('Haircut capture failed');
+    const heads = (await Promise.all([before, after].map(image))).map((head) => analyseCutout(cleanCutout(head)));
 
     const canvas = document.createElement('canvas');
     canvas.width = 1080;
-    canvas.height = 1920;
+    // the card is only as tall as its content: the frames fit the heads, with a small even space above the hair
+    const width = 494, fit = fitHeads(heads, width - 20);
+    const top = 300, height = Math.round(fit.height) + 20, H = top + height + 16 + 34; // the bottom margin matches the sides
+    canvas.height = H;
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) throw new Error('Share canvas unavailable');
-    ctx.fillStyle = '#f7e8c8';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const supports = [heads[0], heads[1], heads[3]];
-    const ratioSum = supports.reduce((sum, head) => sum + head.head.width / head.bounds.height, 0);
-    const availableWidth = 1080 - supports.length * HEAD_SIDE_PADDING * 2 - 3 * ratioSum;
-    const supportHeight = Math.max(500, Math.min(760,
-      Math.floor(availableWidth / ((1 - TOP_GAP_RATIO) * ratioSum))));
-    const heroHeight = 1920 - supportHeight;
-    const idealWidths = supports.map(head =>
-      head.head.width * ((supportHeight * (1 - TOP_GAP_RATIO) + 3) / head.bounds.height)
-        + HEAD_SIDE_PADDING * 2);
-    const idealTotal = idealWidths.reduce((sum, width) => sum + width, 0);
-    const supportWidths = idealWidths.map((width, index) =>
-      index === idealWidths.length - 1 ? 1080 : Math.round(width / idealTotal * 1080));
-    supportWidths[2] = 1080 - supportWidths[0] - supportWidths[1];
-    const columns = [supportWidths[0], supportWidths[0] + supportWidths[1]];
-    const panels = [
-      { head: heads[2], x: 0, y: 0, width: 1080, height: heroHeight, hero: true },
-      { head: heads[0], x: 0, y: heroHeight, width: supportWidths[0], height: supportHeight, hero: false },
-      { head: heads[1], x: columns[0], y: heroHeight, width: supportWidths[1], height: supportHeight, hero: false },
-      { head: heads[3], x: columns[1], y: heroHeight, width: supportWidths[2], height: supportHeight, hero: false },
-    ];
+    const sky = ctx.createRadialGradient(540, H / 2, 80, 540, H / 2, 1000);
+    sky.addColorStop(0, '#2a78c4'); sky.addColorStop(.6, '#0d3f86'); sky.addColorStop(1, INK);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, 1080, H);
+    // the barber pole, faintly, as on the home screen
     ctx.save();
-    roundedRect(ctx, 9, 9, 1062, 1902, 44);
-    ctx.clip();
-    panels.forEach(panel => {
-      const { head, x, y, width, height, hero } = panel;
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(x, y, width, height);
-      ctx.clip();
-      cover(ctx, background, x, y, width, height);
-      const shade = ctx.createLinearGradient(0, y, 0, y + height);
-      shade.addColorStop(0, 'rgba(18,10,5,.10)');
-      shade.addColorStop(.52, 'rgba(18,10,5,0)');
-      shade.addColorStop(1, 'rgba(18,10,5,.12)');
-      ctx.fillStyle = shade;
-      ctx.fillRect(x, y, width, height);
-      drawPortrait(ctx, head, x, y, width, height);
-      ctx.restore();
-    });
+    ctx.translate(540, H / 2); ctx.rotate(-35 * Math.PI / 180);
+    ctx.fillStyle = 'rgba(255,255,255,.055)';
+    for (let x = -1500; x < 1500; x += 170) ctx.fillRect(x, -1500, 60, 3000);
     ctx.restore();
-
-    dividers(ctx, heroHeight, columns);
-    ctx.save();
-    ctx.strokeStyle = '#fff2d6';
-    ctx.lineWidth = 24;
-    roundedRect(ctx, 10, 10, 1060, 1900, 44);
+    // the name
+    const { name, sub, rtl } = title();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round';
+    if (rtl) ctx.direction = 'rtl';
+    ctx.font = `900 118px ${FONT}`;
+    ctx.lineWidth = 26; ctx.strokeStyle = INK; ctx.strokeText(name, 540, 142, 1000);
+    ctx.fillStyle = '#ffd257'; ctx.fillText(name, 540, 142, 1000);
+    ctx.font = `900 58px ${FONT}`;
+    const w = Math.min(ctx.measureText(sub).width, 940) + 72;
+    roundedRect(ctx, 540 - w / 2, 172, w, 84, 42);
+    ctx.fillStyle = INK; ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.fillText(sub, 540, 234, 940);
+    // before and after
+    panel(ctx, 34, top, width, height, '#ffffff', '#b9c6d6', heads[0].image, fit);
+    panel(ctx, 552, top, width, height, '#fff6d0', '#ffc53a', heads[1].image, fit);
+    ctx.beginPath(); ctx.arc(540, top + height * .5, 84, 0, Math.PI * 2);
+    const gold = ctx.createLinearGradient(0, top + height * .5 - 84, 0, top + height * .5 + 84);
+    gold.addColorStop(0, '#ffe682'); gold.addColorStop(1, '#ffb21a');
+    ctx.fillStyle = gold; ctx.fill(); ctx.lineWidth = 10; ctx.strokeStyle = INK; ctx.stroke();
+    ctx.beginPath(); ctx.lineCap = 'round'; ctx.lineWidth = 16;
+    const my = top + height * .5;
+    ctx.moveTo(500, my); ctx.lineTo(580, my); ctx.moveTo(548, my - 34); ctx.lineTo(582, my); ctx.lineTo(548, my + 34);
     ctx.stroke();
-    ctx.strokeStyle = '#e9bd45';
-    ctx.lineWidth = 7;
-    roundedRect(ctx, 10, 10, 1060, 1900, 44);
-    ctx.stroke();
-    ctx.restore();
 
     return canvas.toDataURL('image/jpeg', .9);
   }
@@ -213,9 +197,9 @@
 
     const style = document.createElement('style');
     style.textContent = `
-.hsc-native-share{position:absolute;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));width:${SIZE}px;height:${SIZE}px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;background:#fff6e6;color:#2a1d15;border:3px solid #2a1d15;box-shadow:0 3px 0 #2a1d15;cursor:pointer;visibility:hidden;z-index:3}
-.hsc-native-share>svg{display:block;width:24px;height:24px}
-.hsc-native-share:active{transform:translateY(3px);box-shadow:0 1px 0 #2a1d15}
+.hsc-native-share{position:absolute;left:max(16px,env(safe-area-inset-left));width:${SIZE}px;height:${SIZE}px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(#fff,#dfe8f2);color:#10223f;border:3px solid #10223f;box-shadow:inset 0 -5px 0 #0002,inset 0 2px 0 #fff9,0 4px 0 #10223f,0 6px 8px #0004;cursor:pointer;visibility:hidden;z-index:3}
+.hsc-native-share>svg{display:block;width:46%;height:46%}
+.hsc-native-share:active{transform:translateY(3px);box-shadow:inset 0 -3px 0 #0002,inset 0 2px 0 #fff9,0 1px 0 #10223f}
 .hsc-native-share:disabled{cursor:wait;opacity:.78}
 .hsc-native-share.busy>svg{animation:hsc-share-spin .8s linear infinite}
 @keyframes hsc-share-spin{to{transform:rotate(360deg)}}
@@ -246,14 +230,20 @@
       const view = game && game.getView ? game.getView() : null;
       const show = hub.classList.contains('show') && state && state.status === 'reveal' && view && view.revealComplete;
       if (!show) { button.style.visibility = 'hidden'; return; }
-      // Fixed to the screen's right edge on every phone/tablet orientation. The completion actions can move;
-      // this does not, so it never gets mistaken for replay or next-customer.
-      button.style.left = 'auto';
-      button.style.right = 'max(12px, env(safe-area-inset-right))';
-      button.style.top = 'max(12px, env(safe-area-inset-top))';
+      // Bottom left, level with the next button, on every phone and tablet orientation.
+      // The same size as the next button and level with it, 16 px from the edge like the next row.
+      const next = document.querySelector('.training-continue'), r = next && next.getBoundingClientRect(), S = HSC.S || 1;
+      const size = r && r.height ? r.height / S : SIZE;
+      button.style.width = button.style.height = size + 'px';
+      button.style.top = (r && r.height ? r.top / S : innerHeight / S - SIZE - 48) + 'px';
+      // on wide screens the next row can reach the left edge: Share then sits right beside it, on the same line
+      const dock = document.querySelector('#hsc-dock'), d = dock && dock.getBoundingClientRect();
+      button.style.left = d && d.width && d.left / S < 16 + size + 12 ? d.right / S + 16 + 'px' : '';
       button.style.visibility = 'visible';
     };
     const queue = () => { if (!frame) frame = requestAnimationFrame(place); };
+    // the next row settles a moment after a turn of the device: Share follows it
+    setInterval(() => { if (hub.classList.contains('show')) place(); }, 200);
     const observer = new MutationObserver(queue);
     observer.observe(hub, { attributes: true, attributeFilter: ['class'] });
     addEventListener('resize', queue);

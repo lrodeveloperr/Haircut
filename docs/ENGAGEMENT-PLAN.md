@@ -1,5 +1,14 @@
 # Engagement, retention and ad-revenue plan (Android)
 
+**Career source-of-truth note (5 November 2026):** Career structure is now approved separately in
+[CAREER-MODE-ARCHITECTURE.md](CAREER-MODE-ARCHITECTURE.md). Economy, advertising and purchase proposals in
+this document remain proposals.
+
+**Economy source-of-truth note:** The owner-approved holistic economy design is
+[ECONOMY-ARCHITECTURE.md](ECONOMY-ARCHITECTURE.md). Where this older plan differs, the approved design controls.
+The owner rejected paid ad removal on 5 November 2026; any older ad-free proposal in this research plan is
+superseded and must not be implemented.
+
 Status: **proposal, awaiting owner approval**, except where marked built. Written 4 November 2026.
 
 On 4 November 2026 the owner approved regulars, skin details and accessories (section 1, items 1, 3 and 5). They are built for Android in `source/customers/extras.js`. Everything else here is not implemented.
@@ -31,7 +40,7 @@ Figures are from third-party trackers (AppGoblin), so treat them as estimates.
 - **Tips as soft currency**, spent on **salon decor** and **tool upgrades**.
 - **A rewarded "×3 earnings" button** at the end of each customer. This is the most common rewarded placement in the genre.
 - **An unlock progress bar** that fills per customer and offers "keep it now" with a video.
-- **A "No Ads" purchase** at $3.99–4.99.
+- Some competitors sell ad removal; this game deliberately does not.
 
 ### Lessons from them
 
@@ -117,7 +126,7 @@ Highest impact, about 1–2 weeks of work.
 2. **Tips (soft currency).** A coin icon with a counter in the top bar. At the reveal, coins fly from the customer into a tip jar. More coins for a satisfied customer, a streak, or a VIP.
 3. **Loose requests with 1–3 stars.**
    - The customer's bubble shows the cut he wants; the reveal shows a reaction and stars.
-   - Never a fail: freestyle still pays at least 1 star. This follows the Azur lesson.
+   - Never a hard fail: scored requests still receive at least 1 star. Quick Play has no requested target or required score.
 4. **×3 tips on the reveal screen (rewarded).** A coin stack, "×3" and a ▶ icon. A small "take ×1" coin appears after about 2 seconds. Optionally a swinging meter from ×2 to ×5. This is the biggest rewarded lever in the genre.
 
 ### Phase 2: progression
@@ -153,13 +162,14 @@ Highest impact, about 1–2 weeks of work.
     - Tap a completed cut to practise it freely.
     - Share cards show the stars.
 
-    This feeds collection, retention and organic installs.
+    This feeds collection, retention and organic installs. The locked implementation is now controlled by
+    `PERMANENT-CAREER-PORTFOLIO-CONTRACT.md`; this earlier proposal does not override its save, reward or mode
+    boundaries.
 
 ### Extras
 
 - **Wordless local notifications** (coin, VIP face, clock) around the 3rd launch.
 - **An app-open ad** on a warm return, only after day 1.
-- **A "No Ads" purchase** ($3.99–4.99), which removes interstitials but keeps rewarded videos optional.
 - **AdMob bidding partners** when you're ready.
 - **A banner only on the shop and decor screens**, never on the cutting screen.
 

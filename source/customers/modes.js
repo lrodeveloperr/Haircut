@@ -2,16 +2,17 @@
 // Android only (buildall.sh, HEAD_SHAPES=1; owner-approved items M1-M7, 5 November 2026): game modes, picked on the
 // home screen (menu.js). Every mode keeps the interstitial after every cut, the undo videos and x3 tips.
 //
-//   requests  (M1) the career: a customer asks for a cut, 1-3 stars, tips, combo, regulars, VIPs
+//   requests  (M1) the career: a customer asks for a cut, 1-3 stars, tips, regulars, VIPs
 //   free      (M2) Quick Play (the former freestyle; `free` stays the saved id): no request and no stars, no
-//             progression; a button seats a new customer. It is a Home action, not a Modes tile.
-//   fix       (M3) hair disasters: a clipper job gone wrong walks in, hair and sometimes beard (a gouge, tracks, a step, a crooked
-//             line-up). The bubble shows the repaired cut. Every flaw is hair already cut to the repaired cut's own
-//             length, so the repair never needs hair that is not there. Tips x1.5. Level 2.
-//   beard     (M5) beard studio: bearded customers ask for a beard style (boxed, goatee, Van Dyke, chinstrap, balbo,
-//             anchor, circle, stubble, a moustache, mutton chops or a clean shave). Scored on the beard. Level 2.
-//   rush      (M7) quick tidy-ups: a finished cut with a little regrowth, against a 45 s clock. Never fails: the time
-//             left adds coins, and every three tidy-ups pay a round bonus. Level 4.
+//             progression; Finish brings the next customer. It is a Home action, not a Modes tile.
+//   fix       (M3) Rescue: a clipper job gone wrong walks in, hair and sometimes beard (a gouge, tracks, a step, a crooked
+//             line-up). There is no order and no stars: the barber rescues it on their own judgment, for a set pay once real
+//             work is done (owner decision, 6 November 2026). Level 2.
+//   beard     (M5) Beards: bearded customers, and the barber decides what to do. No order, no stars, a set pay. Level 2.
+//   rush      (M7) Orders against a 45 s clock that ticks down: order, stars and the best pay of the modes, and the time left
+//             adds coins. Never fails. The third customer in Orders is a one-off taste of it at its full pay; the mode itself
+//             opens at level 6 (15 customers), free, with nothing that skips the wait. Career keeps these jobs from level 4.
+// Inside Career the same rules hold, except that a showcase keeps its order and stars: a city's mastery is earned there.
 // The mode, its current job (the flawed start and its repair) are saved with the progress.
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
@@ -20,15 +21,18 @@
   const INK = '#10223f';
   const M = () => HSC.meta, G = () => globalThis.skinFadeStudio;
   const LIST = ['requests', 'free', 'fix', 'beard', 'rush'];
-  const LEVEL = { career: 1, requests: 1, free: 1, fix: 2, beard: 2, rush: 4 };
+  const LEVEL = { career: 1, requests: 1, free: 1, fix: 2, beard: 2, rush: 6 };
+  const CAREER_LEVEL = { fix: 2, beard: 2, rush: 4 }; // when Career may seat these jobs: the mode's own lock does not change Career
   const data = () => {
     const d = M() && M().data;
     if (!d) return null;
-    if (!d.modes || typeof d.modes !== 'object') d.modes = { mode: 'requests', job: null, rush: 0 };
+    if (!d.modes || typeof d.modes !== 'object') d.modes = { mode: 'requests', job: null };
     return d.modes;
   };
   const level = () => (M() && M().data ? M().level() : 1);
-  const unlocked = (m) => level() >= LEVEL[m];
+  // a mode the player has already played stays open
+  const unlocked = (m) => level() >= LEVEL[m] || !!(data() && Array.isArray(data().tried) && data().tried.includes(m));
+  const inCareer = (m) => level() >= (CAREER_LEVEL[m] || 1);
   // 'career' (career-run.js) is the main game; the listed modes are also playable on their own
   const CR = () => HSC.careerRun && HSC.careerRun.ready() ? HSC.careerRun : null;
   const current = () => { const md = data(); if (md && md.mode === 'career' && CR()) return 'career'; const m = md && LIST.includes(md.mode) ? md.mode : 'requests'; return unlocked(m) ? m : 'requests'; };
@@ -203,19 +207,22 @@
   }
 
   // ---- who comes in ----
+  // the last customer's group and age, so the next one is someone visibly different
+  const lastSeat = { her: null, age: null };
   function modePerson(mode, job, seed) {
-    const R = HSC.rng((seed ^ 0x6a09e667) >>> 0 || 1);
-    if (mode === 'beard') {
-      // the beard studio selects a customer who already has a beard (never rewrites one); the fallback is only for an
-      // impossible run of seeds, so the mode can never stall
-      // every style has an even turn here, so a player meets the whole catalogue
-      const want = BEARDED[hash('beard-' + seed) % BEARDED.length];
-      const p = HSC.selectPerson(seed >>> 0 || 1, {}, (x) => x.beard.style === want, 600) || HSC.makePerson(seed >>> 0 || 1, { beard: want });
-      return Object.assign(p, { job });
-    }
-    return null;
+    const R = HSC.rng((seed ^ 0x6a09e667) >>> 0 || 1), d = M() && M().data;
+    // Quick Play is the open game: besides the ordinary walk-ins, the whole beard catalogue comes through the door
+    const walkIn = d && d.queue && d.queue.person, twin = !!walkIn && walkIn.heritage === lastSeat.her;
+    if (mode === 'free' && (!d || !d.cuts || (R.next() >= 0.4 && !twin))) return null;
+    // the beard studio selects a customer who already has a beard (never rewrites one); the fallback is only for an
+    // impossible run of seeds, so the mode can never stall
+    // every style has an even turn here, so a player meets the whole catalogue
+    const want = BEARDED[hash('beard-' + seed) % BEARDED.length], s0 = seed >>> 0 || 1;
+    const p = HSC.selectPerson(s0, {}, (x) => x.beard.style === want && x.heritage !== lastSeat.her && x.age !== lastSeat.age, 600) ||
+      HSC.selectPerson(s0, {}, (x) => x.beard.style === want, 600) || HSC.makePerson(s0, { beard: want });
+    return Object.assign(p, { job });
   }
-  const wantsPerson = (m) => m === 'beard';
+  const wantsPerson = (m) => m === 'beard' || m === 'free';
   function hook() {
     // the customer for a new job (no queued customer) in a mode with its own customers
     const pfj = HSC.personForJob;
@@ -238,6 +245,7 @@
         const job = state.jobId + 1, seed = (((state.seed >>> 0) ^ Math.imul(job + 1, 0x9e3779b1)) >>> 0) || 1;
         const p = modePerson(m, job, seed);
         if (p) { d.queue = { job, person: p, profile: M().profileFor(p, state.recentLooks) }; M().save(); }
+        if (d.queue && d.queue.person) { lastSeat.her = d.queue.person.heritage; lastSeat.age = d.queue.person.age; }
       }
       return r;
     };
@@ -254,7 +262,9 @@
     if (!md || !s || s.status !== 'cutting' || s.cutStrokeCount || !s.look || !s.look.person || s.look.person.first) return null;
     if (md.job && md.job.n === s.jobId) return null; // this job's start is already made (also after a reload)
     const p = s.look.person;
-    if (m !== 'fix' && m !== 'rush' && m !== 'beard') return null;
+    // the taste of Rush: once, in Orders, from the third customer, while the mode is still locked
+    const taste = m === 'requests' && !md.taste && M().data.cuts >= 2 && !unlocked('rush');
+    if (m !== 'fix' && m !== 'rush' && m !== 'beard' && !taste) return null;
     const R = HSC.rng(((p.seed >>> 0) ^ Math.imul((s.jobId | 0) + 11, 0x5851f42d)) >>> 0 || 1);
     if (m === 'beard') {
       if (!Array.isArray(s.startBeard)) return null;
@@ -264,9 +274,10 @@
       M().save();
       return null;
     }
-    const j = m === 'fix' ? disaster(p, s.startHair, R, null, s.startBeard) : tidy(p, s.startHair, R);
-    if (!j) { md.job = { n: s.jobId, m, none: true }; M().save(); return null; }
-    md.job = { n: s.jobId, m, st: j.style.id, t: pack(j.target) };
+    const kind = taste ? 'rush' : m;
+    const j = kind === 'fix' ? disaster(p, s.startHair, R, null, s.startBeard) : tidy(p, s.startHair, R);
+    if (!j) { md.job = { n: s.jobId, m: kind, none: true }; M().save(); return null; }
+    md.job = { n: s.jobId, m: kind, st: j.style.id, t: pack(j.target) };
     if (j.beard) md.job.b = pack(j.beard.target);
     noteAsk(j.style); for (const f of j.flaws || []) noteAsk(f);
     if (j.beard) { noteAsk(j.beard.style); noteAsk(j.beard.flaw); }
@@ -276,10 +287,28 @@
     return out;
   }
 
+  // ---- jobs with no order: the barber's judgment decides, so nothing is scored, and a set pay needs real work ----
+  const judged = (s) => {
+    const m = current();
+    if (m === 'fix' || m === 'beard') return true;
+    const a = m === 'career' && CR() ? CR().active() : null;
+    return !!(a && s && a.job === s.jobId && a.role !== 'showcase' && (a.mode === 'fix' || a.mode === 'beard'));
+  };
+  const MIN_WORK = 60; // cells of hair or beard really changed: a stroke or two
+  const worked = (s) => {
+    let n = 0;
+    for (const [a, b] of [[s.hair, s.startHair], [s.beard, s.startBeard]]) {
+      if (!a || !b) continue;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i] && ++n >= MIN_WORK) return true;
+    }
+    return false;
+  };
+
   // ---- what each mode asks for (requests.js) ----
   const reqCache = { key: null, val: undefined };
   function request(s) {
     const m = current(), md = data(), p = s.look && s.look.person;
+    if (judged(s)) return null;
     // a career chair without its contract (between chapters) asks for nothing
     if (m === 'career') { const r = CR().request(s); return r !== undefined ? r : null; }
     if (m === 'free') return null;
@@ -302,19 +331,19 @@
   // what the economy needs to know about this job's mode: the kind, a Rush time bonus (0-12)
   function econJob(s) {
     const m = current();
-    const out = { kind: m === 'requests' || m === 'career' ? 'requests' : m };
+    const md = data(), taste = m === 'requests' && md && md.job && md.job.n === s.jobId && md.job.m === 'rush' && !md.job.none;
+    const out = { kind: taste ? 'rush' : m === 'requests' || m === 'career' ? 'requests' : m };
     if (m === 'career' && CR() && CR().unscored()) out.kind = 'free'; // no contract in the chair: practice, no pay
-    if (m === 'rush' && rush.job === s.jobId) out.rushBonus = Math.round(12 * timeLeft() / rush.LIMIT);
+    if (rush.job === s.jobId) out.rushBonus = Math.round(12 * timeLeft() / rush.LIMIT);
     return out;
   }
   function done(s, stars) {
     const md = data();
     if (!md) return;
     if (current() === 'career') CR().done(s, stars);
-    if (current() === 'rush' && rush.job === s.jobId) {
-      rush.job = null;
-      md.rush = (md.rush || 0) + 1; // (the economy pays Rush by its fee and time bonus; no round bonus)
-    }
+    // the taste is spent only once it has been finished, so a customer skipped by changing mode does not use it up
+    if (current() === 'requests' && md.job && md.job.n === s.jobId && md.job.m === 'rush' && !md.job.none) { md.taste = true; M().save(); }
+    if (rush.job === s.jobId) rush.job = null;
   }
 
   // ---- switching ----
@@ -329,7 +358,6 @@
     md.tried = Array.isArray(md.tried) ? md.tried : [];
     if (!md.tried.includes(m)) md.tried.push(m); // a mode is no longer new once played
     M().save();
-    if (CR() && CR().syncLook) CR().syncLook(); // the salon behind the chair follows the mode (a branch in Career)
     if (!g) return true;
     const s = g.getState();
     // a new customer for the new mode (the one in the chair keeps his cut in freestyle and the career)
@@ -338,16 +366,7 @@
     else if (!keep && s.status === 'reveal' && g.next) { if (M().data.queue && M().data.queue.job === s.jobId + 1) M().data.queue = null; await g.next(); }
     return true;
   }
-  async function newCustomer() {
-    const g = G(), d = M() && M().data;
-    if (!g || !g.skip) return;
-    const s = g.getState();
-    if (s.status !== 'cutting') return;
-    if (d && d.queue && d.queue.job === s.jobId + 1) d.queue = null;
-    await g.skip();
-  }
-
-  // ---- UI: the mode badge on the menu button, the rush clock, the freestyle new-customer button ----
+  // ---- UI: the mode badge on the menu button, the rush clock ----
   const ICON = {
     requests: `<svg viewBox="0 0 48 48" width="56" height="56"><circle cx="20" cy="27" r="11" fill="#e9c9a8" stroke="${INK}" stroke-width="2.4"/><path d="M9.5 25c0-7 4.5-11 10.5-11s10.5 4 10.5 11c-3-3-7-4.5-10.5-4.5S12.5 22 9.5 25z" fill="#5a3b1f" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/><path d="M28 6h14a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-7l-4 4v-4h-3a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3z" fill="#fff" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/><path d="M31.5 14.5c0-3 1.6-4.6 3.5-4.6s3.5 1.6 3.5 4.6" fill="#5a3b1f"/></svg>`,
     free: `<svg viewBox="0 0 48 48" width="56" height="56"><rect x="16" y="16" width="16" height="26" rx="5" fill="#ffb627" stroke="${INK}" stroke-width="2.4"/><path d="M15 17v-6h18v6" fill="#c9cfd6" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/><path d="M8 8l2 4M40 8l-2 4M6 20h4M42 20h-4M24 2v4" stroke="#ffb627" stroke-width="3" stroke-linecap="round"/></svg>`,
@@ -359,17 +378,16 @@
   const LOCK = `<svg viewBox="0 0 24 24" width="22" height="22"><rect x="5" y="10.5" width="14" height="10" rx="2.4" fill="#ffc83d" stroke="${INK}" stroke-width="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="${INK}" stroke-width="2"/></svg>`;
   const STAR = (on) => `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc83d' : 'none'}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"${on ? '' : ' stroke-dasharray="2.6 2.2" opacity=".55"'}/></svg>`;
   const TICK = '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#10223f" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const NEWC = `<svg viewBox="0 0 24 24" width="30" height="30"><circle cx="9" cy="8" r="3.6" fill="#e9c9a8" stroke="${INK}" stroke-width="1.8"/><path d="M2.5 20.5c0-4.2 3-6.4 6.5-6.4s6.5 2.2 6.5 6.4z" fill="#4a90d9" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/><path d="M15.5 6.5a4.5 4.5 0 0 1 6 3.8M21.8 13a4.5 4.5 0 0 1-6 3" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round"/><path d="M21.8 7.4v3.1h-3.1" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const CSS = `
-#hsc-rush{position:fixed;z-index:21;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translateX(-50%);display:none;align-items:center;gap:6px;height:48px;padding:0 14px 0 6px;border-radius:24px;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};font:900 22px "DM Sans",system-ui,sans-serif;color:${INK};font-variant-numeric:tabular-nums;zoom:var(--hsc-s,1);pointer-events:none}
-#hsc-rush.on{display:flex}
-#hsc-rush svg{width:36px;height:36px}
-#hsc-rush.low{animation:hsc-rushb .6s ease-in-out infinite}
-@keyframes hsc-rushb{50%{transform:translateX(-50%) scale(1.08)}}
-#hsc-newc{position:fixed;z-index:20;right:max(12px,env(safe-area-inset-right));top:calc(env(safe-area-inset-top) + 76px);width:56px;height:56px;border-radius:50%;padding:0;display:none;align-items:center;justify-content:center;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};cursor:pointer;zoom:var(--hsc-s,1)}
-#hsc-newc.on{display:flex}
-#hsc-newc:active{transform:translateY(3px);box-shadow:0 1px 0 ${INK}}
-body.hsc-reveal #hsc-rush,body.hsc-reveal #hsc-newc,body.hsc-spin #hsc-newc{display:none}
+#hsc-rush{--c:#46c43a;--p:1;position:fixed;z-index:21;left:50%;top:calc(env(safe-area-inset-top) + 8px);transform:translateX(-50%);display:none;width:60px;height:60px;box-sizing:border-box;border-radius:50%;border:3px solid ${INK};background:conic-gradient(var(--c) calc(var(--p) * 1turn),#c9d6e4 0);box-shadow:inset 0 2px 0 #fff9,0 4px 0 ${INK},0 6px 8px #0004;zoom:var(--hsc-s,1)}
+#hsc-rush.on{display:block}
+#hsc-rush span{position:absolute;inset:5px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:linear-gradient(#fff,#e4f3ff);box-shadow:inset 0 0 0 2px #10223f22;color:${INK};font:900 1em "Arial Rounded MT Bold","Nunito",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+#hsc-rush.mid{--c:#ffb21a}
+#hsc-rush.low{--c:#f04436;animation:hsc-rushb .5s ease-in-out infinite}
+#hsc-rush.low span{color:#d11f14}
+#hsc-rush.end{animation-duration:.25s}
+@keyframes hsc-rushb{50%{transform:translateX(-50%) scale(1.14)}}
+body.hsc-reveal #hsc-rush{display:none}
 .hsc-toast{position:fixed;z-index:41;left:50%;top:40%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:26px;background:#fff6e6;border:3px solid ${INK};box-shadow:0 4px 0 ${INK};font:900 24px "DM Sans",system-ui,sans-serif;color:${INK};animation:hsc-toast 1.8s ease-out forwards;pointer-events:none}
 @keyframes hsc-toast{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%)}}
 @media (prefers-reduced-motion:reduce){#hsc-rush.low{animation:none}}
@@ -381,12 +399,10 @@ body.hsc-reveal #hsc-rush,body.hsc-reveal #hsc-newc,body.hsc-spin #hsc-newc{disp
       if (this.built || !document.body) return;
       this.built = true;
       const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
-      const r = document.createElement('div'); r.id = 'hsc-rush'; r.setAttribute('aria-hidden', 'true'); r.innerHTML = ICON.rush + '<span></span>';
-      const n = document.createElement('button'); n.id = 'hsc-newc'; n.type = 'button'; n.setAttribute('aria-label', 'New customer'); n.innerHTML = HSC.icon ? HSC.icon('newc', 32) : NEWC;
-      n.addEventListener('click', newCustomer);
-      document.body.append(r, n);
-      Object.assign(this.el, { rush: r, newc: n });
-      setInterval(() => this.tick(), 200);
+      const r = document.createElement('div'); r.id = 'hsc-rush'; r.setAttribute('aria-hidden', 'true'); r.innerHTML = '<span></span>';
+      document.body.append(r);
+      Object.assign(this.el, { rush: r });
+      setInterval(() => this.tick(), 100);
     },
     toast(kind) {
       const t = document.createElement('div'); t.className = 'hsc-toast';
@@ -400,14 +416,29 @@ body.hsc-reveal #hsc-rush,body.hsc-reveal #hsc-newc,body.hsc-spin #hsc-newc{disp
       if (!g || !M() || !M().data) return;
       const s = g.getState(), m = current();
       // the rush clock starts when a tidy-up customer sits down
-      const rushing = m === 'rush' && s.status === 'cutting' && data().job && data().job.n === s.jobId && !data().job.none;
+      const ca = m === 'career' && CR() ? CR().active() : null;
+      const jb = data().job, ownJob = jb && jb.n === s.jobId && !jb.none;
+      const rushing = s.status === 'cutting' && (m === 'rush' ? !!ownJob : m === 'requests' ? !!(ownJob && jb.m === 'rush') : !!(ca && ca.mode === 'rush' && ca.job === s.jobId));
       if (rushing && rush.job !== s.jobId) { rush.job = s.jobId; rush.t0 = performance.now(); }
       if (!rushing && s.status === 'cutting') rush.job = null;
-      const left = Math.ceil(timeLeft() / 1000);
-      this.el.rush.classList.toggle('on', rushing);
-      this.el.rush.classList.toggle('low', rushing && left <= 10);
-      if (rushing) this.el.rush.querySelector('span').textContent = left;
-      this.el.newc.classList.toggle('on', m === 'free' && s.status === 'cutting');
+      const ms = timeLeft(), left = Math.ceil(ms / 1000), el = this.el.rush;
+      el.classList.toggle('on', rushing);
+      el.classList.toggle('mid', rushing && left <= 20 && left > 10);
+      el.classList.toggle('low', rushing && left <= 10);
+      el.classList.toggle('end', rushing && left <= 5);
+      if (!rushing) { this.beat = null; return; }
+      // on the same line as the Home and Finish buttons, at their scale
+      const home = document.querySelector('#hsc-menu-btn'), r = home && home.getBoundingClientRect(), S = HSC.S || 1;
+      if (r && r.height) { const size = r.height / S; Object.assign(el.style, { width: size + 'px', height: size + 'px', top: r.top / S + 'px', fontSize: size * 0.4 + 'px' }); }
+      el.style.setProperty('--p', (ms / rush.LIMIT).toFixed(3));
+      el.querySelector('span').textContent = left;
+      // tick, tock, each second; twice as fast in the last ten; a bell at zero
+      const beat = ms <= 0 ? 'end' : left <= 10 ? 'h' + Math.ceil(ms / 500) : 's' + left;
+      if (beat !== this.beat) {
+        const first = this.beat == null;
+        this.beat = beat; this.flip = !this.flip;
+        if (!first && HSC.fx) HSC.fx.play(beat === 'end' ? 'bell' : this.flip ? 'tick' : 'tock');
+      }
     },
   };
 
@@ -417,8 +448,8 @@ body.hsc-reveal #hsc-rush,body.hsc-reveal #hsc-newc,body.hsc-spin #hsc-newc{disp
   };
   boot();
   HSC.modes = {
-    current, unlocked, list: LIST, level: LEVEL, set: setMode, newCustomer,
-    request: (s) => request(s), tips, done, beardStars, beardJob, econJob, recently, noteAsk,
+    current, unlocked, inCareer, list: LIST, level: LEVEL, set: setMode,
+    request: (s) => request(s), judged, worked, tips, done, beardStars, beardJob, econJob, recently, noteAsk,
     unscored: () => { const m = current(); return m === 'free' || (m === 'career' && CR().unscored()); },
     icon: (m) => ICON[m],
     // the job builders, for the career catalog (career-catalog.js)

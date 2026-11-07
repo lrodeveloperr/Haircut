@@ -4,10 +4,10 @@
 // game's own economy.js; salon prices are read from salon.js, so the report always matches the shipped values.
 //
 // Player model (stated, so it can be argued with): about 3 minutes per contract; a career chapter every five
-// contracts (licence first, then one new city per chapter until all 36, then revisits); levels 2-12 at
-// n^2 - 1 contracts; the play-time Gift by minutes played; calendar, daily goals, weekly chest and the Daily
-// challenge on active days. Spending: buy the cheapest unowned salon part when affordable (with a buffer of one
-// operating bill), except the saver. Rewarded: the high-ad viewer triples tips and doubles the calendar and Gift.
+// contracts (licence first, then one new city per chapter until all 18, then revisits); levels from the game's own
+// curve (meta.js); the play-time Gift by minutes played; three daily tasks on active days. No free items: clippers and
+// gowns are bought with coins. Spending: buy the cheapest unowned item when affordable (with a buffer of one operating
+// bill), except the saver. Rewarded: the high-ad viewer triples tips, doubles a Gift and takes the wishlist videos.
 //
 // Usage: node android/tests/economy-sim.cjs [--json] [--prices=current|proposed]
 // Hard invariants are asserted (no required content behind coins, no inflation by tour number, debt recovery);
@@ -24,14 +24,17 @@ vm.runInContext(fs.readFileSync(path.join(root, 'source/customers/economy.js'), 
 const E = ctx.HSC.economy, CFG = E.CONFIG;
 const args = process.argv.slice(2), JSON_OUT = args.includes('--json');
 const PRICES = (args.find((a) => a.startsWith('--prices=')) || '--prices=current').split('=')[1];
-// the Gift's three amounts, as the game pays them
-const session = JSON.parse(fs.readFileSync(path.join(root, 'source/customers/session.js'), 'utf8').match(/PAY = (\[[^\]]*\])/)[1]);
 // what-if levers for the owner's decision (never change the game): --chapter=N (city chapter milestone),
-// --showcase=N (first showcase in a city), --gift=a,b,c (the three play-time gifts)
+// --showcase=N (first showcase in a city), --mastery=N, --tour=N, --bill=N, --goal=N, --gift=a,b,c (the three play-time gifts)
 const opt = (k) => { const a = args.find((x) => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : null; };
 if (opt('chapter')) CFG.milestones.cityChapter = +opt('chapter');
 if (opt('showcase')) CFG.milestones.cityShowcase = +opt('showcase');
-const GIFTS = (opt('gift') || session.join(',')).split(',').map(Number);
+if (opt('mastery')) CFG.milestones.cityMastery = +opt('mastery');
+if (opt('tour')) CFG.milestones.tour = +opt('tour');
+if (opt('bill')) { CFG.bill.amount = +opt('bill'); }
+if (opt('goal')) CFG.goal = +opt('goal');
+const GIFTS = (opt('gift') || CFG.gift.pay.join(',')).split(',').map(Number);
+const CITIES = 18; // the launch roster (cities.js)
 
 // ---- the salon catalogue, as the game sells it ----
 const salonSrc = fs.readFileSync(path.join(root, 'source/customers/salon.js'), 'utf8');
@@ -77,14 +80,16 @@ const ARCH = {
   weak: { perDay: 4, active: 0.85, stars: [0.7, 0.3, 0], ads: 0, spend: 'cheapest' },
 };
 const KINDS = ['requests', 'requests', 'fix', 'beard', 'rush'];
-const MIN_PER_JOB = 3, LEVEL_AT = (n) => n * n - 1;
+const MIN_PER_JOB = 3;
+// the game's level curve (meta.js)
+const LEVEL_AT = (n) => (n <= 5 ? [0, 2, 4, 7, 10][n - 1] : 10 + 5 * (n - 5));
 
 function simulate(name, days, seed = 7) {
   const A = ARCH[name], R = rng(seed + name.length * 131);
   let eco = E.fresh();
   const owned = new Set(), shop = catalogue(), buys = [], wallet = [], debt = [];
   const src = {}, sink = {}, add = (book, k, v) => { book[k] = (book[k] || 0) + v; };
-  let jobs = 0, combo = 0, chapters = 0, citiesDone = 0, tour = 1, level = 1, goalsWeek = 0, calDay = 0, inDebtSince = null;
+  let jobs = 0, chapters = 0, citiesDone = 0, tour = 1, level = 1, inDebtSince = null;
   const credit = (key, cat, n) => { if (!n) return; const r = E.apply(eco, { key, type: 'earn', cat, amount: Math.round(n) }); if (!r.error && !r.duplicate) { eco = r.eco; add(src, cat, Math.round(n)); } };
   const milestone = (id, n) => { const m = E.payMilestones(eco, [[id, n]]); if (m.paid.length) add(src, 'milestone', n); eco = m.eco; };
   const daySeries = [];
@@ -92,39 +97,38 @@ function simulate(name, days, seed = 7) {
     const before = { src: Object.values(src).reduce((a, b) => a + b, 0), sink: Object.values(sink).reduce((a, b) => a + b, 0) };
     if (R() < A.active) {
       // daily sources on an active day
-      const cal = CFG.calendar[calDay % 7]; calDay++;
-      credit('cal:' + day, 'calendar', cal * (A.ads && R() < A.ads ? 2 : 1));
-      if (calDay % 7 === 0) credit('cal-item:' + day, 'calendar', 0);
       if (A.ads) for (let v = 0; v < CFG.wishVideo.perDay; v++) if (R() < A.ads) credit('wish:' + day + ':' + v, 'rewarded', CFG.wishVideo.coins);
-      const goals = A.perDay >= 4 ? 2 : 1; goalsWeek += goals;
+      // Quick Play: about half as many customers as paid jobs, for its small pay, up to the daily limit
+      for (let v = 0; v < Math.min(CFG.quickPlay.perDay, Math.ceil(A.perDay / 2)); v++) credit('quick:' + day + ':' + v, 'job', CFG.quickPlay.pay);
+      // ad viewers who practise take its capped video
+      if (A.ads) for (let v = 0; v < CFG.video.practicePerDay; v++) if (R() < A.ads * 0.4) credit('practice:' + day + ':' + v, 'rewarded', CFG.video.floor);
+      const goals = A.perDay >= 4 ? 2 : 1;
       credit('goals:' + day, 'goals', goals * CFG.goal);
-      if (day % 7 === 0) { if (goalsWeek >= CFG.weeklyGoal) credit('weekly:' + day, 'weekly', CFG.weekly); goalsWeek = 0; }
-      // the play-time Gift: 50 / 100 / 200 at 10 / 20 / 30 minutes; a video doubles one
+      // the play-time Gift at 10 / 20 / 30 minutes; a video doubles one
       const minutes = A.perDay * MIN_PER_JOB, gifts = [[10, GIFTS[0]], [20, GIFTS[1]], [30, GIFTS[2]]].filter(([m]) => minutes >= m);
       gifts.forEach(([, n], i) => credit('gift:' + day + ':' + i, 'gift', n * (A.ads && i === gifts.length - 1 && R() < A.ads ? 2 : 1)));
       for (let k = 0; k < A.perDay; k++) {
         jobs++;
         const u = R(), stars = u < A.stars[0] ? 1 : u < A.stars[0] + A.stars[1] ? 2 : 3;
-        combo = stars === 3 ? combo + 1 : 0;
         const slot = (jobs - 1) % 5, kind = slot === 4 ? 'showcase' : KINDS[Math.floor(R() * KINDS.length)];
-        const job = { kind, stars, valid: true, regular: slot === 2 && jobs > 5, vip: R() < 0.05, combo, rushBonus: kind === 'rush' ? Math.floor(R() * 12) : 0 };
+        const job = { kind, stars, judged: kind === 'fix' || kind === 'beard', valid: true, regular: slot === 2 && jobs > 5, vip: R() < 0.05, rushBonus: kind === 'rush' ? Math.floor(R() * 12) : 0 };
         job.demandMatch = E.demandMatch(eco, kind === 'showcase' ? 'requests' : kind);
         const p = E.payJob(eco, 'job:' + jobs, job);
         eco = p.eco;
         add(src, 'job', p.payout.total);
         if (p.bill) add(sink, 'bill', -p.bill.amount);
-        if (A.ads && R() < A.ads * 0.5 && p.payout.tip) { const t = E.tripleTip(eco, 'job:' + jobs, p.payout.tip); if (!t.error && !t.duplicate) { eco = t.eco; add(src, 'rewarded', 2 * p.payout.tip); } }
+        if (A.ads && R() < 0.52 && R() < A.ads * 0.5) { const t = E.tripleTip(eco, 'job:' + jobs, p.payout.tip); if (!t.error && !t.duplicate) { eco = t.eco; add(src, 'rewarded', 2 * p.payout.tip); } }
         if (jobs === 1) milestone('first-haircut', CFG.milestones.firstHaircut);
         if (slot === 4) {
           chapters++;
           if (chapters <= 6) milestone('home-chapter:' + chapters, CFG.milestones.homeChapter);
           if (chapters === 6) milestone('licence', CFG.milestones.licence);
           if (chapters > 6) {
-            const c = (chapters - 7) % 36, t = Math.floor((chapters - 7) / 36) + 1;
+            const c = (chapters - 7) % (CITIES - 1), t = Math.floor((chapters - 7) / (CITIES - 1)) + 1;
             milestone('chapter:' + c + ':' + t, CFG.milestones.cityChapter);
             if (t === 1) { milestone('showcase:' + c, CFG.milestones.cityShowcase); citiesDone++; }
             if (t === 3) milestone('mastery:' + c, CFG.milestones.cityMastery); // three chapters in a city: tour 3
-            if (c === 35) { milestone('tour:' + t, CFG.milestones.tour); tour = t + 1; }
+            if (c === CITIES - 2) { milestone('tour:' + t, CFG.milestones.tour); tour = t + 1; }
           }
         }
         while (level < 12 && jobs >= LEVEL_AT(level + 1)) { level++; const e2 = E.payLevels(eco, level); add(src, 'level', e2.balance - eco.balance); eco = e2; }
@@ -173,7 +177,7 @@ function tourSources() {
   const per = [];
   for (const t of [2, 10, 100, 1000]) {
     let eco = E.fresh(), coins = 0;
-    for (let c = 0; c < 36; c++) { const m = E.payMilestones(eco, [['chapter:' + c + ':' + t, CFG.milestones.cityChapter]].concat(c === 35 ? [['tour:' + t, CFG.milestones.tour]] : [])); eco = m.eco; coins += m.paid.reduce((a, x) => a + x[1], 0); }
+    for (let c = 0; c < CITIES; c++) { const m = E.payMilestones(eco, [['chapter:' + c + ':' + t, CFG.milestones.cityChapter]].concat(c === CITIES - 1 ? [['tour:' + t, CFG.milestones.tour]] : [])); eco = m.eco; coins += m.paid.reduce((a, x) => a + x[1], 0); }
     per.push(coins);
   }
   return per;
@@ -204,7 +208,7 @@ for (const r of report.runs) assert.ok(r.jobs > 0);
 const T = (ok) => (ok ? 'PASS' : 'MISS');
 const lines = [];
 const nm = report.runs.filter((r) => r.name === 'normal');
-for (const r of nm) lines.push(`normal ${r.days}d: sink/source 7-day ${r.sinkRatio7.toFixed(2)} [0.65-0.80 ${T(r.sinkRatio7 >= 0.65 && r.sinkRatio7 <= 0.8)}], core share ${(r.coreShare * 100).toFixed(0)}% [45-55% ${T(r.coreShare >= 0.45 && r.coreShare <= 0.55)}], gift share ${(r.giftShare * 100).toFixed(0)}%, bill ${(r.billShareOfWork * 100).toFixed(0)}% of work [about 20% ${T(r.billShareOfWork >= 0.15 && r.billShareOfWork <= 0.25)}], wallet ${r.wallet}, bought ${r.boughtCount}, salon complete ${r.salonComplete}`);
+for (const r of nm) lines.push(`normal ${r.days}d: sink/source 7-day ${r.sinkRatio7.toFixed(2)} [0.65-0.80 ${T(r.sinkRatio7 >= 0.65 && r.sinkRatio7 <= 0.8)}], core share ${(r.coreShare * 100).toFixed(0)}% [55-65% ${T(r.coreShare >= 0.55 && r.coreShare <= 0.65)}], gift share ${(r.giftShare * 100).toFixed(0)}%, bill ${(r.billShareOfWork * 100).toFixed(0)}% of work [25-35% ${T(r.billShareOfWork >= 0.25 && r.billShareOfWork <= 0.35)}], wallet ${r.wallet}, bought ${r.boughtCount}, salon complete ${r.salonComplete}`);
 const n90 = nm.find((r) => r.days === 90);
 lines.push(`job distance: ordinary work nets ${n90.perJobNet}/contract; longest single stage ${n90.longestStageJobs} contracts [<=60 ${T(n90.longestStageJobs <= 60)}]; first purchase at contract ${n90.firstBuyJob} [<=3 ${T(n90.firstBuyJob != null && n90.firstBuyJob <= 3)}]`);
 lines.push(`debt from zero (1/2/3-star Orders): ${report.debtFromZero.join('/')} contracts [median 1-3 ${T(report.debtFromZero[1] <= 3)}]`);

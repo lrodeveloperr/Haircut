@@ -107,12 +107,6 @@ s = C.reconcile(s);
 assert.ok(!s.tour.roster.includes('mum'), 'new city does not enter the frozen roster');
 ok('roster');
 
-// 10. base change only after Tour 1 and only to an established branch
-assert.equal(C.setBase(C.create('ist', 1), 'lon').error, 'base-locked');
-assert.equal(C.setBase(s, 'mum').error, 'not-established');
-assert.equal(C.setBase(s, 'lon').state.base, 'lon');
-ok('base');
-
 // 11. endless tours: the state does not grow with tour count
 C.setCities(CITIES, 4);
 s = C.reconcile(s);
@@ -244,20 +238,5 @@ ok('pure');
   ok('city mastery');
 }
 
-// 20. relocation: locked during World Tour 1; afterwards any established branch, never an unestablished city
-{
-  C.setCities(CITIES, 6);
-  let st = C.create('ist', 61);
-  for (let i = 0; i < 30; i++) st = finish(st).state;
-  assert.equal(C.setBase(st, 'ist').error, 'base-locked', 'no relocation before World Tour 1 is complete');
-  for (const id of ['lon', 'lag', 'nyc', 'sao']) { st = C.selectCity(st, id).state; for (let i = 0; i < 5; i++) st = finish(st).state; }
-  assert.equal(st.tour.n, 2, 'World Tour 1 is complete');
-  assert.equal(C.setBase(st, 'zzz').error, 'not-established');
-  const moved = C.setBase(st, 'lag');
-  assert.equal(moved.state.base, 'lag');
-  assert.equal(moved.state.founding, 'ist', 'the founding city never changes');
-  assert.equal(moved.state.tour.n, st.tour.n, 'relocating does not reset the tour');
-  ok('relocation');
-}
 
 console.log('PASS: ' + passed + ' career state-machine cases (licence, tours, idempotency, roster changes, bounded save).');

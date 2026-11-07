@@ -17,13 +17,15 @@ const plain = (x) => JSON.parse(JSON.stringify(x));
 // 1. the balance model's worked examples
 assert.equal(E.payout({ kind: 'requests', stars: 3, valid: true }).total, 36, 'ordinary 3-star order pays 36');
 assert.equal(E.payout({ kind: 'requests', stars: 3, valid: true }).tip, 12);
-let p = E.payout({ kind: 'requests', stars: 3, valid: true, combo: 2 });
-assert.equal(p.total, 38, '3-star order, second combo result, pays 38');
-assert.equal(p.total + 2 * p.tip, 66, 'and 66 with the rewarded triple');
-p = E.payout({ kind: 'fix', stars: 3, valid: true, combo: 4, vip: true });
-assert.equal(p.tip, 34, 'the tip is capped at the net fee');
-assert.equal(p.total, 68, '3-star VIP rescue at maximum combo pays 68');
-assert.equal(p.total + 2 * p.tip, 136);
+let p = E.payout({ kind: 'requests', stars: 3, valid: true });
+assert.equal(p.total + 2 * p.tip, 60, 'and 60 with the rewarded triple');
+p = E.payout({ kind: 'rush', stars: 3, valid: true, vip: true, regular: true });
+assert.equal(p.tip, 25, 'stars, regular and VIP add up on the tip');
+assert.equal(p.total, 53, '3-star regular VIP rush pays 53');
+assert.equal(E.payout({ kind: 'fix', stars: 2, judged: true, valid: true }).total, 30, 'Rescue pays a set 30');
+assert.equal(E.payout({ kind: 'beard', stars: 2, judged: true, valid: true }).total, 28, 'Beards pays a set 28');
+assert.equal(E.payout({ kind: 'fix', stars: 2, judged: true, valid: true }).tip, 6, 'with a set tip, so the result video stays');
+assert.equal(E.payout({ kind: 'rush', stars: 1, valid: true }).total, 28, 'Rush starts at 28');
 passed++;
 
 // 2. stars move the tip only; incomplete and freestyle pay nothing
@@ -47,23 +49,28 @@ assert.equal(again.eco.balance, 36);
 const t1 = E.tripleTip(eco, 'job:A', 12); eco = t1.eco;
 assert.equal(eco.balance, 60);
 assert.equal(E.tripleTip(eco, 'job:A', 12).duplicate, true, 'a duplicate rewarded callback pays once');
+assert.equal(E.videoPay(0), 10, 'a 1-star result still has a video');
+assert.equal(E.videoPay(12), 24, 'and a good one pays two tips');
+assert.equal(E.videoWait(0.1), 0, 'the video can come twice in a row');
+assert.equal(E.videoWait(0.99), 4, 'or stay away for a while');
+assert.equal(E.CONFIG.video.waits.reduce((a, b) => a + b, 0).toFixed(6), '1.000000', 'the waits are a whole');
 passed++;
 
-// 5. the operating bill: the first cycle is sponsored; the 50-coin next-cycle bill is disclosed at the preceding
+// 5. the operating bill: the first cycle is sponsored; the 60-coin next-cycle bill is disclosed at the preceding
 // result boundary (after jobs 5/10/15), before jobs 6/11/16 can begin, and posts once even into debt
 eco = E.fresh();
 for (let i = 0; i < 4; i++) eco = E.payJob(eco, 'j' + i, { kind: 'requests', stars: 1, valid: true }).eco;
 assert.equal(eco.balance, 4 * 24, 'the sponsored opening cycle has no bill');
 let fifth = E.payJob(eco, 'j4', { kind: 'requests', stars: 1, valid: true }); eco = fifth.eco;
-assert.equal(eco.balance, 5 * 24 - 50, 'the next-cycle bill is visible before job six');
+assert.equal(eco.balance, 5 * 24 - 60, 'the next-cycle bill is visible before job six');
 assert.equal(fifth.bill.key, 'bill:1');
 for (let i = 5; i < 10; i++) eco = E.payJob(eco, 'j' + i, { kind: 'requests', stars: 1, valid: true }).eco;
-assert.equal(eco.balance, 10 * 24 - 100, 'one 50-coin bill posts at each five-job boundary');
-assert.equal(eco.sinks.bill, 100);
+assert.equal(eco.balance, 10 * 24 - 120, 'one 60-coin bill posts at each five-job boundary');
+assert.equal(eco.sinks.bill, 120);
 // into debt: a player who spent everything still gets billed, and can always work back
 eco = E.apply(eco, { key: 'force-debt', type: 'cost', cat: 'test', amount: -eco.balance - 50 }).eco;
 for (let i = 10; i < 15; i++) eco = E.payJob(eco, 'j' + i, { kind: 'requests', stars: 1, valid: true }).eco;
-assert.equal(eco.balance, -50 + 5 * 24 - 50, 'bills post below zero; earnings reduce the debt first');
+assert.equal(eco.balance, -50 + 5 * 24 - 60, 'bills post below zero; earnings reduce the debt first');
 passed++;
 
 // 6. a discretionary purchase needs the price in hand; debt never buys
@@ -78,11 +85,11 @@ passed++;
 eco = E.fresh();
 let ms = E.milestonesFor(['licence-complete', 'branch-established:lon', 'tour-complete:1'], { city: 'lon', visit: 0, tour: 1 }, true);
 let m = E.payMilestones(eco, ms); eco = m.eco;
-assert.equal(eco.balance, 40 + 300 + 75 + 400); // first showcase 75 (owner decision 5 November 2026)
+assert.equal(eco.balance, 40 + 300 + 50 + 200); // owner decision 6 November 2026
 m = E.payMilestones(eco, ms);
 assert.equal(m.paid.length, 0, 'replays cannot pay a milestone again');
 const tour9 = E.milestonesFor(['tour-complete:9'], null, false);
-assert.equal(tour9[0][1], 400, 'a later tour pays the same as the first');
+assert.equal(tour9[0][1], 200, 'a later tour pays the same as the first');
 passed++;
 
 // 8. level rewards: capped table, once per level, nothing after 12, history not repaid after migration

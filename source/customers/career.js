@@ -152,13 +152,6 @@
     n.current = { city: cityId, visit: cityRec(n, cityId).visits, slot: 0, practice };
     return { state: n };
   }
-  // after World Tour 1 any established branch may become the active base (cosmetic; branch plan section 8)
-  function setBase(s, cityId) {
-    if (!s.tour || s.tour.n < 2) return { state: s, error: 'base-locked' };
-    if (!(s.cities[cityId] && s.cities[cityId].established)) return { state: s, error: 'not-established' };
-    const n = clone(s); n.base = cityId; return { state: n };
-  }
-
   // ---- completion (idempotent) ----
   // result: { id, stars (1-3), valid (meaningful work), mode, style, tools[], services[] }
   function isDone(s, id) {
@@ -342,7 +335,7 @@
     regularStage, REG_STAGES, cityMastery, branchState, MASTERY_NEED,
     VERSION, LICENCE, SLOTS, ROLES, RANKS, MASTER_STARS,
     UNSET, needsFounding, found,
-    setCities, enabledIds, create, phase, position, contractId, contractSeed, remaining, selectable, selectCity, setBase,
+    setCities, enabledIds, create, phase, position, contractId, contractSeed, remaining, selectable, selectCity,
     isDone, complete, reconcile, rank, rankIndex, stats, validate, hash32, clone,
     city: (id) => registry.cities.get(id) || null,
   };

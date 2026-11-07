@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------------------
-// Progress between haircuts: barber level, daily streak, the daily VIP, and the queue that decides
+// Progress between haircuts: barber level, the daily VIP, and the queue that decides
 // who the next customer is (so the reveal screen can show them, and a video can swap in a VIP).
 //
 // Level gates which customer features appear, so the first session keeps showing something new:
@@ -152,11 +152,10 @@
   const M = (HSC.meta = { data: null, client: null, levelOf, cutsFor });
 
   const dayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
   const hash = (str) => { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
 
   function fresh() {
-    return { v: 1, cuts: 0, streak: 0, lastDay: null, firstDay: dayKey(), dailyDay: null, queue: null, trial: null, declines: 0, pauseLeft: 0, offerTurn: 0, seen: {}, deck: {}, last: {}, regulars: [], sinceReg: 0, coins: 0, lastRound: null, combo: 0, book: {}, settings: null, modes: null, gift: null };
+    return { v: 1, cuts: 0, firstDay: dayKey(), dailyDay: null, queue: null, trial: null, declines: 0, pauseLeft: 0, offerTurn: 0, seen: {}, deck: {}, last: {}, regulars: [], sinceReg: 0, coins: 0, lastRound: null, settings: null, modes: null, gift: null };
   }
   const okTok = (v) => (typeof v === 'string' && v.length < 16) || (Number.isInteger(v) && v >= 0 && v < 8);
   function cleanDecks(o) {
@@ -226,11 +225,11 @@
   // the game mode, its current job (a flawed start and its repair, packed) and the daily challenge (modes.js)
   function cleanModes(o) {
     if (!o || typeof o !== 'object') return null;
-    const MODES = ['career', 'requests', 'free', 'fix', 'daily', 'beard', 'rush'];
+    const MODES = ['career', 'requests', 'free', 'fix', 'beard', 'rush'];
     const j = o.job, okJob = j && typeof j === 'object' && Number.isSafeInteger(j.n) && MODES.includes(j.m) &&
-      (j.none === true || j.m === 'daily' || (typeof j.st === 'string' && j.st.length < 40 && (typeof j.t === 'string' ? j.t.length < 24000 : typeof j.b === 'string' && j.b.length < 24000)));
+      (j.none === true || (typeof j.st === 'string' && j.st.length < 40 && (typeof j.t === 'string' ? j.t.length < 24000 : typeof j.b === 'string' && j.b.length < 24000)));
     const dl = o.daily, okDaily = dl && typeof dl === 'object' && typeof dl.day === 'string' && /^\d{4}-\d\d-\d\d$/.test(dl.day) && [0, 1, 2, 3].includes(dl.stars);
-    return { mode: MODES.includes(o.mode) ? o.mode : 'requests', job: okJob ? { n: j.n, m: j.m, st: j.st, t: j.t, b: j.b, none: j.none === true || undefined } : null,
+    return { taste: o.taste === true, qp: o.qp && typeof o.qp.day === 'string' && Number.isSafeInteger(o.qp.n) ? { day: o.qp.day, n: o.qp.n } : null, wait: Number.isSafeInteger(o.wait) && o.wait >= 0 && o.wait < 100 ? o.wait : undefined, pv: o.pv && typeof o.pv.day === 'string' && Number.isSafeInteger(o.pv.n) ? { day: o.pv.day, n: o.pv.n } : null, mode: MODES.includes(o.mode) ? o.mode : 'requests', job: okJob ? { n: j.n, m: j.m, st: j.st, t: j.t, b: j.b, none: j.none === true || undefined } : null,
       ask: Array.isArray(o.ask) ? o.ask.filter((x) => typeof x === 'string' && x.length < 48).slice(-14) : [], wv: o.wv && typeof o.wv.day === 'string' && Number.isSafeInteger(o.wv.n) ? { day: o.wv.day, n: o.wv.n } : null, daily: okDaily ? { day: dl.day, stars: dl.stars, paid: dl.paid === true } : null, beforeDaily: MODES.includes(o.beforeDaily) && o.beforeDaily !== 'daily' ? o.beforeDaily : null, tried: Array.isArray(o.tried) ? o.tried.filter((m) => MODES.includes(m)).slice(0, 10) : [], rush: Number.isSafeInteger(o.rush) && o.rush >= 0 ? Math.min(o.rush, 1e6) : 0 };
   }
   // the play-time gift: today's active play seconds and the gifts taken (session.js)
@@ -241,16 +240,9 @@
   // the player's settings (settings.js)
   function cleanSettings(o) {
     if (!o || typeof o !== 'object') return null;
-    const b = (v, d) => (typeof v === 'boolean' ? v : d), i = (v, lo, hi, d) => (Number.isSafeInteger(v) && v >= lo && v <= hi ? v : d);
+    const b = (v, d) => (typeof v === 'boolean' ? v : d);
     const lang = typeof o.lang === 'string' && /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})?$/.test(o.lang) ? o.lang : null;
-    return { left: b(o.left, false), size: i(o.size, 0, 4, 2), sens: i(o.sens, 0, 2, 2), vib: b(o.vib, true), calm: b(o.calm, false), pulses: b(o.pulses, false), lang };
-  }
-  // the lookbook: the best stars for each requested cut (requests.js)
-  function cleanBook(b) {
-    const out = {};
-    if (!b || typeof b !== 'object') return out;
-    for (const [k, v] of Object.entries(b).slice(0, 200)) if (typeof k === 'string' && k.length < 40 && [1, 2, 3].includes(v)) out[k] = v;
-    return out;
+    return { left: b(o.left, false), lang };
   }
   function cleanRound(r) {
     if (!r || typeof r !== 'object' || !Number.isSafeInteger(r.job) || ![0, 1, 2, 3].includes(r.stars)) return null;
@@ -258,7 +250,7 @@
     const key = typeof r.key === 'string' && r.key.length <= 160 ? r.key : null;
     const lines = Array.isArray(r.lines) ? r.lines.filter((x) => Array.isArray(x) && x.length === 2 && typeof x[0] === 'string' && x[0].length < 32 && Number.isSafeInteger(x[1]) && Math.abs(x[1]) < 1e6).slice(0, 24) : [];
     const bill = r.bill && typeof r.bill.key === 'string' && r.bill.key.length < 80 ? { key: r.bill.key, lines: Array.isArray(r.bill.lines) ? r.bill.lines.filter((x) => Array.isArray(x) && x.length === 2 && typeof x[0] === 'string' && Number.isSafeInteger(x[1])).slice(0, 8) : [] } : null;
-    return { job: r.job, key, stars: r.stars, tips: n(r.tips), tip: n(r.tip), paid: n(r.paid), lines, bill, tripled: r.tripled === true, shownStars: [1, 2, 3].includes(r.shownStars) ? r.shownStars : r.stars, prev: Math.min(999, n(r.prev)), mult: [1, 1.2, 1.5, 2].includes(r.mult) ? r.mult : 1, free: r.free === true };
+    return { job: r.job, key, judged: r.judged === true, video: n(r.video), stars: r.stars, tips: n(r.tips), tip: n(r.tip), paid: n(r.paid), lines, bill, tripled: r.tripled === true, shownStars: [1, 2, 3].includes(r.shownStars) ? r.shownStars : r.stars, prev: Math.min(999, n(r.prev)), mult: [1, 1.2, 1.5, 2].includes(r.mult) ? r.mult : 1, free: r.free === true };
   }
   function sanitize(d) {
     const f = fresh();
@@ -271,10 +263,10 @@
     if (q && REG && qr && gridOk(qr.h, 5) && gridOk(qr.b, top) && gridOk(qr.u, top)) q.regular = { h: qr.h, b: qr.b, u: qr.u };
     const t = d.trial && Number.isSafeInteger(d.trial.job) && typeof d.trial.key === 'string' ? d.trial : null;
     return {
-      v: 1, cuts: int(d.cuts, 0), streak: int(d.streak, 0), lastDay: str(d.lastDay), firstDay: str(d.firstDay) || f.firstDay,
+      v: 1, cuts: int(d.cuts, 0), homeSeen: d.homeSeen === true || int(d.cuts, 0) > 1, firstDay: str(d.firstDay) || f.firstDay,
       dailyDay: str(d.dailyDay), queue: q, trial: t, declines: int(d.declines, 0), pauseLeft: int(d.pauseLeft, 0),
       offerTurn: int(d.offerTurn, 0), seen: d.seen && typeof d.seen === 'object' ? d.seen : {},
-      deck: cleanDecks(d.deck), last: cleanLast(d.last), sinceVip: int(d.sinceVip, 9), runs: cleanRuns(d.runs), regulars: cleanRegulars(d.regulars), sinceReg: int(d.sinceReg, 0), coins: Math.min(99999999, int(d.coins, 0)), lastRound: cleanRound(d.lastRound), combo: Math.min(999, int(d.combo, 0)), book: cleanBook(d.book), settings: cleanSettings(d.settings), modes: cleanModes(d.modes), gift: cleanGift(d.gift),
+      deck: cleanDecks(d.deck), last: cleanLast(d.last), sinceVip: int(d.sinceVip, 9), runs: cleanRuns(d.runs), regulars: cleanRegulars(d.regulars), sinceReg: int(d.sinceReg, 0), coins: Math.min(99999999, int(d.coins, 0)), lastRound: cleanRound(d.lastRound), combo: Math.min(999, int(d.combo, 0)), settings: cleanSettings(d.settings), modes: cleanModes(d.modes), gift: cleanGift(d.gift),
     };
   }
   M.save = function () {
@@ -285,13 +277,8 @@
     M.client = client;
     const d = client && client.loadProgress ? await client.loadProgress(KEY, null) : null;
     M.data = sanitize(d);
-    // a streak survives only if the last haircut was today or yesterday
-    if (M.data.lastDay !== dayKey() && M.data.lastDay !== yesterday()) M.data.streak = 0;
     oneTab(client);
   };
-  // the streak as it stands now (a tab left open past a missed day shows 0, not the old number)
-  M.streakNow = () => (M.data && (M.data.lastDay === dayKey() || M.data.lastDay === yesterday()) ? M.data.streak : 0);
-
   // one game at a time: a newer tab takes over and this one pauses and stops saving (two tabs writing
   // the same saves would lose unlocks and progress). The tab in front always plays: coming back to a paused
   // tab, or the other tab closing while this one is in view, reloads it with the latest saves.
@@ -335,7 +322,7 @@
     if (shaved || wantBeard) delete opts.beard; // the dealt style gives way: selection decides
     const fits = (x) => (shaved ? x.beard.style === 'clean' : !wantBeard || !['clean', 'stubble'].includes(x.beard.style.replace(/\d+$/, '')));
     const p = HSC.selectPerson(seed >>> 0 || 1, opts, fits) || HSC.makePerson(seed >>> 0 || 1, Object.assign({}, opts, shaved ? { beard: 'clean' } : {}));
-    // the streaks count the customer as finally made (after the VIP and showcase rules)
+    // the runs count the customer as finally made (after the VIP and showcase rules)
     if (M.data && !extra.first && level >= 2) { note('loss', p.bald.norwood !== '1' || p.bald.type !== 'none'); note('beard', p.beard.style !== 'clean'); }
     // before level 4, hair loss stops at a Norwood 4 (the very bald crowns come later)
     if (level < 4 && !extra.feature && ['5', '6', '7'].includes(p.bald.norwood)) p.bald.norwood = '4';
@@ -364,47 +351,49 @@
     return Object.assign(generate(seed, level, first ? { first: true } : {}), { job: s.jobId });
   };
 
-  // a haircut was finished: progress, streak, and who comes in next
+  // a haircut was finished: progress, and who comes in next
   M.onFinish = function (state) {
     const d = M.data;
     if (!d) return null;
     const before = levelOf(d.cuts);
-    // finishing without a single cut is not a haircut: no level, no streak (the next customer still comes)
-    const counted = state.cutStrokeCount > 0;
-    if (counted) d.cuts += 1;
-    if (counted) rememberRegular(state);
+    // level comes from paid work only: not a customer finished with no cut, Quick Play, an empty chair or a job seen twice
+    const noWork = d.lastRound && d.lastRound.job === state.jobId && d.lastRound.judged && !d.lastRound.stars; // Rescue or Beards with no real work
+    const paid = state.cutStrokeCount > 0 && !noWork && !(HSC.modes && HSC.modes.econJob(state).kind === 'free') && !(HSC.repeatJob && HSC.repeatJob(state.jobId));
+    if (paid) { d.cuts += 1; rememberRegular(state); }
     const level = levelOf(d.cuts);
     const today = dayKey();
-    if (counted && d.lastDay !== today) d.streak = d.lastDay === yesterday() ? d.streak + 1 : 1;
-    if (counted) d.lastDay = today;
     // next customer: the new level's feature > daily VIP (from the second day on; never twice for one day,
     // even with the clock turned back) > VIP walk-in > anyone
     const job = state.jobId + 1;
-    // a replayed haircut: the next customer was already chosen and shown, they stay (a daily VIP too)
+    // Career picks its own next customer (career-run.js): the daily VIP and due regulars wait for the other modes
+    if (HSC.modes && HSC.modes.current() === 'career') { M.save(); return { levelUp: level > before, level, before, job }; }
+    // the next customer was already chosen and shown: they stay (a daily VIP too)
     if (d.queue && d.queue.job === job && HSC.validPerson(d.queue.person)) {
       M.save();
       return { levelUp: level > before, level, before, job };
     }
     const seed = (((state.seed >>> 0) ^ Math.imul(job + 1, 0x9e3779b1)) >>> 0) || 1;
     let person, reg = null;
+    // Quick Play is the open game: its next customer can be anyone, at any level
+    const open = HSC.modes && HSC.modes.current() === 'free', gl = open ? 99 : level;
     const FEATURE = { 2: 'beard', 3: 'old', 4: 'loss' };
     // a VIP (full hair, a big beard) waits a customer when it would make a fourth of a kind in a row
     const vipFits = !streak('loss', false) && (level < 2 || !streak('beard', true));
     if (level > before && FEATURE[level]) {
       person = generate(seed, level, { feature: FEATURE[level] });
     } else if ((!d.dailyDay || today > d.dailyDay) && d.firstDay !== today && vipFits) {
-      person = generate(hash('daily-' + today), level, { vip: true, daily: today });
+      person = generate(hash('daily-' + today), gl, { vip: true, daily: today });
       d.dailyDay = today;
     } else if (level > before && level === 5 && vipFits) {
       person = generate(seed, level, { vip: true });
-    } else if ((reg = regularDue(level, seed))) {
+    } else if (!open && (reg = regularDue(level, seed))) {
       // a regular comes back with his last cut grown out
       person = reg.person;
       note('loss', person.bald.norwood !== '1' || person.bald.type !== 'none');
       note('beard', person.beard.style !== 'clean');
     } else {
       // VIPs walk in now and then, never two close together
-      person = generate(seed, level, level >= 5 && vipFits && (d.sinceVip || 0) >= 4 && HSC.rng(seed).next() < 0.18 ? { vip: true } : {});
+      person = generate(seed, gl, level >= 5 && vipFits && (d.sinceVip || 0) >= 4 && HSC.rng(seed).next() < 0.18 ? { vip: true } : {});
     }
     d.sinceVip = person.vip ? 0 : (d.sinceVip || 0) + 1;
     if (REG) d.sinceReg = reg ? 0 : (d.sinceReg || 0) + 1;

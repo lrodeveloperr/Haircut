@@ -46,6 +46,8 @@ const canvasContext = {
   getImageData(x, y, width, height) { return { data: new Uint8ClampedArray(width * height * 4) }; },
   putImageData() {},
   createLinearGradient() { return { addColorStop() {} }; },
+  createRadialGradient() { return { addColorStop() {} }; },
+  translate() {}, rotate() {}, fillText() {}, strokeText() {}, measureText() { return { width: 100 }; },
 };
 const hub = new Element('div');
 hub.className = 'show';
@@ -58,10 +60,11 @@ const thumbnailCalls = [];
 const shared = [];
 const context = {
   console,
+  setInterval() {},
   hubInitializations: 0,
   AndroidHost: { shareGame(payload) { shared.push(payload); } },
   skinFadeStudio: {
-    getState() { return { status: 'reveal', hair: haircut }; },
+    getState() { return { status: 'reveal', hair: haircut, startHair: { cells: [9] } }; },
     getView() { return { revealComplete: true }; },
   },
   HSC: {
@@ -113,45 +116,28 @@ context.globalThis = context;
   assert.equal(button.tagName, 'BUTTON');
   assert.equal(button.attributes['aria-label'], 'Share haircut');
   assert.equal(button.textContent, '', 'the visible control is icon-only');
-  assert.equal(button.style.left, 'auto');
-  assert.equal(button.style.right, 'max(12px, env(safe-area-inset-right))');
-  assert.equal(button.style.top, 'max(12px, env(safe-area-inset-top))');
   assert.equal(button.style.visibility, 'visible');
 
   await button.click();
-  assert.deepEqual(thumbnailCalls.map(call => call.yaw), [180, 90, 0, -90],
-    'the shared card renders front, right, back and left in that order');
-  for (const call of thumbnailCalls) {
-    assert.equal(call.hair, haircut, 'all four views use the exact finished haircut');
-    assert.equal(call.elevation, 8);
-    assert.equal(call.options.headOnly, false);
-    assert.equal(call.options.size, 640);
-  }
+  assert.deepEqual(thumbnailCalls.map(call => call.yaw), [50, 50], 'the flyer shows before and after in the same pose');
+  assert.equal(thumbnailCalls[1].hair, haircut, 'the after is the exact finished haircut');
+  assert.notEqual(thumbnailCalls[0].hair, haircut, 'the before is the hair he came in with');
+  for (const call of thumbnailCalls) { assert.equal(call.elevation, 8); assert.equal(call.options.headOnly, false); assert.equal(call.options.size, 1024); }
   assert.deepEqual(shared, ['data:image/jpeg;base64,c2hhcmU=']);
-  const composed = drawCalls.filter(call => call.length === 9);
-  assert.equal(composed.length, 8, 'four backgrounds and four complete customer renders are composed');
-  const hero = composed[1];
-  const portraits = [composed[3], composed[5], composed[7]];
-  assert(hero[8] > portraits[0][8], 'the direct-back hero is taller than each supporting portrait');
-  const heroPanelHeight = hero[6] / .16;
-  const supportHeight = 1920 - heroPanelHeight;
-  const heroRatio = hero[6] / heroPanelHeight;
-  assert(Math.abs(heroRatio - .16) < .002, 'the hero uses the intended proportional top breathing room');
-  for (const portrait of portraits) {
-    const supportRatio = (portrait[6] - heroPanelHeight) / supportHeight;
-    assert(Math.abs(supportRatio - heroRatio) < .002,
-      'every supporting head uses the same proportional top breathing room as the hero');
-    const bottom = portrait[6] + portrait[8];
-    assert(bottom >= 1919 && bottom <= 1924,
-      'each supporting cape reaches the lower edge without a dead strip');
-  }
   assert.equal(button.disabled, false);
   assert.equal(button.classList.contains('busy'), false);
 
   context.HSC.hubInit();
   assert.equal(hub.children.filter(child => child.className.includes('hsc-native-share')).length, 1,
     'reinitialization does not duplicate the control');
-  console.log('PASS: right-edge completion control shares one four-angle image through Android.');
+  // the name on the flyer is the name on Google Play, in every language that has its own listing
+  const source = fs.readFileSync(path.resolve(__dirname, '../share.js'), 'utf8');
+  const listing = path.resolve(__dirname, '../store-listing');
+  for (const [lang, folder] of Object.entries({ en: 'en-US', ar: 'ar', de: 'de-DE', es: 'es-419', fr: 'fr-FR', hi: 'hi-IN', id: 'id', ja: 'ja-JP', ko: 'ko-KR', pt: 'pt-BR' })) {
+    const name = fs.readFileSync(path.join(listing, folder, 'title.txt'), 'utf8').trim();
+    assert(source.includes(`${lang}: '${name}'`), `flyer name for ${lang} matches the store title`);
+  }
+  console.log('PASS: the completion control shares one before-and-after flyer through Android.');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

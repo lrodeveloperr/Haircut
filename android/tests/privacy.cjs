@@ -14,7 +14,7 @@ const frozen = {
   // its two splice points reproduces the previous approved hash bd68b869... exactly, so the renderer is unchanged.
   // Re-pinned 6 November 2026 with the owner's approval for head form and camera tilt: source/patch21.py only
   'source/build/runtime/game.js':'3f8fc36c31672de8f7d86cf834b97d8d0c1dd557366ecca78f31e3bef2aa5a62',
-  'source/customers/wardrobe.js':'b6b0cb1d438cb8da4f4a0ca754a27ca02e2df25cffd4811835608420ab0948e6',
+  'source/customers/wardrobe.js':'02dc5a1e503d9219c41dbd8eb8522685886475c62b500f3b2bfbd780d8a20291',
 };
 for(const [p,expected] of Object.entries(frozen)) assert.equal(hash(p),expected,'owner-approved source must remain byte-identical: '+p);
 const types = {'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp','.json':'application/json'};
@@ -58,9 +58,9 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
       await page.waitForFunction(()=>document.querySelector('#hsc-set.open .hsc-privacy'));
       assert.equal(await page.locator('#hsc-panel .hsc-privacy').count(),0,'privacy is not hidden in Wardrobe');
       const visibleText = await page.locator('#hsc-set.open').innerText();
-      for(const label of ['Settings','Salon name','Language','Hand','Vibration','Reduce motion','Sound cues','Privacy']) assert(visibleText.includes(label),name+': readable setting '+label);
+      for(const label of ['Settings','Language','Hand','Sound','Privacy']) assert(visibleText.includes(label),name+': readable setting '+label);
       // a setting may not change a tool's physical result (TOOL-PHYSICS-AND-EFFECT-CONTRACT.md 7.3 items 5-6)
-      for(const label of ['Tool width','Cut per pass']) assert(!visibleText.includes(label),name+': removed physics setting '+label);
+      for(const label of ['Tool width','Cut per pass','Vibration','Reduce motion','Sound cues']) assert(!visibleText.includes(label),name+': removed setting '+label);
       const policy = page.getByRole('button',{name:'Privacy',exact:true});
       const bounds = await policy.evaluate(el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};});
       assert(bounds.width>=48&&bounds.height>=48,name+': privacy action has a full touch target');

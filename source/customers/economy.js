@@ -6,10 +6,9 @@
 // idempotency key, so a replayed reveal, a duplicate ad callback or a reload can never pay twice.
 //
 //   job payout   net = haircut fee - operating cost + organic tip + demand bonus. Stars decide the
-//                tip (0 / 25 / 50% of the net fee); regular +4, VIP +25% of the net fee and the 3-star combo
-//                apply to the tip, which is then capped at the net fee. A rewarded triple adds two tips, as its
+//                tip (0 / 25 / 50% of the net fee); regular +4 and VIP +25% of the net fee apply to the tip, which is then capped at the net fee. A rewarded triple adds two tips, as its
 //                own transaction.
-//   bill         the first five contracts are sponsored; each later five-contract cycle starts with a 50-coin
+//   bill         the first five contracts are sponsored; each later five-contract cycle starts with a 60-coin
 //                operating bill, posted at the preceding result boundary so it is visible before the next shift,
 //                into debt. The balance is signed: debt never blocks play; discretionary buys need the price.
 //   milestones   career facts pay once (first haircut, home chapter, licence, first city showcase, ...).
@@ -22,22 +21,30 @@
   const CONFIG = {
     version: 2,
     // [gross fee, operating cost] per contract type (balance model section 3)
-    fee: { requests: [28, 4], fix: [40, 6], beard: [26, 4], rush: [24, 4], showcase: [52, 8], free: [0, 0] },
+    fee: { requests: [28, 4], fix: [30, 6], beard: [26, 4], rush: [32, 4], showcase: [52, 8], free: [0, 0] },
+    // the result video: two more tips, never less than the floor. It comes at random, in every mode, so seeing it is a small
+    // relief and a reason for one more customer. After each offer a hidden wait is drawn: waits[n] is the chance of n results
+    // with no video, so no count ever tells the player when it is due. Quick Play earns only this, a few a day
+    video: { floor: 10, practicePerDay: 5, waits: [0.5, 0.25, 0.12, 0.08, 0.05] },
+    flatTip: 6, // Rescue and Beards have no order to score: the barber's judgment earns a set tip, so the result video stays
     tipShare: { 1: 0, 2: 0.25, 3: 0.5 }, // of the net fee
-    // Relax: ritual completion under 50% -> no tip, 50-99% -> 25%, 100% -> 50% of the net fee
-    regular: 4, vipShare: 0.25, combo: [1, 1, 1.2, 1.5, 2], rushMax: 12,
+    regular: 4, vipShare: 0.25, rushMax: 12,
     demand: { share: 0.2, max: 12, perShift: 3, shiftLength: 5 },
-    freestyleOnce: 5,
+    // Quick Play pays a little for real work, up to a daily limit: no bill, no level, and never worth farming over paid jobs
+    quickPlay: { pay: 5, perDay: 10 },
     // a video toward the wishlist, and the one-time Starter Pack for when Play Billing goes in (shown after the first shop
     // visit or wishlist, once three customers are done; Monetization Strategy section 11)
     wishVideo: { coins: 25, perDay: 3 }, starterPack: { coins: 2000, afterCustomers: 3 },
-    bill: { every: 5, amount: 50, subsidised: 5, lines: { rent: 25, utilities: 12, cleaning: 8, tools: 5 } },
-    // owner decision 5 November 2026 (economy simulator, plan 3.1/3.7): city chapter 75 -> 30, first showcase 150 -> 75,
-    // so ordinary work carries more of the income; paid milestones keep their keys and are never repaid or taken back
-    milestones: { firstHaircut: 40, homeChapter: 75, licence: 300, cityShowcase: 75, cityMastery: 250, cityChapter: 30, tour: 400 },
+    // what real money buys (Monetization Strategy section 11): the game shows no price; Google Play shows it at purchase
+    packs: [{ id: 'coins_500', coins: 500 }, { id: 'coins_1800', coins: 1800 }, { id: 'coins_5000', coins: 5000 }, { id: 'coins_16000', coins: 16000 }],
+    supporterBundle: { coins: 2500 },
+    bill: { every: 5, amount: 60, subsidised: 5, lines: { rent: 30, utilities: 15, cleaning: 10, supplies: 5 } },
+    // owner decision 6 November 2026 (economy simulator): one-off payouts cut so ordinary work carries more of the income; paid milestones keep their keys and are never repaid or taken back
+    milestones: { firstHaircut: 40, homeChapter: 75, licence: 300, cityShowcase: 50, cityMastery: 100, cityChapter: 20, tour: 200 },
     levels: [[2, 5, 50], [6, 9, 75], [10, 12, 100]], // one-time coins for reaching a level; none after 12
-    calendar: [20, 25, 30, 35, 40, 50, 80], goal: 25, weekly: 200, weeklyGoal: 15, duplicateItem: 50,
-    salon: [100, 300, 800, 1800], // price of tier 0->1, 1->2, 2->3, 3->4 in every slot
+    goal: 25, // one daily task
+    gift: { at: [600, 1200, 1800], pay: [20, 40, 60] }, // the play-time gift: seconds played today and what each pays
+    salon: [100, 300, 800, 1750], // price of tier 0->1, 1->2, 2->3, 3->4 in every slot
     wardrobe: { starter: 0, common: 120, uncommon: 350, rare: 900, premium: 2400 },
     ledgerSize: 60, keyRing: 300,
     maxBalance: 999999999, minBalance: -999999999,
@@ -67,16 +74,14 @@
   }
 
   // ---- the job payout (balance model sections 2-7) ----
-  // job: { kind (mode or 'showcase'), stars, valid, regular, vip, combo (3-star run including this job),
-  //        rushBonus (0..12), demandMatch }
+  // job: { kind (mode or 'showcase'), stars, judged (no order: a set tip), valid, regular, vip, rushBonus (0..12), demandMatch }
   function payout(job) {
     const kind = job.kind in CONFIG.fee ? job.kind : 'requests';
     const [gross, cost] = CONFIG.fee[kind];
     const net = gross - cost;
     if (!job.valid || kind === 'free') return { total: 0, net: 0, tip: 0, lines: [], kind };
-    // the organic tip: from stars, then regular, VIP and combo, capped at the net fee
-    let tip = net * (CONFIG.tipShare[job.stars] || 0);
-    if (job.combo) tip *= CONFIG.combo[Math.min(job.combo, 4)] || 1;
+    // the organic tip: from stars, then regular and VIP, capped at the net fee
+    let tip = job.judged ? CONFIG.flatTip : net * (CONFIG.tipShare[job.stars] || 0);
     if (job.regular) tip += CONFIG.regular;
     if (job.vip) tip += net * CONFIG.vipShare;
     tip = Math.round(Math.min(tip, net));
@@ -135,8 +140,11 @@
     if (eco.paid < B.subsidised) return { sponsored: B.subsidised - eco.paid, amount: B.amount };
     return { inJobs: B.every - (eco.paid % B.every), amount: B.amount };
   }
-  // the rewarded triple: two more organic tips, keyed to the job so a duplicate callback cannot pay again
-  function tripleTip(eco, jobKey, tip) { return apply(eco, { key: jobKey + ':triple', type: 'reward', cat: 'rewarded', amount: 2 * Math.max(0, tip | 0) }); }
+  // the rewarded result video: two more organic tips, at least the floor, keyed to the job so a duplicate callback cannot pay again
+  const videoPay = (tip) => Math.max(2 * Math.max(0, tip | 0), CONFIG.video.floor);
+  // the hidden wait until the next offer, from a roll of 0..1
+  const videoWait = (roll) => { let a = 0; const w = CONFIG.video.waits; for (let i = 0; i < w.length; i++) { a += w[i]; if (roll < a) return i; } return w.length - 1; };
+  function tripleTip(eco, jobKey, tip) { return apply(eco, { key: jobKey + ':triple', type: 'reward', cat: 'rewarded', amount: videoPay(tip) }); }
 
   // ---- career milestones (balance model section 9): one payment per career fact ----
   function milestonesFor(events, pos, firstHaircut) {
@@ -202,5 +210,5 @@
     return { balance: eco.balance, sources: eco.sources, sinks: eco.sinks, ratio: src ? snk / src : 0 };
   }
 
-  HSC.economy = { CONFIG, fresh, apply, payout, payJob, demandModes, demandMatch, billDue, tripleTip, milestonesFor, payMilestones, levelReward, payLevels, buy, grant, migrate, report };
+  HSC.economy = { CONFIG, fresh, apply, payout, payJob, demandModes, demandMatch, billDue, tripleTip, videoPay, videoWait, milestonesFor, payMilestones, levelReward, payLevels, buy, grant, migrate, report };
 })(globalThis.HSC || (globalThis.HSC = {}));

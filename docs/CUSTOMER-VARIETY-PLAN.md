@@ -1,5 +1,10 @@
 # Customer variety expansion — proposal (Android)
 
+**Career source-of-truth note (5 November 2026):** This is a historical feature proposal. Some of its
+appearance work was subsequently built, but its estimated tables are not approved as city weights. The
+locked career dependency, demographic and tattoo rules are in
+[CITY-CUSTOMER-VARIABILITY.md](CITY-CUSTOMER-VARIABILITY.md).
+
 Status: **proposal, awaiting owner approval.** Nothing here is implemented yet. Written 4 November 2026.
 Builds on the 36 head shapes and 240 face bases (branch `feature/head-shapes-36`). Adult men only (18+).
 

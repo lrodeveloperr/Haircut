@@ -1,5 +1,13 @@
 # Growth plan: engagement, retention, ad revenue and reach (Android)
 
+**Career source-of-truth note:** Career structure is now approved separately in
+[CAREER-MODE-ARCHITECTURE.md](CAREER-MODE-ARCHITECTURE.md). The economy, advertising, purchases and platform
+services below remain proposals and are not implied by the career approval.
+
+**Economy source-of-truth note:** The owner-approved holistic economy design is
+[ECONOMY-ARCHITECTURE.md](ECONOMY-ARCHITECTURE.md). Where this older plan differs, the approved design controls.
+The owner rejected paid ad removal on 5 November 2026; no purchase or bundle may suppress advertising.
+
 Status: **proposal, awaiting owner approval.** Written 5 November 2026. Nothing in this document is implemented
 unless it is marked **built**. It extends `docs/ENGAGEMENT-PLAN.md` (4 November) and replaces its ordering.
 
@@ -21,7 +29,7 @@ unless it is marked **built**. It extends `docs/ENGAGEMENT-PLAN.md` (4 November)
   - Android 8.0 and later (minSdk 26),
   - no text anywhere in the game,
   - store listings in 10 languages,
-  - fixed High graphics on every device,
+  - automatic Potato/Balanced/High/Ultra graphics with a protected visual floor and full Ultra ceiling,
   - works offline (ads need a connection).
 
 The biggest revenue lever is not ad tuning. With 30–50 players a day, revenue is a few dollars a day whatever
@@ -52,7 +60,7 @@ Figures are third-party tracker estimates (AppGoblin, SimilarWeb, AppFollow).
 - designs and colour as extra jobs,
 - daily, weekly and monthly tasks (Barber Chop 2),
 - leaderboards and feeds of other players' work,
-- a "No Ads" purchase.
+- direct coin and exact-cosmetic purchases.
 
 **Player complaints:**
 - ads after every customer and mid-action,
@@ -94,7 +102,8 @@ Each item is marked by what it moves: **E** engagement (session length), **R** r
    - Touch targets of at least 48 dp.
    - A one-finger play check on every screen.
 5. **Store listing growth (P).**
-   - Grow from 10 to about 30 languages.
+   - Grow in-game support from the current implementation to the owner-locked 40-language catalog in
+     `GLOBAL-LANGUAGE-AND-TEXT-CONTRACT.md`. Store-listing expansion remains a separate public-metadata action.
    - Screenshots that show customers from the region's own groups. The 12 phenotype groups make this possible, and Barber Chop is praised for diverse characters.
    - Custom store listings by country.
    - A 30-second gameplay video.
@@ -104,7 +113,7 @@ Each item is marked by what it moves: **E** engagement (session length), **R** r
 ### Phase 2: the economy and rewarded value (1–2 weeks; the big revenue step)
 
 7. **Tips (E, R, $).** Coins fly into a tip jar at the reveal. More for a happy customer, a streak or a VIP.
-8. **Loose requests with 1–3 stars, never a fail (E, R).** A thought bubble shows the cut he wants, and freestyle still pays. Regulars ask for "his usual".
+8. **Loose requests with 1–3 stars, never a fail (E, R).** A thought bubble shows the cut he wants. Quick Play remains the separate pressure-free path. Regulars ask for "his usual".
 9. **×3 tips (rewarded) on the reveal ($).**
    - A coin stack with ×3 and a ▶ button.
    - "Take ×1" appears after about 2 s.
@@ -122,10 +131,9 @@ Each item is marked by what it moves: **E** engagement (session length), **R** r
     - **After a rewarded video:** skip the next interstitial.
 
     Ads after every customer are the genre's top complaint. Early ads hurt D1 most, when players decide whether to keep the game. Recommendation: A/B test this against the current rule before choosing.
-12. **No Ads purchase ($).**
-    - At $3.99–4.99, it removes interstitials and the banner, and keeps optional rewarded videos.
-    - A small starter pack (tips plus a premium clipper) alongside it.
-    - In the genre, IAP is 40–60% of revenue.
+12. **Starter purchase ($).**
+    - A small one-time pack containing disclosed coins, one premium clipper skin and one gown.
+    - It does not remove or reduce advertising.
     - Needs Google Play Billing and a listing update.
 
 ### Phase 3: progression and daily return (2–4 weeks)
@@ -155,7 +163,11 @@ Each item is marked by what it moves: **E** engagement (session length), **R** r
 
 ### Phase 5: reach every device (ongoing; owner decisions)
 
-28. **Low-end phones (P; owner decision).** The game always runs fixed High (30,000 strands, 2× pixels) and never lowers quality. On 2–3 GB Android Go-class phones that may stutter, and those phones are a large share of emerging-market players. First measure on a real cheap phone (Mali-G52 or Adreno 5xx). If it stutters, offer an opt-in "smooth" setting the player chooses. That keeps your rule that the game never lowers quality on its own.
+28. **Low-end phones (built; physical-device certification pending).** The shared renderer now selects Potato,
+    Balanced, High or Ultra automatically, preserves a 12,000-strand/5-segment recognizable floor, gives proven
+    strong devices the original 30,000-strand/8-segment/2× Ultra ceiling, adapts only rendering cost and recovers
+    lost contexts at a safer tier. Complete weak/strong physical-phone testing before publication; see
+    `ADAPTIVE-GRAPHICS-AND-STABILITY-CONTRACT.md`.
 29. **Android 7 support (P).** minSdk 26 → 24 adds Android 7.x phones, a few percent of active devices, concentrated in emerging markets. Needs a WebView/WebGL check on those versions.
 30. **Mediation bidding ($).** Add bidding partners (Unity, ironSource, InMobi, Meta, AppLovin) inside AdMob mediation. AdMob added several in July 2025. Each needs a partner account and consent setup. Today this waits on AppLovin; the others could start now.
 31. **PC and Microsoft Store (P).** Google Play Games on PC lists Play games automatically, so confirm the game is not opted out (mouse and pen input already work). For the Microsoft Store, package the web build as a store app with the same no-text UI.

@@ -136,6 +136,7 @@
       cloth.needsUpdate = true;
       if (W.gown.collar) W.gown.collar.color.set(hexOf(g.collar));
     }
+    if (W.gown && W.T && HSC.gownDress) HSC.gownDress(worn('gown'));
     HSC.clippingsCape && HSC.clippingsCape(W.gown && W.gown.robe);
   }
 
@@ -211,6 +212,15 @@
     owns: (key) => owns(key),
     picture: (d, size) => picture(d, size),
     todays: () => { const p = picks(); return [p.clipper, p.gown]; },
+    worn: (tool) => W.data.look[tool],
+    // today's pick for one completed video: the earned-reward callback is the only way it is granted
+    async take(key) {
+      const d = C().byKey.get(key), p = picks();
+      if (!d || owns(key) || p[d.tool] !== key) return false;
+      if (!(await watchVideo('unlock-item'))) return false;
+      if (grant(d, 'daily') === 'unlocked') equip(d.tool, d.id);
+      return true;
+    },
     wear: (key) => { const d = C().byKey.get(key); if (d && owns(key)) equip(d.tool, d.id); },
     award(key, via) {
       const d = C().byKey.get(key);

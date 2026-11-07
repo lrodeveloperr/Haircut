@@ -423,7 +423,7 @@ void main(){
     }
   };
 
-  // the neck duster's bristles (services.js talc): flick off only the loose pieces under the brush, in a band
+  // flick off only the loose pieces under the brush, in a band
   // across the gown at `frac` (0 = the customer's left edge of the pieces, 1 = the right), half-width `half`.
   // Returns how many pieces it removed (each piece counts once).
   HSC.dustClippings = function (frac, half) {

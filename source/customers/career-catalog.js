@@ -67,9 +67,9 @@
     const catalog = {
       modes: {
         requests: { lane: (st, rq) => (rq.drop >= BIG_DROP ? 'transformation' : 'precision') },
-        fix: { lane: () => 'recovery', specialist: true, eligible: () => HSC.modes.unlocked('fix') },
-        beard: { lane: () => 'precision', specialist: true, eligible: () => HSC.modes.unlocked('beard') },
-        rush: { lane: () => 'pressure', specialist: true, eligible: () => HSC.modes.unlocked('rush') },
+        fix: { lane: () => 'recovery', specialist: true, eligible: () => (HSC.modes.inCareer || HSC.modes.unlocked)('fix') },
+        beard: { lane: () => 'precision', specialist: true, eligible: () => (HSC.modes.inCareer || HSC.modes.unlocked)('beard') },
+        rush: { lane: () => 'pressure', specialist: true, eligible: () => (HSC.modes.inCareer || HSC.modes.unlocked)('rush') },
       },
       // the city's own setting, kept inside the registry's bound; the 12% neutral fallback until a city is researched
       visitorShare(cityId) {
@@ -136,7 +136,8 @@
         const home = ctx && ctx.city && HSC.career ? HSC.career.city(ctx.city) : null, cuts = (home && home.habits && home.habits.cuts) || {};
         const opts = B().options(p, st.hair).map(([w, style, target]) => ({ id: style.id, family: style.fam + ':' + (style.contour || ''), target, drop: dropOf(st.hair, target), cost: { precision: ['part', 'crew', 'temple', 'taper'].includes(style.contour) ? 1 : 0 }, weight: w * lean(style) * (cuts[style.fam] || 1) }));
         // about half of the men with a beard want it done too: one order for the hair and the beard
-        const bj = (p.seed & 1) === 0 ? B().beardJob(p, st.beardGrid, HSC.rng((p.seed ^ 0x51ed29) >>> 0)) : null;
+        // (the first two licence chapters teach the hair alone)
+        const bj = !ctx.early && (p.seed & 1) === 0 ? B().beardJob(p, st.beardGrid, HSC.rng((p.seed ^ 0x51ed29) >>> 0)) : null;
         if (bj) for (const o of opts) Object.assign(o, { beardGoal: bj.style, beardTarget: bj.target });
         // the broad stage (director fallback 5): a plausible style without its usual weighting, still feasible
         return ctx.broad ? opts.map((o) => Object.assign(o, { weight: 1 })) : opts;
@@ -148,7 +149,7 @@
         if (c.request.beardTarget) { const b = c.start.beardGrid; for (let i = 0; i < 8192; i++) if (c.request.beardTarget[i] > b[i]) { r.push('beard-needs-growth'); break; } }
         if (c.mode === 'beard' && !c.request.beardTarget) r.push('no-beard-target');
         if (c.mode !== 'beard' && t && dropOf(h, t) < 150) r.push('nothing-to-cut');
-        if (c.mode !== 'requests' && !HSC.modes.unlocked(c.mode)) r.push('mode-locked');
+        if (c.mode !== 'requests' && !(HSC.modes.inCareer || HSC.modes.unlocked)(c.mode)) r.push('mode-locked');
         // owned tools: a beard request is offered only if the unlocked tools can bring 85% of the beard it changes
         // within one length of the target (the 3-star line); the scalp is always reachable with the clipper's guards
         if (c.request.beardTarget && HSC.beardReach) {
