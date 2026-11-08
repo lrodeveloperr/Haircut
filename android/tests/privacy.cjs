@@ -19,7 +19,9 @@ const frozen = {
   // a context lost again during recovery waits for the next restore instead of failing). Reversing it reproduces 4e70f1db... exactly.
   // Re-pinned again 7 November 2026 (audit round 2) for the engine's restore(): it now applies a brow array too (source/patch19.py);
   // reversing that one change reproduces 3eedf5ee... exactly.
-  'source/build/runtime/game.js':'fa238a19e586309db8eea237120e5d64f463be48cd39f11c2231d289835a73b8',
+  // Re-pinned 7 November 2026 for the 40-language release: only the boot error messages (source/boot.js, built into
+  // game.js) now come from the language packs; restoring the old boot.js reproduces fa238a19... exactly.
+  'source/build/runtime/game.js':'dcaa347c2a08e3f627a040e164416ce88a3233b25f5819f31b62181406bf3245',
   // Re-pinned 7 November 2026 (owner-directed audit): daily picks can never move back with the device clock, and the UI
   // scale reaches min(4, m/560) on 4K and ultra-wide screens. The renderer and the look of the wardrobe are unchanged.
   // Re-pinned again 7 November 2026 (audit round 2): the daily picks keep a book of days (meta.js HSC.dayBook), so a corrected
@@ -83,9 +85,9 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
       await choices.click(); assert.equal(await page.evaluate(()=>__adOptionsCalls),1,'UMP action dispatches separately');
       await page.evaluate(()=>{__androidPrivacyOptionsRequired=false;dispatchEvent(new Event('android-privacy-options'));});
       assert.equal(await choices.isVisible(),false,'current UMP status removes the optional action');
-      assert.equal(await page.locator('#hsc-language option').count(),12,'selector exposes exactly the implemented language packs');
-      await page.locator('#hsc-language').selectOption('es');
-      assert((await page.locator('#hsc-set.open').innerText()).includes('Ajustes'),'language change updates Settings atomically');
+      assert.equal(await page.locator('#hsc-language option').count(),40,'selector exposes exactly the 40 language packs');
+      await page.locator('#hsc-language').selectOption('es-419');
+      assert((await page.locator('#hsc-set.open').innerText()).includes('Configuración'),'language change updates Settings atomically');
       await page.locator('#hsc-language').selectOption('en');
       assert.equal(await page.evaluate(()=>JSON.stringify(skinFadeStudio.getState().hair)),hair,'settings and privacy preserve the haircut');
       assert.deepEqual(errors,[],'privacy path has no page exceptions');

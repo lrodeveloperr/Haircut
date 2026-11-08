@@ -40,14 +40,18 @@ function showBootError(error) {
   panel.className = 'boot-error';
   panel.setAttribute('role', 'alert');
   const title = document.createElement('h1');
-  title.textContent = error && error.code === 'SAVE_TOO_NEW' ? 'A newer game version is needed' : 'The game could not load';
+  // in the chosen language when the labels loaded (customers.js runs first); English otherwise
+  const say = (k, en) => { try { return (globalThis.HSC && HSC.t && HSC.t(k)) || en; } catch (_) { return en; } };
+  const tooNew = error && error.code === 'SAVE_TOO_NEW';
+  title.textContent = tooNew ? say('boot_new_title', 'A newer game version is needed') : say('boot_fail_title', 'The game could not load');
   const message = document.createElement('p');
-  message.textContent = error && error.code === 'SAVE_TOO_NEW'
-    ? 'Your progress is safe. Refresh to try the latest game version.'
-    : 'Your saved progress has been kept. Check your connection and try again.';
+  message.textContent = tooNew
+    ? say('boot_new_msg', 'Your progress is safe. Refresh to try the latest game version.')
+    : say('boot_fail_msg', 'Your saved progress has been kept. Check your connection and try again.');
+  if (globalThis.HSC && HSC.rtl) try { panel.dir = HSC.rtl() ? 'rtl' : 'ltr'; } catch (_) {}
   const retry = document.createElement('button');
   retry.type = 'button';
-  retry.textContent = 'Retry';
+  retry.textContent = say('retry', 'Retry');
   retry.addEventListener('click', () => { retry.disabled = true; globalThis.location.reload(); });
   panel.append(title, message, retry);
   document.body.appendChild(panel);

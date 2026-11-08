@@ -148,7 +148,8 @@
   HSC.cityName = (id) => {
     const c = CITIES.find((x) => x.id === id);
     if (!c) return id;
+    // the language pack's city_<id> (labels-packs.js), then this table by base language, then English
     const l = HSC.lang ? HSC.lang() : 'en';
-    return c.names[l] || c.names.en;
+    return (HSC.tHas && HSC.tHas('city_' + id)) || c.names[l] || c.names[l.split('-')[0]] || c.names.en;
   };
 })(globalThis.HSC || (globalThis.HSC = {}));

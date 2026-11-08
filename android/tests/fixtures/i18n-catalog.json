@@ -1,0 +1,4147 @@
+[
+ {
+  "key": "play",
+  "en": "Play",
+  "context": "Fallback label on the loading card when the mode has no name.",
+  "purpose": "label",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Verb: start playing.",
+  "existing": {
+   "ar": "العب",
+   "fr": "Jouer",
+   "de": "Spielen",
+   "id": "Main",
+   "ja": "プレイ",
+   "ko": "플레이",
+   "pt-BR": "Jogar",
+   "ru": "Играть",
+   "es-419": "Jugar",
+   "tr": "Oyna",
+   "hi": "खेलें"
+  }
+ },
+ {
+  "key": "modes",
+  "en": "Modes",
+  "context": "Home dock tab and page title: opens the list of extra game modes (Orders, Rescue, Beards, Rush).",
+  "purpose": "label",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "bottom-dock label under an icon, 4 columns on a 360 px phone; a long word widens its column (German Einstellungen = 13), and the row steps down to 12 px only if all four are too wide",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Plural of game \"mode\".",
+  "existing": {
+   "ar": "الأنماط",
+   "fr": "Modes",
+   "de": "Modi",
+   "id": "Mode",
+   "ja": "モード",
+   "ko": "모드",
+   "pt-BR": "Modos",
+   "ru": "Режимы",
+   "es-419": "Modos",
+   "tr": "Modlar",
+   "hi": "मोड"
+  }
+ },
+ {
+  "key": "daily",
+  "en": "Daily",
+  "context": "Daily mode/challenge name.",
+  "purpose": "retain",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "mode tile name, bold, beside the mode icon",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "something new every day worth returning for",
+  "existing": {
+   "ar": "يومي",
+   "fr": "Défi",
+   "de": "Täglich",
+   "id": "Harian",
+   "ja": "デイリー",
+   "ko": "일일",
+   "pt-BR": "Diário",
+   "ru": "День",
+   "es-419": "Diario",
+   "tr": "Günlük",
+   "hi": "दैनिक"
+  }
+ },
+ {
+  "key": "gift",
+  "en": "Gift",
+  "context": "Free gift destination name.",
+  "purpose": "reward",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "a small free treat waiting for me",
+  "existing": {
+   "ar": "هدية",
+   "fr": "Cadeau",
+   "de": "Geschenk",
+   "id": "Hadiah",
+   "ja": "ギフト",
+   "ko": "선물",
+   "pt-BR": "Presente",
+   "ru": "Подарок",
+   "es-419": "Regalo",
+   "tr": "Hediye",
+   "hi": "उपहार"
+  }
+ },
+ {
+  "key": "wardrobe",
+  "en": "Wardrobe",
+  "context": "Legacy wardrobe destination name (clippers and gowns the player owns).",
+  "purpose": "label",
+  "max": {
+   "chars": 18,
+   "lines": 1,
+   "element": "page title beside an icon in the header bar",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "الخزانة",
+   "fr": "Vestiaire",
+   "de": "Garderobe",
+   "id": "Lemari",
+   "ja": "衣装",
+   "ko": "옷장",
+   "pt-BR": "Armário",
+   "ru": "Гардероб",
+   "es-419": "Armario",
+   "tr": "Gardırop",
+   "hi": "अलमारी"
+  }
+ },
+ {
+  "key": "salon",
+  "en": "Salon",
+  "context": "Screen-reader name of the shop/salon button; the player's own barbershop.",
+  "purpose": "label",
+  "max": {
+   "chars": 18,
+   "lines": 1,
+   "element": "page title beside an icon in the header bar",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "الصالون",
+   "fr": "Salon",
+   "de": "Salon",
+   "id": "Salon",
+   "ja": "サロン",
+   "ko": "살롱",
+   "pt-BR": "Salão",
+   "ru": "Салон",
+   "es-419": "Salón",
+   "tr": "Salon",
+   "hi": "सैलून"
+  }
+ },
+ {
+  "key": "styles",
+  "en": "Styles",
+  "context": "Screen-reader / legacy label for the haircut portfolio (icon \"styles\").",
+  "purpose": "label",
+  "max": {
+   "chars": 18,
+   "lines": 1,
+   "element": "page title beside an icon in the header bar",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Haircut styles, not fashion styles in general.",
+  "existing": {
+   "ar": "القصات",
+   "fr": "Styles",
+   "de": "Frisuren",
+   "id": "Gaya",
+   "ja": "スタイル",
+   "ko": "스타일",
+   "pt-BR": "Estilos",
+   "ru": "Стрижки",
+   "es-419": "Estilos",
+   "tr": "Stiller",
+   "hi": "स्टाइल"
+  }
+ },
+ {
+  "key": "regulars",
+  "en": "Regulars",
+  "context": "Label for returning regular customers.",
+  "purpose": "retain",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "mode tile name, bold, beside the mode icon",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Regular customers who come back.",
+  "intent": "familiar faces who come back to me",
+  "existing": {
+   "ar": "المعتادون",
+   "fr": "Habitués",
+   "de": "Stammkunden",
+   "id": "Langganan",
+   "ja": "常連",
+   "ko": "단골",
+   "pt-BR": "Fregueses",
+   "ru": "Постоянные",
+   "es-419": "Habituales",
+   "tr": "Müdavimler",
+   "hi": "नियमित"
+  }
+ },
+ {
+  "key": "orders",
+  "en": "Orders",
+  "context": "Modes page tile name: customers ask for a specific haircut. Also loading card name.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "mode tile name, bold, beside the mode icon",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Customer orders / requests.",
+  "existing": {
+   "ar": "الطلبات",
+   "fr": "Commandes",
+   "de": "Aufträge",
+   "id": "Pesanan",
+   "ja": "注文",
+   "ko": "주문",
+   "pt-BR": "Pedidos",
+   "ru": "Заказы",
+   "es-419": "Pedidos",
+   "tr": "Siparişler",
+   "hi": "ऑर्डर"
+  }
+ },
+ {
+  "key": "freestyle",
+  "en": "Freestyle",
+  "context": "Legacy mode name for pressure-free play (now Quick Play).",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "mode tile name, bold, beside the mode icon",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Not shown as a separate mode in the current Home; keep consistent with Quick Play meaning.",
+  "existing": {
+   "ar": "حر",
+   "fr": "Libre",
+   "de": "Freestyle",
+   "id": "Bebas",
+   "ja": "フリー",
+   "ko": "자유",
+   "pt-BR": "Livre",
+   "ru": "Фристайл",
+   "es-419": "Libre",
+   "tr": "Serbest",
+   "hi": "फ्रीस्टाइल"
+  }
+ },
+ {
+  "key": "rescue",
+  "en": "Rescue",
+  "context": "Modes page tile name: fix a bad haircut another barber made.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "mode tile name, bold, beside the mode icon",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Rescue/fix a disaster, playful.",
+  "existing": {
+   "ar": "إنقاذ",
+   "fr": "Sauvetage",
+   "de": "Rettung",
+   "id": "Perbaiki",
+   "ja": "救出",
+   "ko": "구조",
+   "pt-BR": "Resgate",
+   "ru": "Спасение",
+   "es-419": "Rescate",
+   "tr": "Kurtarma",
+   "hi": "बचाव"
+  }
+ },
+ {
+  "key": "beards",
+  "en": "Beards",
+  "context": "Modes page tile name: beard shaping mode.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "mode tile name, bold, beside the mode icon",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Plural beards.",
+  "existing": {
+   "ar": "اللحى",
+   "fr": "Barbes",
+   "de": "Bärte",
+   "id": "Jenggot",
+   "ja": "ひげ",
+   "ko": "수염",
+   "pt-BR": "Barbas",
+   "ru": "Бороды",
+   "es-419": "Barbas",
+   "tr": "Sakallar",
+   "hi": "दाढ़ी"
+  }
+ },
+ {
+  "key": "rush",
+  "en": "Rush",
+  "context": "Modes page tile name: timed mode, cut against the clock.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "mode tile name, bold, beside the mode icon",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Keep it short (one word if natural): hurry/rush hour.",
+  "existing": {
+   "ar": "زحمة",
+   "fr": "Rush",
+   "de": "Ansturm",
+   "id": "Kilat",
+   "ja": "ラッシュ",
+   "ko": "러시",
+   "pt-BR": "Correria",
+   "ru": "Спешка",
+   "es-419": "Prisa",
+   "tr": "Acele",
+   "hi": "रश"
+  }
+ },
+ {
+  "key": "event",
+  "en": "Event",
+  "context": "Legacy event label (not wired in the current UI).",
+  "purpose": "label",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Not currently drawn; translate for completeness.",
+  "existing": {
+   "ar": "حدث",
+   "fr": "Événement",
+   "de": "Event",
+   "id": "Acara",
+   "ja": "イベント",
+   "ko": "이벤트",
+   "pt-BR": "Evento",
+   "ru": "Событие",
+   "es-419": "Evento",
+   "tr": "Etkinlik",
+   "hi": "इवेंट"
+  }
+ },
+ {
+  "key": "new",
+  "en": "New",
+  "context": "\"New\" badge on a fresh item or customer.",
+  "purpose": "label",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Very short badge; 3-6 characters ideal.",
+  "existing": {
+   "ar": "جديد",
+   "fr": "Nouveau",
+   "de": "Neu",
+   "id": "Baru",
+   "ja": "新着",
+   "ko": "신규",
+   "pt-BR": "Novo",
+   "ru": "Новое",
+   "es-419": "Nuevo",
+   "tr": "Yeni",
+   "hi": "नया"
+  }
+ },
+ {
+  "key": "map",
+  "en": "Map",
+  "context": "Career: title of the city map page; screen-reader name of the map button.",
+  "purpose": "label",
+  "max": {
+   "chars": 18,
+   "lines": 1,
+   "element": "page title beside an icon in the header bar",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "الخريطة",
+   "fr": "Carte",
+   "de": "Karte",
+   "id": "Peta",
+   "ja": "マップ",
+   "ko": "지도",
+   "pt-BR": "Mapa",
+   "ru": "Карта",
+   "es-419": "Mapa",
+   "tr": "Harita",
+   "hi": "नक्शा"
+  }
+ },
+ {
+  "key": "tour",
+  "en": "Tour",
+  "context": "Legacy Career tour label (not wired in the current UI).",
+  "purpose": "label",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Not currently drawn; a world tour of cities.",
+  "existing": {
+   "ar": "جولة",
+   "fr": "Tournée",
+   "de": "Tour",
+   "id": "Tur",
+   "ja": "ツアー",
+   "ko": "투어",
+   "pt-BR": "Turnê",
+   "ru": "Тур",
+   "es-419": "Gira",
+   "tr": "Tur",
+   "hi": "टूर"
+  }
+ },
+ {
+  "key": "home",
+  "en": "Home",
+  "context": "Legacy label: the Home screen.",
+  "purpose": "label",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "The game's main menu, not a house.",
+  "existing": {
+   "ar": "الوطن",
+   "fr": "Maison",
+   "de": "Heimat",
+   "id": "Rumah",
+   "ja": "ホーム",
+   "ko": "홈",
+   "pt-BR": "Casa",
+   "ru": "Дом",
+   "es-419": "Casa",
+   "tr": "Memleket",
+   "hi": "घर"
+  }
+ },
+ {
+  "key": "choose_city",
+  "en": "Choose a city",
+  "context": "Career hero button subtitle before a city is picked.",
+  "purpose": "retain",
+  "max": {
+   "chars": 30,
+   "lines": 2,
+   "element": "mode tile description under the name, may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "Prompt to pick the first city.",
+  "intent": "the start of a journey",
+  "existing": {}
+ },
+ {
+  "key": "no_customers",
+  "en": "No customers yet",
+  "context": "Portfolio page when empty.",
+  "purpose": "guide",
+  "max": {
+   "chars": 80,
+   "lines": 3,
+   "element": "message text, wraps freely",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {}
+ },
+ {
+  "key": "sound",
+  "en": "Sound",
+  "context": "Settings row: sound on/off switch.",
+  "purpose": "guide",
+  "max": {
+   "chars": 22,
+   "lines": 2,
+   "element": "Settings row label or action; may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {}
+ },
+ {
+  "key": "free",
+  "en": "Free",
+  "context": "Shop tab \"Free\" (free gift + daily items); also the text on a video button that gets an item free by watching a video.",
+  "purpose": "reward",
+  "max": {
+   "chars": 10,
+   "lines": 1,
+   "element": "shop tab, 6 tabs share one row",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Means \"free of charge\". Same word on the tab and the video button.",
+  "intent": "a free bonus I would regret missing",
+  "existing": {}
+ },
+ {
+  "key": "coins",
+  "en": "Coins",
+  "context": "Shop tab listing coin packs to buy; also spoken name of the coin balance.",
+  "purpose": "sell",
+  "max": {
+   "chars": 10,
+   "lines": 1,
+   "element": "shop tab, 6 tabs share one row",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "The game currency (coins).",
+  "intent": "more coins = more style",
+  "existing": {}
+ },
+ {
+  "key": "clippers",
+  "en": "Clippers",
+  "context": "Shop tab: clipper designs to buy/wear.",
+  "purpose": "sell",
+  "max": {
+   "chars": 10,
+   "lines": 1,
+   "element": "shop tab, 6 tabs share one row",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Hair clippers (the electric tool), plural.",
+  "intent": "a cool new tool to cut with",
+  "existing": {}
+ },
+ {
+  "key": "gowns",
+  "en": "Gowns",
+  "context": "Shop tab: barber gowns/capes the customer wears.",
+  "purpose": "sell",
+  "max": {
+   "chars": 10,
+   "lines": 1,
+   "element": "shop tab, 6 tabs share one row",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Barber cape/gown draped on the customer, plural; not a dress.",
+  "intent": "bright style for every customer",
+  "existing": {}
+ },
+ {
+  "key": "pick_city",
+  "en": "Pick your city",
+  "context": "Career map page title when the player picks the first city.",
+  "purpose": "retain",
+  "max": {
+   "chars": 18,
+   "lines": 1,
+   "element": "page title beside an icon in the header bar",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "excitement of choosing where my career starts",
+  "existing": {}
+ },
+ {
+  "key": "next_city",
+  "en": "Next city",
+  "context": "Career map page title when the player picks the next city after finishing one.",
+  "purpose": "retain",
+  "max": {
+   "chars": 18,
+   "lines": 1,
+   "element": "page title beside an icon in the header bar",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "progress: on to the next place",
+  "existing": {}
+ },
+ {
+  "key": "m_requests",
+  "en": "Cut what they ask for",
+  "context": "Modes tile description under \"Orders\".",
+  "purpose": "guide",
+  "max": {
+   "chars": 30,
+   "lines": 2,
+   "element": "mode tile description under the name, may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "Imperative to the player: cut the haircut the customer requests.",
+  "en_short": "Cut what they ask",
+  "existing": {}
+ },
+ {
+  "key": "m_fix",
+  "en": "Fix a bad haircut",
+  "context": "Modes tile description under \"Rescue\".",
+  "purpose": "guide",
+  "max": {
+   "chars": 30,
+   "lines": 2,
+   "element": "mode tile description under the name, may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "Imperative: repair a botched haircut.",
+  "existing": {}
+ },
+ {
+  "key": "m_beard",
+  "en": "Shape the beard",
+  "context": "Modes tile description under \"Beards\".",
+  "purpose": "guide",
+  "max": {
+   "chars": 30,
+   "lines": 2,
+   "element": "mode tile description under the name, may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "Imperative: shape/trim the beard.",
+  "existing": {}
+ },
+ {
+  "key": "m_rush",
+  "en": "Beat the clock",
+  "context": "Modes tile description under \"Rush\".",
+  "purpose": "guide",
+  "max": {
+   "chars": 30,
+   "lines": 2,
+   "element": "mode tile description under the name, may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "Imperative: finish before the timer runs out.",
+  "existing": {}
+ },
+ {
+  "key": "task_fade",
+  "en": "Do {n} fades",
+  "context": "Shop \"Free\" tab daily task: do {n} fade haircuts.",
+  "purpose": "reward",
+  "max": {
+   "chars": 26,
+   "lines": 2,
+   "element": "daily task row text; may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [
+   "{n}"
+  ],
+  "notes": "Uses plural rules: add task_fade#one etc. if your language needs it. Keep every placeholder exactly ({n}); move it to the natural position for your grammar.",
+  "en_short": "{n} fades",
+  "intent": "an easy goal with a reward",
+  "existing": {}
+ },
+ {
+  "key": "task_beard",
+  "en": "Trim {n} beards",
+  "context": "Daily task: trim {n} beards.",
+  "purpose": "reward",
+  "max": {
+   "chars": 26,
+   "lines": 2,
+   "element": "daily task row text; may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [
+   "{n}"
+  ],
+  "notes": "Plural rules apply. Keep every placeholder exactly ({n}); move it to the natural position for your grammar.",
+  "en_short": "{n} beards",
+  "intent": "an easy goal with a reward",
+  "existing": {}
+ },
+ {
+  "key": "task_regular",
+  "en": "Cut a regular",
+  "context": "Daily task: cut a regular customer's hair once.",
+  "purpose": "reward",
+  "max": {
+   "chars": 26,
+   "lines": 2,
+   "element": "daily task row text; may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "an easy goal with a reward",
+  "existing": {}
+ },
+ {
+  "key": "task_star3",
+  "en": "{n} three-star cuts",
+  "context": "Daily task: finish {n} haircuts with three stars.",
+  "purpose": "reward",
+  "max": {
+   "chars": 26,
+   "lines": 2,
+   "element": "daily task row text; may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [
+   "{n}"
+  ],
+  "notes": "Plural rules apply. Keep every placeholder exactly ({n}); move it to the natural position for your grammar.",
+  "intent": "a goal that proves my skill",
+  "existing": {}
+ },
+ {
+  "key": "task_customers",
+  "en": "{n} customers",
+  "context": "Daily task: serve {n} customers.",
+  "purpose": "reward",
+  "max": {
+   "chars": 26,
+   "lines": 2,
+   "element": "daily task row text; may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [
+   "{n}"
+  ],
+  "notes": "Plural rules apply. Keep every placeholder exactly ({n}); move it to the natural position for your grammar.",
+  "intent": "an easy goal with a reward",
+  "existing": {}
+ },
+ {
+  "key": "task_tips",
+  "en": "Earn {n} in tips",
+  "context": "Daily task: earn {n} coins in tips. {n} is a formatted number.",
+  "purpose": "reward",
+  "max": {
+   "chars": 26,
+   "lines": 2,
+   "element": "daily task row text; may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [
+   "{n}"
+  ],
+  "notes": "Plural rules apply. Keep every placeholder exactly ({n}); move it to the natural position for your grammar.",
+  "intent": "a goal that pays",
+  "existing": {}
+ },
+ {
+  "key": "career",
+  "en": "Career",
+  "context": "Home: the large hero button that resumes the persistent career (cities, progress). Also the mode name on the loading card.",
+  "purpose": "retain",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "large Home button text (Quick Play card / Career hero button)",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Name of the progression mode. Not \"job\" or \"profession\" if that reads as real-life work; use the gaming term for career mode.",
+  "intent": "my own barber story that continues where I left off",
+  "existing": {
+   "ar": "المسيرة",
+   "fr": "Carrière",
+   "de": "Karriere",
+   "id": "Karier",
+   "ja": "キャリア",
+   "ko": "커리어",
+   "pt-BR": "Carreira",
+   "ru": "Карьера",
+   "es-419": "Carrera",
+   "tr": "Kariyer",
+   "hi": "करियर"
+  }
+ },
+ {
+  "key": "quick_play",
+  "en": "Quick Play",
+  "context": "Home: the first big card; starts pressure-free play with no requested haircut.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "large Home button text (Quick Play card / Career hero button)",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Must stay a clear \"play quickly / casual play\" meaning; never a bare generic \"Play\". Distinct from Career.",
+  "existing": {
+   "ar": "لعب سريع",
+   "fr": "Partie rapide",
+   "de": "Schnellspiel",
+   "id": "Main Cepat",
+   "ja": "クイックプレイ",
+   "ko": "빠른 플레이",
+   "pt-BR": "Jogo rápido",
+   "ru": "Быстрая игра",
+   "es-419": "Juego rápido",
+   "tr": "Hızlı Oyun",
+   "hi": "क्विक प्ले"
+  }
+ },
+ {
+  "key": "settings",
+  "en": "Settings",
+  "context": "Home dock tab and Settings sheet title.",
+  "purpose": "label",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "bottom-dock label under an icon, 4 columns on a 360 px phone; a long word widens its column (German Einstellungen = 13), and the row steps down to 12 px only if all four are too wide",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the platform-standard word for Settings. German \"Einstellungen\" is the known longest; dock column widens for it.",
+  "existing": {
+   "ar": "الإعدادات",
+   "fr": "Réglages",
+   "de": "Einstellungen",
+   "id": "Pengaturan",
+   "ja": "設定",
+   "ko": "설정",
+   "pt-BR": "Ajustes",
+   "ru": "Настройки",
+   "es-419": "Ajustes",
+   "tr": "Ayarlar",
+   "hi": "सेटिंग्स"
+  }
+ },
+ {
+  "key": "shop_name",
+  "en": "Salon name",
+  "context": "Settings row: edit the barbershop's name.",
+  "purpose": "guide",
+  "max": {
+   "chars": 22,
+   "lines": 2,
+   "element": "Settings row label or action; may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "اسم الصالون",
+   "fr": "Nom du salon",
+   "de": "Salonname",
+   "id": "Nama salon",
+   "ja": "サロン名",
+   "ko": "살롱 이름",
+   "pt-BR": "Nome do salão",
+   "ru": "Название салона",
+   "es-419": "Nombre del salón",
+   "tr": "Salon adı",
+   "hi": "सैलून का नाम"
+  }
+ },
+ {
+  "key": "hand",
+  "en": "Hand",
+  "context": "Settings row: which hand holds the clipper (left/right-handed controls).",
+  "purpose": "guide",
+  "max": {
+   "chars": 22,
+   "lines": 2,
+   "element": "Settings row label or action; may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "Handedness.",
+  "existing": {
+   "ar": "اليد",
+   "fr": "Main",
+   "de": "Hand",
+   "id": "Tangan",
+   "ja": "利き手",
+   "ko": "손",
+   "pt-BR": "Mão",
+   "ru": "Рука",
+   "es-419": "Mano",
+   "tr": "El",
+   "hi": "हाथ"
+  }
+ },
+ {
+  "key": "left",
+  "en": "Left",
+  "context": "Settings: left-handed option button.",
+  "purpose": "guide",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Left (hand).",
+  "existing": {
+   "ar": "اليسرى",
+   "fr": "Gauche",
+   "de": "Links",
+   "id": "Kiri",
+   "ja": "左",
+   "ko": "왼쪽",
+   "pt-BR": "Esquerda",
+   "ru": "Левая",
+   "es-419": "Izquierda",
+   "tr": "Sol",
+   "hi": "बायाँ"
+  }
+ },
+ {
+  "key": "right",
+  "en": "Right",
+  "context": "Settings: right-handed option button.",
+  "purpose": "guide",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Right (hand).",
+  "existing": {
+   "ar": "اليمنى",
+   "fr": "Droite",
+   "de": "Rechts",
+   "id": "Kanan",
+   "ja": "右",
+   "ko": "오른쪽",
+   "pt-BR": "Direita",
+   "ru": "Правая",
+   "es-419": "Derecha",
+   "tr": "Sağ",
+   "hi": "दायाँ"
+  }
+ },
+ {
+  "key": "privacy",
+  "en": "Privacy",
+  "context": "Settings action: opens the privacy policy in the browser.",
+  "purpose": "guide",
+  "max": {
+   "chars": 22,
+   "lines": 2,
+   "element": "Settings row label or action; may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "Platform/legal: \"Privacy\" or \"Privacy policy\".",
+  "existing": {
+   "ar": "الخصوصية",
+   "fr": "Confidentialité",
+   "de": "Datenschutz",
+   "id": "Privasi",
+   "ja": "プライバシー",
+   "ko": "개인정보",
+   "pt-BR": "Privacidade",
+   "ru": "Конфиденциальность",
+   "es-419": "Privacidad",
+   "tr": "Gizlilik",
+   "hi": "गोपनीयता"
+  }
+ },
+ {
+  "key": "ad_choices",
+  "en": "Ad choices",
+  "context": "Settings action (only where Google requires it): reopen the ad privacy / consent choices.",
+  "purpose": "guide",
+  "max": {
+   "chars": 22,
+   "lines": 2,
+   "element": "Settings row label or action; may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "Legal/platform wording; may be longer.",
+  "existing": {
+   "ar": "خيارات الإعلانات",
+   "fr": "Choix publicitaires",
+   "de": "Werbeoptionen",
+   "id": "Pilihan iklan",
+   "ja": "広告設定",
+   "ko": "광고 설정",
+   "pt-BR": "Opções de anúncios",
+   "ru": "Настройки рекламы",
+   "es-419": "Opciones de anuncios",
+   "tr": "Reklam seçenekleri",
+   "hi": "विज्ञापन विकल्प"
+  }
+ },
+ {
+  "key": "full",
+  "en": "Full",
+  "context": "Settings: graphics detail \"Full\" (maximum).",
+  "purpose": "guide",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "كامل",
+   "fr": "Complet",
+   "de": "Voll",
+   "id": "Penuh",
+   "ja": "最大",
+   "ko": "최대",
+   "pt-BR": "Completo",
+   "ru": "Полностью",
+   "es-419": "Completo",
+   "tr": "Tam",
+   "hi": "पूरा"
+  }
+ },
+ {
+  "key": "language",
+  "en": "Language",
+  "context": "Settings row label and spoken name of the language selector.",
+  "purpose": "guide",
+  "max": {
+   "chars": 22,
+   "lines": 2,
+   "element": "Settings row label or action; may wrap to 2 lines",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "اللغة",
+   "fr": "Langue",
+   "de": "Sprache",
+   "id": "Bahasa",
+   "ja": "言語",
+   "ko": "언어",
+   "pt-BR": "Idioma",
+   "ru": "Язык",
+   "es-419": "Idioma",
+   "tr": "Dil",
+   "hi": "भाषा"
+  }
+ },
+ {
+  "key": "shops",
+  "en": "Shops",
+  "context": "Shop tab: barbershop interior styles (by city).",
+  "purpose": "sell",
+  "max": {
+   "chars": 10,
+   "lines": 1,
+   "element": "shop tab, 6 tabs share one row",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Shop/barbershop designs, plural.",
+  "intent": "make my barbershop look like a famous city",
+  "existing": {
+   "ar": "المتاجر",
+   "fr": "Boutiques",
+   "de": "Läden",
+   "id": "Toko",
+   "ja": "ショップ",
+   "ko": "매장",
+   "pt-BR": "Lojas",
+   "ru": "Салоны",
+   "es-419": "Tiendas",
+   "tr": "Dükkanlar",
+   "hi": "दुकानें"
+  }
+ },
+ {
+  "key": "parts",
+  "en": "Parts",
+  "context": "Shop tab: individual barbershop parts (wall, floor, chair...).",
+  "purpose": "sell",
+  "max": {
+   "chars": 10,
+   "lines": 1,
+   "element": "shop tab, 6 tabs share one row",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Furniture/parts of the shop.",
+  "intent": "make it mine piece by piece",
+  "existing": {
+   "ar": "القطع",
+   "fr": "Pièces",
+   "de": "Teile",
+   "id": "Bagian",
+   "ja": "パーツ",
+   "ko": "부품",
+   "pt-BR": "Peças",
+   "ru": "Детали",
+   "es-419": "Piezas",
+   "tr": "Parçalar",
+   "hi": "हिस्से"
+  }
+ },
+ {
+  "key": "wall",
+  "en": "Wall",
+  "context": "Shop Parts: wall.",
+  "purpose": "sell",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Part names: single words.",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "الجدار",
+   "fr": "Mur",
+   "de": "Wand",
+   "id": "Dinding",
+   "ja": "壁",
+   "ko": "벽",
+   "pt-BR": "Parede",
+   "ru": "Стена",
+   "es-419": "Pared",
+   "tr": "Duvar",
+   "hi": "दीवार"
+  }
+ },
+ {
+  "key": "lower",
+  "en": "Panels",
+  "context": "Shop Parts: the lower wall panels (wainscoting).",
+  "purpose": "sell",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "الألواح",
+   "fr": "Lambris",
+   "de": "Paneele",
+   "id": "Panel",
+   "ja": "腰壁",
+   "ko": "패널",
+   "pt-BR": "Painéis",
+   "ru": "Панели",
+   "es-419": "Paneles",
+   "tr": "Lambri",
+   "hi": "पैनल"
+  }
+ },
+ {
+  "key": "floor",
+  "en": "Floor",
+  "context": "Shop Parts: floor.",
+  "purpose": "sell",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "الأرضية",
+   "fr": "Sol",
+   "de": "Boden",
+   "id": "Lantai",
+   "ja": "床",
+   "ko": "바닥",
+   "pt-BR": "Piso",
+   "ru": "Пол",
+   "es-419": "Suelo",
+   "tr": "Zemin",
+   "hi": "फ़र्श"
+  }
+ },
+ {
+  "key": "mat",
+  "en": "Mat",
+  "context": "Shop Parts: the mat/rug under the chair.",
+  "purpose": "sell",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "السجادة",
+   "fr": "Tapis",
+   "de": "Matte",
+   "id": "Keset",
+   "ja": "マット",
+   "ko": "매트",
+   "pt-BR": "Tapete",
+   "ru": "Коврик",
+   "es-419": "Alfombra",
+   "tr": "Paspas",
+   "hi": "चटाई"
+  }
+ },
+ {
+  "key": "mirror",
+  "en": "Mirror",
+  "context": "Shop Parts: mirror.",
+  "purpose": "sell",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "المرآة",
+   "fr": "Miroir",
+   "de": "Spiegel",
+   "id": "Cermin",
+   "ja": "鏡",
+   "ko": "거울",
+   "pt-BR": "Espelho",
+   "ru": "Зеркало",
+   "es-419": "Espejo",
+   "tr": "Ayna",
+   "hi": "आईना"
+  }
+ },
+ {
+  "key": "lights",
+  "en": "Lights",
+  "context": "Shop Parts: lights/lamps.",
+  "purpose": "sell",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "الإضاءة",
+   "fr": "Lumières",
+   "de": "Licht",
+   "id": "Lampu",
+   "ja": "照明",
+   "ko": "조명",
+   "pt-BR": "Luzes",
+   "ru": "Свет",
+   "es-419": "Luces",
+   "tr": "Işıklar",
+   "hi": "रोशनी"
+  }
+ },
+ {
+  "key": "shelf",
+  "en": "Shelf",
+  "context": "Shop Parts: shelf.",
+  "purpose": "sell",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "الرف",
+   "fr": "Étagère",
+   "de": "Regal",
+   "id": "Rak",
+   "ja": "棚",
+   "ko": "선반",
+   "pt-BR": "Prateleira",
+   "ru": "Полка",
+   "es-419": "Estante",
+   "tr": "Raf",
+   "hi": "शेल्फ़"
+  }
+ },
+ {
+  "key": "chair",
+  "en": "Chair",
+  "context": "Shop Parts: barber chair.",
+  "purpose": "sell",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "الكرسي",
+   "fr": "Fauteuil",
+   "de": "Stuhl",
+   "id": "Kursi",
+   "ja": "椅子",
+   "ko": "의자",
+   "pt-BR": "Cadeira",
+   "ru": "Кресло",
+   "es-419": "Sillón",
+   "tr": "Koltuk",
+   "hi": "कुर्सी"
+  }
+ },
+ {
+  "key": "decor",
+  "en": "Decor",
+  "context": "Shop Parts: decorations.",
+  "purpose": "sell",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "الديكور",
+   "fr": "Déco",
+   "de": "Deko",
+   "id": "Dekor",
+   "ja": "装飾",
+   "ko": "장식",
+   "pt-BR": "Decoração",
+   "ru": "Декор",
+   "es-419": "Decoración",
+   "tr": "Dekor",
+   "hi": "सजावट"
+  }
+ },
+ {
+  "key": "name",
+  "en": "Name",
+  "context": "Shop: the shop sign / name part.",
+  "purpose": "label",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "الاسم",
+   "fr": "Nom",
+   "de": "Name",
+   "id": "Nama",
+   "ja": "名前",
+   "ko": "이름",
+   "pt-BR": "Nome",
+   "ru": "Имя",
+   "es-419": "Nombre",
+   "tr": "İsim",
+   "hi": "नाम"
+  }
+ },
+ {
+  "key": "open",
+  "en": "Open",
+  "context": "Shop sign: \"Open\" (shown on the 3D shop door/sign).",
+  "purpose": "label",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Shop-door \"Open\" sign.",
+  "existing": {
+   "ar": "مفتوح",
+   "fr": "Ouvert",
+   "de": "Geöffnet",
+   "id": "Buka",
+   "ja": "営業中",
+   "ko": "영업중",
+   "pt-BR": "Aberto",
+   "ru": "Открыто",
+   "es-419": "Abierto",
+   "tr": "Açık",
+   "hi": "खुला"
+  }
+ },
+ {
+  "key": "est",
+  "en": "Est. {y}",
+  "context": "Shop sign: founding year, e.g. \"Est. 2026\".",
+  "purpose": "label",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [
+   "{y}"
+  ],
+  "notes": "Abbreviation of \"established in {y}\". {y} is a year: never add separators. Keep every placeholder exactly ({y}); move it to the natural position for your grammar.",
+  "existing": {
+   "ar": "منذ {y}",
+   "fr": "Depuis {y}",
+   "de": "Seit {y}",
+   "id": "Sejak {y}",
+   "ja": "{y}年創業",
+   "ko": "{y}년 개업",
+   "pt-BR": "Desde {y}",
+   "ru": "С {y} года",
+   "es-419": "Desde {y}",
+   "tr": "Kuruluş {y}",
+   "hi": "{y} से"
+  }
+ },
+ {
+  "key": "classic",
+  "en": "Classic",
+  "context": "Shop style card: the classic (default) barbershop design.",
+  "purpose": "sell",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "كلاسيكي",
+   "fr": "Classique",
+   "de": "Klassisch",
+   "id": "Klasik",
+   "ja": "クラシック",
+   "ko": "클래식",
+   "pt-BR": "Clássica",
+   "ru": "Классика",
+   "es-419": "Clásica",
+   "tr": "Klasik",
+   "hi": "क्लासिक"
+  }
+ },
+ {
+  "key": "c_london",
+  "en": "London",
+  "context": "Shop style card: London-style barbershop.",
+  "purpose": "sell",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "City name as locally written.",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "لندن",
+   "fr": "Londres",
+   "de": "London",
+   "id": "London",
+   "ja": "ロンドン",
+   "ko": "런던",
+   "pt-BR": "Londres",
+   "ru": "Лондон",
+   "es-419": "Londres",
+   "tr": "Londra",
+   "hi": "लंदन"
+  }
+ },
+ {
+  "key": "c_tokyo",
+  "en": "Tokyo",
+  "context": "Shop style card: Tokyo-style barbershop.",
+  "purpose": "sell",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "City name as locally written.",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "طوكيو",
+   "fr": "Tokyo",
+   "de": "Tokio",
+   "id": "Tokyo",
+   "ja": "東京",
+   "ko": "도쿄",
+   "pt-BR": "Tóquio",
+   "ru": "Токио",
+   "es-419": "Tokio",
+   "tr": "Tokyo",
+   "hi": "टोक्यो"
+  }
+ },
+ {
+  "key": "c_lagos",
+  "en": "Lagos",
+  "context": "Shop style card: Lagos-style barbershop.",
+  "purpose": "sell",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "City name as locally written.",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "لاغوس",
+   "fr": "Lagos",
+   "de": "Lagos",
+   "id": "Lagos",
+   "ja": "ラゴス",
+   "ko": "라고스",
+   "pt-BR": "Lagos",
+   "ru": "Лагос",
+   "es-419": "Lagos",
+   "tr": "Lagos",
+   "hi": "लागोस"
+  }
+ },
+ {
+  "key": "c_istanbul",
+  "en": "Istanbul",
+  "context": "Shop style card: Istanbul-style barbershop.",
+  "purpose": "sell",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "City name as locally written.",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "إسطنبول",
+   "fr": "Istanbul",
+   "de": "Istanbul",
+   "id": "Istanbul",
+   "ja": "イスタンブール",
+   "ko": "이스탄불",
+   "pt-BR": "Istambul",
+   "ru": "Стамбул",
+   "es-419": "Estambul",
+   "tr": "İstanbul",
+   "hi": "इस्तांबुल"
+  }
+ },
+ {
+  "key": "c_mexico",
+  "en": "Mexico",
+  "context": "Shop style card: Mexico-City-style barbershop.",
+  "purpose": "sell",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "City name as locally written (short form \"Mexico\" is fine).",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "المكسيك",
+   "fr": "Mexico",
+   "de": "Mexiko",
+   "id": "Meksiko",
+   "ja": "メキシコ",
+   "ko": "멕시코",
+   "pt-BR": "México",
+   "ru": "Мехико",
+   "es-419": "México",
+   "tr": "Meksika",
+   "hi": "मेक्सिको"
+  }
+ },
+ {
+  "key": "c_mumbai",
+  "en": "Mumbai",
+  "context": "Shop style card: Mumbai-style barbershop.",
+  "purpose": "sell",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "City name as locally written.",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "مومباي",
+   "fr": "Bombay",
+   "de": "Mumbai",
+   "id": "Mumbai",
+   "ja": "ムンバイ",
+   "ko": "뭄바이",
+   "pt-BR": "Mumbai",
+   "ru": "Мумбаи",
+   "es-419": "Bombay",
+   "tr": "Mumbai",
+   "hi": "मुंबई"
+  }
+ },
+ {
+  "key": "shopname",
+  "en": "Barbershop",
+  "context": "Default name of the player's barbershop until they name it; drawn on the shop sign.",
+  "purpose": "label",
+  "max": {
+   "chars": 18,
+   "lines": 1,
+   "element": "page title beside an icon in the header bar",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "A generic \"Barbershop\" in the local language.",
+  "existing": {
+   "ar": "صالون الحلاقة",
+   "fr": "Le Barbier",
+   "de": "Barbershop",
+   "id": "Pangkas Rambut",
+   "ja": "理容室",
+   "ko": "이발소",
+   "pt-BR": "Barbearia",
+   "ru": "Барбершоп",
+   "es-419": "Barbería",
+   "tr": "Berber",
+   "hi": "सैलून"
+  }
+ },
+ {
+  "key": "a_back",
+  "en": "Back",
+  "context": "Back button (arrow).",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "رجوع",
+   "fr": "Retour",
+   "de": "Zurück",
+   "id": "Kembali",
+   "ja": "戻る",
+   "ko": "뒤로",
+   "pt-BR": "Voltar",
+   "ru": "Назад",
+   "es-419": "Atrás",
+   "tr": "Geri",
+   "hi": "वापस"
+  }
+ },
+ {
+  "key": "a_close",
+  "en": "Close",
+  "context": "Close button (X).",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "إغلاق",
+   "fr": "Fermer",
+   "de": "Schließen",
+   "id": "Tutup",
+   "ja": "閉じる",
+   "ko": "닫기",
+   "pt-BR": "Fechar",
+   "ru": "Закрыть",
+   "es-419": "Cerrar",
+   "tr": "Kapat",
+   "hi": "बंद करें"
+  }
+ },
+ {
+  "key": "a_menu",
+  "en": "Menu",
+  "context": "The Home/menu button in the cutting screen.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "القائمة",
+   "fr": "Menu",
+   "de": "Menü",
+   "id": "Menu",
+   "ja": "メニュー",
+   "ko": "메뉴",
+   "pt-BR": "Menu",
+   "ru": "Меню",
+   "es-419": "Menú",
+   "tr": "Menü",
+   "hi": "मेन्यू"
+  }
+ },
+ {
+  "key": "a_modes",
+  "en": "Modes",
+  "context": "Modes button.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "الأوضاع",
+   "fr": "Modes",
+   "de": "Modi",
+   "id": "Mode",
+   "ja": "モード",
+   "ko": "모드",
+   "pt-BR": "Modos",
+   "ru": "Режимы",
+   "es-419": "Modos",
+   "tr": "Modlar",
+   "hi": "मोड"
+  }
+ },
+ {
+  "key": "a_newcust",
+  "en": "New customer",
+  "context": "Button that brings a new customer.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "زبون جديد",
+   "fr": "Nouveau client",
+   "de": "Neuer Kunde",
+   "id": "Pelanggan baru",
+   "ja": "新しいお客さん",
+   "ko": "새 손님",
+   "pt-BR": "Novo cliente",
+   "ru": "Новый клиент",
+   "es-419": "Nuevo cliente",
+   "tr": "Yeni müşteri",
+   "hi": "नया ग्राहक"
+  }
+ },
+ {
+  "key": "a_goals",
+  "en": "Goals",
+  "context": "Goals/tasks button.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "الأهداف",
+   "fr": "Objectifs",
+   "de": "Ziele",
+   "id": "Target",
+   "ja": "目標",
+   "ko": "목표",
+   "pt-BR": "Metas",
+   "ru": "Цели",
+   "es-419": "Objetivos",
+   "tr": "Hedefler",
+   "hi": "लक्ष्य"
+  }
+ },
+ {
+  "key": "a_dblday",
+  "en": "Watch a video to double today's reward",
+  "context": "Video button: watch a rewarded video to double today's reward.",
+  "purpose": "reward",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "Must say a video is watched and what is gained.",
+  "intent": "double for a short video",
+  "existing": {
+   "ar": "شاهد فيديو لمضاعفة مكافأة اليوم",
+   "fr": "Regarder une vidéo pour doubler la récompense du jour",
+   "de": "Video ansehen, um die heutige Belohnung zu verdoppeln",
+   "id": "Tonton video untuk menggandakan hadiah hari ini",
+   "ja": "動画を見て今日の報酬を2倍に",
+   "ko": "영상을 보고 오늘 보상 두 배 받기",
+   "pt-BR": "Assistir a um vídeo para dobrar a recompensa de hoje",
+   "ru": "Посмотреть видео, чтобы удвоить награду дня",
+   "es-419": "Ver un vídeo para duplicar la recompensa de hoy",
+   "tr": "Bugünün ödülünü ikiye katlamak için video izle",
+   "hi": "आज का इनाम दोगुना करने के लिए वीडियो देखें"
+  }
+ },
+ {
+  "key": "a_chest",
+  "en": "Open the weekly chest",
+  "context": "Opens the weekly chest reward.",
+  "purpose": "reward",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "a weekly surprise",
+  "existing": {
+   "ar": "افتح صندوق الأسبوع",
+   "fr": "Ouvrir le coffre hebdomadaire",
+   "de": "Wochentruhe öffnen",
+   "id": "Buka peti mingguan",
+   "ja": "週間宝箱を開ける",
+   "ko": "주간 상자 열기",
+   "pt-BR": "Abrir o baú semanal",
+   "ru": "Открыть недельный сундук",
+   "es-419": "Abrir el cofre semanal",
+   "tr": "Haftalık sandığı aç",
+   "hi": "साप्ताहिक संदूक खोलें"
+  }
+ },
+ {
+  "key": "a_wear",
+  "en": "Wear it",
+  "context": "Puts on (equips) the clipper/gown.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "ارتدِه",
+   "fr": "Le porter",
+   "de": "Tragen",
+   "id": "Pakai",
+   "ja": "着ける",
+   "ko": "착용하기",
+   "pt-BR": "Usar",
+   "ru": "Надеть",
+   "es-419": "Usarlo",
+   "tr": "Kullan",
+   "hi": "पहनें"
+  }
+ },
+ {
+  "key": "a_onemore",
+  "en": "Watch a video for one more",
+  "context": "Video button: watch a video for one more (extra item/turn).",
+  "purpose": "reward",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "Must say a video is watched.",
+  "intent": "one more for a short video",
+  "existing": {
+   "ar": "شاهد فيديو للحصول على واحد آخر",
+   "fr": "Regarder une vidéo pour en avoir un de plus",
+   "de": "Video ansehen für ein weiteres",
+   "id": "Tonton video untuk satu lagi",
+   "ja": "動画を見てもう1つ",
+   "ko": "영상을 보고 하나 더",
+   "pt-BR": "Assistir a um vídeo para mais um",
+   "ru": "Посмотреть видео, чтобы получить ещё один",
+   "es-419": "Ver un vídeo para uno más",
+   "tr": "Bir tane daha için video izle",
+   "hi": "एक और के लिए वीडियो देखें"
+  }
+ },
+ {
+  "key": "a_collect",
+  "en": "Collect",
+  "context": "Collect a reward.",
+  "purpose": "reward",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "a reward is mine",
+  "existing": {
+   "ar": "استلام",
+   "fr": "Récupérer",
+   "de": "Einsammeln",
+   "id": "Ambil",
+   "ja": "受け取る",
+   "ko": "받기",
+   "pt-BR": "Coletar",
+   "ru": "Забрать",
+   "es-419": "Recoger",
+   "tr": "Topla",
+   "hi": "लें"
+  }
+ },
+ {
+  "key": "a_undo",
+  "en": "Watch a video to undo the last stroke",
+  "context": "Video button on the cutting screen: watch a video to undo the last stroke.",
+  "purpose": "reward",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "Must say a video is watched.",
+  "intent": "a second chance",
+  "existing": {
+   "ar": "شاهد فيديو للتراجع عن آخر تمريرة",
+   "fr": "Regarder une vidéo pour annuler le dernier passage",
+   "de": "Video ansehen, um den letzten Zug rückgängig zu machen",
+   "id": "Tonton video untuk membatalkan usapan terakhir",
+   "ja": "動画を見て最後のひと動作を元に戻す",
+   "ko": "영상을 보고 마지막 획 되돌리기",
+   "pt-BR": "Assistir a um vídeo para desfazer a última passada",
+   "ru": "Посмотреть видео, чтобы отменить последний проход",
+   "es-419": "Ver un vídeo para deshacer la última pasada",
+   "tr": "Son geçişi geri almak için video izle",
+   "hi": "आखिरी स्ट्रोक वापस लेने के लिए वीडियो देखें"
+  }
+ },
+ {
+  "key": "a_triple",
+  "en": "Watch a video to triple the tips",
+  "context": "Video button after a haircut: watch a video to triple the tips.",
+  "purpose": "reward",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "Must say a video is watched.",
+  "intent": "three times the tips for a short video",
+  "existing": {
+   "ar": "شاهد فيديو لمضاعفة البقشيش ثلاث مرات",
+   "fr": "Regarder une vidéo pour tripler les pourboires",
+   "de": "Video ansehen, um das Trinkgeld zu verdreifachen",
+   "id": "Tonton video untuk melipatgandakan tip tiga kali",
+   "ja": "動画を見てチップを3倍に",
+   "ko": "영상을 보고 팁 3배 받기",
+   "pt-BR": "Assistir a um vídeo para triplicar as gorjetas",
+   "ru": "Посмотреть видео, чтобы утроить чаевые",
+   "es-419": "Ver un vídeo para triplicar las propinas",
+   "tr": "Bahşişi üçe katlamak için video izle",
+   "hi": "टिप तीन गुना करने के लिए वीडियो देखें"
+  }
+ },
+ {
+  "key": "a_coins",
+  "en": "Coins",
+  "context": "Coin balance chip.",
+  "purpose": "label",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "العملات",
+   "fr": "Pièces",
+   "de": "Münzen",
+   "id": "Koin",
+   "ja": "コイン",
+   "ko": "코인",
+   "pt-BR": "Moedas",
+   "ru": "Монеты",
+   "es-419": "Monedas",
+   "tr": "Jeton",
+   "hi": "सिक्के"
+  }
+ },
+ {
+  "key": "a_shop",
+  "en": "Shop",
+  "context": "Shop button.",
+  "purpose": "label",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "المتجر",
+   "fr": "Boutique",
+   "de": "Shop",
+   "id": "Toko",
+   "ja": "ショップ",
+   "ko": "상점",
+   "pt-BR": "Loja",
+   "ru": "Магазин",
+   "es-419": "Tienda",
+   "tr": "Mağaza",
+   "hi": "दुकान"
+  }
+ },
+ {
+  "key": "a_salon",
+  "en": "Salon",
+  "context": "Salon (own barbershop) button.",
+  "purpose": "label",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "الصالون",
+   "fr": "Salon",
+   "de": "Salon",
+   "id": "Salon",
+   "ja": "サロン",
+   "ko": "살롱",
+   "pt-BR": "Salão",
+   "ru": "Салон",
+   "es-419": "Salón",
+   "tr": "Salon",
+   "hi": "सैलून"
+  }
+ },
+ {
+  "key": "a_gift",
+  "en": "Gift",
+  "context": "Free gift button.",
+  "purpose": "reward",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "a free treat",
+  "existing": {
+   "ar": "هدية",
+   "fr": "Cadeau",
+   "de": "Geschenk",
+   "id": "Hadiah",
+   "ja": "ギフト",
+   "ko": "선물",
+   "pt-BR": "Presente",
+   "ru": "Подарок",
+   "es-419": "Regalo",
+   "tr": "Hediye",
+   "hi": "उपहार"
+  }
+ },
+ {
+  "key": "a_take",
+  "en": "Take",
+  "context": "Take/claim the free item.",
+  "purpose": "reward",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "it is mine now",
+  "existing": {
+   "ar": "خذ",
+   "fr": "Prendre",
+   "de": "Nehmen",
+   "id": "Ambil",
+   "ja": "受け取る",
+   "ko": "받기",
+   "pt-BR": "Pegar",
+   "ru": "Взять",
+   "es-419": "Tomar",
+   "tr": "Al",
+   "hi": "लें"
+  }
+ },
+ {
+  "key": "a_dblit",
+  "en": "Watch a video to double it",
+  "context": "Video button: watch a video to double the reward.",
+  "purpose": "reward",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "Must say a video is watched.",
+  "intent": "double for a short video",
+  "existing": {
+   "ar": "شاهد فيديو لمضاعفته",
+   "fr": "Regarder une vidéo pour le doubler",
+   "de": "Video ansehen, um es zu verdoppeln",
+   "id": "Tonton video untuk menggandakannya",
+   "ja": "動画を見て2倍に",
+   "ko": "영상을 보고 두 배로",
+   "pt-BR": "Assistir a um vídeo para dobrar",
+   "ru": "Посмотреть видео, чтобы удвоить",
+   "es-419": "Ver un vídeo para duplicarlo",
+   "tr": "İkiye katlamak için video izle",
+   "hi": "दोगुना करने के लिए वीडियो देखें"
+  }
+ },
+ {
+  "key": "a_wardrobe",
+  "en": "Wardrobe",
+  "context": "Wardrobe button.",
+  "purpose": "label",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "خزانة الملابس",
+   "fr": "Garde-robe",
+   "de": "Garderobe",
+   "id": "Lemari",
+   "ja": "ワードローブ",
+   "ko": "옷장",
+   "pt-BR": "Guarda-roupa",
+   "ru": "Гардероб",
+   "es-419": "Vestuario",
+   "tr": "Gardırop",
+   "hi": "अलमारी"
+  }
+ },
+ {
+  "key": "a_clippers",
+  "en": "Clippers",
+  "context": "Clippers tab/button.",
+  "purpose": "label",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "ماكينات الحلاقة",
+   "fr": "Tondeuses",
+   "de": "Haarschneider",
+   "id": "Mesin cukur",
+   "ja": "バリカン",
+   "ko": "바리캉",
+   "pt-BR": "Máquinas",
+   "ru": "Машинки",
+   "es-419": "Máquinas",
+   "tr": "Makineler",
+   "hi": "क्लिपर"
+  }
+ },
+ {
+  "key": "a_robes",
+  "en": "Robes",
+  "context": "Gowns/capes tab/button.",
+  "purpose": "label",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "Barber cape worn by the customer.",
+  "existing": {
+   "ar": "الأردية",
+   "fr": "Capes",
+   "de": "Umhänge",
+   "id": "Jubah",
+   "ja": "ケープ",
+   "ko": "가운",
+   "pt-BR": "Capas",
+   "ru": "Накидки",
+   "es-419": "Capas",
+   "tr": "Önlükler",
+   "hi": "गाउन"
+  }
+ },
+ {
+  "key": "a_detail",
+  "en": "Detail level",
+  "context": "Graphics detail level control.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "مستوى التفاصيل",
+   "fr": "Niveau de détail",
+   "de": "Detailstufe",
+   "id": "Tingkat detail",
+   "ja": "詳細レベル",
+   "ko": "세부 수준",
+   "pt-BR": "Nível de detalhe",
+   "ru": "Уровень детализации",
+   "es-419": "Nivel de detalle",
+   "tr": "Ayrıntı düzeyi",
+   "hi": "विवरण स्तर"
+  }
+ },
+ {
+  "key": "a_next",
+  "en": "Next",
+  "context": "Next page arrow.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "التالي",
+   "fr": "Suivant",
+   "de": "Weiter",
+   "id": "Berikutnya",
+   "ja": "次へ",
+   "ko": "다음",
+   "pt-BR": "Próximo",
+   "ru": "Далее",
+   "es-419": "Siguiente",
+   "tr": "Sonraki",
+   "hi": "अगला"
+  }
+ },
+ {
+  "key": "a_prev",
+  "en": "Previous",
+  "context": "Previous page arrow.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "السابق",
+   "fr": "Précédent",
+   "de": "Zurück",
+   "id": "Sebelumnya",
+   "ja": "前へ",
+   "ko": "이전",
+   "pt-BR": "Anterior",
+   "ru": "Назад",
+   "es-419": "Anterior",
+   "tr": "Önceki",
+   "hi": "पिछला"
+  }
+ },
+ {
+  "key": "a_timeleft",
+  "en": "Time left today",
+  "context": "Timer showing time left today for the daily offer.",
+  "purpose": "retain",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "hurry, it ends today",
+  "existing": {
+   "ar": "الوقت المتبقي اليوم",
+   "fr": "Temps restant aujourd’hui",
+   "de": "Heute verbleibende Zeit",
+   "id": "Sisa waktu hari ini",
+   "ja": "今日の残り時間",
+   "ko": "오늘 남은 시간",
+   "pt-BR": "Tempo restante hoje",
+   "ru": "Осталось времени сегодня",
+   "es-419": "Tiempo restante hoy",
+   "tr": "Bugün kalan süre",
+   "hi": "आज बचा समय"
+  }
+ },
+ {
+  "key": "a_mute",
+  "en": "Mute game sound",
+  "context": "Sound button while sound is on.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "كتم صوت اللعبة",
+   "fr": "Couper le son du jeu",
+   "de": "Spielton stummschalten",
+   "id": "Bisukan suara game",
+   "ja": "ゲーム音をミュート",
+   "ko": "게임 소리 끄기",
+   "pt-BR": "Silenciar o jogo",
+   "ru": "Выключить звук игры",
+   "es-419": "Silenciar el juego",
+   "tr": "Oyun sesini kapat",
+   "hi": "गेम की आवाज़ बंद करें"
+  }
+ },
+ {
+  "key": "a_unmute",
+  "en": "Unmute game sound",
+  "context": "Sound button while sound is off.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "تشغيل صوت اللعبة",
+   "fr": "Rétablir le son du jeu",
+   "de": "Spielton einschalten",
+   "id": "Nyalakan suara game",
+   "ja": "ゲーム音をオン",
+   "ko": "게임 소리 켜기",
+   "pt-BR": "Ativar o som do jogo",
+   "ru": "Включить звук игры",
+   "es-419": "Activar el sonido del juego",
+   "tr": "Oyun sesini aç",
+   "hi": "गेम की आवाज़ चालू करें"
+  }
+ },
+ {
+  "key": "arc_clipper",
+  "en": "Clipper guard: tap or slide, 1 is shortest",
+  "context": "The curved guard selector on the cutting screen: tap or slide to change the clipper guard; guard 1 cuts shortest.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "Guard = clipper attachment comb.",
+  "existing": {
+   "ar": "مشط الماكينة: انقر أو اسحب، 1 هو الأقصر",
+   "fr": "Sabot de la tondeuse : touchez ou glissez, 1 est le plus court",
+   "de": "Aufsatz: tippen oder schieben, 1 ist am kürzesten",
+   "id": "Sisir mesin: ketuk atau geser, 1 paling pendek",
+   "ja": "バリカンのアタッチメント：タップかスライド、1が最も短い",
+   "ko": "바리캉 가이드: 탭하거나 밀기, 1이 가장 짧음",
+   "pt-BR": "Pente da máquina: toque ou deslize, 1 é o mais curto",
+   "ru": "Насадка машинки: нажмите или проведите, 1 — самая короткая",
+   "es-419": "Peine de la máquina: toca o desliza, 1 es el más corto",
+   "tr": "Makine tarağı: dokun veya kaydır, 1 en kısa",
+   "hi": "क्लिपर गार्ड: टैप करें या खिसकाएँ, 1 सबसे छोटा"
+  }
+ },
+ {
+  "key": "a_clipon",
+  "en": "Clipper on: drag on the hair to cut",
+  "context": "Clipper toggle while on.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "الماكينة تعمل: اسحب على الشعر للقص",
+   "fr": "Tondeuse allumée : glissez sur les cheveux pour couper",
+   "de": "Haarschneider an: über das Haar ziehen zum Schneiden",
+   "id": "Mesin menyala: geser di rambut untuk memotong",
+   "ja": "バリカンON：髪の上をドラッグしてカット",
+   "ko": "바리캉 켜짐: 머리 위를 드래그해 자르기",
+   "pt-BR": "Máquina ligada: arraste no cabelo para cortar",
+   "ru": "Машинка включена: проведите по волосам, чтобы стричь",
+   "es-419": "Máquina encendida: arrastra sobre el pelo para cortar",
+   "tr": "Makine açık: kesmek için saçın üzerinde sürükle",
+   "hi": "क्लिपर चालू: काटने के लिए बालों पर खींचें"
+  }
+ },
+ {
+  "key": "a_clipoff",
+  "en": "Clipper off: drag to turn the customer",
+  "context": "Clipper toggle while off.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "الماكينة متوقفة: اسحب لتدوير الزبون",
+   "fr": "Tondeuse éteinte : glissez pour tourner le client",
+   "de": "Haarschneider aus: ziehen, um den Kunden zu drehen",
+   "id": "Mesin mati: geser untuk memutar pelanggan",
+   "ja": "バリカンOFF：ドラッグでお客さんを回す",
+   "ko": "바리캉 꺼짐: 드래그해 손님 돌리기",
+   "pt-BR": "Máquina desligada: arraste para girar o cliente",
+   "ru": "Машинка выключена: проведите, чтобы повернуть клиента",
+   "es-419": "Máquina apagada: arrastra para girar al cliente",
+   "tr": "Makine kapalı: müşteriyi döndürmek için sürükle",
+   "hi": "क्लिपर बंद: ग्राहक को घुमाने के लिए खींचें"
+  }
+ },
+ {
+  "key": "a_finish",
+  "en": "Finish haircut",
+  "context": "Finish-haircut button (seal icon).",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "إنهاء القصة",
+   "fr": "Terminer la coupe",
+   "de": "Haarschnitt beenden",
+   "id": "Selesaikan potongan",
+   "ja": "カット完了",
+   "ko": "커트 완료",
+   "pt-BR": "Terminar o corte",
+   "ru": "Завершить стрижку",
+   "es-419": "Terminar el corte",
+   "tr": "Tıraşı bitir",
+   "hi": "कटिंग पूरी करें"
+  }
+ },
+ {
+  "key": "a_nextcust",
+  "en": "Next customer",
+  "context": "Next-customer button after the reveal.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "الزبون التالي",
+   "fr": "Client suivant",
+   "de": "Nächster Kunde",
+   "id": "Pelanggan berikutnya",
+   "ja": "次のお客さん",
+   "ko": "다음 손님",
+   "pt-BR": "Próximo cliente",
+   "ru": "Следующий клиент",
+   "es-419": "Siguiente cliente",
+   "tr": "Sıradaki müşteri",
+   "hi": "अगला ग्राहक"
+  }
+ },
+ {
+  "key": "a_showing",
+  "en": "Showing finished haircut",
+  "context": "Status while the finished haircut is shown.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "عرض القصة النهائية",
+   "fr": "Coupe terminée affichée",
+   "de": "Fertiger Haarschnitt wird gezeigt",
+   "id": "Menampilkan potongan selesai",
+   "ja": "仕上がりを表示中",
+   "ko": "완성된 머리 보는 중",
+   "pt-BR": "Mostrando o corte pronto",
+   "ru": "Показ готовой стрижки",
+   "es-419": "Mostrando el corte terminado",
+   "tr": "Bitmiş tıraş gösteriliyor",
+   "hi": "पूरा कट दिखाया जा रहा है"
+  }
+ },
+ {
+  "key": "a_savefail",
+  "en": "Save failed. Progress will retry on the next action",
+  "context": "Status icon when saving failed.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "Calm: progress retries automatically.",
+  "existing": {
+   "ar": "فشل الحفظ. ستتم إعادة المحاولة عند الإجراء التالي",
+   "fr": "Échec de l’enregistrement. Nouvel essai à la prochaine action",
+   "de": "Speichern fehlgeschlagen. Beim nächsten Schritt wird es erneut versucht",
+   "id": "Gagal menyimpan. Akan dicoba lagi pada aksi berikutnya",
+   "ja": "保存に失敗しました。次の操作で再試行します",
+   "ko": "저장 실패. 다음 동작에서 다시 시도합니다",
+   "pt-BR": "Falha ao salvar. Tentaremos de novo na próxima ação",
+   "ru": "Не удалось сохранить. Повторим при следующем действии",
+   "es-419": "No se pudo guardar. Se reintentará en la próxima acción",
+   "tr": "Kaydedilemedi. Sonraki işlemde yeniden denenecek",
+   "hi": "सेव नहीं हुआ। अगली क्रिया पर फिर कोशिश होगी"
+  }
+ },
+ {
+  "key": "a_guard",
+  "en": "Guard {g}, {mm} millimetres",
+  "context": "Each guard button: \"Guard 2, 6 millimetres\". {g} guard number, {mm} formatted millimetres.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [
+   "{g}",
+   "{mm}"
+  ],
+  "notes": "Write the unit in full. Keep every placeholder exactly ({g}, {mm}); move it to the natural position for your grammar.",
+  "existing": {
+   "ar": "المشط {g}، {mm} ملم",
+   "fr": "Sabot {g}, {mm} millimètres",
+   "de": "Aufsatz {g}, {mm} Millimeter",
+   "id": "Sisir {g}, {mm} milimeter",
+   "ja": "アタッチメント{g}、{mm}ミリ",
+   "ko": "가이드 {g}, {mm}밀리미터",
+   "pt-BR": "Pente {g}, {mm} milímetros",
+   "ru": "Насадка {g}, {mm} мм",
+   "es-419": "Peine {g}, {mm} milímetros",
+   "tr": "Tarak {g}, {mm} milimetre",
+   "hi": "गार्ड {g}, {mm} मिलीमीटर"
+  }
+ },
+ {
+  "key": "mm",
+  "en": "mm",
+  "context": "Millimetre unit abbreviation (guard length).",
+  "purpose": "label",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "short tag, chip or button text",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the local unit symbol.",
+  "existing": {
+   "ar": "ملم",
+   "fr": "mm",
+   "de": "mm",
+   "id": "mm",
+   "ja": "ミリ",
+   "ko": "mm",
+   "pt-BR": "mm",
+   "ru": "мм",
+   "es-419": "mm",
+   "tr": "mm",
+   "hi": "मिमी"
+  }
+ },
+ {
+  "key": "a_view",
+  "en": "Customer haircut view",
+  "context": "The 3D canvas showing the customer.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "عرض قصة الزبون",
+   "fr": "Vue de la coupe du client",
+   "de": "Ansicht des Haarschnitts",
+   "id": "Tampilan potongan pelanggan",
+   "ja": "お客さんのヘアスタイル表示",
+   "ko": "손님 헤어 보기",
+   "pt-BR": "Visão do corte do cliente",
+   "ru": "Вид стрижки клиента",
+   "es-419": "Vista del corte del cliente",
+   "tr": "Müşterinin saç görünümü",
+   "hi": "ग्राहक के कट का दृश्य"
+  }
+ },
+ {
+  "key": "a_turn",
+  "en": "Drag to turn the customer",
+  "context": "Tutorial and canvas hint: drag to rotate the customer.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {
+   "ar": "اسحب لتدوير الزبون",
+   "fr": "Glissez pour tourner le client",
+   "de": "Ziehen, um den Kunden zu drehen",
+   "id": "Geser untuk memutar pelanggan",
+   "ja": "ドラッグでお客さんを回す",
+   "ko": "드래그해 손님 돌리기",
+   "pt-BR": "Arraste para girar o cliente",
+   "ru": "Проведите, чтобы повернуть клиента",
+   "es-419": "Arrastra para girar al cliente",
+   "tr": "Müşteriyi döndürmek için sürükle",
+   "hi": "ग्राहक को घुमाने के लिए खींचें"
+  }
+ },
+ {
+  "key": "shop",
+  "en": "Shop",
+  "context": "Home dock tab and page title: opens the shop (free gifts, coin packs, shop styles, clippers, gowns).",
+  "purpose": "label",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "bottom-dock label under an icon, 4 columns on a 360 px phone; a long word widens its column (German Einstellungen = 13), and the row steps down to 12 px only if all four are too wide",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Store/shop, not a hair salon.",
+  "existing": {
+   "ar": "المتجر",
+   "fr": "Boutique",
+   "de": "Shop",
+   "id": "Toko",
+   "ja": "ショップ",
+   "ko": "상점",
+   "pt-BR": "Loja",
+   "ru": "Магазин",
+   "es-419": "Tienda",
+   "tr": "Mağaza",
+   "hi": "दुकान"
+  }
+ },
+ {
+  "key": "collection",
+  "en": "Collection",
+  "context": "Home dock tab and page title: the portfolio of haircuts the player has finished.",
+  "purpose": "label",
+  "max": {
+   "chars": 14,
+   "lines": 1,
+   "element": "bottom-dock label under an icon, 4 columns on a 360 px phone; a long word widens its column (German Einstellungen = 13), and the row steps down to 12 px only if all four are too wide",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "A gallery/portfolio of past work.",
+  "existing": {
+   "ar": "المجموعة",
+   "fr": "Collection",
+   "de": "Sammlung",
+   "id": "Koleksi",
+   "ja": "コレクション",
+   "ko": "컬렉션",
+   "pt-BR": "Coleção",
+   "ru": "Коллекция",
+   "es-419": "Colección",
+   "tr": "Koleksiyon",
+   "hi": "संग्रह"
+  }
+ },
+ {
+  "key": "a_wish",
+  "en": "Save for this",
+  "context": "Wishlist button: save coins for this item.",
+  "purpose": "sell",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "I will get this soon",
+  "existing": {
+   "ar": "ادّخر لهذا",
+   "fr": "Économiser pour ça",
+   "de": "Hierfür sparen",
+   "id": "Menabung untuk ini",
+   "ja": "これを目標にする",
+   "ko": "이걸 목표로",
+   "pt-BR": "Guardar para isto",
+   "ru": "Копить на это",
+   "es-419": "Ahorrar para esto",
+   "tr": "Bunun için biriktir",
+   "hi": "इसके लिए बचाएं"
+  }
+ },
+ {
+  "key": "a_bill",
+  "en": "{n} customers to the {c}-coin bill",
+  "context": "Shop bill indicator: {n} more customers until the {c}-coin bill is due.",
+  "purpose": "retain",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [
+   "{n}",
+   "{c}"
+  ],
+  "notes": "Plural rules apply to {n}. {c} is a formatted coin amount. Keep every placeholder exactly ({n}, {c}); move it to the natural position for your grammar.",
+  "intent": "a goal coming up",
+  "existing": {
+   "ar": "{n} زبائن حتى فاتورة {c}",
+   "fr": "{n} clients avant la facture de {c}",
+   "de": "{n} Kunden bis zur Rechnung über {c}",
+   "id": "{n} pelanggan lagi ke tagihan {c}",
+   "ja": "請求{c}コインまであと{n}人",
+   "ko": "청구서 {c}까지 손님 {n}명",
+   "pt-BR": "{n} clientes até a conta de {c}",
+   "ru": "{n} клиентов до счёта на {c}",
+   "es-419": "{n} clientes hasta la factura de {c}",
+   "tr": "{c} faturasına {n} müşteri",
+   "hi": "{c} के बिल तक {n} ग्राहक"
+  }
+ },
+ {
+  "key": "make_base",
+  "en": "Make base",
+  "context": "Shop: make this design the base of the shop (not wired in the current UI).",
+  "purpose": "sell",
+  "max": {
+   "chars": 12,
+   "lines": 1,
+   "element": "button text beside an icon (coin / video)",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "worth having, clearly priced",
+  "existing": {
+   "ar": "اجعلها القاعدة",
+   "fr": "Choisir comme base",
+   "de": "Als Basis",
+   "id": "Jadikan basis",
+   "ja": "拠点にする",
+   "ko": "거점으로",
+   "pt-BR": "Tornar base",
+   "ru": "Сделать базой",
+   "es-419": "Hacer base",
+   "tr": "Merkez yap",
+   "hi": "बेस बनाएं"
+  }
+ },
+ {
+  "key": "update_needed",
+  "en": "Update the game to continue your Career",
+  "context": "Career: message when a saved career needs a newer game version.",
+  "purpose": "guide",
+  "max": {
+   "chars": 80,
+   "lines": 3,
+   "element": "message text, wraps freely",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "Calm, clear: progress is not lost, the app must be updated.",
+  "en_short": "Update the game to continue Career",
+  "existing": {
+   "ar": "حدّث اللعبة لمتابعة مسيرتك",
+   "fr": "Mettez le jeu à jour pour continuer votre Carrière",
+   "de": "Aktualisiere das Spiel, um deine Karriere fortzusetzen",
+   "id": "Perbarui game untuk melanjutkan Karier",
+   "ja": "キャリアを続けるにはゲームを更新してください",
+   "ko": "커리어를 계속하려면 게임을 업데이트하세요",
+   "pt-BR": "Atualize o jogo para continuar sua Carreira",
+   "ru": "Обновите игру, чтобы продолжить карьеру",
+   "es-419": "Actualiza el juego para seguir tu Carrera",
+   "tr": "Kariyerine devam etmek için oyunu güncelle",
+   "hi": "करियर जारी रखने के लिए गेम अपडेट करें"
+  }
+ },
+ {
+  "key": "buy",
+  "en": "Buy",
+  "context": "Coin-pack and item Buy button. Google Play shows the price; the game shows none.",
+  "purpose": "sell",
+  "max": {
+   "chars": 12,
+   "lines": 1,
+   "element": "button text beside an icon (coin / video)",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Imperative \"Buy\". Never imply free.",
+  "intent": "a confident, simple purchase",
+  "existing": {
+   "ar": "شراء",
+   "fr": "Acheter",
+   "de": "Kaufen",
+   "id": "Beli",
+   "ja": "購入",
+   "ko": "구매",
+   "pt-BR": "Comprar",
+   "ru": "Купить",
+   "es-419": "Comprar",
+   "tr": "Satın al",
+   "hi": "खरीदें"
+  }
+ },
+ {
+  "key": "a_wishvid",
+  "en": "Watch a video for coins toward your wishlist",
+  "context": "Video button: watch a video for coins toward the wishlist item.",
+  "purpose": "reward",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "Must say a video is watched.",
+  "intent": "closer to the thing I want",
+  "existing": {
+   "ar": "شاهد فيديو للحصول على عملات لقائمتك",
+   "fr": "Regardez une vidéo pour des pièces pour votre liste",
+   "de": "Video ansehen für Münzen für deine Wunschliste",
+   "id": "Tonton video untuk koin daftar keinginan",
+   "ja": "動画を見てほしい物リストのコインを獲得",
+   "ko": "영상을 보고 위시리스트 코인 받기",
+   "pt-BR": "Assista a um vídeo por moedas para sua lista",
+   "ru": "Посмотреть видео и получить монеты на желаемое",
+   "es-419": "Mira un vídeo para ganar monedas para tu lista",
+   "tr": "İstek listen için video izle, para kazan",
+   "hi": "अपनी सूची के लिए सिक्कों का वीडियो देखें"
+  }
+ },
+ {
+  "key": "a_share",
+  "en": "Share haircut",
+  "context": "Share button after a finished haircut: opens the phone's share sheet with a poster.",
+  "purpose": "retain",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "intent": "proud to show my work",
+  "existing": {}
+ },
+ {
+  "key": "a_wearing",
+  "en": "Wearing",
+  "context": "Wardrobe tile currently worn.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {}
+ },
+ {
+  "key": "a_wearthis",
+  "en": "Wear this",
+  "context": "Wardrobe tile: wear this design.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {}
+ },
+ {
+  "key": "tut_clipper",
+  "en": "Tap the clipper to switch it on",
+  "context": "First-run tutorial hand pointing at the clipper button.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {}
+ },
+ {
+  "key": "tut_guard",
+  "en": "Tap or slide the guard arc to change the clipper guard",
+  "context": "First-run tutorial hand pointing at the guard arc.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "en_short": "Tap or slide the arc to change the guard",
+  "existing": {}
+ },
+ {
+  "key": "tut_cut",
+  "en": "Drag on the hair to cut",
+  "context": "First-run tutorial: drag on the hair to cut it.",
+  "purpose": "guide",
+  "max": {
+   "chars": null,
+   "lines": null,
+   "element": "screen-reader only (aria-label), never drawn; complete context allowed",
+   "note": "spoken only: accuracy over brevity"
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {}
+ },
+ {
+  "key": "boot_new_title",
+  "en": "A newer game version is needed",
+  "context": "Startup error screen title: the saved progress needs a newer app version.",
+  "purpose": "guide",
+  "max": {
+   "chars": 80,
+   "lines": 3,
+   "element": "message text, wraps freely",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "Calm.",
+  "en_short": "Update needed",
+  "existing": {}
+ },
+ {
+  "key": "boot_new_msg",
+  "en": "Your progress is safe. Refresh to try the latest game version.",
+  "context": "Startup error screen message under boot_new_title.",
+  "purpose": "guide",
+  "max": {
+   "chars": 92,
+   "lines": 3,
+   "element": "message text, wraps freely",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "Reassure that progress is safe.",
+  "en_short": "Your progress is safe. Update to the latest version.",
+  "existing": {}
+ },
+ {
+  "key": "boot_fail_title",
+  "en": "The game could not load",
+  "context": "Startup error screen title: the game could not load.",
+  "purpose": "guide",
+  "max": {
+   "chars": 80,
+   "lines": 3,
+   "element": "message text, wraps freely",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "",
+  "existing": {}
+ },
+ {
+  "key": "boot_fail_msg",
+  "en": "Your saved progress has been kept. Check your connection and try again.",
+  "context": "Startup error screen message under boot_fail_title.",
+  "purpose": "guide",
+  "max": {
+   "chars": 101,
+   "lines": 3,
+   "element": "message text, wraps freely",
+   "wrap": true
+  },
+  "placeholders": [],
+  "notes": "Reassure that progress is kept.",
+  "en_short": "Your progress is kept. Check your connection and retry.",
+  "existing": {}
+ },
+ {
+  "key": "retry",
+  "en": "Retry",
+  "context": "Startup error screen button: reload the game.",
+  "purpose": "guide",
+  "max": {
+   "chars": 12,
+   "lines": 1,
+   "element": "button text beside an icon (coin / video)",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Imperative.",
+  "existing": {}
+ },
+ {
+  "key": "city_lagos",
+  "en": "Lagos",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "لاغوس",
+   "fr": "Lagos",
+   "de": "Lagos",
+   "id": "Lagos",
+   "ja": "ラゴス",
+   "ko": "라고스",
+   "pt-BR": "Lagos",
+   "ru": "Лагос",
+   "es-419": "Lagos",
+   "tr": "Lagos",
+   "hi": "लागोस"
+  }
+ },
+ {
+  "key": "city_kinshasa",
+  "en": "Kinshasa",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "كينشاسا",
+   "fr": "Kinshasa",
+   "de": "Kinshasa",
+   "id": "Kinshasa",
+   "ja": "キンシャサ",
+   "ko": "킨샤사",
+   "pt-BR": "Kinshasa",
+   "ru": "Киншаса",
+   "es-419": "Kinsasa",
+   "tr": "Kinşasa",
+   "hi": "किंशासा"
+  }
+ },
+ {
+  "key": "city_nairobi",
+  "en": "Nairobi",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "نيروبي",
+   "fr": "Nairobi",
+   "de": "Nairobi",
+   "id": "Nairobi",
+   "ja": "ナイロビ",
+   "ko": "나이로비",
+   "pt-BR": "Nairóbi",
+   "ru": "Найроби",
+   "es-419": "Nairobi",
+   "tr": "Nairobi",
+   "hi": "नैरोबी"
+  }
+ },
+ {
+  "key": "city_johannesburg",
+  "en": "Johannesburg",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "جوهانسبرغ",
+   "fr": "Johannesburg",
+   "de": "Johannesburg",
+   "id": "Johannesburg",
+   "ja": "ヨハネスブルグ",
+   "ko": "요하네스버그",
+   "pt-BR": "Joanesburgo",
+   "ru": "Йоханнесбург",
+   "es-419": "Johannesburgo",
+   "tr": "Johannesburg",
+   "hi": "जोहान्सबर्ग"
+  }
+ },
+ {
+  "key": "city_cairo",
+  "en": "Cairo",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "القاهرة",
+   "fr": "Le Caire",
+   "de": "Kairo",
+   "id": "Kairo",
+   "ja": "カイロ",
+   "ko": "카이로",
+   "pt-BR": "Cairo",
+   "ru": "Каир",
+   "es-419": "El Cairo",
+   "tr": "Kahire",
+   "hi": "काहिरा"
+  }
+ },
+ {
+  "key": "city_casablanca",
+  "en": "Casablanca",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "الدار البيضاء",
+   "fr": "Casablanca",
+   "de": "Casablanca",
+   "id": "Casablanca",
+   "ja": "カサブランカ",
+   "ko": "카사블랑카",
+   "pt-BR": "Casablanca",
+   "ru": "Касабланка",
+   "es-419": "Casablanca",
+   "tr": "Kazablanka",
+   "hi": "कासाब्लांका"
+  }
+ },
+ {
+  "key": "city_london",
+  "en": "London",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "لندن",
+   "fr": "Londres",
+   "de": "London",
+   "id": "London",
+   "ja": "ロンドン",
+   "ko": "런던",
+   "pt-BR": "Londres",
+   "ru": "Лондон",
+   "es-419": "Londres",
+   "tr": "Londra",
+   "hi": "लंदन"
+  }
+ },
+ {
+  "key": "city_paris",
+  "en": "Paris",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "باريس",
+   "fr": "Paris",
+   "de": "Paris",
+   "id": "Paris",
+   "ja": "パリ",
+   "ko": "파리",
+   "pt-BR": "Paris",
+   "ru": "Париж",
+   "es-419": "París",
+   "tr": "Paris",
+   "hi": "पेरिस"
+  }
+ },
+ {
+  "key": "city_berlin",
+  "en": "Berlin",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "برلين",
+   "fr": "Berlin",
+   "de": "Berlin",
+   "id": "Berlin",
+   "ja": "ベルリン",
+   "ko": "베를린",
+   "pt-BR": "Berlim",
+   "ru": "Берлин",
+   "es-419": "Berlín",
+   "tr": "Berlin",
+   "hi": "बर्लिन"
+  }
+ },
+ {
+  "key": "city_madrid",
+  "en": "Madrid",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "مدريد",
+   "fr": "Madrid",
+   "de": "Madrid",
+   "id": "Madrid",
+   "ja": "マドリード",
+   "ko": "마드리드",
+   "pt-BR": "Madri",
+   "ru": "Мадрид",
+   "es-419": "Madrid",
+   "tr": "Madrid",
+   "hi": "मैड्रिड"
+  }
+ },
+ {
+  "key": "city_warsaw",
+  "en": "Warsaw",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "وارسو",
+   "fr": "Varsovie",
+   "de": "Warschau",
+   "id": "Warsawa",
+   "ja": "ワルシャワ",
+   "ko": "바르샤바",
+   "pt-BR": "Varsóvia",
+   "ru": "Варшава",
+   "es-419": "Varsovia",
+   "tr": "Varşova",
+   "hi": "वारसॉ"
+  }
+ },
+ {
+  "key": "city_istanbul",
+  "en": "Istanbul",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "إسطنبول",
+   "fr": "Istanbul",
+   "de": "Istanbul",
+   "id": "Istanbul",
+   "ja": "イスタンブール",
+   "ko": "이스탄불",
+   "pt-BR": "Istambul",
+   "ru": "Стамбул",
+   "es-419": "Estambul",
+   "tr": "İstanbul",
+   "hi": "इस्तांबुल"
+  }
+ },
+ {
+  "key": "city_riyadh",
+  "en": "Riyadh",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "الرياض",
+   "fr": "Riyad",
+   "de": "Riad",
+   "id": "Riyadh",
+   "ja": "リヤド",
+   "ko": "리야드",
+   "pt-BR": "Riad",
+   "ru": "Эр-Рияд",
+   "es-419": "Riad",
+   "tr": "Riyad",
+   "hi": "रियाद"
+  }
+ },
+ {
+  "key": "city_dubai",
+  "en": "Dubai",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "دبي",
+   "fr": "Dubaï",
+   "de": "Dubai",
+   "id": "Dubai",
+   "ja": "ドバイ",
+   "ko": "두바이",
+   "pt-BR": "Dubai",
+   "ru": "Дубай",
+   "es-419": "Dubái",
+   "tr": "Dubai",
+   "hi": "दुबई"
+  }
+ },
+ {
+  "key": "city_amman",
+  "en": "Amman",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "عمّان",
+   "fr": "Amman",
+   "de": "Amman",
+   "id": "Amman",
+   "ja": "アンマン",
+   "ko": "암만",
+   "pt-BR": "Amã",
+   "ru": "Амман",
+   "es-419": "Amán",
+   "tr": "Amman",
+   "hi": "अम्मान"
+  }
+ },
+ {
+  "key": "city_delhi",
+  "en": "Delhi",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "دلهي",
+   "fr": "Delhi",
+   "de": "Delhi",
+   "id": "Delhi",
+   "ja": "デリー",
+   "ko": "델리",
+   "pt-BR": "Délhi",
+   "ru": "Дели",
+   "es-419": "Delhi",
+   "tr": "Delhi",
+   "hi": "दिल्ली"
+  }
+ },
+ {
+  "key": "city_mumbai",
+  "en": "Mumbai",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "مومباي",
+   "fr": "Bombay",
+   "de": "Mumbai",
+   "id": "Mumbai",
+   "ja": "ムンバイ",
+   "ko": "뭄바이",
+   "pt-BR": "Mumbai",
+   "ru": "Мумбаи",
+   "es-419": "Bombay",
+   "tr": "Mumbai",
+   "hi": "मुंबई"
+  }
+ },
+ {
+  "key": "city_karachi",
+  "en": "Karachi",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "كراتشي",
+   "fr": "Karachi",
+   "de": "Karatschi",
+   "id": "Karachi",
+   "ja": "カラチ",
+   "ko": "카라치",
+   "pt-BR": "Karachi",
+   "ru": "Карачи",
+   "es-419": "Karachi",
+   "tr": "Karaçi",
+   "hi": "कराची"
+  }
+ },
+ {
+  "key": "city_dhaka",
+  "en": "Dhaka",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "دكا",
+   "fr": "Dacca",
+   "de": "Dhaka",
+   "id": "Dhaka",
+   "ja": "ダッカ",
+   "ko": "다카",
+   "pt-BR": "Daca",
+   "ru": "Дакка",
+   "es-419": "Daca",
+   "tr": "Dakka",
+   "hi": "ढाका"
+  }
+ },
+ {
+  "key": "city_colombo",
+  "en": "Colombo",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "كولومبو",
+   "fr": "Colombo",
+   "de": "Colombo",
+   "id": "Kolombo",
+   "ja": "コロンボ",
+   "ko": "콜롬보",
+   "pt-BR": "Colombo",
+   "ru": "Коломбо",
+   "es-419": "Colombo",
+   "tr": "Kolombo",
+   "hi": "कोलंबो"
+  }
+ },
+ {
+  "key": "city_tokyo",
+  "en": "Tokyo",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "طوكيو",
+   "fr": "Tokyo",
+   "de": "Tokio",
+   "id": "Tokyo",
+   "ja": "東京",
+   "ko": "도쿄",
+   "pt-BR": "Tóquio",
+   "ru": "Токио",
+   "es-419": "Tokio",
+   "tr": "Tokyo",
+   "hi": "टोक्यो"
+  }
+ },
+ {
+  "key": "city_seoul",
+  "en": "Seoul",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "سول",
+   "fr": "Séoul",
+   "de": "Seoul",
+   "id": "Seoul",
+   "ja": "ソウル",
+   "ko": "서울",
+   "pt-BR": "Seul",
+   "ru": "Сеул",
+   "es-419": "Seúl",
+   "tr": "Seul",
+   "hi": "सियोल"
+  }
+ },
+ {
+  "key": "city_shanghai",
+  "en": "Shanghai",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "شنغهاي",
+   "fr": "Shanghai",
+   "de": "Shanghai",
+   "id": "Shanghai",
+   "ja": "上海",
+   "ko": "상하이",
+   "pt-BR": "Xangai",
+   "ru": "Шанхай",
+   "es-419": "Shanghái",
+   "tr": "Şanghay",
+   "hi": "शंघाई"
+  }
+ },
+ {
+  "key": "city_jakarta",
+  "en": "Jakarta",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "جاكرتا",
+   "fr": "Jakarta",
+   "de": "Jakarta",
+   "id": "Jakarta",
+   "ja": "ジャカルタ",
+   "ko": "자카르타",
+   "pt-BR": "Jacarta",
+   "ru": "Джакарта",
+   "es-419": "Yakarta",
+   "tr": "Cakarta",
+   "hi": "जकार्ता"
+  }
+ },
+ {
+  "key": "city_manila",
+  "en": "Manila",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "مانيلا",
+   "fr": "Manille",
+   "de": "Manila",
+   "id": "Manila",
+   "ja": "マニラ",
+   "ko": "마닐라",
+   "pt-BR": "Manila",
+   "ru": "Манила",
+   "es-419": "Manila",
+   "tr": "Manila",
+   "hi": "मनीला"
+  }
+ },
+ {
+  "key": "city_bangkok",
+  "en": "Bangkok",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "بانكوك",
+   "fr": "Bangkok",
+   "de": "Bangkok",
+   "id": "Bangkok",
+   "ja": "バンコク",
+   "ko": "방콕",
+   "pt-BR": "Bangkok",
+   "ru": "Бангкок",
+   "es-419": "Bangkok",
+   "tr": "Bangkok",
+   "hi": "बैंकॉक"
+  }
+ },
+ {
+  "key": "city_new-york",
+  "en": "New York",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "نيويورك",
+   "fr": "New York",
+   "de": "New York",
+   "id": "New York",
+   "ja": "ニューヨーク",
+   "ko": "뉴욕",
+   "pt-BR": "Nova York",
+   "ru": "Нью-Йорк",
+   "es-419": "Nueva York",
+   "tr": "New York",
+   "hi": "न्यूयॉर्क"
+  }
+ },
+ {
+  "key": "city_los-angeles",
+  "en": "Los Angeles",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "لوس أنجلوس",
+   "fr": "Los Angeles",
+   "de": "Los Angeles",
+   "id": "Los Angeles",
+   "ja": "ロサンゼルス",
+   "ko": "로스앤젤레스",
+   "pt-BR": "Los Angeles",
+   "ru": "Лос-Анджелес",
+   "es-419": "Los Ángeles",
+   "tr": "Los Angeles",
+   "hi": "लॉस एंजिल्स"
+  }
+ },
+ {
+  "key": "city_toronto",
+  "en": "Toronto",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "تورونتو",
+   "fr": "Toronto",
+   "de": "Toronto",
+   "id": "Toronto",
+   "ja": "トロント",
+   "ko": "토론토",
+   "pt-BR": "Toronto",
+   "ru": "Торонто",
+   "es-419": "Toronto",
+   "tr": "Toronto",
+   "hi": "टोरंटो"
+  }
+ },
+ {
+  "key": "city_montreal",
+  "en": "Montreal",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "مونتريال",
+   "fr": "Montréal",
+   "de": "Montreal",
+   "id": "Montreal",
+   "ja": "モントリオール",
+   "ko": "몬트리올",
+   "pt-BR": "Montreal",
+   "ru": "Монреаль",
+   "es-419": "Montreal",
+   "tr": "Montreal",
+   "hi": "मॉन्ट्रियल"
+  }
+ },
+ {
+  "key": "city_mexico-city",
+  "en": "Mexico City",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "مكسيكو سيتي",
+   "fr": "Mexico",
+   "de": "Mexiko-Stadt",
+   "id": "Kota Meksiko",
+   "ja": "メキシコシティ",
+   "ko": "멕시코시티",
+   "pt-BR": "Cidade do México",
+   "ru": "Мехико",
+   "es-419": "Ciudad de México",
+   "tr": "Meksiko",
+   "hi": "मेक्सिको सिटी"
+  }
+ },
+ {
+  "key": "city_sao-paulo",
+  "en": "São Paulo",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "ساو باولو",
+   "fr": "São Paulo",
+   "de": "São Paulo",
+   "id": "São Paulo",
+   "ja": "サンパウロ",
+   "ko": "상파울루",
+   "pt-BR": "São Paulo",
+   "ru": "Сан-Паулу",
+   "es-419": "São Paulo",
+   "tr": "São Paulo",
+   "hi": "साओ पाउलो"
+  }
+ },
+ {
+  "key": "city_buenos-aires",
+  "en": "Buenos Aires",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "بوينس آيرس",
+   "fr": "Buenos Aires",
+   "de": "Buenos Aires",
+   "id": "Buenos Aires",
+   "ja": "ブエノスアイレス",
+   "ko": "부에노스아이레스",
+   "pt-BR": "Buenos Aires",
+   "ru": "Буэнос-Айрес",
+   "es-419": "Buenos Aires",
+   "tr": "Buenos Aires",
+   "hi": "ब्यूनस आयर्स"
+  }
+ },
+ {
+  "key": "city_kingston",
+  "en": "Kingston",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "كينغستون",
+   "fr": "Kingston",
+   "de": "Kingston",
+   "id": "Kingston",
+   "ja": "キングストン",
+   "ko": "킹스턴",
+   "pt-BR": "Kingston",
+   "ru": "Кингстон",
+   "es-419": "Kingston",
+   "tr": "Kingston",
+   "hi": "किंग्स्टन"
+  }
+ },
+ {
+  "key": "city_sydney",
+  "en": "Sydney",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card. Not shown in this release (city switched off); translate for a later update.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "سيدني",
+   "fr": "Sydney",
+   "de": "Sydney",
+   "id": "Sydney",
+   "ja": "シドニー",
+   "ko": "시드니",
+   "pt-BR": "Sydney",
+   "ru": "Сидней",
+   "es-419": "Sídney",
+   "tr": "Sidney",
+   "hi": "सिडनी"
+  }
+ },
+ {
+  "key": "city_auckland",
+  "en": "Auckland",
+  "context": "Career: city name on the city map list (sorted alphabetically in your language), the Career button subtitle (\"City · 2/5\") and the portfolio card.",
+  "purpose": "label",
+  "max": {
+   "chars": 16,
+   "lines": 1,
+   "element": "city name on the Career map list, shop region card, portfolio and Career subtitle",
+   "wrap": false
+  },
+  "placeholders": [],
+  "notes": "Use the locally established exonym (e.g. German \"Kairo\"); no transliteration of the English spelling when a local name exists.",
+  "existing": {
+   "ar": "أوكلاند",
+   "fr": "Auckland",
+   "de": "Auckland",
+   "id": "Auckland",
+   "ja": "オークランド",
+   "ko": "오클랜드",
+   "pt-BR": "Auckland",
+   "ru": "Окленд",
+   "es-419": "Auckland",
+   "tr": "Auckland",
+   "hi": "ऑकलैंड"
+  }
+ }
+]

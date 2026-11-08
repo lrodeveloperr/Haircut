@@ -18,7 +18,8 @@
     pt: 'Barbeiro ASMR: Corte de Cabelo',
   };
   // the name and its line: the two halves of the store title
-  const title = () => { const lang = HSC.lang ? HSC.lang() : 'en', [name, sub] = (TITLES[lang] || TITLES.en).split(/\s*[:：]\s*/); return { name, sub, rtl: lang === 'ar' }; };
+  // the chosen language is a canonical tag (es-419, pt-BR): its listing title is keyed by the base language
+  const title = () => { const tag = HSC.lang ? HSC.lang() : 'en', base = tag.split('-')[0], lang = TITLES[tag] ? tag : TITLES[base] ? base : 'en', [name, sub] = TITLES[lang].split(/\s*[:：]\s*/); return { name, sub, rtl: lang === 'ar' }; };
   const FONT = '"Arial Rounded MT Bold","Nunito","Baloo 2",system-ui,sans-serif';
   const image = (src) => new Promise((resolve, reject) => {
     const node = new Image();

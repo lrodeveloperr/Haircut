@@ -116,7 +116,12 @@
     // grow by that much rather than stack its tabs
     fit(box) {
       if (!box || !box.isConnected || !box.clientWidth) return 0;
-      const tabs = [...box.children], over = () => box.scrollWidth > box.clientWidth + 0.5;
+      // the whole-pixel scroll width can round away a tab that ends a fraction of a pixel past the row: measure the edges too
+      const tabs = [...box.children], over = () => {
+        if (box.scrollWidth > box.clientWidth + 0.5) return true;
+        const r = box.getBoundingClientRect();
+        return tabs.some((b) => { const x = b.getBoundingClientRect(); return x.left < r.left - 0.25 || x.right > r.right + 0.25; });
+      };
       const plain = () => { box.style.gap = ''; tabs.forEach((b) => (b.style.fontSize = '')); };
       box.classList.remove('two'); plain();
       for (const [size, gap] of [[12, 5], [12, 3], [12, 2]]) { if (!over()) break; box.style.gap = gap + 'px'; tabs.forEach((b) => (b.style.fontSize = size + 'px')); }

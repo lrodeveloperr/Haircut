@@ -96,7 +96,8 @@
 #hsc-menu .j.qp:active,#hsc-menu .j.hero:active{box-shadow:inset 0 2px 0 #fff5,0 1px 0 var(--edge)}
 #hsc-menu .qp .hsc-lbl{font-size:clamp(19px,calc(5.4 * var(--vw)),26px);white-space:normal;line-height:1.05;text-wrap:balance;padding:0 8px}
 #hsc-menu .hero .hsc-lbl{font-size:clamp(23px,calc(6.6 * var(--vw)),32px)}
-#hsc-menu .hero .sub{font-size:14px;font-weight:800;opacity:.95;max-width:92%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* the Career line (a city, or 'Choose your city') takes a second line in a long language (Tamil) instead of an ellipsis */
+#hsc-menu .hero .sub{font-size:14px;font-weight:800;opacity:.95;max-width:92%;white-space:normal;text-wrap:balance;line-height:1.1;overflow:hidden}
 #hsc-menu .hero .sub:empty{display:none}
 /* the dock runs edge to edge under the page's own margins (the safe-area insets included), and its buttons stay
    inside them: clear of a notch at the sides and 8 px above the gesture bar. Its four columns are equal unless a
@@ -112,11 +113,15 @@
 #hsc-menu .dock .hsc-dot{right:calc(50% - 26px);top:2px;width:14px;height:14px}
 /* ---- the modes screen ---- */
 #hsc-menu .mhead{display:flex;align-items:center;gap:10px;height:48px}
-#hsc-menu .back{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center}
+/* the back button keeps its 48 px beside a long title (Croatian 'Načini igre'): the title shrinks instead */
+#hsc-menu .back{flex:none;width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center}
 #hsc-menu .back .hsc-ic{width:28px;height:28px}
+/* right to left (Arabic, Hebrew, Persian, Urdu): Back points right, and a reward reads as written ('24+', '+5') */
+#hsc-menu[dir=rtl] .back .hsc-ic{transform:scaleX(-1)}
+#hsc-menu .mode .reward{direction:ltr;unicode-bidi:isolate}
 #hsc-menu .title{display:flex;align-items:center;gap:8px;min-width:0;color:#fff;font-weight:900;font-size:clamp(22px,calc(6 * var(--vw)),34px);-webkit-text-stroke:3px ${K};paint-order:stroke fill;text-shadow:0 3px 0 ${K}}
 #hsc-menu .title .hsc-ic{width:44px;height:44px}
-#hsc-menu .title .hsc-lbl{overflow:visible}
+#hsc-menu .title .hsc-lbl{overflow:visible;min-width:0}
 #hsc-menu .mhead .coins{margin-inline-start:auto}
 #hsc-menu .mgrid{display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:minmax(0,1fr);gap:12px;min-height:0;padding:4px 2px 10px}
 #hsc-menu .mode{display:flex;align-items:center;gap:12px;padding:8px 14px;overflow:hidden;text-align:start;border-radius:22px}
@@ -124,7 +129,7 @@
 #hsc-menu .mode .ico .hsc-ic{width:58px;height:58px}
 #hsc-menu .mode .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 #hsc-menu .mode .hsc-lbl{font-size:clamp(20px,calc(7 * var(--vw)),28px);text-align:start}
-#hsc-menu .mode .ln{font-size:15px;font-weight:800;line-height:1.15}
+#hsc-menu .mode .ln{font-size:15px;font-weight:800;line-height:1.15;overflow-wrap:break-word;hyphens:auto}
 #hsc-menu .mode .reward{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:62px;padding:6px 8px;border-radius:16px;background:${K};color:#ffe682;font-weight:900;font-size:17px;font-variant-numeric:tabular-nums}
 #hsc-menu .mode .reward .hsc-ic{width:24px;height:24px}
 #hsc-menu .mode .reward em{font-style:normal;font-size:13px;color:#9cf06c}

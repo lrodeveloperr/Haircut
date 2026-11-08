@@ -224,7 +224,8 @@
 #hsc-salon .namer input{flex:1;min-width:0;height:44px;border:0;background:none;text-align:end;font:900 17px "Arial Rounded MT Bold","Nunito",system-ui,sans-serif;color:${K};outline:none}
 #hsc-salon .cats{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 8px;flex:none}
 #hsc-salon .cats::-webkit-scrollbar{display:none}
-#hsc-salon .cats .j{flex:none;flex-direction:column;gap:2px;width:66px;height:66px;border-radius:14px;font-size:12px;padding:0 2px}
+/* a long category word (Catalan 'Decoració', Dutch 'Vloerkleed') widens its chip a little; the row already slides */
+#hsc-salon .cats .j{flex:none;flex-direction:column;gap:2px;width:auto;min-width:66px;height:66px;border-radius:14px;font-size:12px;padding:0 4px}
 #hsc-salon .cats .j.on{background:linear-gradient(#ffe682,#ffb21a)}
 #hsc-salon .cats img{width:34px;height:34px;object-fit:cover;border-radius:7px;border:2px solid ${K}}
 #hsc-salon .cats .hsc-lbl{max-width:100%}
@@ -239,7 +240,9 @@
 #hsc-salon .card .art img.obj{object-fit:contain;width:92%;height:92%}
 #hsc-salon .card .foot{height:36px;flex:none;border-top:3px solid ${K};display:flex;align-items:center;justify-content:center;gap:4px;font-weight:900;font-size:16px;background:#fff}
 #hsc-salon .card .foot .hsc-ic{width:22px;height:22px}
-#hsc-salon .card .tag{position:absolute;left:6px;top:6px;padding:1px 9px;border-radius:9px;background:#ffffffe8;border:2px solid ${K};font-size:13px;font-weight:900;max-width:calc(100% - 50px);white-space:nowrap;overflow:hidden}
+#hsc-salon .card .tag{position:absolute;left:6px;top:6px;padding:1px 9px;border-radius:9px;background:#ffffffe8;border:2px solid ${K};font-size:13px;font-weight:900;max-width:calc(100% - 42px);white-space:normal;text-wrap:balance;line-height:1.15;overflow:hidden}
+/* a city's name on its card wraps (Japanese, Hausa) rather than lose its end */
+#hsc-salon .card .tag{padding:1px 6px}
 #hsc-salon .card .own{position:absolute;right:5px;top:5px;width:28px;height:28px;border-radius:50%;background:#36b83a;border:2.5px solid ${K};display:flex;align-items:center;justify-content:center}
 #hsc-salon .card .own .hsc-ic{width:20px;height:20px}
 #hsc-salon .act{display:flex;gap:10px;align-items:center;flex:none;min-height:52px}

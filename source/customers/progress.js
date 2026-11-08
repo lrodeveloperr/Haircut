@@ -108,7 +108,7 @@
   // ---- the Free tab (shop.js) ----
   const WORDS = { fade: 'task_fade', beard: 'task_beard', regular: 'task_regular', star3: 'task_star3', customers: 'task_customers', tips: 'task_tips' };
   HSC.tasks = {
-    list: () => (P ? ensureTasks().map((x) => ({ k: x.k, n: x.n, goal: TASKS[x.k].goal, done: taskDone(x), claimed: x.claimed, pay: taskPay(), text: (HSC.t ? HSC.t(WORDS[x.k]) : x.k).replace('{n}', TASKS[x.k].goal) })) : []),
+    list: () => (P ? ensureTasks().map((x) => ({ k: x.k, n: x.n, goal: TASKS[x.k].goal, done: taskDone(x), claimed: x.claimed, pay: taskPay(), text: HSC.tn ? HSC.tn(WORDS[x.k], TASKS[x.k].goal) : (HSC.t ? HSC.t(WORDS[x.k]) : x.k).replace('{n}', TASKS[x.k].goal) })) : []),
     ready: () => !!P && ensureTasks().some((x) => taskDone(x) && !x.claimed),
     claim(i) {
       const x = P && P.tasks.list[i];
