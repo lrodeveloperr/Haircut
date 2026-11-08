@@ -1,0 +1,166 @@
+[
+ {
+  "id": "1-beard-under",
+  "region": "lagos",
+  "opts": {
+   "heritage": "west-african",
+   "age": "middle",
+   "noLoss": true,
+   "grey": 0.1,
+   "beardGrey": 0.12,
+   "beard": "garibaldi"
+  },
+  "pred": "(q,pr)=>q.years>=38&&q.years<=46&&/^4/.test(q.hair.type)",
+  "yaw": 150,
+  "el": -42,
+  "clip": 14,
+  "gown": 46,
+  "seed": 439257846
+ },
+ {
+  "id": "2-fade-side",
+  "region": "tokyo",
+  "seed": 570759282,
+  "opts": {
+   "heritage": "east-asian",
+   "age": "middle",
+   "noLoss": true,
+   "beard": "clean"
+  },
+  "pred": "(q,pr)=>true",
+  "yaw": -93,
+  "el": 10,
+  "clip": 16,
+  "gown": 56,
+  "profile": "s5-b5-t5-even-v0"
+ },
+ {
+  "id": "3-fade-back",
+  "region": "istanbul",
+  "opts": {
+   "heritage": "mena",
+   "age": "middle",
+   "noLoss": true,
+   "grey": 0.45,
+   "beard": "vandyke"
+  },
+  "pred": "(q,pr)=>/^s5-b5-t5/.test(pr)&&q.years>=44&&q.years<=52&&/^2/.test(q.hair.type)",
+  "yaw": -35,
+  "el": 8,
+  "clip": 23,
+  "gown": 16,
+  "profile": "s5-b5-t5-even-v0",
+  "seed": 2708530789
+ },
+ {
+  "id": "4-buzz-top",
+  "region": "london",
+  "opts": {
+   "heritage": "north-european",
+   "age": "young",
+   "noLoss": true,
+   "hairColour": 7,
+   "grey": 0,
+   "beard": "stubble"
+  },
+  "pred": "(q,pr)=>/^s5-b5-t5/.test(pr)&&q.years<=22&&/^1/.test(q.hair.type)",
+  "yaw": 170,
+  "el": 55,
+  "clip": 15,
+  "gown": 96,
+  "profile": "s5-b5-t5-even-v0",
+  "seed": 1355346877
+ },
+ {
+  "id": "5-beard-cheek",
+  "region": "mumbai",
+  "opts": {
+   "heritage": "south-asian",
+   "age": "old",
+   "noLoss": true,
+   "grey": 0.9,
+   "beardGrey": 1,
+   "beard": "bandholz"
+  },
+  "pred": "(q,pr)=>q.years>=62&&q.years<=70",
+  "yaw": 150,
+  "el": 4,
+  "clip": 6,
+  "gown": 71,
+  "seed": 2791849525
+ },
+ {
+  "id": "6-neckline-low",
+  "region": "classic",
+  "opts": {
+   "heritage": "mixed",
+   "age": "young",
+   "noLoss": true,
+   "hairColour": 10,
+   "grey": 0,
+   "beard": "clean"
+  },
+  "pred": "(q,pr)=>/^s5-b5-t5/.test(pr)&&/^3/.test(q.hair.type)",
+  "yaw": 8,
+  "el": 2,
+  "clip": 39,
+  "gown": 41,
+  "profile": "s5-b5-t5-even-v0",
+  "seed": 2584139908
+ },
+ {
+  "id": "7-fade-coily",
+  "region": "london",
+  "seed": 3740087521,
+  "opts": {
+   "heritage": "east-african",
+   "age": "young",
+   "noLoss": true,
+   "beard": "handlebar"
+  },
+  "pred": "(q,pr)=>true",
+  "yaw": 95,
+  "el": 2,
+  "clip": 47,
+  "gown": 86,
+  "profile": "s5-b5-t5-even-v0"
+ },
+ {
+  "id": "8-crown-high",
+  "region": "mexico",
+  "opts": {
+   "heritage": "latino",
+   "age": "middle",
+   "noLoss": true,
+   "hairColour": 4,
+   "grey": 0.05,
+   "beard": "anchor"
+  },
+  "pred": "(q,pr)=>/^s5-b5-t5/.test(pr)&&q.years>=32&&q.years<=38",
+  "yaw": 120,
+  "el": 15,
+  "clip": 7,
+  "gown": 61,
+  "profile": "s5-b5-t5-even-v0",
+  "seed": 3831517402
+ },
+ {
+  "id": "F-feature",
+  "region": "istanbul",
+  "opts": {
+   "heritage": "north-european",
+   "age": "middle",
+   "noLoss": true,
+   "grey": 0,
+   "hairColour": 3,
+   "beard": "balbo"
+  },
+  "pred": "(q,pr)=>q.years>=32&&q.years<=38&&/^(1|2)/.test(q.hair.type)",
+  "profile": "s5-b5-t5-even-v0",
+  "yaw": -120,
+  "el": 6,
+  "clip": 24,
+  "gown": 126,
+  "seed": 2005973601
+ }
+]
