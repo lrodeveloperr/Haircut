@@ -16,7 +16,7 @@
   function data() {
     const d = M() && M().data;
     if (!d) return null;
-    const day = M().today();
+    const day = M().today(); // the game's day (meta.js): a day's gifts come back with the day, so the clock cannot reopen them
     if (!d.gift || d.gift.day !== day) d.gift = { day, sec: 0, got: 0 };
     return d.gift;
   }
@@ -37,19 +37,37 @@
     if (++dirty >= 15) { dirty = 0; M().save(); }
   }, 1000);
 
+  // one claim at a time, and the gift is fixed (its day and number) before the video: a second tap during the video
+  // cannot claim the same gift again, nor a later one, and midnight during the video does not change which gift it is.
+  // The gift counts as taken only once its coins have landed: a failed coin commit leaves it to take again (same key,
+  // so it is paid once), and a doubling video already watched for it is remembered, so the retry pays double with no
+  // new video
+  let claiming = false;
   async function claim(double) {
+    if (claiming) return false;
     const g = data(), st = state();
-    if (!g || !st.ready) return false;
+    if (!g || !st.ready || !HSC.coins) return false;
+    const day = g.day, i = g.got;
     let n = st.pay;
-    if (double) {
-      const ok = HSC.watchVideo ? await HSC.watchVideo('gift-double') : false;
-      if (!ok) return false;
-      n *= 2;
-    }
-    if (HSC.coins) HSC.coins.add(n, 'gift', 'gift:' + g.day + ':' + g.got); // keyed: a repeated claim pays once
-    g.got++;
-    M().save();
-    return n;
+    claiming = true;
+    try {
+      if (g.dbl === i) n *= 2;
+      else if (double) {
+        const ok = HSC.watchVideo ? await HSC.watchVideo('gift-double') : false;
+        if (!ok) return false;
+        n *= 2;
+        g.dbl = i;
+        M().save();
+      }
+      let r;
+      try { r = await HSC.coins.add(n, 'gift', 'gift:' + day + ':' + i); } catch (e) { r = null; } // keyed: a repeated claim pays once
+      // the economy's result when it reports one; nothing back is the local purse (credited at once) or a queued credit
+      if (r !== undefined && !(r && !r.error)) return false;
+      g.got = Math.max(g.got, i + 1);
+      if (g.dbl != null && g.dbl < g.got) delete g.dbl;
+      M().save();
+      return n;
+    } finally { claiming = false; }
   }
 
   HSC.gift = { state, claim };

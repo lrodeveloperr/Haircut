@@ -11,7 +11,7 @@ const script=path.resolve(__dirname,'../review.js');
     await page.setContent('<button class="training-continue" disabled>Next</button>');
     await page.evaluate(()=>{
       window.reviewEvents=[];
-      window.AndroidHost={reviewMoment(completed,qualified,activeMs){reviewEvents.push({completed,qualified,activeMs});}};
+      window.__androidRewardedReady = true; window.AndroidHost = {reviewMoment(completed,qualified,activeMs){reviewEvents.push({completed,qualified,activeMs});}};
       window.reviewState={status:'cutting',completed:2,adCadence:{qualified:1,activeMs:59_900}};
       window.reviewView={revealComplete:false};
       window.skinFadeStudio={getState:()=>reviewState,getView:()=>reviewView};
@@ -36,7 +36,7 @@ const script=path.resolve(__dirname,'../review.js');
     await restored.setContent('<button class="training-continue">Next</button>');
     await restored.evaluate(()=>{
       window.reviewEvents=[];
-      window.AndroidHost={reviewMoment(...args){reviewEvents.push(args);}};
+      window.__androidRewardedReady = true; window.AndroidHost = {reviewMoment(...args){reviewEvents.push(args);}};
       window.reviewState={status:'reveal',completed:9,adCadence:{qualified:1,activeMs:70_000}};
       window.reviewView={revealComplete:true};
       window.skinFadeStudio={getState:()=>reviewState,getView:()=>reviewView};

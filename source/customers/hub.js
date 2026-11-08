@@ -217,6 +217,7 @@ body.hsc-reveal .training-continue{translate:0 -18px}
     const d = M().data;
     // next customer
     const q = d.queue && st.round.info && d.queue.job === st.round.info.job ? d.queue.person : null;
+    st.round.q = queued();
     st.el.next.hidden = !q;
     if (q) {
       const reg = q.regular && HSC.regularOf ? HSC.regularOf({ jobId: d.queue.job }, q) : null;
@@ -300,8 +301,12 @@ body.hsc-reveal .training-continue{translate:0 -18px}
       chime(!!(st.round.info && st.round.info.levelUp));
     }
     if (!show && st.el.hub.classList.contains('show')) { st.el.hub.classList.remove('show'); st.el.dock.classList.remove('show'); document.body.classList.remove('hsc-reveal'); }
+    // the queued customer changed under the card (a mode switch from the home screen over the result): draw the new one
+    if (show && st.round.q !== queued()) render();
     if (show) layout();
   }
+  // who the card was drawn for
+  function queued() { const q = M().data.queue; return q && q.person ? q.job + ':' + q.person.seed + ':' + q.profile : ''; }
 
   // ---------------- first-time "turn the customer" hint ----------------
   // One layout on every screen: the turn icon beside a dotted arc, the hand sweeping along it, the group

@@ -8,7 +8,7 @@ const root=path.resolve(__dirname,'../..'),build=path.join(root,'source/build');
 
 function hostFixture(){
   window.__native={ready:0,ads:[],outcome:'hold',reviews:[]};
-  window.AndroidHost={
+  window.__androidRewardedReady = true; window.AndroidHost = {
     request(id,op,payload){setTimeout(()=>{
       if(op==='save')localStorage.setItem('android-test-envelope',JSON.parse(payload));
       __androidHost.complete(id,true,op==='load'?localStorage.getItem('android-test-envelope')||'{}':'');
@@ -18,7 +18,7 @@ function hostFixture(){
       __native.ads.push(placement);
       setTimeout(()=>__androidHost.ad('interstitial',__native.outcome==='fail'?'failed':'opened'),10);
     },
-    showRewarded(){setTimeout(()=>__androidHost.ad('rewarded','failed'),10);},
+    showRewarded(){setTimeout(()=>{if(__native.rewarded==='close'){__androidHost.ad('rewarded','opened');__androidHost.ad('rewarded','closed');}else __androidHost.ad('rewarded','failed');},10);},
     reviewMoment(...args){__native.reviews.push(args);},shareGame(){},
   };
 }
@@ -93,17 +93,25 @@ function hostFixture(){
     await page.evaluate(()=>__androidHost.ad('interstitial','closed'));
     await page.waitForFunction(()=>skinFadeStudio.getState().status==='cutting'&&!skinFadeStudio.getView().busy);
     await stopTap();
-    // a rewarded video started on the result (here it fails) wins the break: Continue shows no interstitial
+    // a rewarded video that never came on screen (no fill) leaves the break to the interstitial
     await work();await revealed();
     await page.evaluate(async()=>{HSC.lastRewardAt=0;await HSC.watchVideo('triple-tips').catch(()=>false);});
     await page.evaluate(()=>{HSC.lastRewardAt=0;});await tap();
+    await page.waitForFunction(()=>__native.ads.length===3&&skinFadeStudio.getView().busy);
+    await page.evaluate(()=>__androidHost.ad('interstitial','closed'));
     await page.waitForFunction(()=>skinFadeStudio.getState().status==='cutting'&&!skinFadeStudio.getView().busy);
     await stopTap();
-    assert.equal(await page.evaluate(()=>__native.ads.length),2,'a rewarded result suppresses its interstitial');
+    // a rewarded video that came on screen on the result (closed early, no reward) wins the break: no interstitial
+    await work();await revealed();
+    await page.evaluate(async()=>{HSC.lastRewardAt=0;__native.rewarded='close';await HSC.watchVideo('triple-tips').catch(()=>false);__native.rewarded=null;});
+    await page.evaluate(()=>{HSC.lastRewardAt=0;});await tap();
+    await page.waitForFunction(()=>skinFadeStudio.getState().status==='cutting'&&!skinFadeStudio.getView().busy);
+    await stopTap();
+    assert.equal(await page.evaluate(()=>__native.ads.length),3,'a rewarded result suppresses its interstitial');
     // no fill releases Continue
     await work();await revealed();
     await page.evaluate(()=>{__native.outcome='fail';});await tap();
-    await page.waitForFunction(()=>__native.ads.length===3&&skinFadeStudio.getState().status==='cutting'&&!skinFadeStudio.getView().busy&&!skinFadeStudio.getView().paused);
+    await page.waitForFunction(()=>__native.ads.length===4&&skinFadeStudio.getState().status==='cutting'&&!skinFadeStudio.getView().busy&&!skinFadeStudio.getView().paused);
     await stopTap();
     // a reveal restored after a reload shows no ad on Continue
     await work();await revealed();

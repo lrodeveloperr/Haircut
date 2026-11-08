@@ -15,8 +15,18 @@ const frozen = {
   // Re-pinned 6 November 2026 with the owner's approval for head form and camera tilt: source/patch21.py only
   // Re-pinned 7 November 2026 with the owner's approval for the save check only (android/build-runtime.py): it accepts
   // Android's 18 hair colours. Reversing that one replacement reproduces the previous approved hash 3f8fc36c... exactly.
-  'source/build/runtime/game.js':'4e70f1db0fe45bba1670c28ae1fee91adac9109d2e0c2ce74d5f4c9eeb0ad2fc',
-  'source/customers/wardrobe.js':'02dc5a1e503d9219c41dbd8eb8522685886475c62b500f3b2bfbd780d8a20291',
+  // Re-pinned 7 November 2026 (owner-directed logic audit) for graphics-loss recovery only (source/youtube/build.py lost/restore:
+  // a context lost again during recovery waits for the next restore instead of failing). Reversing it reproduces 4e70f1db... exactly.
+  // Re-pinned again 7 November 2026 (audit round 2) for the engine's restore(): it now applies a brow array too (source/patch19.py);
+  // reversing that one change reproduces 3eedf5ee... exactly.
+  'source/build/runtime/game.js':'fa238a19e586309db8eea237120e5d64f463be48cd39f11c2231d289835a73b8',
+  // Re-pinned 7 November 2026 (owner-directed audit): daily picks can never move back with the device clock, and the UI
+  // scale reaches min(4, m/560) on 4K and ultra-wide screens. The renderer and the look of the wardrobe are unchanged.
+  // Re-pinned again 7 November 2026 (audit round 2): the daily picks keep a book of days (meta.js HSC.dayBook), so a corrected
+  // clock recovers and no calendar day deals its picks twice. Renderer and wardrobe look unchanged.
+  // Re-pinned 7 November 2026 with the owner's approval: daily picks only from items up to 350 coins, and video buttons
+  // hide when no rewarded ad can play (Android readiness flag). Renderer and wardrobe look unchanged.
+  'source/customers/wardrobe.js':'09d52cab8d19598b3175ed6f6ff63d51c4d661d5a494d5cd02558918dd12e1b3',
 };
 for(const [p,expected] of Object.entries(frozen)) assert.equal(hash(p),expected,'owner-approved source must remain byte-identical: '+p);
 const types = {'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp','.json':'application/json'};
@@ -35,7 +45,7 @@ const report = {status:'RUNNING',frozen,layouts:[],screenshots:[]};
       });
       await context.addInitScript(()=>{
         window.__privacyCalls=0; window.__adOptionsCalls=0;
-        window.AndroidHost={
+        window.__androidRewardedReady = true; window.AndroidHost = {
           request(id,operation,payload) {setTimeout(()=>{if(operation==='save')localStorage.setItem('privacy-save',JSON.parse(payload));__androidHost.complete(id,true,operation==='load'?localStorage.getItem('privacy-save')||'{}':'');},5);},
           gameReady(){}, showRewarded(){throw Error('privacy test must not request ads');}, showInterstitial(){throw Error('privacy test must not request ads');},
           openPrivacy(){__privacyCalls++;}, showPrivacyOptions(){__adOptionsCalls++;},

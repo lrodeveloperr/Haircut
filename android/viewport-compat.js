@@ -13,7 +13,9 @@
   if (!legacyRectZoom) return;
   Element.prototype.getBoundingClientRect = function () {
     const rect = nativeRect.call(this);
-    if (!this.closest('.ui,#hsc-hud,#hsc-panel,#hsc-hub')) return rect;
+    // the order bubble, the result, the undo button, the Rush clock and the toast are zoomed layers of their own:
+    // they are placed against the head and the controls, so their boxes must be in screen pixels too
+    if (!this.closest('.ui,#hsc-hud,#hsc-panel,#hsc-hub,#hsc-req,#hsc-score,#hsc-undo,#hsc-rush,.hsc-toast')) return rect;
     let scale = 1;
     // The renderer asks for this rect on every input event. Its only zoom is
     // the responsive UI scale; avoid computed-style walks on this hot path.

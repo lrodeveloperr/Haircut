@@ -27,6 +27,11 @@
   HSC.wardrobe = W;
 
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+  // a day key as a local date (y-m-d), or null for a malformed one; day keys are compared by date, never as text
+  // the day book (meta.js): a wrong clock in either direction never deals a day's picks twice, and a clock put right
+  // gets its real day back; a build without it keeps the picks' day moving forward only
+  const book = () => HSC.dayBook || { fresh: () => null, clean: () => null };
+  const dateOf = (key) => { const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(key || ''); return m ? new Date(+m[1], m[2] - 1, +m[3]) : null; };
   const hash = (str) => { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
   const TOOLS = ['clipper', 'gown'];
   const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -42,7 +47,7 @@
   }
 
   function fresh() {
-    return { v: 4, own: {}, look: Object.assign({}, C().DEFAULT_LOOK), progress: {}, dotDay: null, pick: null };
+    return { v: 4, own: {}, look: Object.assign({}, C().DEFAULT_LOOK), progress: {}, dotDay: null, pick: null, days: book().fresh() };
   }
   function sanitize(d) {
     const f = fresh();
@@ -51,7 +56,10 @@
     for (const t of TOOLS) W.bits[t] = typeof (d.own && d.own[t]) === 'string' ? fromB64(d.own[t], bytes(t)) : new Uint8Array(bytes(t));
     const pk = d.pick && typeof d.pick.day === 'string' && C().byKey.has(d.pick.clipper) && C().byKey.has(d.pick.gown) ? { day: d.pick.day, clipper: d.pick.clipper, gown: d.pick.gown } : null;
     const recent = Array.isArray(d.recent) ? d.recent.filter((k) => typeof k === 'string' && C().byKey.has(k)) : [];
-    const out = { v: 4, own: {}, look: Object.assign({}, f.look), progress: {}, dotDay: typeof d.dotDay === 'string' ? d.dotDay : null, pick: pk, recent };
+    // the days whose picks were dealt (picks() below): each one's two designs, so that day never deals other ones
+    const okPick = (e) => (e && typeof e.day === 'string' && C().byKey.has(e.clipper) && C().byKey.has(e.gown) ? { day: e.day, clipper: e.clipper, gown: e.gown } : null);
+    const days = book().clean(d.days, okPick, pk && pk.day);
+    const out = { v: 4, own: {}, look: Object.assign({}, f.look), progress: {}, dotDay: typeof d.dotDay === 'string' ? d.dotDay : null, pick: pk, recent, days };
     W.data = out;
     for (const k of C().FREE) setOwned(k);
     for (const t of TOOLS) {
@@ -196,7 +204,10 @@
   }
 
   // ---------------- unlocking ----------------
-  const canVideo = () => !!(W.client && W.client.rewardedSupported && W.client.showRewarded);
+  // a platform with rewarded videos may also say whether one can play right now (Android: an ad loaded and consent
+  // given); while it says no, every video button is hidden, and a platform that does not say keeps them
+  const canVideo = () => !!(W.client && W.client.rewardedSupported && W.client.showRewarded
+    && (typeof W.client.rewardedReady !== 'function' || W.client.rewardedReady()));
   async function watchVideo(placement) {
     const c = W.client;
     if (!canVideo()) return false;
@@ -258,26 +269,66 @@
     applyLook();
   }
   // today's clipper and robe: the same for every player that day, never one the player owns; a new day
-  // brings new picks
-  function picks() {
-    const day = today();
-    if (W.data.pick && W.data.pick.day === day) return W.data.pick;
-    const old = W.data.pick;
-    if (old) for (const t of TOOLS) delete W.data.progress[old[t]];
-    const pick = { day };
-    for (const t of TOOLS) {
-      const all = C().designs[t], n = all.length;
-      let i = hash(day + '|' + t) % n;
-      for (let k = 0; k < n && (owns(all[i].key) || C().FREE.has(all[i].key)); k++) i = (i + 1) % n;
-      pick[t] = all[i].key;
+  // brings new picks. The days follow the day book (meta.js): a date one or two days back (a time zone crossed
+  // westward) keeps the picks, a clock put right gets its real day back, and a day whose picks were dealt before
+  // gets those same two designs back (taken ones stay taken), so moving the date back and forth deals nothing new
+  // and every calendar day gives its two picks once at most
+  // the daily picks come only from the Common and Uncommon designs (350 coins or less, never Rare or Premium): the
+  // coin price where the shop sells (wardrobe-shop.js), else the same tier from the design's own data
+  const cheap = (d) => {
+    const S = HSC.wardrobeShop, cfg = HSC.economy && HSC.economy.CONFIG.wardrobe;
+    if (S && S.price && cfg) return S.price(d) <= cfg.uncommon;
+    if (d.premium) return false;
+    const tier = (name, list) => { const r = name != null && list.find((x) => x[0] === name); return r ? r[r.length - 1] : 0; };
+    const p = d.parts;
+    return Math.max(0, ...[p.body, p.accent, p.main, p.second, p.collar].map((c) => tier(c, C().COLOURS)), tier(p.finish, C().FINISHES)) < 3;
+  };
+  // one day's design for a tool: from the day's own number, the next one not owned (nor free) among the cheap ones;
+  // when every cheap one is owned, a cheap owned one (nothing to take that day), never a dear one
+  function deal(day, t) {
+    const all = C().designs[t], n = all.length, start = hash(day + '|' + t) % n;
+    let fallback = null;
+    for (let k = 0; k < n; k++) {
+      const d = all[(start + k) % n];
+      if (C().FREE.has(d.key) || !cheap(d)) continue;
+      if (!owns(d.key)) return d.key;
+      fallback = fallback || d.key;
     }
+    return fallback || all[start].key;
+  }
+  // a pick dealt by an older version from the dear designs and not taken is dealt again from the cheap ones (once:
+  // the new one is saved, and the same day always deals the same one); a taken one stays taken
+  function cheapen(pick) {
+    let changed = false;
+    for (const t of TOOLS) {
+      const d = C().byKey.get(pick[t]);
+      if (d && !cheap(d) && !owns(d.key)) { delete W.data.progress[d.key]; pick[t] = deal(pick.day, t); changed = true; }
+    }
+    return changed;
+  }
+  function picks() {
+    const day = today(), old = W.data.pick, B = HSC.dayBook;
+    if (old && old.day === day) { if (cheapen(old)) save(); return old; }
+    if (!W.data.days && B) W.data.days = B.fresh();
+    if (B ? old && !B.may(W.data.days, old.day, day) : old && dateOf(old.day) && dateOf(day) < dateOf(old.day)) { if (cheapen(old)) save(); return old; }
+    // the new day's record comes out of the book before the day left goes in, so it can never be pushed out
+    const back = B && B.take(W.data.days, day);
+    if (old) {
+      for (const t of TOOLS) delete W.data.progress[old[t]];
+      if (B) B.put(W.data.days, { day: old.day, clipper: old.clipper, gown: old.gown });
+    }
+    if (back) { cheapen(back); W.data.pick = back; save(); return back; }
+    const pick = { day };
+    for (const t of TOOLS) pick[t] = deal(day, t);
     W.data.pick = pick;
     save();
     return pick;
   }
-  // time left today, as the countdown shows it (h:mm:ss, or m:ss in the last hour)
-  function timeLeft() {
-    const now = new Date(), start = new Date(now.getFullYear(), now.getMonth(), now.getDate()), end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  // time left on the pick's day, as the countdown shows it (h:mm:ss, or m:ss in the last hour); the pick's own
+  // day, so a clock set back counts down to when that pick really goes, not to the device's midnight
+  function timeLeft(day) {
+    const now = new Date(), d = dateOf(day) || new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate()), end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
     const t = Math.max(0, Math.floor((end - now) / 1000)), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
     const two = (v) => String(v).padStart(2, '0');
     // the ring around the pick drains with the day: green, orange from 6 h, red from 2 h, a heartbeat at the end
@@ -285,10 +336,11 @@
   }
 
   // ---------------- UI ----------------
-  // the UI scale: 1 on phones (short side 300-560 px), up to 2.4 on big screens, down to 0.6 in tiny embeds
+  // the UI scale: 1 on phones (short side 300-560 px), the short side / 560 above that so every screen keeps the same
+  // proportions (4 at most, past a 4K screen's 3.86), down to 0.6 in tiny embeds
   HSC.uiScale = () => {
     const m = Math.min(innerWidth, innerHeight);
-    return +(m < 300 ? Math.max(0.6, m / 300) : Math.min(2.4, Math.max(1, m / 560))).toFixed(3);
+    return +(m < 300 ? Math.max(0.6, m / 300) : Math.min(4, Math.max(1, m / 560))).toFixed(3);
   };
   HSC.applyScale = () => {
     const s = HSC.uiScale();
@@ -468,7 +520,7 @@ body.hsc-settle .ui button,body.hsc-settle #hsc-hud *,body.hsc-settle .hsc-repla
       setInterval(() => {
         place();
         const open = this.el.panel.classList.contains('open');
-        if (open && this.day !== today()) this.render(); // midnight: today's new picks replace yesterday's
+        if (open && this.day !== picks().day) this.render(); // midnight: today's new picks replace yesterday's
         else if (open) this.tickTimer();
         this.dot();
       }, 1000);
@@ -522,7 +574,7 @@ body.hsc-settle .ui button,body.hsc-settle #hsc-hud *,body.hsc-settle .hsc-repla
     tickTimer() {
       const t = this.el.pick.querySelector('.hsc-timer');
       if (!t) return;
-      const left = timeLeft();
+      const left = timeLeft(this.day);
       t.querySelector('span').textContent = left.text;
       const taken = !!t.dataset.taken, card = this.el.pick.querySelector('.hsc-pick');
       t.classList.toggle('low', left.low && !taken);
@@ -590,19 +642,30 @@ body.hsc-settle .ui button,body.hsc-settle #hsc-hud *,body.hsc-settle .hsc-repla
       const t = this.el.grid.querySelector(`[data-key="${key}"]`);
       if (t) { t.classList.remove('hsc-pop'); void t.offsetWidth; t.classList.add('hsc-pop'); }
     },
+    // the platform says a rewarded video can (or can no longer) play: the pick card and the red dot follow at once
+    // (not mid-video: the card is redrawn when that video ends)
+    ready() {
+      if (!W.data || !this.el || !this.el.pick || this.busy) return;
+      if (this.el.panel.classList.contains('open')) this.render();
+      this.dot();
+    },
     async take(d) {
       if (this.busy || owns(d.key)) return;
+      // a card drawn before the day changed offers yesterday's pick: show today's instead
+      if (picks()[d.tool] !== d.key) { this.render(); return; }
       this.busy = true;
       const b = this.el.pick.querySelector('.hsc-vbtn');
       b.disabled = true;
       const ok = await watchVideo('unlock-item');
       this.busy = false;
+      if (!ok && !canVideo()) { this.render(); this.dot(); return; } // no video can play now: the card goes away
       if (!ok) { b.disabled = false; HSC.nope && HSC.nope(b); return; }
       if (grant(d, 'daily') === 'unlocked') { equip(d.tool, d.id); this.fresh = d.key; this.page = 0; this.render(); this.pop(d.key); }
       else this.render();
     },
   };
 
+  if (typeof addEventListener === 'function') addEventListener('hsc-rewarded-ready', () => { try { ui.ready(); } catch (e) {} });
   HSC.wardrobeApply = () => applyLook();
   // for other modules: the current look, pictures of designs, and a design previewed without owning it
   HSC.rewards = {

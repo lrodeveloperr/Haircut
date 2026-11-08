@@ -1,9 +1,7 @@
 package com.worksbien.barbersimulatorasmr;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.webkit.WebView;
 
 import com.google.android.play.core.review.ReviewInfo;
@@ -16,8 +14,6 @@ import com.google.android.play.core.review.ReviewManagerFactory;
  * this records attempts and applies a conservative cross-version cooldown instead.
  */
 final class ReviewController {
-    private static final String APPGALLERY_DETAILS =
-            "hiapplink://com.huawei.appmarket?appId=119651751";
     private static final String PREFS = "play-review-state";
     private static final String ATTEMPTS = "attempts";
     private static final String LAST_ATTEMPT_AT = "last-attempt-at";
@@ -66,8 +62,9 @@ final class ReviewController {
                 requestInFlight = false;
                 return;
             }
+            // no Play review card: nothing else opens (never another store, never without the player's tap)
             if (!request.isSuccessful()) {
-                launchAppGalleryFallback(completed, attempts, now);
+                requestInFlight = false;
                 return;
             }
             ReviewInfo review = request.getResult();
@@ -84,30 +81,9 @@ final class ReviewController {
                     manager.launchReviewFlow(activity, review).addOnCompleteListener(ignored -> requestInFlight = false);
                     recordAttempt(completed, attempts, now);
                 } catch (RuntimeException ignored) {
-                    launchAppGalleryFallback(completed, attempts, now);
+                    requestInFlight = false;
                 }
             });
-        });
-    }
-
-    private void launchAppGalleryFallback(int completed, int attempts, long now) {
-        String stillAtMoment = "(function(){const g=window.skinFadeStudio;if(!g)return false;"
-                + "const s=g.getState(),v=g.getView();return s.status==='reveal'&&v.revealComplete"
-                + "&&s.completed===" + completed + ";})()";
-        web.evaluateJavascript(stillAtMoment, value -> {
-            if (destroyed || !"true".equals(value) || ads.isFullScreenBusy()) {
-                requestInFlight = false;
-                return;
-            }
-            try {
-                Intent details = new Intent(Intent.ACTION_VIEW, Uri.parse(APPGALLERY_DETAILS));
-                details.setPackage("com.huawei.appmarket");
-                activity.startActivity(details);
-                recordAttempt(completed, attempts, now);
-            } catch (RuntimeException ignored) {
-                // AppGallery is not installed. Leave the player in the game without a broken prompt.
-            }
-            requestInFlight = false;
         });
     }
 

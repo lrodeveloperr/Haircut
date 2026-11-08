@@ -12,15 +12,24 @@
 // The career save is separate from progress, advertising, consent and wardrobe saves.
 //
 // Hardening (save contract section 8): records migrate one schema version at a time (deterministic and
-// idempotent), every section is sanitized field by field (types, bounds, collection sizes), a record above
-// 2.5 MB warns and one above 3 MB is refused before it is written, a commit whose base revision is older than the
-// stored pointer is refused as stale (another surface wrote), and when the page is hidden the lease is released:
-// the next write first reloads the latest committed record.
+// idempotent), every section is sanitized field by field (types, bounds, collection sizes), a record is budgeted
+// by what it really takes in the host's save envelope (both journal records live there, beside the progress,
+// session and wardrobe saves, and the envelope refuses anything from 3 MiB): above 1 MiB it warns, above 1.25 MiB
+// the regulars' saved cuts are trimmed and what still does not fit is refused before it is written. A commit whose
+// base revision is older than a valid committed record of another surface is refused as stale, a record from a
+// newer game version makes the whole career read-only (never a frozen half), and when the page is hidden the lease
+// is released: the next write first reloads the latest committed record.
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
   'use strict';
   const SCHEMA = 2;
-  const WARN_BYTES = 2.5 * 1024 * 1024, MAX_BYTES = 3 * 1024 * 1024;
+  // per journal record, in envelope bytes (UTF-8 of the record as saved, its body string escaped): two records fit
+  // the 3 MiB envelope with half a MiB left for every other save
+  const WARN_BYTES = 1024 * 1024, MAX_BYTES = 1.25 * 1024 * 1024;
+  // the regulars: one regular's saved cut (hair, beard, his usual beard) and all regulars together
+  const REG_GRID_BYTES = 20000, REGS_BYTES = 400 * 1024;
+  const enc = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+  const sizeOf = (rec) => { const j = JSON.stringify(rec); return enc ? enc.encode(j).length : j.length * 3; };
   // one migration per schema step: MIGRATE[n] turns a schema-n body into a schema-(n+1) body
   const MIGRATE = {
     // 1 -> 2 (Wave 2): sections that schema 1 left optional get their empty defaults; nothing else changes
@@ -71,7 +80,35 @@
         (g.h == null || str(g.h, 24000)) && (g.b == null || str(g.b, 24000)) && (g.u == null || str(g.u, 24000)) && (g.usual == null || str(g.usual, 60)));
       if (list.length) out[city] = list.slice(-6);
     }
-    return out;
+    return trimRegs(out);
+  }
+  // Regulars are the part of a career that grows with play. A regular whose saved cut is oversized keeps his
+  // identity without it (he walks in on a fresh start); over the total budget, the regulars seen longest ago lose
+  // their saved cuts first, then their records. Changes `regs` in place and returns it.
+  function trimRegs(regs, budget = REGS_BYTES) {
+    if (!obj(regs)) return {};
+    const all = [], len = (v) => (typeof v === 'string' ? v.length : 0);
+    const strip = (g) => { delete g.h; delete g.b; delete g.u; };
+    for (const city of Object.keys(regs)) {
+      if (!Array.isArray(regs[city])) { delete regs[city]; continue; }
+      for (const g of regs[city]) { if (len(g.h) + len(g.b) + len(g.u) > REG_GRID_BYTES) strip(g); all.push([city, g]); }
+    }
+    let size = JSON.stringify(regs).length;
+    if (size <= budget) return regs;
+    all.sort((x, y) => (x[1].lastDay | 0) - (y[1].lastDay | 0));
+    for (const [, g] of all) {
+      if (size <= budget) break;
+      if (g.h == null && g.b == null && g.u == null) continue;
+      const before = JSON.stringify(g).length; strip(g); size -= before - JSON.stringify(g).length;
+    }
+    for (const [city, g] of all) {
+      if (size <= budget) break;
+      const list = regs[city], i = list ? list.indexOf(g) : -1;
+      if (i < 0) continue;
+      size -= JSON.stringify(g).length + 1; list.splice(i, 1);
+      if (!list.length) delete regs[city];
+    }
+    return regs;
   }
   // population deficits: per city, a bounded number per group
   function cleanPop(p) {
@@ -91,7 +128,9 @@
     if (!obj(a) || !str(a.id, 120) || !STATES.includes(a.state) || !obj(a.person) || !obj(a.start) || !str(a.start.h, 24000) || !obj(a.request)) return null;
     if (a.start.b != null && !str(a.start.b, 24000)) return null;
     if (a.work != null && !(obj(a.work) && str(a.work.h, 24000) && (a.work.b == null || str(a.work.b, 24000)))) return null;
+    if (a.work && a.work.br != null && !str(a.work.br, 24000)) a.work.br = null; // damaged brows: the checkpoint keeps the rest
     if (a.job != null && !nat(a.job, 1e9)) a.job = null;
+    if (a.doneJob != null && !nat(a.doneJob, 1e9)) delete a.doneJob;
     return a;
   }
   // the director's memory: bounded rings; a damaged one starts fresh (it only shapes variety)
@@ -146,7 +185,7 @@
   // storage: { get(key) -> Promise(value|null), set(key, value) -> Promise }
   function journal(storage) {
     let head = null; // { slot, rev, body }
-    let lease = Symbol('lease');
+    let lease = Symbol('lease'), tooNewSeen = false;
     async function load() {
       const recs = await Promise.all(KEYS.map((k) => storage.get(k).catch(() => null)));
       let best = null, newer = false;
@@ -158,9 +197,11 @@
         if (!body) return;
         if (!best || o.rec.rev > best.rev) best = { slot, rev: o.rec.rev, body };
       });
-      if (newer && (!best)) return { tooNew: true };
+      // a newer game version wrote here: the career is read-only until the update (save contract section 8). Even
+      // beside an older readable record, writing would only ever be refused as stale against the newer one
+      if (newer) { head = null; tooNewSeen = true; return { tooNew: true }; }
       head = best;
-      return best ? { body: best.body, rev: best.rev, newerExists: newer } : { body: null, newerExists: newer };
+      return best ? { body: best.body, rev: best.rev, newerExists: false } : { body: null, newerExists: false };
     }
     // apply(body) -> new body (pure); the event is applied to a copy of the last committed body
     let released = false;
@@ -168,19 +209,26 @@
       // a released journal (the page was hidden) reloads before it writes again, so it never overwrites what another
       // surface wrote meanwhile; a write is never dropped (a reward credit may arrive while an ad covers the page)
       if (released) await load2();
+      if (tooNewSeen) { const e = new Error('career-save: saved by a newer game version'); e.tooNew = true; throw e; }
       const mine = lease;
-      // a newer revision written by another surface: this one is stale and must reload first (section 10)
+      // a newer revision written by another surface: this one is stale and must reload first (section 10). Only a
+      // record that really loads counts: a pointer to a damaged record (which load skipped) does not freeze saving
       const ptr = await storage.get(PTR).catch(() => null);
-      if (head && ptr && Number.isSafeInteger(ptr.rev) && ptr.rev > head.rev) { const e = new Error('career-save: stale base revision'); e.stale = true; throw e; }
+      if (head && ptr && Number.isSafeInteger(ptr.rev) && ptr.rev > head.rev && (ptr.slot === 0 || ptr.slot === 1)) {
+        const o = open(await storage.get(KEYS[ptr.slot]).catch(() => null));
+        if (o.tooNew || (!o.bad && o.rec.committed && o.rec.rev > head.rev && sanitize(o.body))) { const e = new Error('career-save: stale base revision'); e.stale = true; throw e; }
+      }
       const base = head ? JSON.parse(JSON.stringify(head.body)) : null;
       const next = apply(base);
       if (!next || !next.core) throw new Error('career-save: empty commit');
       const bad = HSC.career.validate(next.core);
       if (bad.length) throw new Error('career-save: invariant ' + bad.join(','));
       const rev = (head ? head.rev : 0) + 1, slot = head ? 1 - head.slot : 0;
-      const pending = seal(next, rev, false);
-      // size budget (section 4): refuse a record that would not fit, warn well before it
-      const bytes = pending.body.length * 2;
+      let pending = seal(next, rev, false);
+      // size budget (section 4): over it, the regulars' saved cuts are trimmed hard; what still does not fit is
+      // refused before anything is written, and a warning comes well before it
+      let bytes = sizeOf(pending);
+      if (bytes > MAX_BYTES && obj(next.regs)) { next.regs = trimRegs(next.regs, REGS_BYTES / 4); pending = seal(next, rev, false); bytes = sizeOf(pending); }
       if (bytes > MAX_BYTES) { const e = new Error('career-save: record too large (' + bytes + ' bytes)'); e.tooLarge = true; throw e; }
       if (bytes > WARN_BYTES) console.warn('career-save: record is ' + bytes + ' bytes (limit ' + MAX_BYTES + ')');
       await storage.set(KEYS[slot], pending);
@@ -188,15 +236,16 @@
       const back = open(await storage.get(KEYS[slot]));
       if (back.bad || back.rec.rev !== rev) throw new Error('career-save: read-back failed');
       await storage.set(KEYS[slot], Object.assign({}, pending, { committed: true }));
-      await storage.set(PTR, { slot, rev });
+      // the committed record is the commit (load never reads the pointer); a failed pointer write is caught up next time
       head = { slot, rev, body: next };
+      await storage.set(PTR, { slot, rev }).catch((e) => console.warn('career-save: pointer not written', e));
       return next;
     }
     // another surface took over, or the page was hidden: stop writing until the journal is loaded again
     const release = () => { lease = Symbol('lease'); released = true; };
-    const load2 = async () => { const r = await load(); released = false; return r; };
+    const load2 = async () => { tooNewSeen = false; const r = await load(); released = false; return r; };
     return { load: load2, commit, release, released: () => released, current: () => (head ? head.body : null), rev: () => (head ? head.rev : 0) };
   }
 
-  HSC.careerSave = { SCHEMA, KEYS, PTR, WARN_BYTES, MAX_BYTES, journal, checksum, sanitize, open, migrate };
+  HSC.careerSave = { SCHEMA, KEYS, PTR, WARN_BYTES, MAX_BYTES, REGS_BYTES, REG_GRID_BYTES, journal, checksum, sanitize, open, migrate, trimRegs, sizeOf };
 })(globalThis.HSC || (globalThis.HSC = {}));

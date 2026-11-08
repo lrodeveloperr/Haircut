@@ -48,7 +48,8 @@
 #hsc-set .head h2{margin:0 8px;font:900 26px/1.1 "Arial Rounded MT Bold","Nunito",system-ui,sans-serif}
 #hsc-set .x{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff6e6;border:3px solid ${INK};box-shadow:0 3px 0 ${INK};cursor:pointer;color:${INK};padding:0}
 #hsc-set .row{display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 12px;border-radius:18px;border:3px solid ${INK};background:#fff}
-#hsc-set .label{flex:1;min-width:0;font:800 16px/1.2 "DM Sans",system-ui,sans-serif}
+/* the label keeps its words whole; the language list gives way on a narrow phone (it shows the language's name) */
+#hsc-set .label{flex:1 0 auto;min-width:0;font:800 16px/1.2 "DM Sans",system-ui,sans-serif}
 #hsc-set .hands{display:flex;gap:8px;flex:none}
 #hsc-set .hand{min-width:76px;height:48px;border-radius:14px;border:3px solid ${INK};background:#f1e4cc;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0 12px;font:800 15px/1 system-ui,sans-serif;color:${INK}}
 #hsc-set .hand[aria-pressed=true]{background:#ffe08a;box-shadow:0 0 0 3px #ffb627}
@@ -57,7 +58,7 @@
 #hsc-set input[type=range]{flex:1;height:48px;margin:0;background:transparent;-webkit-appearance:none;appearance:none;touch-action:none}
 #hsc-set input[type=range]::-webkit-slider-runnable-track{height:12px;border-radius:6px;background:#e9dcc4;border:2.5px solid ${INK}}
 #hsc-set input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:40px;height:40px;margin-top:-16px;border-radius:50%;background:#ffb627;border:3px solid ${INK};box-shadow:0 3px 0 ${INK}}
-#hsc-set select{min-width:180px;max-width:58%;height:48px;border-radius:14px;border:3px solid ${INK};background:#fff;padding:0 10px;font:800 16px/1 system-ui,sans-serif;color:${INK}}
+#hsc-set select{flex:0 1 180px;min-width:0;max-width:58%;height:48px;border-radius:14px;border:3px solid ${INK};background:#fff;padding:0 10px;font:800 16px/1 system-ui,sans-serif;color:${INK}}
 @keyframes hsc-shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 #hsc-set .sw{position:relative;width:88px;height:48px;border-radius:24px;border:3px solid ${INK};background:#e9dcc4;cursor:pointer;padding:0;flex:none}
 #hsc-set .sw .k{position:absolute;top:3px;left:3px;width:36px;height:36px;border-radius:50%;background:#fff;border:2.5px solid ${INK};display:flex;align-items:center;justify-content:center;transition:left .15s}
@@ -71,13 +72,23 @@
 /* a page of its own, in the home screen's colours */
 #hsc-set{background:radial-gradient(120% 90% at 50% 0%,#38d1e8,#1679c9 55%,#0d3f86);font-family:"Arial Rounded MT Bold","Nunito","Baloo 2",system-ui,sans-serif}
 #hsc-set.open{align-items:flex-start;justify-content:center}
-#hsc-set .sheet{width:min(100%,600px);height:100%;max-height:none;background:none;border:0;box-shadow:none;border-radius:0;padding:max(12px,env(safe-area-inset-top)) 12px 14px;gap:12px}
+/* the page is zoomed by the UI scale, and inside a zoom env() is zoomed too: each safe-area inset is divided back by
+   the scale, so the rows keep clear of a notch at the side and of the gesture bar below */
+#hsc-set .sheet{width:min(100%,600px);height:100%;max-height:none;background:none;border:0;box-shadow:none;border-radius:0;padding:max(12px,calc(env(safe-area-inset-top) / var(--hsc-s,1))) max(12px,calc(env(safe-area-inset-right) / var(--hsc-s,1))) max(14px,calc(env(safe-area-inset-bottom) / var(--hsc-s,1))) max(12px,calc(env(safe-area-inset-left) / var(--hsc-s,1)));gap:12px}
 #hsc-set .head{justify-content:flex-start;gap:10px;height:48px;flex:none}
 #hsc-set .head h2{margin:0;color:#fff;-webkit-text-stroke:3px ${INK};paint-order:stroke fill;text-shadow:0 3px 0 ${INK}}
 #hsc-set .x{border-radius:16px;background:linear-gradient(#fff,#dfe8f2);box-shadow:inset 0 -5px 0 #0002,0 4px 0 ${INK}}
 #hsc-set .row{min-height:72px;box-shadow:0 4px 0 ${INK}}
 #hsc-set .action{font:900 19px/1.2 "Arial Rounded MT Bold","Nunito",system-ui,sans-serif!important}
 #hsc-set .label{font:900 19px/1.2 "Arial Rounded MT Bold","Nunito",system-ui,sans-serif}
+/* a phone on its side: the rows in two columns, so every one of them, Privacy and Ad choices included, is in view
+   without scrolling (one column needs about 500 px of height) */
+@media (orientation:landscape) and (max-height:500px){
+  #hsc-set .sheet{width:min(100%,860px);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:8px 10px}
+  #hsc-set .head{grid-column:1/-1}
+  #hsc-set .actions{display:contents}
+  #hsc-set .row{min-height:64px}
+}
 /* the sound switch lives in Settings */
 .ui .audio-toggle{display:none!important}
 /* left-handed: the guards and the clipper button on the left, the tool button on the right */

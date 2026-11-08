@@ -38,6 +38,15 @@
     return {version: 1, slots};
   }
   const tooNew = () => Object.assign(new Error('Progress needs a newer game version'), {code: 'SAVE_TOO_NEW'});
+  const tooLarge = () => Object.assign(new Error('Cloud save exceeds size limit'), {code: 'SAVE_TOO_LARGE'});
+  // The save before an ad gets this long. A tap must not wait silently on a hung save: past this the ad is
+  // refused, exactly as when the save fails, and the save itself carries on.
+  const AD_SAVE_MS = 5000;
+  function withinTime(promise, ms) {
+    let timer = 0;
+    const late = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Progress save timed out')), ms); });
+    return Promise.race([promise, late]).finally(() => clearTimeout(timer));
+  }
 
   // Transport-only, lossless run-length encoding for repeated numeric arrays. The
   // game continues to receive its original numbers and arrays, without quantization.
@@ -45,8 +54,7 @@
   // protect the new envelope as a future save rather than misreading packed arrays.
   function encodeSave(value) {
     const plain = JSON.stringify(value);
-    if (new TextEncoder().encode(plain).byteLength >= 3 * 1024 * 1024)
-      throw new Error('Cloud save exceeds size limit');
+    if (new TextEncoder().encode(plain).byteLength >= 3 * 1024 * 1024) throw tooLarge();
     const data = JSON.parse(plain), paths = [];
     function pack(parent, key, path) {
       // Keep every produced transport within the decoder's defensive bounds.
@@ -153,6 +161,10 @@
     let queue = Promise.resolve(), game = null, hostAudio = sdk.system.isAudioEnabled() === true;
     let userAudio = true, adPending = false, ready = false, lastAttempt = -Infinity, interstitialAccepted = false;
     let acknowledgedCuts = 0, reportedCuts = 0, scorePending = false;
+    // UTF-8 bytes of each slot's "key":value entry and of the envelope around them, so the size of the next
+    // save is known before a slot enters the envelope.
+    const entryBytes = new Map(), bytesOf = text => new TextEncoder().encode(text).byteLength;
+    let frameBytes = 0;
     const reasons = new Set(), listeners = new Set(), cleanup = [];
     if (preload) reasons.add('startup');
     const state = () => ({paused: reasons.size > 0, executionPaused: reasons.has('host') || reasons.has('advertisement-request'), audioEnabled: hostAudio && userAudio && reasons.size === 0});
@@ -242,6 +254,8 @@
           if (value && Number.isFinite(value[field]) && value[field] > version) throw tooNew();
         }
         envelope = parsed;
+        frameBytes = bytesOf(JSON.stringify(Object.assign({}, parsed, {slots: {}})));
+        for (const [key, value] of Object.entries(parsed.slots)) entryBytes.set(key, bytesOf(JSON.stringify(key)) + 1 + bytesOf(JSON.stringify(value) ?? ''));
         loaded = true;
         acknowledgedCuts = savedCuts(envelope);
         if (HSC.startupTiming) HSC.startupTiming.savesLoaded = performance.now();
@@ -282,7 +296,7 @@
         requireLoaded();
         const data = encodeSave(envelope);
         const cuts = savedCuts(envelope);
-        if (new TextEncoder().encode(data).byteLength >= 3 * 1024 * 1024) throw new Error('Cloud save exceeds size limit');
+        if (new TextEncoder().encode(data).byteLength >= 3 * 1024 * 1024) throw tooLarge();
         if (hosted) await sdk.game.saveData(data);
         else previewStore.set(data);
         acknowledgedCuts = cuts;
@@ -306,7 +320,7 @@
       let result = false;
       try {
         // A failed save blocks the ad, preserving the current customer and earned content.
-        await flush();
+        await withinTime(flush(), AD_SAVE_MS);
         if (!state().executionPaused && !disposed) {
           pause('advertisement-request', true);
           if (kind === 'interstitial') {
@@ -348,8 +362,20 @@
       platformId: 'youtube', language: language || 'en', isLocalPreview: !hosted,
       rewardedSupported: hosted && typeof sdk.ads?.requestRewardedAd === 'function',
       async loadProgress(key, fallback) { await load(); const value = envelope.slots[key]; return value == null ? fallback : clone(value); },
-      async saveProgress(key, value) { requireLoaded(); envelope.slots[key] = clone(value); return persist(); },
-      async deleteProgress(key) { requireLoaded(); delete envelope.slots[key]; return persist(); },
+      async saveProgress(key, value) {
+        requireLoaded();
+        const text = JSON.stringify(value), next = JSON.parse(text), entry = bytesOf(JSON.stringify(key)) + 1 + bytesOf(text);
+        // A slot that would make the whole save too large is refused before it enters the envelope and the
+        // slot keeps its last value: left in, it would make every later save of every slot fail for the
+        // rest of the session. (The exact JSON size: the frame, each entry and the commas between them.)
+        let total = frameBytes + entry, count = 1;
+        for (const [other, bytes] of entryBytes) if (other !== key) { total += bytes; count++; }
+        if (total + count - 1 >= 3 * 1024 * 1024) throw tooLarge();
+        envelope.slots[key] = next;
+        entryBytes.set(key, entry);
+        return persist();
+      },
+      async deleteProgress(key) { requireLoaded(); delete envelope.slots[key]; entryBytes.delete(key); return persist(); },
       flushProgress: flush, whenResumed, afterPaint, setPauseReason: pause,
       finishStartup() { pause('startup', false); },
       setUserAudioEnabled(value) { userAudio = !!value; publish(); },

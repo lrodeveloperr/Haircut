@@ -19,6 +19,18 @@
   const I = (n, s) => (HSC.icon ? HSC.icon(n, s) : '');
   // each feature's own button and where it goes on the home screen
   const PLACE = [['#hsc-set-btn', '.hold'], ['.hsc-rw', '.hold'], ['#hsc-salon-btn', '.hold']];
+  // the panels that open over the home screen, and every layer that covers the chair
+  const PANELS = '#hsc-salon.open,#hsc-set.open,#hsc-panel.open';
+  const COVERS = '#hsc-menu.open,#hsc-reveal.on,' + PANELS;
+  // The game reads its keys (guard, turn, clipper, finish, next) on the window and only stops for its own pause. While a
+  // screen covers the chair, or a form control (the language list, the shop name) has focus, no key reaches it: the
+  // haircut behind the home screen never changes. Stopped on the document, so the screens' own controls still get
+  // every key first (Tab, typing, a list's arrows, Enter or Space on a button); Escape stays with the screens' back.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') return;
+    const el = e.target, form = el && el.closest && el.closest('input,select,textarea,[contenteditable]:not([contenteditable=false])');
+    if (form || document.querySelector(COVERS)) e.stopPropagation();
+  });
   const MODE_ICON = { requests: 'orders', free: 'freestyle', fix: 'rescue', beard: 'beards', rush: 'rush' };
   const MODE_WORD = Object.assign({}, MODE_ICON, { free: 'quick_play' });
   const MODE_LINE = { requests: 'm_requests', fix: 'm_fix', beard: 'm_beard', rush: 'm_rush' };
@@ -26,16 +38,20 @@
   const STAR = (on) => `<svg viewBox="0 0 24 24" width="1em" height="1em"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc21a' : 'none'}" stroke="${on ? K : '#fff'}" stroke-width="2.4" stroke-linejoin="round"${on ? '' : ' stroke-dasharray="2.6 2.2"'}/></svg>`;
   // what each mode pays, shown on its card: numbers and icons only
   // Truthful minimums from economy.js. A trailing + means skill or time can add more.
-  const REWARD = { requests: () => I('coin') + '24+', fix: () => I('coin') + '30', beard: () => I('coin') + '28', rush: () => I('coin') + '28+' };
+  const REWARD = { requests: () => I('coin') + '24+', fix: () => I('coin') + '30', beard: () => I('coin') + '28', rush: () => I('coin') + '11+' };
   const CSS = `
 #hsc-menu-btn{padding:0}
+/* this layer is zoomed by the UI scale, and inside a zoom env(), vw and vh are zoomed too: each is divided back by
+   the scale so an inset or a share of the screen stays its true size on every screen. --sl/--sr/--st/--sb are the
+   page's side, top and bottom margins: 12 px (14 at the bottom) or the device's safe-area inset, whichever is larger */
+#hsc-menu{--sl:max(12px,calc(env(safe-area-inset-left) / var(--hsc-s,1)));--sr:max(12px,calc(env(safe-area-inset-right) / var(--hsc-s,1)));--st:max(12px,calc(env(safe-area-inset-top) / var(--hsc-s,1)));--ib:calc(env(safe-area-inset-bottom) / var(--hsc-s,1));--sb:max(14px,var(--ib));--vw:calc(1vw / var(--hsc-s,1));--vh:calc(1vh / var(--hsc-s,1))}
 #hsc-menu{position:fixed;inset:0;z-index:29;zoom:var(--hsc-s,1);display:none;pointer-events:auto;touch-action:manipulation;font-family:"Arial Rounded MT Bold","Nunito","Baloo 2",system-ui,-apple-system,"Segoe UI",sans-serif;color:${K};-webkit-user-select:none;user-select:none;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,#38d1e8,#1679c9 55%,#0d3f86)}
 #hsc-menu::before{content:"";position:absolute;inset:-50%;background:repeating-linear-gradient(-35deg,#ffffff12 0 22px,#0000 22px 60px);animation:hsc-pole 14s linear infinite;pointer-events:none}
 #hsc-menu::after{content:"";position:absolute;inset:0;background:radial-gradient(60% 40% at 50% 112%,#ffd76a66,#0000);pointer-events:none}
 @keyframes hsc-pole{to{transform:translateX(60px)}}
 #hsc-menu.open{display:block}
 #hsc-menu .hold{display:none}
-#hsc-menu .page{position:relative;z-index:1;box-sizing:border-box;height:100%;max-width:600px;margin:0 auto;display:grid;gap:12px;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+#hsc-menu .page{position:relative;z-index:1;box-sizing:border-box;height:100%;max-width:600px;margin:0 auto;display:grid;gap:12px;padding:var(--st) var(--sr) var(--sb) var(--sl)}
 #hsc-menu .page[hidden]{display:none}
 /* the game's own sheet also uses .top and .home: pin this grid so nothing outside places its parts */
 #hsc-menu .page{grid-template-areas:none;grid-template-columns:minmax(0,1fr);grid-auto-flow:row}
@@ -63,7 +79,7 @@
 #hsc-menu .lvl{box-sizing:border-box;display:flex;align-items:center;gap:8px;height:48px;padding-inline-end:14px;border-radius:24px;background:#10223fcc;border:2px solid #ffffff30;flex:0 1 auto;min-width:0}
 #hsc-menu .lvl .lv{width:48px;height:48px;margin:-2px;flex:none}
 #hsc-menu .lvl .lv .hsc-ic{width:100%;height:100%}
-#hsc-menu .xp{width:clamp(32px,12vw,90px);height:12px;border-radius:6px;background:#ffffff35;overflow:hidden}
+#hsc-menu .xp{width:clamp(32px,calc(12 * var(--vw)),90px);height:12px;border-radius:6px;background:#ffffff35;overflow:hidden}
 #hsc-menu .xp i{display:block;height:100%;background:linear-gradient(#b5ff7a,#46c43a);border-radius:6px;transition:width .6s}
 #hsc-menu .coins{margin-inline-start:auto}
 /* ---- Home: the shop on show, the play cards in thumb reach, the dock ---- */
@@ -72,28 +88,33 @@
 #hsc-menu .home{max-width:none}
 #hsc-menu .home .top{position:relative}
 #hsc-menu .grow{min-height:0}
-#hsc-menu .duo{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px;width:100%;max-width:640px;margin:0 auto;height:clamp(92px,14vh,132px)}
+#hsc-menu .duo{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px;width:100%;max-width:640px;margin:0 auto;height:clamp(92px,calc(14 * var(--vh)),132px)}
 #hsc-menu .qp,#hsc-menu .hero{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;border:0;border-radius:20px;color:#fff;box-shadow:inset 0 2px 0 #fff5,0 6px 0 var(--edge),0 10px 16px #0005}
 #hsc-menu .j.qp::before,#hsc-menu .j.hero::before{display:none}
 #hsc-menu .qp{--edge:#c9921a;background:linear-gradient(#ffd55c,#ffb820);color:${K}}
 #hsc-menu .hero{--edge:#2f8f3c;background:linear-gradient(#5fd06a,#37ae48)}
 #hsc-menu .j.qp:active,#hsc-menu .j.hero:active{box-shadow:inset 0 2px 0 #fff5,0 1px 0 var(--edge)}
-#hsc-menu .qp .hsc-lbl{font-size:clamp(19px,5.4vw,26px);white-space:normal;line-height:1.05;text-wrap:balance;padding:0 8px}
-#hsc-menu .hero .hsc-lbl{font-size:clamp(23px,6.6vw,32px)}
+#hsc-menu .qp .hsc-lbl{font-size:clamp(19px,calc(5.4 * var(--vw)),26px);white-space:normal;line-height:1.05;text-wrap:balance;padding:0 8px}
+#hsc-menu .hero .hsc-lbl{font-size:clamp(23px,calc(6.6 * var(--vw)),32px)}
 #hsc-menu .hero .sub{font-size:14px;font-weight:800;opacity:.95;max-width:92%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #hsc-menu .hero .sub:empty{display:none}
-#hsc-menu .dock{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:calc(100% + 24px + env(safe-area-inset-left) + env(safe-area-inset-right));margin:6px -12px calc(-14px - env(safe-area-inset-bottom));padding:6px 12px calc(8px + env(safe-area-inset-bottom));box-sizing:border-box;background:#fff;box-shadow:0 -3px 0 #d5dde8}
+/* the dock runs edge to edge under the page's own margins (the safe-area insets included), and its buttons stay
+   inside them: clear of a notch at the sides and 8 px above the gesture bar. Its four columns are equal unless a
+   label needs more (German's 'Einstellungen'): that column takes its word's width and the others share the rest;
+   only if the four words together are too wide do they step down (to 12 px, dockFit()) and then wrap */
+#hsc-menu .dock{display:grid;grid-template-columns:repeat(4,1fr);width:calc(100% + var(--sl) + var(--sr));margin:6px calc(-1 * var(--sr)) calc(-1 * var(--sb)) calc(-1 * var(--sl));padding:6px var(--sr) calc(8px + var(--ib)) var(--sl);box-sizing:border-box;background:#fff;box-shadow:0 -3px 0 #d5dde8}
 #hsc-menu .dock button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;height:62px;background:none;border:0;padding:0;font:inherit;color:${K};cursor:pointer;border-radius:14px}
 #hsc-menu .dock button:active{background:#eef3fa}
 #hsc-menu .dock button:focus-visible{outline:4px solid #4fc3ff}
 #hsc-menu .dock .hsc-ic{width:32px;height:32px}
 #hsc-menu .dock .hsc-lbl{font-size:14px;width:100%}
+#hsc-menu .dock.wrap .hsc-lbl{white-space:normal;line-height:1.05;overflow-wrap:anywhere}
 #hsc-menu .dock .hsc-dot{right:calc(50% - 26px);top:2px;width:14px;height:14px}
 /* ---- the modes screen ---- */
 #hsc-menu .mhead{display:flex;align-items:center;gap:10px;height:48px}
 #hsc-menu .back{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center}
 #hsc-menu .back .hsc-ic{width:28px;height:28px}
-#hsc-menu .title{display:flex;align-items:center;gap:8px;min-width:0;color:#fff;font-weight:900;font-size:clamp(22px,6vw,34px);-webkit-text-stroke:3px ${K};paint-order:stroke fill;text-shadow:0 3px 0 ${K}}
+#hsc-menu .title{display:flex;align-items:center;gap:8px;min-width:0;color:#fff;font-weight:900;font-size:clamp(22px,calc(6 * var(--vw)),34px);-webkit-text-stroke:3px ${K};paint-order:stroke fill;text-shadow:0 3px 0 ${K}}
 #hsc-menu .title .hsc-ic{width:44px;height:44px}
 #hsc-menu .title .hsc-lbl{overflow:visible}
 #hsc-menu .mhead .coins{margin-inline-start:auto}
@@ -102,7 +123,7 @@
 #hsc-menu .mode .ico{flex:none;width:84px;height:84px;max-height:100%;border-radius:20px;background:#ffffff66;display:flex;align-items:center;justify-content:center}
 #hsc-menu .mode .ico .hsc-ic{width:58px;height:58px}
 #hsc-menu .mode .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-#hsc-menu .mode .hsc-lbl{font-size:clamp(20px,7vw,28px);text-align:start}
+#hsc-menu .mode .hsc-lbl{font-size:clamp(20px,calc(7 * var(--vw)),28px);text-align:start}
 #hsc-menu .mode .ln{font-size:15px;font-weight:800;line-height:1.15}
 #hsc-menu .mode .reward{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:62px;padding:6px 8px;border-radius:16px;background:${K};color:#ffe682;font-weight:900;font-size:17px;font-variant-numeric:tabular-nums}
 #hsc-menu .mode .reward .hsc-ic{width:24px;height:24px}
@@ -116,8 +137,10 @@
 /* wide screens (phones on their side, tablets on their side, PC): the play card on the left, the blocks on the right */
 @media (orientation:landscape){
   #hsc-menu .page{max-width:1280px}
+  /* Home is the shop on show: it fills any screen, so the dock spans the whole width on wide and ultra-wide ones */
+  #hsc-menu .page.home{max-width:none}
   /* a wide screen keeps the shop in view: slim cards and a one-line dock */
-  #hsc-menu .duo{height:clamp(68px,17vh,108px);max-width:560px}
+  #hsc-menu .duo{height:clamp(68px,calc(17 * var(--vh)),108px);max-width:560px}
   #hsc-menu .dock button{flex-direction:row;gap:8px;height:44px}
   #hsc-menu .dock .hsc-lbl{width:auto}
   #hsc-menu .dock .hsc-ic{width:28px;height:28px}
@@ -201,9 +224,10 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       m.querySelector('[data-b=settings]').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('swish'); if (HSC.settings) HSC.settings.open(); });
       m.querySelector('[data-b=collection]').addEventListener('click', () => { if (HSC.fx) HSC.fx.play('swish'); if (HSC.collection) HSC.collection.open(); });
       m.querySelectorAll('.page.modes .back,.page.shop .back').forEach((b) => b.addEventListener('click', () => { if (HSC.fx) HSC.fx.play('back'); this.view('home', true); }));
-      // back (Escape) closes only the top layer: a panel over the home screen handles it first
-      addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('open') && !document.querySelector('#hsc-salon.open,#hsc-set.open')) { if (m.querySelector('.page.home').hidden) this.view('home', true); else this.close(); } });
-      addEventListener('resize', () => { if (m.classList.contains('open')) requestAnimationFrame(() => { if (HSC.fitLabels) HSC.fitLabels(m); this.backdrop(); }); });
+      // back (Escape) closes only the top layer: a panel over the home screen handles it itself. Decided before any
+      // panel's own handler runs (capture), so the Escape that closes a panel never also closes the home screen
+      addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('open') && !document.querySelector(PANELS)) { if (m.querySelector('.page.home').hidden) this.view('home', true); else this.close(); } }, true);
+      addEventListener('resize', () => { if (m.classList.contains('open')) requestAnimationFrame(() => { this.fit(); this.backdrop(); }); });
       Object.assign(this.el, { btn: b, menu: m, row });
       this.tick();
       try { new MutationObserver(() => this.tick()).observe(row, { childList: true }); } catch (e) {}
@@ -231,7 +255,25 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       m.querySelectorAll('.hsc-lbl[data-k]').forEach((el) => { el.textContent = t(el.dataset.k); });
       m.querySelector('.hero').setAttribute('aria-label', t('career'));
       m.querySelector('.qp').setAttribute('aria-label', t('quick_play'));
-      requestAnimationFrame(() => HSC.fitLabels && HSC.fitLabels(m));
+      requestAnimationFrame(() => this.fit());
+    },
+    // every label whole: each one steps its type down (labels.js), then the dock's four together
+    fit() {
+      const m = this.el.menu;
+      if (HSC.fitLabels) HSC.fitLabels(m);
+      this.dockFit();
+    },
+    dockFit() {
+      const d = this.el.menu && this.el.menu.querySelector('.page.home .dock');
+      if (!d || !d.offsetParent) return;
+      const ls = [...d.querySelectorAll('.hsc-lbl')], over = () => d.scrollWidth > d.clientWidth + 0.5;
+      d.classList.remove('wrap');
+      if (!over()) return;
+      // one size for all four, so the dock keeps one baseline
+      let s = Math.min(...ls.map((l) => parseFloat(getComputedStyle(l).fontSize) || 14)), guard = 40;
+      ls.forEach((l) => (l.style.fontSize = s + 'px'));
+      while (over() && s > 12 && guard--) { s = Math.max(12, s - 0.5); ls.forEach((l) => (l.style.fontSize = s + 'px')); }
+      if (over()) d.classList.add('wrap');
     },
     open() {
       this.el.menu.classList.add('open');
@@ -306,6 +348,8 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
     tick() {
       const m = this.el.menu;
       if (m.classList.contains('open') && HSC.fitLabels && [...m.querySelectorAll('.hsc-lbl')].some((e) => e.offsetParent && e.scrollWidth > e.clientWidth + 0.5)) HSC.fitLabels(m);
+      // the dock as a whole (after a language change, say): fitLabels() above sees only one label at a time
+      if (m.classList.contains('open')) { const d = m.querySelector('.page.home .dock'); if (d && d.offsetParent && d.scrollWidth > d.clientWidth + 0.5) this.dockFit(); }
       // move each feature button into its place as it appears
       for (const [sel, slot] of PLACE) {
         const btn = document.querySelector('#hsc-hud .hsc-row ' + sel);
@@ -332,19 +376,35 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
   });
   // career(): the home screen on the world map (a city must be chosen before the career can seat anyone)
   HSC.menu = { open: () => ui.open(), close: () => ui.close(), view: (v, back) => ui.view(v, back), career: () => { if (!ui.el.menu) return; ui.open(); ui.view('map'); }, play: (m) => ui.play(m) };
-  // the Android back button: close the top panel, then the modes screen back to home; from the chair it opens the home
-  // screen; on the home screen it is not handled (Android leaves the app as usual)
+  // a haircut is under way: the customer in the chair has been touched
+  const inProgress = () => {
+    const g = globalThis.skinFadeStudio, s = g && g.getState();
+    if (!s || s.status !== 'cutting') return false;
+    if (s.cutStrokeCount > 0) return true;
+    const moved = (a, b) => Array.isArray(a) && Array.isArray(b) && a.some((v, i) => v !== b[i]);
+    return moved(s.hair, s.startHair) || moved(s.beard, s.startBeard);
+  };
+  // the Android back button: the Open splash goes first, then the top panel, then the modes screen back to home; from
+  // the chair it opens the home screen. On the home screen it goes back to a haircut under way (touch has no other way
+  // back to it); with nothing under way it is not handled (Android leaves the app as usual)
   HSC.menuBack = function () {
     const m = ui.el.menu;
     if (!m) return false;
+    // the splash covers everything: back only lets it go (the haircut it opens on stays)
+    const splash = document.querySelector('#hsc-reveal.on');
+    if (splash) { if (!splash.classList.contains('out')) splash.click(); return true; }
     for (const sel of ['#hsc-salon.open .x', '#hsc-set.open .x']) {
       const x = document.querySelector(sel);
       if (x) { x.click(); return true; }
     }
     if (m.classList.contains('open')) {
       if (m.querySelector('.page.home').hidden) { ui.view('home', true); return true; }
+      if (inProgress()) { if (HSC.fx) HSC.fx.play('back'); ui.close(); return true; }
       return false;
     }
+    // the reveal spin plays out first: the result and the next customer are settled only when it lands
+    const g = globalThis.skinFadeStudio;
+    if (g && g.getState().status === 'reveal' && !g.getView().revealComplete) return true;
     ui.open();
     return true;
   };

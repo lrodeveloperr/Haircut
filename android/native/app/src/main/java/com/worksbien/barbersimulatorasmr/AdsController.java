@@ -112,9 +112,10 @@ final class AdsController {
         consent.requestConsentInfoUpdate(activity, new ConsentRequestParameters.Builder().build(),
                 () -> UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity, formError -> {
                     publishPrivacyOptions();
+                    publishRewardedReady();
                     initAds();
                 }),
-                requestError -> { publishPrivacyOptions(); initAds(); });
+                requestError -> { publishPrivacyOptions(); publishRewardedReady(); initAds(); });
         // consent gathered in an earlier session: ads may start straight away
         initAds();
     }
@@ -125,6 +126,16 @@ final class AdsController {
                 == ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED;
         web.evaluateJavascript("window.__androidPrivacyOptionsRequired=" + required
                 + ";window.dispatchEvent(new Event('android-privacy-options'))", null);
+    }
+
+    // whether a rewarded video can play right now (one is loaded and consent allows ads): the page hides its video
+    // buttons when not, so a tap never waits on an ad that is not there. Published like the privacy flag, after every
+    // load, load failure, show, dismiss and consent change, and again when the page reports ready (gameReady).
+    void publishRewardedReady() {
+        if (destroyed) return;
+        boolean ready = rewarded != null && !showing && !privacyOptionsShowing && canRequestAds();
+        web.evaluateJavascript("window.__androidRewardedReady=" + ready
+                + ";window.dispatchEvent(new Event('android-rewarded-ready'))", null);
     }
 
     void showPrivacyOptions() {
@@ -138,10 +149,12 @@ final class AdsController {
         interstitial = null;
         loadingRewarded = loadingInterstitial = false;
         if (banner != null) { bannerSlot.removeView(banner); banner.destroy(); banner = null; bannerKey = -1; }
+        publishRewardedReady();
         UserMessagingPlatform.showPrivacyOptionsForm(activity, formError -> {
             if (destroyed) return;
             privacyOptionsShowing = false;
             publishPrivacyOptions();
+            publishRewardedReady();
             if (!canRequestAds()) return;
             if (initialized.get()) {
                 loadRewarded(); loadInterstitial(); loadBanner();
@@ -175,6 +188,7 @@ final class AdsController {
                 loadingRewarded = false;
                 rewarded = ad;
                 if (rewardedWanted) { rewardedWanted = false; ui.removeCallbacks(rewardedTimeout); presentRewarded(); }
+                else publishRewardedReady();
             }
 
             @Override
@@ -182,6 +196,7 @@ final class AdsController {
                 if (destroyed || generation != consentGeneration) return;
                 loadingRewarded = false;
                 if (rewardedWanted) { rewardedWanted = false; ui.removeCallbacks(rewardedTimeout); emit("rewarded", "failed"); }
+                publishRewardedReady();
             }
         });
     }
@@ -227,9 +242,17 @@ final class AdsController {
     }
 
     private void presentRewarded() {
+        // as for the interstitial: an ad that finishes loading after the player left the app is never shown
+        // over another app; the game hears "failed" (no reward) and the loaded ad is kept for the next tap
+        if (destroyed || activity.isFinishing() || activity.isDestroyed() || !activity.hasWindowFocus()) {
+            emit("rewarded", "failed");
+            publishRewardedReady();
+            return;
+        }
         RewardedAd ad = rewarded;
         rewarded = null;
         showing = true;
+        publishRewardedReady();
         ad.setFullScreenContentCallback(new FullScreenContentCallback() {
             @Override
             public void onAdShowedFullScreenContent() { emit("rewarded", "opened"); }
@@ -296,6 +319,9 @@ final class AdsController {
         showing = false;
         emit(kind, state);
         if ("rewarded".equals(kind)) loadRewarded(); else loadInterstitial();
+        // an interstitial's end can make a loaded rewarded video playable again; a rewarded one's end is not ready
+        // until the next one loads
+        publishRewardedReady();
     }
 
     private void emit(String kind, String state) {

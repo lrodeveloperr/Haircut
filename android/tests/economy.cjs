@@ -15,17 +15,18 @@ let passed = 0;
 const plain = (x) => JSON.parse(JSON.stringify(x));
 
 // 1. the balance model's worked examples
-assert.equal(E.payout({ kind: 'requests', stars: 3, valid: true }).total, 36, 'ordinary 3-star order pays 36');
-assert.equal(E.payout({ kind: 'requests', stars: 3, valid: true }).tip, 12);
+assert.equal(E.payout({ kind: 'requests', stars: 3, valid: true }).total, 38, 'ordinary 3-star order pays 38 (3-star tip 60% from the 7 November 2026 calibration)');
+assert.equal(E.payout({ kind: 'requests', stars: 3, valid: true }).tip, 14);
 let p = E.payout({ kind: 'requests', stars: 3, valid: true });
-assert.equal(p.total + 2 * p.tip, 60, 'and 60 with the rewarded triple');
+assert.equal(p.total + 2 * p.tip, 66, 'and 66 with the rewarded triple');
 p = E.payout({ kind: 'rush', stars: 3, valid: true, vip: true, regular: true });
-assert.equal(p.tip, 25, 'stars, regular and VIP add up on the tip');
-assert.equal(p.total, 53, '3-star regular VIP rush pays 53');
+assert.equal(p.tip, 11, 'stars, regular and VIP add up on the tip, capped at the net fee');
+assert.equal(p.total, 22, '3-star regular VIP rush pays 22 (Rush pays about 2.5 times less a job since 7 November 2026)');
 assert.equal(E.payout({ kind: 'fix', stars: 2, judged: true, valid: true }).total, 30, 'Rescue pays a set 30');
 assert.equal(E.payout({ kind: 'beard', stars: 2, judged: true, valid: true }).total, 28, 'Beards pays a set 28');
 assert.equal(E.payout({ kind: 'fix', stars: 2, judged: true, valid: true }).tip, 6, 'with a set tip, so the result video stays');
-assert.equal(E.payout({ kind: 'rush', stars: 1, valid: true }).total, 28, 'Rush starts at 28');
+assert.equal(E.payout({ kind: 'rush', stars: 1, valid: true }).total, 11, 'Rush starts at 11');
+assert.equal(E.payout({ kind: 'requests', stars: 1, valid: true, early: true }).total, 30, 'the first jobs forgive a weak cut');
 passed++;
 
 // 2. stars move the tip only; incomplete and freestyle pay nothing
@@ -45,11 +46,11 @@ let r = E.payJob(eco, 'job:A', { kind: 'requests', stars: 3, valid: true });
 eco = r.eco;
 const again = E.payJob(eco, 'job:A', { kind: 'requests', stars: 3, valid: true });
 assert.equal(again.duplicate, true);
-assert.equal(again.eco.balance, 36);
-const t1 = E.tripleTip(eco, 'job:A', 12); eco = t1.eco;
-assert.equal(eco.balance, 60);
-assert.equal(E.tripleTip(eco, 'job:A', 12).duplicate, true, 'a duplicate rewarded callback pays once');
-assert.equal(E.videoPay(0), 10, 'a 1-star result still has a video');
+assert.equal(again.eco.balance, 38);
+const t1 = E.tripleTip(eco, 'job:A', 14); eco = t1.eco;
+assert.equal(eco.balance, 66);
+assert.equal(E.tripleTip(eco, 'job:A', 14).duplicate, true, 'a duplicate rewarded callback pays once');
+assert.equal(E.videoPay(0), 15, 'a 1-star result still has a video (floor 15)');
 assert.equal(E.videoPay(12), 24, 'and a good one pays two tips');
 assert.equal(E.videoWait(0.1), 0, 'the video can come twice in a row');
 assert.equal(E.videoWait(0.99), 4, 'or stay away for a while');

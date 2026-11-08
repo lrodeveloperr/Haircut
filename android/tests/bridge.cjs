@@ -9,7 +9,7 @@ const placementReport=path.join(root,'qa/results',process.env.ANDROID_LAST_LAYOU
 const types = {'.html':'text/html','.js':'application/javascript','.css':'text/css','.webp':'image/webp','.json':'application/json'};
 function fakeHost() {
   window.__native = {ready:0, outcome:'reward', delay:10, failWrites:false, ads:[], shares:0};
-  window.AndroidHost = {
+  window.__androidRewardedReady = true; window.AndroidHost = {
     request(id, op, payload) {
       setTimeout(() => {
         if(op === 'save' && __native.failWrites) return __androidHost.complete(id, false, 'Android storage write failed');

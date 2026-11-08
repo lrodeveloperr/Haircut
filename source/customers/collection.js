@@ -55,7 +55,7 @@
   // one finished customer: a retry updates his entry, someone coming back moves to the top with one more visit
   function record(s, city) {
     const p = s.look && s.look.person, d = M() && M().data, last = d && d.lastRound;
-    if (!p || !(s.cutStrokeCount > 0) || !last || last.job !== s.jobId) return;
+    if (!p || !(HSC.modes && HSC.modes.worked ? HSC.modes.worked(s) : s.cutStrokeCount > 0) || !last || last.job !== s.jobId) return;
     const old = list.find((c) => c.p.seed === p.seed), again = !!(old && old.job === s.jobId);
     const req = HSC.requestFor ? HSC.requestFor(s) : null, top = BTOP();
     const rec = { job: s.jobId, p, n: old ? old.n + (again ? 0 : 1) : 1, stars: last.free || last.judged ? 0 : last.stars | 0, mode: HSC.modes ? HSC.modes.current() : 'requests',
@@ -85,7 +85,7 @@
 #hsc-menu .port .pc .st{display:flex;font-size:18px}
 #hsc-menu .port .pc .at{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #hsc-menu .port .pc .n{margin-inline-start:auto;display:flex;align-items:center;gap:3px}
-#hsc-menu .port .none{grid-column:1/-1;align-self:center;margin:18vh auto 0;padding:18px 24px;border-radius:22px;border:3px solid ${K};background:linear-gradient(#fff,#e4f3ff);color:${K};font-weight:900;font-size:20px;text-align:center}
+#hsc-menu .port .none{grid-column:1/-1;align-self:center;margin:calc(18vh / var(--hsc-s,1)) auto 0;padding:18px 24px;border-radius:22px;border:3px solid ${K};background:linear-gradient(#fff,#e4f3ff);color:${K};font-weight:900;font-size:20px;text-align:center}
 `;
   const ui = {
     built: false,

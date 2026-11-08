@@ -11,7 +11,7 @@ const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': '
 
 function fakeHost() {
   window.__native = { ready: 0, image: null };
-  window.AndroidHost = {
+  window.__androidRewardedReady = true; window.AndroidHost = {
     request(id, operation) {
       setTimeout(() => __androidHost.complete(id, true, operation === 'load' ? '{}' : ''), 0);
     },

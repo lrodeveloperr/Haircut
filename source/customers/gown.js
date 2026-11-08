@@ -311,8 +311,36 @@
     G.dirty = true;
     if (G.queued) return;
     G.queued = true;
-    requestAnimationFrame(() => { G.queued = false; try { apply(); } catch (e) { console.error('gown: fit failed', e); } });
+    requestAnimationFrame(() => {
+      G.queued = false;
+      try { apply(); } catch (e) { console.error('gown: fit failed', e); }
+      G.redraw = true;
+      redraw();
+    });
   };
+  // the game draws on demand: ask for the frame that shows the new fit (turn(0) moves nothing), or the previous
+  // customer's gown stays on screen until the first touch. Never while a finger is on the game: turn releases the
+  // pointer, which would end a stroke or a rotate drag; the frame is asked for once the last finger lifts
+  const down = new Set();
+  function redraw() {
+    if (!G.redraw) return;
+    const clip = HSC.view && HSC.view.clipperScreen && HSC.view.clipperScreen().visible;
+    if (down.size || clip) return;
+    G.redraw = false;
+    const g = globalThis.skinFadeStudio;
+    try { if (g && g.turn && g.getState().status === 'cutting') g.turn(0); } catch (e) {}
+  }
+  if (typeof addEventListener === 'function') {
+    // capture on the window: seen before the game's own handlers, and also when it holds pointer capture
+    addEventListener('pointerdown', (e) => { if (e.target && e.target.closest && e.target.closest('#scene')) down.add(e.pointerId); }, true);
+    const up = (e) => { if (down.delete(e.pointerId) && !down.size && G.redraw) setTimeout(redraw, 0); };
+    addEventListener('pointerup', up, true);
+    addEventListener('pointercancel', up, true);
+    // a lift the page never heard (the app sent to the background mid-drag) must not hold the redraw forever
+    const lost = () => { down.clear(); if (G.redraw) setTimeout(redraw, 0); };
+    addEventListener('blur', lost);
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (document.hidden) lost(); });
+  }
   HSC.gownFit = apply; // tests
 
   // ---- the shop's product shot: the same gown on a plain form ----

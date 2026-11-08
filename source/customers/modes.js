@@ -74,6 +74,7 @@
 
   // ---- M3: a hair disaster from the hair he walked in with ----
   // every flaw only lowers hair to the repair's own length there, so the repair is always possible
+  const REPAIR_MIN = 120; // cells still longer than the repair: twice what counts as real work (MIN_WORK)
   function disaster(person, start, R, force, beard) {
     // a repair needs room to show a mistake: only styles that take a real amount off, the biggest change if none does
     const room = (t) => { let n = 0; for (let i = 0; i < 8192; i++) if (start[i] - t[i] >= 2) n++; return n; };
@@ -120,6 +121,17 @@
     let changed = 0;
     for (let i = 0; i < 8192; i++) if (bad[i] !== start[i]) changed++;
     for (let k = 0; k < 4 && changed < 120; k++) { KINDS.chunks(); changed = 0; for (let i = 0; i < 8192; i++) if (bad[i] !== start[i]) changed++; }
+    // a rescue always leaves a real repair to do: 'missed' (done everywhere but a few patches) with a second flaw over
+    // those patches can leave nothing longer than the repair (about 1 job in 330), so a perfect repair could never count
+    // as work. Such a job is made again with the other flaw alone, or none is made
+    const left = () => { let n = 0; for (let i = 0; i < 8192; i++) if (bad[i] > target[i]) n++; return n; };
+    if (!force && left() < REPAIR_MIN) {
+      const rest = names.filter((n) => n !== 'missed');
+      for (let i = 0; i < 8192; i++) bad[i] = start[i];
+      names.splice(0, names.length, ...(rest.length ? rest : ['gouge']));
+      for (const n of names) KINDS[n]();
+      if (left() < REPAIR_MIN) return null;
+    }
     // a man with a beard may have had that botched too
     const fixBeard = Array.isArray(beard) && !force && R.next() < 0.45 ? beardDisaster(person, beard, R) : null;
     return { start: bad, target, style, flaws: names, beard: fixBeard };
@@ -149,19 +161,28 @@
   }
 
   // ---- M7: a tidy-up: a finished cut with a little regrowth in one or two places ----
+  // a tidy-up is never already finished: regrowth only shows where the style takes hair off, so a style that cuts little
+  // in the grown zones could leave nothing to do. Too little grown back: every zone grows; still too little: another style
+  const TIDY_MIN = 300; // cells grown back, so the job is real work (MIN_WORK below is what counts as worked)
   function tidy(person, start, R) {
-    const opts = options(person, start);
-    if (!opts.length) return null;
-    const [, style, target] = choose(R, opts);
-    const s = target.slice();
-    const grow = (i) => { s[i] = Math.min(start[i], Math.max(s[i], target[i] + 1)); };
-    const ZONES = {
-      nape() { for (let i = 0; i < 8192; i++) if (V(i) < 0.16) grow(i); },
-      side() { const u0 = R.next(); for (let i = 0; i < 8192; i++) if (du(U(i), u0) < 0.14 && V(i) < 0.45) grow(i); },
-      ring() { const v0 = R.range(0.25, 0.45); for (let i = 0; i < 8192; i++) if (Math.abs(V(i) - v0) < 0.06) grow(i); },
-    };
-    for (const z of Object.keys(ZONES).sort(() => R.next() - 0.5).slice(0, R.next() < 0.5 ? 2 : 1)) ZONES[z]();
-    return { start: s, target, style };
+    let opts = options(person, start);
+    while (opts.length) {
+      const pick = choose(R, opts), [, style, target] = pick;
+      const s = target.slice();
+      const grow = (i) => { s[i] = Math.min(start[i], Math.max(s[i], target[i] + 1)); };
+      const ZONES = {
+        nape() { for (let i = 0; i < 8192; i++) if (V(i) < 0.16) grow(i); },
+        side() { const u0 = R.next(); for (let i = 0; i < 8192; i++) if (du(U(i), u0) < 0.14 && V(i) < 0.45) grow(i); },
+        ring() { const v0 = R.range(0.25, 0.45); for (let i = 0; i < 8192; i++) if (Math.abs(V(i) - v0) < 0.06) grow(i); },
+      };
+      const grown = () => { let n = 0; for (let i = 0; i < 8192; i++) if (s[i] > target[i]) n++; return n; };
+      for (const z of Object.keys(ZONES).sort(() => R.next() - 0.5).slice(0, R.next() < 0.5 ? 2 : 1)) ZONES[z]();
+      // (the usual case draws nothing more, so tidy-ups that already had enough to do are unchanged)
+      if (grown() < TIDY_MIN) for (const z of Object.keys(ZONES)) ZONES[z]();
+      if (grown() >= TIDY_MIN) return { start: s, target, style };
+      opts = opts.filter((o) => o !== pick);
+    }
+    return null;
   }
 
   // ---- M5: the beard he asks for, from the beard he walked in with ----
@@ -189,20 +210,27 @@
     const [, style, target] = choose(R, opts);
     return { style, target };
   }
+  // the beard a known style asks for from this start (a saved order is rebuilt exactly, requests.js)
+  const beardTarget = (person, start, style) => { const g = beardGrid(person, style); return start.map((v, i) => Math.min(v, g[i])); };
   // stars for a beard request: the share of his beard within one length of the asked beard, counted from where he
   // started (as requests.js does for hair): 60% for 2 stars, 85% for 3
+  // The job (cells that need work) and a slip (cells that were right and are now wrong) are counted apart: the job
+  // done is its share of the job, and a slip is weighed against the job's size but never against less than SLIP_FLOOR of
+  // the beard, so a small job is not lost to one slip. A perfect beard is 3 stars, an untouched one none of the job.
+  // (requests.js does the same for the hair)
+  const SLIP_FLOOR = 0.2;
   function beardStars(s, r) {
     const st = s.startBeard, now = s.beard, t = r.beard;
     if (!Array.isArray(st) || !Array.isArray(now) || !t) return 1;
-    let n = 0, a = 0, b = 0;
+    let n = 0, job = 0, done = 0, slip = 0;
     for (let i = 0; i < 8192; i++) {
       if (!(st[i] > 0)) continue;
       n++;
-      if (Math.abs(st[i] - t[i]) <= 1) a++;
-      if (Math.abs(now[i] - t[i]) <= 1) b++;
+      const ok = Math.abs(now[i] - t[i]) <= 1;
+      if (Math.abs(st[i] - t[i]) > 1) { job++; if (ok) done++; } else if (!ok) slip++;
     }
     if (!n) return 1;
-    const ma = a / n, mb = b / n, k = ma >= 0.999 ? mb : Math.max(0, Math.min(1, (mb - ma) / (1 - ma)));
+    const k = Math.max(0, Math.min(1, (job ? done / job : 1) - slip / Math.max(job, SLIP_FLOOR * n)));
     return k >= 0.85 ? 3 : k >= 0.6 ? 2 : 1;
   }
 
@@ -294,15 +322,54 @@
     const a = m === 'career' && CR() ? CR().active() : null;
     return !!(a && s && a.job === s.jobId && a.role !== 'showcase' && (a.mode === 'fix' || a.mode === 'beard'));
   };
+  // The one test of real work, everywhere work decides something (pay, stars, level, videos, tasks, the Rush bonus and
+  // taste, regulars, Career contracts): hair or beard really changed from where he sat down. The stroke counter is not
+  // used: it counts pointer samples, stays raised after an undo and counts a brushed brow.
   const MIN_WORK = 60; // cells of hair or beard really changed: a stroke or two
-  const worked = (s) => {
+  // a scored job (an order: Orders, Rush, a Career order) also needs this share of the order's own work done: one dab on
+  // a big order is not a job (the median order has over a thousand cells to cut, a Rush tidy-up at least 300)
+  const ORDER_SHARE = 0.2;
+  const changedCells = (s, stop = Infinity) => {
     let n = 0;
+    if (!s) return 0;
     for (const [a, b] of [[s.hair, s.startHair], [s.beard, s.startBeard]]) {
-      if (!a || !b) continue;
-      for (let i = 0; i < a.length; i++) if (a[i] !== b[i] && ++n >= MIN_WORK) return true;
+      if (!Array.isArray(a) || !Array.isArray(b)) continue;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i] && ++n >= stop) return n;
     }
-    return false;
+    return n;
   };
+  // the order's own work: cells longer than the order at the start (a beard within one length of its order already
+  // scores, as beardStars counts it), and how many of them have been cut at all
+  function orderWork(s, target, beard) {
+    let need = 0, done = 0;
+    for (const [now, st, t, tol] of [[s.hair, s.startHair, target, 0], [s.beard, s.startBeard, beard, 1]]) {
+      if (!Array.isArray(now) || !Array.isArray(st) || !Array.isArray(t)) continue;
+      for (let i = 0; i < t.length; i++) if (st[i] - t[i] > tol) { need++; if (now[i] < st[i]) done++; }
+    }
+    return { need, done };
+  }
+  // a job with no order still has a repair or a beard it was built for (Rescue, Beards; standalone or a Career contract)
+  function repairOf(s) {
+    const md = data(), j = md && md.job;
+    if (current() !== 'career') return j && j.n === s.jobId && !j.none ? { t: j.m === 'beard' ? null : unpack(j.t, 5), b: j.b ? unpack(j.b, BTOP()) : null } : null;
+    const a = CR() && CR().active();
+    return a && a.job === s.jobId && a.request ? { t: a.request.t ? unpack(a.request.t, 5) : null, b: a.request.bt ? unpack(a.request.bt, BTOP()) : null } : null;
+  }
+  // real work. A scored job: MIN_WORK cells (all of the order's work when it has less) and ORDER_SHARE of the order
+  // cut. A job without an order (Rescue, Beards, Quick Play, the tutorial): MIN_WORK cells, or the whole of a smaller
+  // repair, so a perfect small rescue always counts
+  function worked(s) {
+    if (!s) return false;
+    const r = HSC.requestFor ? HSC.requestFor(s) : null;
+    if (r && (r.target || r.beard)) {
+      const w = orderWork(s, r.target, r.beard);
+      const need = w.need ? Math.min(MIN_WORK, w.need) : MIN_WORK;
+      return changedCells(s, need) >= need && (!w.need || w.done >= ORDER_SHARE * w.need);
+    }
+    const rp = judged(s) ? repairOf(s) : null, w = rp ? orderWork(s, rp.t, rp.b) : null;
+    const need = w && w.need ? Math.min(MIN_WORK, w.need) : MIN_WORK;
+    return changedCells(s, need) >= need;
+  }
 
   // ---- what each mode asks for (requests.js) ----
   const reqCache = { key: null, val: undefined };
@@ -313,7 +380,9 @@
     if (m === 'career') { const r = CR().request(s); return r !== undefined ? r : null; }
     if (m === 'free') return null;
     const j = md && md.job && md.job.n === s.jobId ? md.job : null;
-    if (!j || j.none) return m === 'beard' || m === 'fix' || m === 'rush' ? null : undefined;
+    // no tidy-up could be made for him: a Rush customer asks for an ordinary cut instead (still on the clock), so he is
+    // never scored without an order
+    if (!j || j.none) return m === 'beard' || m === 'fix' ? null : undefined;
     const key = s.jobId + ':' + j.m + ':' + j.st;
     if (reqCache.key === key) return reqCache.val;
     let val;
@@ -324,34 +393,56 @@
   }
 
   // ---- tips and results ----
-  const rush = { job: null, t0: 0, LIMIT: 45000 };
-  const timeLeft = () => (rush.job == null ? 0 : Math.max(0, rush.LIMIT - (performance.now() - rush.t0)));
+  // the clock counts play time only (not an ad, the app in the background, a menu or the Open splash) and the time
+  // used is saved with the job, so a restart or a mode switch cannot give it back
+  // A Career contract keeps its clock by the contract's id (Career seats a suspended contract on a new job number), any
+  // other job by its job number; `ads` counts videos in progress, which always hold the clock
+  const rush = { job: null, key: null, used: 0, last: 0, saved: -1, held: true, ads: 0, LIMIT: 45000 };
+  for (const e of ['visibilitychange', 'pagehide', 'freeze']) addEventListener(e, () => { rush.held = true; }, true);
+  document.addEventListener('visibilitychange', () => { rush.held = true; }, true);
+  addEventListener('blur', (e) => { if (e.target === window) rush.held = true; }); // the window, not a button losing focus
+  // a host pause or an ad freezes this tick entirely, so watch the pause flag the client sets on <html> (client.js)
+  try { new MutationObserver(() => { rush.held = true; }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }); } catch (e) {}
+  const timeLeft = () => (rush.job == null ? 0 : Math.max(0, rush.LIMIT - rush.used));
   // the economy (economy.js) prices every mode by its fee: no mode multiplies tips any more
   function tips(base) { return base; }
-  // what the economy needs to know about this job's mode: the kind, a Rush time bonus (0-12)
-  function econJob(s) {
+  // what the economy needs to know about this job's mode: the kind, a Rush time bonus (0-12). The bonus is for a job
+  // done well and fast: only real work of 2 stars or more earns it (`stars`, from requests.js), so a dab and Finish
+  // at once earns nothing from the clock
+  function econJob(s, stars) {
     const m = current();
     const md = data(), taste = m === 'requests' && md && md.job && md.job.n === s.jobId && md.job.m === 'rush' && !md.job.none;
     const out = { kind: taste ? 'rush' : m === 'requests' || m === 'career' ? 'requests' : m };
     if (m === 'career' && CR() && CR().unscored()) out.kind = 'free'; // no contract in the chair: practice, no pay
-    if (rush.job === s.jobId) out.rushBonus = Math.round(12 * timeLeft() / rush.LIMIT);
+    if (rush.job === s.jobId && stars >= 2 && worked(s)) out.rushBonus = Math.round(HSC.economy.CONFIG.rushMax * timeLeft() / rush.LIMIT);
     return out;
   }
   function done(s, stars) {
     const md = data();
     if (!md) return;
+    const ca = current() === 'career' && CR() ? CR().active() : null, cid = ca && ca.job === s.jobId ? String(ca.id) : null;
     if (current() === 'career') CR().done(s, stars);
-    // the taste is spent only once it has been finished, so a customer skipped by changing mode does not use it up
-    if (current() === 'requests' && md.job && md.job.n === s.jobId && md.job.m === 'rush' && !md.job.none) { md.taste = true; M().save(); }
-    if (rush.job === s.jobId) rush.job = null;
+    // the taste is spent only once it has been finished with real work, so a customer skipped by changing mode, or
+    // finished (or timed out) untouched, does not use it up
+    if (current() === 'requests' && md.job && md.job.n === s.jobId && md.job.m === 'rush' && !md.job.none && stars > 0 && worked(s)) { md.taste = true; M().save(); }
+    if (rush.job === s.jobId) { rush.job = null; rush.key = null; }
+    if (md.clock && md.clock.n === s.jobId) { md.clock = null; M().save(); }
+    if (cid && md.cclock && md.cclock.id === cid) { md.cclock = null; M().save(); }
   }
 
   // ---- switching ----
+  // one switch at a time: a second tap while the first is still saving would skip a second customer
+  let switching = false;
   async function setMode(m) {
+    if (switching) return false;
+    switching = true;
+    try { return await switchTo(m); } finally { switching = false; }
+  }
+  async function switchTo(m) {
     const md = data(), g = G();
+    const was = current(); // read before any wait, so it is the mode the player is really leaving
     if (m === 'career') { if (!CR()) return false; await CR().ensure(); }
     else if (!md || !LIST.includes(m) || !unlocked(m)) return false;
-    const was = current();
     // leaving the career chair: its contract keeps the work done so far and waits for the barber (suspended)
     if (was === 'career' && m !== 'career' && g) await CR().suspend(g.getState());
     md.mode = m;
@@ -379,7 +470,7 @@
   const STAR = (on) => `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="${on ? '#ffc83d' : 'none'}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"${on ? '' : ' stroke-dasharray="2.6 2.2" opacity=".55"'}/></svg>`;
   const TICK = '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#10223f" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const CSS = `
-#hsc-rush{--c:#46c43a;--p:1;position:fixed;z-index:21;left:50%;top:calc(env(safe-area-inset-top) + 8px);transform:translateX(-50%);display:none;width:60px;height:60px;box-sizing:border-box;border-radius:50%;border:3px solid ${INK};background:conic-gradient(var(--c) calc(var(--p) * 1turn),#c9d6e4 0);box-shadow:inset 0 2px 0 #fff9,0 4px 0 ${INK},0 6px 8px #0004;zoom:var(--hsc-s,1)}
+#hsc-rush{--c:#46c43a;--p:1;position:fixed;z-index:21;left:50%;pointer-events:none;top:calc(env(safe-area-inset-top) / var(--hsc-s,1) + 8px);transform:translateX(-50%);display:none;width:60px;height:60px;box-sizing:border-box;border-radius:50%;border:3px solid ${INK};background:conic-gradient(var(--c) calc(var(--p) * 1turn),#c9d6e4 0);box-shadow:inset 0 2px 0 #fff9,0 4px 0 ${INK},0 6px 8px #0004;zoom:var(--hsc-s,1)}
 #hsc-rush.on{display:block}
 #hsc-rush span{position:absolute;inset:5px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:linear-gradient(#fff,#e4f3ff);box-shadow:inset 0 0 0 2px #10223f22;color:${INK};font:900 1em "Arial Rounded MT Bold","Nunito",system-ui,sans-serif;font-variant-numeric:tabular-nums}
 #hsc-rush.mid{--c:#ffb21a}
@@ -388,8 +479,8 @@
 #hsc-rush.end{animation-duration:.25s}
 @keyframes hsc-rushb{50%{transform:translateX(-50%) scale(1.14)}}
 body.hsc-reveal #hsc-rush{display:none}
-.hsc-toast{position:fixed;z-index:41;left:50%;top:40%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:26px;background:#fff6e6;border:3px solid ${INK};box-shadow:0 4px 0 ${INK};font:900 24px "DM Sans",system-ui,sans-serif;color:${INK};animation:hsc-toast 1.8s ease-out forwards;pointer-events:none}
-@keyframes hsc-toast{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%)}}
+.hsc-toast{position:fixed;z-index:41;left:0;top:0;zoom:var(--hsc-s,1);transform-origin:50% 50%;display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:26px;background:#fff6e6;border:3px solid ${INK};box-shadow:0 4px 0 ${INK};font:900 24px "DM Sans",system-ui,sans-serif;color:${INK};animation:hsc-toast 1.8s ease-out forwards;pointer-events:none}
+@keyframes hsc-toast{0%{opacity:0;transform:translateY(20%) scale(.6)}15%{opacity:1;transform:scale(1.05)}25%{transform:none}80%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-20%)}}
 @media (prefers-reduced-motion:reduce){#hsc-rush.low{animation:none}}
 `;
   const COIN = HSC.icon ? HSC.icon('coin', 30) : `<svg viewBox="0 0 24 24" width="30" height="30"><circle cx="12" cy="12" r="9.5" fill="#ffc83d" stroke="${INK}" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#c98a12" stroke-width="1.8"/></svg>`; // the theme's one coin (icons.js)
@@ -407,8 +498,35 @@ body.hsc-reveal #hsc-rush{display:none}
     toast(kind) {
       const t = document.createElement('div'); t.className = 'hsc-toast';
       t.innerHTML = kind === 'round' ? `${ICON.rush.replace(/56/g, '40')}${COIN}<span>+50</span>` : '';
+      // drawn at the UI scale like every layer, and placed in a free spot off the customer's head (requests.js)
+      t.style.cssText = 'visibility:hidden;animation:none';
       document.body.appendChild(t);
+      const S = HSC.S || 1, r = t.getBoundingClientRect();
+      const p = HSC.uiPlace ? HSC.uiPlace.spot(r.width, r.height) : { x: (innerWidth - r.width) / 2, y: innerHeight * 0.12, k: 1 };
+      const z = S * p.k;
+      t.style.cssText = `zoom:${z};left:${p.x / z}px;top:${p.y / z}px`;
       setTimeout(() => t.remove(), 1900);
+    },
+    // the clock's centre on the top row, in screen px: the middle of the screen, unless the customer's head reaches
+    // up there (a landscape phone, the head tilted): then the nearest free spot on the row beside his head, clear of
+    // the top buttons. It never takes a touch, so if no spot is free it stays in the middle over the hair
+    clockX(home) {
+      const W = innerWidth, size = home.height, half = size / 2, S = HSC.S || 1, gap = 6 * S;
+      const mid = W / 2, row = { t: home.top, b: home.bottom };
+      const hd = HSC.uiPlace && HSC.uiPlace.head ? HSC.uiPlace.head() : null;
+      const at = (x) => ({ l: x - half, r: x + half, ...row });
+      const hit = (a, b) => a.l < b.r + gap && a.r > b.l - gap && a.t < b.b + gap && a.b > b.t - gap;
+      if (!hd || !hit(at(mid), hd)) return mid;
+      const btns = [...document.querySelectorAll('#hsc-menu-btn,.ui .top button,#hsc-hud .hsc-row button')].map((e) => e.getBoundingClientRect()).filter((b) => b.width > 1).map((b) => ({ l: b.left, r: b.right, t: b.top, b: b.bottom }));
+      const xs = [hd.l - gap - half - 0.5, hd.r + gap + half + 0.5];
+      for (const b of btns) xs.push(b.r + gap + half + 0.5, b.l - gap - half - 0.5);
+      let best = null;
+      for (const x of xs) {
+        const a = at(x);
+        if (a.l < 8 * S || a.r > W - 8 * S || hit(a, hd) || btns.some((b) => hit(a, b))) continue;
+        if (best == null || Math.abs(x - mid) < Math.abs(best - mid)) best = x;
+      }
+      return best == null ? mid : best;
     },
     // the mode tiles on the home screen (menu.js calls this when it opens)
     tick() {
@@ -418,9 +536,35 @@ body.hsc-reveal #hsc-rush{display:none}
       // the rush clock starts when a tidy-up customer sits down
       const ca = m === 'career' && CR() ? CR().active() : null;
       const jb = data().job, ownJob = jb && jb.n === s.jobId && !jb.none;
-      const rushing = s.status === 'cutting' && (m === 'rush' ? !!ownJob : m === 'requests' ? !!(ownJob && jb.m === 'rush') : !!(ca && ca.mode === 'rush' && ca.job === s.jobId));
-      if (rushing && rush.job !== s.jobId) { rush.job = s.jobId; rush.t0 = performance.now(); }
-      if (!rushing && s.status === 'cutting') rush.job = null;
+      // a Rush customer with no tidy-up asks for an ordinary cut (request above), still against the clock
+      const cr = ca && ca.mode === 'rush' && ca.job === s.jobId ? ca : null;
+      const rushing = s.status === 'cutting' && (m === 'rush' ? !!(jb && jb.n === s.jobId) : m === 'requests' ? !!(ownJob && jb.m === 'rush') : !!cr);
+      const now = performance.now(), md = data(), key = cr ? 'c:' + cr.id : 'j:' + s.jobId;
+      if (rushing && (rush.job !== s.jobId || rush.key !== key)) {
+        const c = cr ? (md.cclock && md.cclock.id === String(cr.id) ? md.cclock.ms : 0) : md.clock && md.clock.n === s.jobId ? md.clock.ms : 0;
+        Object.assign(rush, { job: s.jobId, key, used: c, last: now, held: true, saved: Math.floor(c / 5000) });
+      }
+      if (!rushing && s.status === 'cutting') { rush.job = null; rush.key = null; }
+      if (rushing) {
+        const v = g.getView ? g.getView() : null;
+        // a video in progress (an undo, a wish) always holds the clock, whether or not the host has paused the game yet
+        const hold = rush.ads > 0 || document.hidden || (v && v.paused) || document.querySelector('#hsc-menu.open, #hsc-reveal.on');
+        // real play time counts in full, even on a busy device; the step after any hold (an ad, a menu, the splash,
+        // the app in the background, see the visibility listener) never counts, so a pause is never charged
+        const dt = Math.min(5000, Math.max(0, now - rush.last)), wasHeld = rush.held;
+        rush.last = now; rush.held = !!hold;
+        if (!hold && !wasHeld) rush.used = Math.min(rush.LIMIT, rush.used + dt);
+        // saved every 5 s of play and whenever the clock is held (a pause, a menu, the app leaving), not every second:
+        // each save writes the whole save file
+        const step = Math.floor(rush.used / 5000);
+        if (md && (step !== rush.saved || (hold && !wasHeld))) {
+          rush.saved = step;
+          if (cr) md.cclock = { id: String(cr.id), ms: Math.round(rush.used) }; else md.clock = { n: s.jobId, ms: Math.round(rush.used) };
+          M().save();
+        }
+        // time is up: the haircut ends exactly as if Finish were pressed (the engine refuses while paused; the next tick retries)
+        if (rush.used >= rush.LIMIT && !hold) g.finish();
+      }
       const ms = timeLeft(), left = Math.ceil(ms / 1000), el = this.el.rush;
       el.classList.toggle('on', rushing);
       el.classList.toggle('mid', rushing && left <= 20 && left > 10);
@@ -429,7 +573,7 @@ body.hsc-reveal #hsc-rush{display:none}
       if (!rushing) { this.beat = null; return; }
       // on the same line as the Home and Finish buttons, at their scale
       const home = document.querySelector('#hsc-menu-btn'), r = home && home.getBoundingClientRect(), S = HSC.S || 1;
-      if (r && r.height) { const size = r.height / S; Object.assign(el.style, { width: size + 'px', height: size + 'px', top: r.top / S + 'px', fontSize: size * 0.4 + 'px' }); }
+      if (r && r.height) { const size = r.height / S; Object.assign(el.style, { width: size + 'px', height: size + 'px', top: r.top / S + 'px', fontSize: size * 0.4 + 'px', left: this.clockX(r) / S + 'px' }); }
       el.style.setProperty('--p', (ms / rush.LIMIT).toFixed(3));
       el.querySelector('span').textContent = left;
       // tick, tock, each second; twice as fast in the last ten; a bell at zero
@@ -442,14 +586,23 @@ body.hsc-reveal #hsc-rush{display:none}
     },
   };
 
+  // every rewarded video goes through HSC.watchVideo (the wardrobe owns it and its earned callback): this only counts
+  // the videos in progress for the Rush clock, then hands over unchanged, with the same result
+  function holdForVideos() {
+    const wv = HSC.watchVideo;
+    if (typeof wv !== 'function' || wv.__rushHeld) return;
+    const held = async function () { rush.ads++; rush.held = true; try { return await wv.apply(this, arguments); } finally { rush.ads = Math.max(0, rush.ads - 1); rush.held = true; } };
+    held.__rushHeld = true; held.__routed = wv.__routed;
+    HSC.watchVideo = held;
+  }
   const boot = () => {
-    if (globalThis.skinFadeStudio && HSC.meta && HSC.meta.data && HSC.requestKit && document.body && HSC.ensure && HSC.personForJob) { hook(); ui.build(); }
+    if (globalThis.skinFadeStudio && HSC.meta && HSC.meta.data && HSC.requestKit && document.body && HSC.ensure && HSC.personForJob) { hook(); holdForVideos(); ui.build(); }
     else setTimeout(boot, 200);
   };
   boot();
   HSC.modes = {
     current, unlocked, inCareer, list: LIST, level: LEVEL, set: setMode,
-    request: (s) => request(s), judged, worked, tips, done, beardStars, beardJob, econJob, recently, noteAsk,
+    request: (s) => request(s), judged, worked, changedCells, MIN_WORK, tips, done, beardStars, beardJob, beardTarget, econJob, recently, noteAsk,
     unscored: () => { const m = current(); return m === 'free' || (m === 'career' && CR().unscored()); },
     icon: (m) => ICON[m],
     // the job builders, for the career catalog (career-catalog.js)

@@ -102,25 +102,33 @@ s = replace(s, 'renderFirstPlayableFrame(){n.render()}',
   HSC.startupTiming.firstPlayable=performance.now();
 }''')
 s = replace(s, 'globalThis.addEventListener("resize",ce);let L=', '''globalThis.addEventListener("resize",ce);
-let recoveryTimer=0,recovering=false;
+let recoveryTimer=0,recovering=false,losses=0,restoreQueued=false;
 const lost=()=>{
   HSC.detail.noteContextLoss("runtime");
   if(initialBoot){startupLost=true;return}
+  losses++;
   t.setPauseReason("graphics",true);
   HSC.lifecycle.clear(recoveryTimer);
   recoveryTimer=HSC.lifecycle.timeout(()=>HSC.failGame(HSC.graphicsError("GFX_LOST")),8000);
 };
 const restore=()=>{
   if(initialBoot){ce(true);return}
-  if(recovering)return;
-  recovering=true;HSC.lifecycle.clear(recoveryTimer);
+  // A restore that arrives while an earlier rebuild is still running is taken up once that one ends.
+  if(recovering){restoreQueued=true;return}
+  recovering=true;restoreQueued=false;HSC.lifecycle.clear(recoveryTimer);
+  const loss=losses;
   (async()=>{
     HSC.detail.commitPending(true);
     await t.whenResumed();await n.prepareFirstFrame();await t.whenResumed();
     n.render(false);await n.waitForFirstFrame();await t.whenResumed();
-    if(n.isContextLost())throw HSC.graphicsError("GFX_LOST");
+    if(n.isContextLost()||losses!==loss)throw HSC.graphicsError("GFX_LOST");
     needsRender=false;t.setPauseReason("graphics",false);
-  })().catch(error=>HSC.failGame(error)).finally(()=>recovering=false);
+  })().catch(error=>{
+    // Lost again while rebuilding: not fatal. lost() has re-armed the wait for the next restore, exactly as
+    // for a first loss; only a rebuild that fails on a live context is a real graphics failure.
+    if(losses!==loss||n.isContextLost())return;
+    HSC.failGame(error);
+  }).finally(()=>{recovering=false;if(restoreQueued&&!n.isContextLost())restore()});
 };
 a.addEventListener("webglcontextrestored",restore);a.addEventListener("webglcontextlost",lost);let L=''')
 s = replace(s, 'globalThis.removeEventListener("resize",ce),', 'HSC.lifecycle.clear(recoveryTimer),globalThis.removeEventListener("resize",ce),a.removeEventListener("webglcontextrestored",restore),a.removeEventListener("webglcontextlost",lost),')

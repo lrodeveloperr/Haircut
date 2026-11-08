@@ -150,12 +150,71 @@
   }
 
   const M = (HSC.meta = { data: null, client: null, levelOf, cutsFor });
+  // real work (modes.js): hair or beard really changed from the start; builds without the modes keep the stroke count
+  const worked = (s) => !!s && (HSC.modes && HSC.modes.worked ? HSC.modes.worked(s) : s.cutStrokeCount > 0);
 
   const dayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   const hash = (str) => { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
 
+  // ---- the game's day, robust to a wrong clock in both directions --------------------------------------------
+  // Every daily limit counts by one game day. The device's date is followed, with a book of the days already used:
+  //   - a day already used comes back with what was used on it (its record), so it never gives its limits twice;
+  //   - a date one or two days back (a time zone crossed westward) keeps the day;
+  //   - a date further back is a clock put right (a phone that booted with a wrong date ahead, then synced): the day
+  //     moves back to it, but only to a day after the last one played before the clock jumped ahead (`low`), so
+  //     turning the clock back can never deal days from before then;
+  //   - the book keeps the last 32 days used; a day older than those (`floor`) counts as used.
+  // So each calendar day gives its limits once at most, however often the clock moves, and a corrected clock
+  // gets its real day back at once. Shared with the wardrobe's daily picks (wardrobe.js), which keep their own book.
+  const BOOK = 32;
+  const dayNum = (k) => { const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(typeof k === 'string' ? k : ''); return m ? Math.round(Date.UTC(+m[1], m[2] - 1, +m[3]) / 864e5) : NaN; };
+  const okNum = (v) => (Number.isSafeInteger(v) && v > 0 && v < 1e6 ? v : null);
+  HSC.dayBook = {
+    num: dayNum,
+    fresh: () => ({ low: null, floor: null, log: [] }),
+    // a saved book: `entry` cleans one record (null drops it); the current day is never in the book
+    clean(o, entry, cur) {
+      const b = { low: null, floor: null, log: [] };
+      if (!o || typeof o !== 'object') return b;
+      b.low = okNum(o.low); b.floor = okNum(o.floor);
+      const seen = new Set([dayNum(cur)]);
+      for (const e of Array.isArray(o.log) ? o.log.slice(-BOOK) : []) {
+        const n = dayNum(e && e.day), c = Number.isFinite(n) && !seen.has(n) ? entry(e) : null;
+        if (c) { seen.add(n); b.log.push(c); }
+      }
+      return b;
+    },
+    // may the day move from `cur` to the device's `now`? (records a clock jump ahead in the book)
+    may(B, cur, now) {
+      const c = dayNum(cur), n = dayNum(now);
+      if (!Number.isFinite(c)) return true;
+      if (!Number.isFinite(n) || n === c) return false;
+      if (B.floor != null && n <= B.floor) return false; // its record is gone: counted as used
+      if (n < c && c - n <= 2) return false; // a time zone or a small set-back: the day stays
+      const days = B.log.map((e) => dayNum(e.day));
+      if (days.includes(n)) return true; // a day used before: its record comes back
+      const top = Math.max(c, ...days);
+      if (n > top) { if (n - top > 2 && B.low == null) B.low = top; return true; }
+      return B.low != null && n >= B.low; // a day never played, earlier than one played: only a clock put right
+    },
+    // a day's record out of the book (it becomes the current day), or null
+    take(B, day) {
+      const n = dayNum(day), i = B.log.findIndex((e) => dayNum(e.day) === n);
+      return i < 0 ? null : B.log.splice(i, 1)[0];
+    },
+    // a day left: its record goes into the book; the oldest beyond 32 leave it and raise the floor
+    put(B, e) {
+      const n = dayNum(e.day);
+      B.log = B.log.filter((x) => dayNum(x.day) !== n).concat([e]);
+      if (B.log.length > BOOK) {
+        B.log.sort((a, b) => dayNum(a.day) - dayNum(b.day));
+        while (B.log.length > BOOK) B.floor = Math.max(B.floor || 0, dayNum(B.log.shift().day));
+      }
+    },
+  };
+
   function fresh() {
-    return { v: 1, cuts: 0, firstDay: dayKey(), dailyDay: null, queue: null, trial: null, declines: 0, pauseLeft: 0, offerTurn: 0, seen: {}, deck: {}, last: {}, regulars: [], sinceReg: 0, coins: 0, lastRound: null, settings: null, modes: null, gift: null };
+    return { v: 1, cuts: 0, firstDay: dayKey(), dailyDay: null, queue: null, trial: null, declines: 0, pauseLeft: 0, offerTurn: 0, seen: {}, deck: {}, last: {}, regulars: [], sinceReg: 0, coins: 0, lastRound: null, settings: null, modes: null, gift: null, maxDay: null, days: HSC.dayBook.fresh(), jobSeq: 0, counted: null };
   }
   const okTok = (v) => (typeof v === 'string' && v.length < 16) || (Number.isInteger(v) && v >= 0 && v < 8);
   function cleanDecks(o) {
@@ -192,7 +251,7 @@
   // a finished customer joins the regulars (his record without the visit's own flags)
   function rememberRegular(state) {
     const d = M.data, p = state && state.look && state.look.person;
-    if (!REG || !d || !p || !HSC.validPerson(p) || p.first || state.cutStrokeCount < 3 || !keepsComing(p.seed)) return;
+    if (!REG || !d || !p || !HSC.validPerson(p) || p.first || !worked(state) || !keepsComing(p.seed)) return;
     if (!Array.isArray(state.hair) || state.hair.length !== 8192 || !Array.isArray(state.beard) || !Array.isArray(state.startBeard)) return;
     // a returning regular keeps his usual beard (the queue still holds this visit's entry)
     const q = d.queue && d.queue.job === state.jobId && d.queue.person && d.queue.person.seed === p.seed ? d.queue.regular : null;
@@ -230,12 +289,38 @@
       (j.none === true || (typeof j.st === 'string' && j.st.length < 40 && (typeof j.t === 'string' ? j.t.length < 24000 : typeof j.b === 'string' && j.b.length < 24000)));
     const dl = o.daily, okDaily = dl && typeof dl === 'object' && typeof dl.day === 'string' && /^\d{4}-\d\d-\d\d$/.test(dl.day) && [0, 1, 2, 3].includes(dl.stars);
     return { taste: o.taste === true, qp: o.qp && typeof o.qp.day === 'string' && Number.isSafeInteger(o.qp.n) ? { day: o.qp.day, n: o.qp.n } : null, wait: Number.isSafeInteger(o.wait) && o.wait >= 0 && o.wait < 100 ? o.wait : undefined, pv: o.pv && typeof o.pv.day === 'string' && Number.isSafeInteger(o.pv.n) ? { day: o.pv.day, n: o.pv.n } : null, mode: MODES.includes(o.mode) ? o.mode : 'requests', job: okJob ? { n: j.n, m: j.m, st: j.st, t: j.t, b: j.b, none: j.none === true || undefined } : null,
-      ask: Array.isArray(o.ask) ? o.ask.filter((x) => typeof x === 'string' && x.length < 48).slice(-14) : [], wv: o.wv && typeof o.wv.day === 'string' && Number.isSafeInteger(o.wv.n) ? { day: o.wv.day, n: o.wv.n } : null, daily: okDaily ? { day: dl.day, stars: dl.stars, paid: dl.paid === true } : null, beforeDaily: MODES.includes(o.beforeDaily) && o.beforeDaily !== 'daily' ? o.beforeDaily : null, tried: Array.isArray(o.tried) ? o.tried.filter((m) => MODES.includes(m)).slice(0, 10) : [], rush: Number.isSafeInteger(o.rush) && o.rush >= 0 ? Math.min(o.rush, 1e6) : 0 };
+      ask: Array.isArray(o.ask) ? o.ask.filter((x) => typeof x === 'string' && x.length < 48).slice(-14) : [], wv: o.wv && typeof o.wv.day === 'string' && Number.isSafeInteger(o.wv.n) ? { day: o.wv.day, n: o.wv.n, pend: typeof o.wv.pend === 'string' && o.wv.pend.length < 80 ? o.wv.pend : null } : null, daily: okDaily ? { day: dl.day, stars: dl.stars, paid: dl.paid === true } : null, beforeDaily: MODES.includes(o.beforeDaily) && o.beforeDaily !== 'daily' ? o.beforeDaily : null, tried: Array.isArray(o.tried) ? o.tried.filter((m) => MODES.includes(m)).slice(0, 10) : [], rush: Number.isSafeInteger(o.rush) && o.rush >= 0 ? Math.min(o.rush, 1e6) : 0,
+      // the Rush clock's play time used on this job, so a restart cannot give the clock back (modes.js)
+      clock: o.clock && Number.isSafeInteger(o.clock.n) && Number.isFinite(o.clock.ms) ? { n: o.clock.n, ms: Math.max(0, Math.min(o.clock.ms, 45000)) } : null,
+      // a Career Rush contract's clock, kept by the contract's id (Career can seat the contract on a new job)
+      cclock: o.cclock && typeof o.cclock.id === 'string' && o.cclock.id.length < 160 && Number.isFinite(o.cclock.ms) ? { id: o.cclock.id, ms: Math.max(0, Math.min(o.cclock.ms, 45000)) } : null,
+      // the order an Orders customer was given (requests.js), so a reload shows and scores the same order
+      ord: o.ord && Number.isSafeInteger(o.ord.n) && Number.isSafeInteger(o.ord.p) && typeof o.ord.st === 'string' && o.ord.st.length < 40 ? { n: o.ord.n, p: o.ord.p, st: o.ord.st, bs: typeof o.ord.bs === 'string' && o.ord.bs.length < 24 ? o.ord.bs : null } : null };
   }
   // the play-time gift: today's active play seconds and the gifts taken (session.js)
   function cleanGift(o) {
     if (!o || typeof o !== 'object' || typeof o.day !== 'string' || !/^\d{4}-\d\d-\d\d$/.test(o.day)) return null;
-    return { day: o.day, sec: Number.isFinite(o.sec) && o.sec >= 0 ? Math.min(o.sec, 86400) : 0, got: Number.isSafeInteger(o.got) && o.got >= 0 ? Math.min(o.got, 9) : 0 };
+    // dbl: the gift whose doubling video was watched but whose coins did not land yet (paid doubled, no new video)
+    return Object.assign({ day: o.day, sec: Number.isFinite(o.sec) && o.sec >= 0 ? Math.min(o.sec, 86400) : 0, got: Number.isSafeInteger(o.got) && o.got >= 0 ? Math.min(o.got, 9) : 0 }, Number.isSafeInteger(o.dbl) && o.dbl >= 0 && o.dbl < 9 ? { dbl: o.dbl } : {});
+  }
+  // one used day in the day book: what each daily limit had used on it (only records of that same day)
+  const XCAP = /^[a-z]{1,12}$/;
+  function cleanDayEntry(e) {
+    if (!e || typeof e !== 'object' || !dayOk(e.day)) return null;
+    const own = (o) => (o && o.day === e.day ? o : null);
+    const m = cleanModes({ wv: e.wv, qp: e.qp, pv: e.pv }) || {};
+    const out = { day: e.day }, g = own(cleanGift(e.gift));
+    if (g) out.gift = g;
+    for (const k of ['wv', 'qp', 'pv']) if (own(m[k])) out[k] = m[k];
+    if (e.vip === true) out.vip = true;
+    // limits kept by other modules (M.dailyCap): small plain records of the same day, cleaned again by their owner
+    if (e.x && typeof e.x === 'object') for (const k of Object.keys(e.x).slice(0, 4)) {
+      const v = e.x[k];
+      let s = '';
+      try { s = JSON.stringify(v); } catch (err) { continue; }
+      if (XCAP.test(k) && v && typeof v === 'object' && v.day === e.day && s.length <= 600) (out.x || (out.x = {}))[k] = JSON.parse(s);
+    }
+    return out;
   }
   // the player's settings (settings.js)
   function cleanSettings(o) {
@@ -250,7 +335,18 @@
     const key = typeof r.key === 'string' && r.key.length <= 160 ? r.key : null;
     const lines = Array.isArray(r.lines) ? r.lines.filter((x) => Array.isArray(x) && x.length === 2 && typeof x[0] === 'string' && x[0].length < 32 && Number.isSafeInteger(x[1]) && Math.abs(x[1]) < 1e6).slice(0, 24) : [];
     const bill = r.bill && typeof r.bill.key === 'string' && r.bill.key.length < 80 ? { key: r.bill.key, lines: Array.isArray(r.bill.lines) ? r.bill.lines.filter((x) => Array.isArray(x) && x.length === 2 && typeof x[0] === 'string' && Number.isSafeInteger(x[1])).slice(0, 8) : [] } : null;
-    return { job: r.job, key, judged: r.judged === true, video: n(r.video), stars: r.stars, tips: n(r.tips), tip: n(r.tip), paid: n(r.paid), lines, bill, tripled: r.tripled === true, shownStars: [1, 2, 3].includes(r.shownStars) ? r.shownStars : r.stars, prev: Math.min(999, n(r.prev)), mult: [1, 1.2, 1.5, 2].includes(r.mult) ? r.mult : 1, free: r.free === true };
+    // what the economy has not committed yet (requests.js pays it at the next start): the job as the economy reads it
+    const pj = r.pend && r.pend.job, okJob = pj && typeof pj === 'object' && typeof pj.kind === 'string' && pj.kind.length < 16 && [0, 1, 2, 3].includes(pj.stars) && pj.valid === true;
+    const pq = r.pend && r.pend.quick, okQuick = Array.isArray(pq) && pq.length === 2 && typeof pq[0] === 'string' && pq[0].length < 80 && Number.isSafeInteger(pq[1]) && pq[1] > 0 && pq[1] < 1000;
+    const pend = okJob || okQuick ? Object.assign({}, okJob ? { job: { kind: pj.kind, stars: pj.stars, judged: pj.judged === true, valid: true, regular: pj.regular === true, vip: pj.vip === true, early: pj.early === true, rushBonus: Number.isSafeInteger(pj.rushBonus) ? Math.max(0, Math.min(12, pj.rushBonus)) : 0, demandMatch: pj.demandMatch === true } } : {}, okQuick ? { quick: [pq[0], pq[1]] } : {}) : null;
+    // who this round was (requests.js): a job number repeated after the game's session was replaced is not the same job
+    const u32 = (v) => (Number.isSafeInteger(v) && v >= 0 && v <= 0xffffffff ? v : undefined);
+    return Object.assign({ p: u32(r.p), sd: u32(r.sd), seq: Number.isSafeInteger(r.seq) && r.seq >= 0 ? r.seq : undefined }, { job: r.job, key, judged: r.judged === true, video: n(r.video), stars: r.stars, tips: n(r.tips), tip: n(r.tip), paid: n(r.paid), lines, bill, tripled: r.tripled === true, shownStars: [1, 2, 3].includes(r.shownStars) ? r.shownStars : r.stars, prev: Math.min(999, n(r.prev)), mult: [1, 1.2, 1.5, 2].includes(r.mult) ? r.mult : 1, free: r.free === true }, pend && key ? { pend } : {});
+  }
+  // the latest day this save has seen (a save from before the game's day kept one: the days its limits were counted on)
+  function latestDay(d) {
+    const days = [d.maxDay, d.dailyDay, d.gift && d.gift.day].concat(d.modes ? ['wv', 'qp', 'pv'].map((k) => d.modes[k] && d.modes[k].day) : []).filter(dayOk);
+    return days.length ? days.reduce((a, b) => (b > a ? b : a)) : null;
   }
   function sanitize(d) {
     const f = fresh();
@@ -262,11 +358,14 @@
     const qr = d.queue && d.queue.regular, top = HSC.BEARD_MM ? HSC.BEARD_MM.length - 1 : 0;
     if (q && REG && qr && gridOk(qr.h, 5) && gridOk(qr.b, top) && gridOk(qr.u, top)) q.regular = { h: qr.h, b: qr.b, u: qr.u };
     const t = d.trial && Number.isSafeInteger(d.trial.job) && typeof d.trial.key === 'string' ? d.trial : null;
+    // a save with a day book keeps its own day (it can be earlier than a limit's day after a clock put right)
+    const day = d.days && typeof d.days === 'object' && dayOk(d.maxDay) ? d.maxDay : latestDay(d);
     return {
       v: 1, cuts: int(d.cuts, 0), homeSeen: d.homeSeen === true || int(d.cuts, 0) > 1, firstDay: str(d.firstDay) || f.firstDay,
       dailyDay: str(d.dailyDay), queue: q, trial: t, declines: int(d.declines, 0), pauseLeft: int(d.pauseLeft, 0),
       offerTurn: int(d.offerTurn, 0), seen: d.seen && typeof d.seen === 'object' ? d.seen : {},
       deck: cleanDecks(d.deck), last: cleanLast(d.last), sinceVip: int(d.sinceVip, 9), runs: cleanRuns(d.runs), regulars: cleanRegulars(d.regulars), sinceReg: int(d.sinceReg, 0), coins: Math.min(99999999, int(d.coins, 0)), lastRound: cleanRound(d.lastRound), combo: Math.min(999, int(d.combo, 0)), settings: cleanSettings(d.settings), modes: cleanModes(d.modes), gift: cleanGift(d.gift),
+      maxDay: day, days: HSC.dayBook.clean(d.days, cleanDayEntry, day), jobSeq: int(d.jobSeq, 0), counted: typeof d.counted === 'string' && d.counted.length <= 160 ? d.counted : null,
     };
   }
   M.save = function () {
@@ -304,7 +403,46 @@
   M.level = () => levelOf(M.data ? M.data.cuts : 0);
   // how far the barber is through the current level, 0..1 (the home screen's XP bar)
   M.levelProgress = () => { const c = M.data ? M.data.cuts : 0, l = levelOf(c), a = cutsFor(l), b = cutsFor(l + 1); return b > a ? Math.max(0, Math.min(1, (c - a) / (b - a))) : 0; };
-  M.today = dayKey;
+  // the game's day for every daily limit (gifts, videos, Quick Play pay, tasks, the daily VIP): the device's date,
+  // kept by the day book (above). Moving to another day files the day left with what its limits used and brings
+  // back the new day's own record, if it was used before; a limit with no record that day starts afresh.
+  const caps = {}; // limits other modules keep in their own saves: name -> [get, set]
+  M.dailyCap = (name, get, set) => { if (XCAP.test(name) && typeof get === 'function' && typeof set === 'function') caps[name] = [get, set]; };
+  function leaveDay(d, day) {
+    const e = { day }, md = d.modes;
+    let used = false;
+    if (d.gift && d.gift.day === day) { e.gift = d.gift; used = true; }
+    if (md) for (const k of ['wv', 'qp', 'pv']) if (md[k] && md[k].day === day) { e[k] = md[k]; used = true; }
+    if (d.dailyDay === day) { e.vip = true; used = true; }
+    for (const [k, [get]] of Object.entries(caps)) {
+      let v = null;
+      try { v = get(); } catch (err) {}
+      if (v && v.day === day) { (e.x || (e.x = {}))[k] = v; used = true; }
+    }
+    // the same objects, not copies: a claim still finishing for the day left (a video across midnight) lands in its record
+    if (used) HSC.dayBook.put(d.days, e);
+  }
+  function enterDay(d, day, e) {
+    const md = d.modes;
+    d.gift = e.gift || null;
+    if (md) for (const k of ['wv', 'qp', 'pv']) md[k] = e[k] || null;
+    d.dailyDay = e.vip ? day : null;
+    for (const [k, [, set]] of Object.entries(caps)) { try { set((e.x && e.x[k]) || null); } catch (err) {} }
+  }
+  M.today = () => {
+    const now = dayKey(), d = M.data;
+    if (!d) return now;
+    if (!d.days) d.days = HSC.dayBook.fresh();
+    if (!dayOk(d.maxDay)) { d.maxDay = now; M.save(); return now; }
+    if (now === d.maxDay || !HSC.dayBook.may(d.days, d.maxDay, now)) return d.maxDay;
+    // the new day's record is taken out first, so filing the day left can never push it out of the book
+    const e = HSC.dayBook.take(d.days, now) || { day: now };
+    leaveDay(d, d.maxDay);
+    d.maxDay = now;
+    enterDay(d, now, e);
+    M.save();
+    return now;
+  };
 
   // ---- customers ----
   // what a customer may have at this level; `extra` forces a showcase feature or a VIP
@@ -320,12 +458,14 @@
     // what this level or feature needs is selected from naturally generated customers, never written onto one
     const shaved = extra.first || level < 2, wantBeard = extra.feature === 'beard';
     if (shaved || wantBeard) delete opts.beard; // the dealt style gives way: selection decides
-    const fits = (x) => (shaved ? x.beard.style === 'clean' : !wantBeard || !['clean', 'stubble'].includes(x.beard.style.replace(/\d+$/, '')));
-    const p = HSC.selectPerson(seed >>> 0 || 1, opts, fits) || HSC.makePerson(seed >>> 0 || 1, Object.assign({}, opts, shaved ? { beard: 'clean' } : {}));
+    // before level 4, hair loss stops at a Norwood 4 (the very bald crowns come later): selected too, never rewritten
+    const crownOk = (x) => level >= 4 || !!extra.feature || !['5', '6', '7'].includes(x.bald.norwood);
+    const fits = (x) => crownOk(x) && (shaved ? x.beard.style === 'clean' : !wantBeard || !['clean', 'stubble'].includes(x.beard.style.replace(/\d+$/, '')));
+    // the fallback (an impossible run of seeds) asks the generator for what the level allows instead
+    const cap = level < 4 && !extra.feature && !opts.noLoss && (opts.norwood == null || ['5', '6', '7'].includes(String(opts.norwood))) ? { norwood: '4' } : {};
+    const p = HSC.selectPerson(seed >>> 0 || 1, opts, fits) || HSC.makePerson(seed >>> 0 || 1, Object.assign({}, opts, shaved ? { beard: 'clean' } : {}, cap));
     // the runs count the customer as finally made (after the VIP and showcase rules)
     if (M.data && !extra.first && level >= 2) { note('loss', p.bald.norwood !== '1' || p.bald.type !== 'none'); note('beard', p.beard.style !== 'clean'); }
-    // before level 4, hair loss stops at a Norwood 4 (the very bald crowns come later)
-    if (level < 4 && !extra.feature && ['5', '6', '7'].includes(p.bald.norwood)) p.bald.norwood = '4';
     if (extra.vip) p.vip = true;
     if (extra.first) p.first = true;
     if (extra.daily) p.daily = extra.daily;
@@ -358,12 +498,14 @@
     const before = levelOf(d.cuts);
     // level comes from paid work only: not a customer finished with no cut, Quick Play, an empty chair or a job seen twice
     const noWork = d.lastRound && d.lastRound.job === state.jobId && d.lastRound.judged && !d.lastRound.stars; // Rescue or Beards with no real work
-    const paid = state.cutStrokeCount > 0 && !noWork && !(HSC.modes && HSC.modes.econJob(state).kind === 'free') && !(HSC.repeatJob && HSC.repeatJob(state.jobId));
-    if (paid) { d.cuts += 1; rememberRegular(state); }
+    const paid = worked(state) && !noWork && !(HSC.modes && HSC.modes.econJob(state).kind === 'free') && !(HSC.repeatJob && HSC.repeatJob(state.jobId));
+    // counted once per job (its pay key), so a reveal finished again after a reload never counts the cut twice
+    const ck = d.lastRound && d.lastRound.job === state.jobId && d.lastRound.key ? d.lastRound.key : 'job' + state.jobId;
+    if (paid && d.counted !== ck) { d.cuts += 1; d.counted = ck; rememberRegular(state); }
     const level = levelOf(d.cuts);
-    const today = dayKey();
-    // next customer: the new level's feature > daily VIP (from the second day on; never twice for one day,
-    // even with the clock turned back) > VIP walk-in > anyone
+    const today = M.today();
+    // next customer: the new level's feature > daily VIP (from the second day on; once per game day, so never twice
+    // for one day whatever the clock does: the day book brings back a day's VIP with the day) > VIP walk-in > anyone
     const job = state.jobId + 1;
     // Career picks its own next customer (career-run.js): the daily VIP and due regulars wait for the other modes
     if (HSC.modes && HSC.modes.current() === 'career') { M.save(); return { levelUp: level > before, level, before, job }; }
@@ -381,7 +523,7 @@
     const vipFits = !streak('loss', false) && (level < 2 || !streak('beard', true));
     if (level > before && FEATURE[level]) {
       person = generate(seed, level, { feature: FEATURE[level] });
-    } else if ((!d.dailyDay || today > d.dailyDay) && d.firstDay !== today && vipFits) {
+    } else if (d.dailyDay !== today && d.firstDay !== today && vipFits) {
       person = generate(hash('daily-' + today), gl, { vip: true, daily: today });
       d.dailyDay = today;
     } else if (level > before && level === 5 && vipFits) {

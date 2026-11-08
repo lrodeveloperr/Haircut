@@ -6,7 +6,7 @@
 // idempotency key, so a replayed reveal, a duplicate ad callback or a reload can never pay twice.
 //
 //   job payout   net = haircut fee - operating cost + organic tip + demand bonus. Stars decide the
-//                tip (0 / 25 / 50% of the net fee); regular +4 and VIP +25% of the net fee apply to the tip, which is then capped at the net fee. A rewarded triple adds two tips, as its
+//                tip (0 / 25 / 60% of the net fee; 60% from the 7 November 2026 calibration); regular +4 and VIP +25% of the net fee apply to the tip, which is then capped at the net fee. A rewarded triple adds two tips, as its
 //                own transaction.
 //   bill         the first five contracts are sponsored; each later five-contract cycle starts with a 60-coin
 //                operating bill, posted at the preceding result boundary so it is visible before the next shift,
@@ -21,23 +21,27 @@
   const CONFIG = {
     version: 2,
     // [gross fee, operating cost] per contract type (balance model section 3)
-    fee: { requests: [28, 4], fix: [30, 6], beard: [26, 4], rush: [32, 4], showcase: [52, 8], free: [0, 0] },
+    fee: { requests: [28, 4], fix: [30, 6], beard: [26, 4], rush: [13, 2], showcase: [52, 8], free: [0, 0] },
     // the result video: two more tips, never less than the floor. It comes at random, in every mode, so seeing it is a small
     // relief and a reason for one more customer. After each offer a hidden wait is drawn: waits[n] is the chance of n results
     // with no video, so no count ever tells the player when it is due. Quick Play earns only this, a few a day
-    video: { floor: 10, practicePerDay: 5, waits: [0.5, 0.25, 0.12, 0.08, 0.05] },
+    video: { floor: 15, practicePerDay: 5, waits: [0.5, 0.25, 0.12, 0.08, 0.05] },
     flatTip: 6, // Rescue and Beards have no order to score: the barber's judgment earns a set tip, so the result video stays
-    tipShare: { 1: 0, 2: 0.25, 3: 0.5 }, // of the net fee
-    regular: 4, vipShare: 0.25, rushMax: 12,
+    tipShare: { 1: 0, 2: 0.25, 3: 0.6 }, // of the net fee
+    regular: 4, vipShare: 0.25, rushMax: 5,
+    // owner decision 7 November 2026: Rush is two to three times faster than other jobs, so it pays about 2.5 times less a
+    // job (fee 32 -> 13, time bonus up to 12 -> 5) and earns about the same a minute. The first 20 paid jobs forgive a
+    // weak cut: a 1-star job still earns the 2-star tip, because new players leave over bad early results, not prices
+    early: { jobs: 20, tipShare: 0.25 },
     demand: { share: 0.2, max: 12, perShift: 3, shiftLength: 5 },
     // Quick Play pays a little for real work, up to a daily limit: no bill, no level, and never worth farming over paid jobs
     quickPlay: { pay: 5, perDay: 10 },
     // a video toward the wishlist, and the one-time Starter Pack for when Play Billing goes in (shown after the first shop
     // visit or wishlist, once three customers are done; Monetization Strategy section 11)
-    wishVideo: { coins: 25, perDay: 3 }, starterPack: { coins: 2000, afterCustomers: 3 },
+    wishVideo: { coins: 40, perDay: 2 }, starterPack: { coins: 2500, afterCustomers: 3 },
     // what real money buys (Monetization Strategy section 11): the game shows no price; Google Play shows it at purchase
-    packs: [{ id: 'coins_500', coins: 500 }, { id: 'coins_1800', coins: 1800 }, { id: 'coins_5000', coins: 5000 }, { id: 'coins_16000', coins: 16000 }],
-    supporterBundle: { coins: 2500 },
+    packs: [{ id: 'coins_500', coins: 500 }, { id: 'coins_3000', coins: 3000 }, { id: 'coins_7500', coins: 7500 }, { id: 'coins_18000', coins: 18000 }],
+    supporterBundle: { coins: 3000 },
     bill: { every: 5, amount: 60, subsidised: 5, lines: { rent: 30, utilities: 15, cleaning: 10, supplies: 5 } },
     // owner decision 6 November 2026 (economy simulator): one-off payouts cut so ordinary work carries more of the income; paid milestones keep their keys and are never repaid or taken back
     milestones: { firstHaircut: 40, homeChapter: 75, licence: 300, cityShowcase: 50, cityMastery: 100, cityChapter: 20, tour: 200 },
@@ -81,7 +85,7 @@
     const net = gross - cost;
     if (!job.valid || kind === 'free') return { total: 0, net: 0, tip: 0, lines: [], kind };
     // the organic tip: from stars, then regular and VIP, capped at the net fee
-    let tip = job.judged ? CONFIG.flatTip : net * (CONFIG.tipShare[job.stars] || 0);
+    let tip = job.judged ? CONFIG.flatTip : net * Math.max(CONFIG.tipShare[job.stars] || 0, job.early ? CONFIG.early.tipShare : 0);
     if (job.regular) tip += CONFIG.regular;
     if (job.vip) tip += net * CONFIG.vipShare;
     tip = Math.round(Math.min(tip, net));

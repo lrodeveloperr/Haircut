@@ -16,12 +16,13 @@
   const FLAG = { tokyo: '🇯🇵', seoul: '🇰🇷', jakarta: '🇮🇩', manila: '🇵🇭', mumbai: '🇮🇳', karachi: '🇵🇰', istanbul: '🇹🇷', cairo: '🇪🇬', lagos: '🇳🇬', kingston: '🇯🇲', nairobi: '🇰🇪', london: '🇬🇧', berlin: '🇩🇪', madrid: '🇪🇸', 'mexico-city': '🇲🇽', 'sao-paulo': '🇧🇷', 'new-york': '🇺🇸', auckland: '🇳🇿' };
   const CSS = `
 #hsc-menu .map{grid-template-rows:48px minmax(0,1fr)}
-#hsc-menu .cities{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:minmax(84px,1fr);gap:9px;min-height:0;overflow-y:auto;padding:4px 2px 12px}
-#hsc-menu .city{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px;border-radius:16px}
+/* a row is at least as tall as its city needs (a name on two lines on a narrow phone), so no name is cut */
+#hsc-menu .cities{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:minmax(auto,1fr);gap:9px;min-height:0;overflow-y:auto;padding:4px 2px 12px}
+#hsc-menu .city{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:84px;padding:6px 4px;border-radius:16px}
 #hsc-menu .city .fl{font-size:40px;line-height:1.1}
 #hsc-menu .city.done{background:linear-gradient(#e6fbdf,#c9f0bd)}
 #hsc-menu .city .tk{position:absolute;right:7px;top:5px;color:#2f9e44;font-size:20px}
-#hsc-menu .city .hsc-lbl{font-size:14px;width:100%;white-space:normal;line-height:1.1}
+#hsc-menu .city .hsc-lbl{flex:none;font-size:14px;width:100%;white-space:normal;line-height:1.1}
 #hsc-menu .upd{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:14px;padding:28px 18px;border-radius:22px;background:linear-gradient(#fff,#e4f3ff);border:3px solid ${K};color:${K};font-weight:900;font-size:20px;text-align:center}
 #hsc-menu .upd p{margin:0;max-width:30ch;line-height:1.3}
 `;

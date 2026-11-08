@@ -80,7 +80,6 @@
     if (s.status !== 'cutting' || s.cutStrokeCount || !s.look || s.look.visit !== 'walk-in') return null;
     if (!Array.isArray(s.hair) || !Array.isArray(s.startHair) || s.hair.some((v, i) => v !== s.startHair[i])) return null;
     const recent = Array.isArray(s.recentLooks) ? s.recentLooks.slice(0, -1) : [];
-    // VIPs and the very first customer come in with a full, even head of hair: the most to cut
     const q = HSC.meta && HSC.meta.data && HSC.meta.data.queue;
     // a regular (meta.js) walks in with his last cut grown out
     const reg = regularOf(s, person);
@@ -89,6 +88,8 @@
       const recentLooks = Array.isArray(s.recentLooks) && s.recentLooks.length ? [...s.recentLooks.slice(0, -1), prof] : [prof];
       return { hair: reg.hair, startHair: reg.hair.slice(), recentLooks, profile: prof };
     }
+    // the look the queue dealt for this job (meta.js, the variety director) comes first, VIPs included; without
+    // one, VIPs and the very first customer come in with a full, even head of hair (the most to cut)
     const queued = q && q.job === s.jobId && q.profile && HSC.walkIns && HSC.walkIns.list.find((w) => w.id === q.profile);
     const p = queued || (person.vip || person.first ? HSC.walkIns && HSC.walkIns.list.find((w) => w.contour === 'even') : HSC.pickWalkIn(person, recent));
     if (!p) return null;
@@ -133,8 +134,21 @@
     return out;
   };
 
-  // Android: a stroke on a brow. The razor, the trimmer and the clipper on guard 0 shave it (a slit, a clean arch);
-  // the scissors, the beard trimmer and a clipper guard trim it short (thinner and lighter). Cells: 2 full, 1 short, 0 shaved.
+  // Android: a stroke on a brow. Cells: 2 full, 1 short (thinner and lighter), 0 shaved. A clipper guard leaves
+  // the hair at its own length, so it only reaches as far as the brow is long: guard 0 shaves a slit or a clean
+  // arch, guard 1 trims it short, and guards 2-4 glide over a brow (its hairs are shorter than the guard).
+  // The razor, the trimmer, the scissors and the beard trimmer keep the old rule where they still exist.
+  const BROW_MM = [0, 3, 7]; // shaved, trimmed short, a natural brow
+  // the brow level a guard leaves: the guard's length or the hair's own if shorter, drawn as the nearest level
+  // (a tie keeps the longer one); never longer than the cell already is
+  const browByGuard = (lvl, g) => {
+    const gmm = HSC.GUARD_MM && HSC.GUARD_MM[g] != null ? HSC.GUARD_MM[g] : g === 0 ? 0 : Infinity; // an unknown guard touches nothing
+    const mm = Math.min(BROW_MM[lvl], gmm);
+    let best = lvl;
+    for (let k = lvl - 1; k >= 0; k--) if (Math.abs(BROW_MM[k] - mm) < Math.abs(BROW_MM[best] - mm)) best = k;
+    return best;
+  };
+  HSC.browByGuard = browByGuard; // tests
   HSC.cutBrow = function (s, points) {
     const none = { state: s, changed: false, changedCells: 0, removedLength: 0, intensity: 0 };
     const cells = HSC.browCells && HSC.browCells();
@@ -143,7 +157,7 @@
     if (HSC.isRitual && HSC.isRitual()) return none;
     // each tool's millimetre target (tools.js); the old rule (razor/trimmer/guard 0 shave, the rest trim short)
     // remains only where the tools module is absent
-    const to = HSC.toolBrow ? null : tool === 'razor' || tool === 'trimmer' || (tool === 'clipper' && s.selectedGuard === 0) ? 0 : 1;
+    const to = HSC.toolBrow || tool === 'clipper' ? null : tool === 'razor' || tool === 'trimmer' ? 0 : 1;
     // on a brow a barber works with the blade's corner: a razor or trimmer slit is 2-3 mm wide. Brows face forward,
     // so the stroke is a brush of that width along the drag, in the brow grid's own x / y (cells are about 1 mm)
     const R = { razor: 0.03, trimmer: 0.04, scissors: 0.11, beard: 0.09, clipper: 0.14 }[tool] || 0.14;
@@ -166,7 +180,7 @@
           const t = Math.max(0, Math.min(1, ((cx - a[0]) * dx + (cy - a[1]) * dy) / ll));
           if (Math.hypot(cx - a[0] - dx * t, cy - a[1] - dy * t) > R) continue;
           const c = row * 128 + col;
-          const tc = to == null ? HSC.toolBrow(next[c], s.selectedGuard) : to;
+          const tc = to != null ? to : HSC.toolBrow ? HSC.toolBrow(next[c], s.selectedGuard) : browByGuard(next[c], s.selectedGuard);
           if (next[c] > tc) { next[c] = tc; n++; }
         }
       }
@@ -174,7 +188,8 @@
     if (!n) return none;
     HSC.setBrow && HSC.setBrow(next);
     HSC.noteTool && HSC.noteTool(s.jobId);
-    return { state: Object.assign({}, s, { brow: next, cutStrokeCount: s.cutStrokeCount + 1 }), changed: true, changedCells: n, removedLength: n * 0.4, intensity: Math.min(1, n / 60) };
+    // a brow is grooming, not the haircut: cutStrokeCount (the job's real work: paid, judged, a break) stays
+    return { state: Object.assign({}, s, { brow: next }), changed: true, changedCells: n, removedLength: n * 0.4, intensity: Math.min(1, n / 60) };
   };
 
   // a clipper stroke on the beard: every cell under the blade is cut down to the guard length

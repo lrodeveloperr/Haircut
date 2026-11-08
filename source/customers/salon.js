@@ -189,13 +189,18 @@
 #hsc-salon .view{position:absolute;left:0;top:0;right:0;overflow:hidden}
 #hsc-salon .view img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .25s}
 #hsc-salon .view img.busy{opacity:.75}
+/* the controls are zoomed by the UI scale, and inside a zoom env() is zoomed too: each inset is divided back by the
+   scale (--il/--ir/--it/--ib, the true insets). --sw, the side sheet's width on a wide screen, is set by layout() */
+#hsc-salon .sui,#hsc-reveal .sui{--il:calc(env(safe-area-inset-left) / var(--hsc-s,1));--ir:calc(env(safe-area-inset-right) / var(--hsc-s,1));--it:calc(env(safe-area-inset-top) / var(--hsc-s,1));--ib:calc(env(safe-area-inset-bottom) / var(--hsc-s,1))}
 #hsc-salon .sui{position:absolute;inset:0;zoom:var(--hsc-s,1);pointer-events:none}
 #hsc-salon .sui > *{pointer-events:auto}
 #hsc-salon .j{position:relative;border:3px solid ${K};border-radius:20px;box-shadow:inset 0 -6px 0 #0003,inset 0 3px 0 #fff6,0 5px 0 ${K},0 8px 12px #0004;color:${K};font:inherit;font-weight:900;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;padding:0 12px}
 #hsc-salon .j:active{transform:translateY(4px);box-shadow:inset 0 -3px 0 #0003,inset 0 3px 0 #fff6,0 1px 0 ${K}}
 #hsc-salon .j:disabled{filter:grayscale(.5);opacity:.6}
 #hsc-salon .c-white{background:linear-gradient(#fff,#dfe8f4)}#hsc-salon .c-yellow{background:linear-gradient(#ffe682,#ffb21a)}#hsc-salon .c-green{background:linear-gradient(#9cf06c,#36b83a)}
-#hsc-salon .bar{position:absolute;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;gap:8px;pointer-events:none}
+/* the back button, the title and the coins: on a narrow picture the coins wrap under the title rather than push the
+   back button off the screen or slide under the sheet */
+#hsc-salon .bar{position:absolute;left:max(12px,var(--il));right:max(12px,var(--ir));top:max(12px,var(--it));display:flex;flex-wrap:wrap;align-items:center;gap:8px;pointer-events:none}
 #hsc-salon .bar > *{pointer-events:auto}
 #hsc-salon .x{width:52px;height:52px;border-radius:50%;padding:0}
 #hsc-salon .x .hsc-ic{width:30px;height:30px}
@@ -209,13 +214,14 @@
 #hsc-salon .pin.on{width:54px;height:54px;background:linear-gradient(#ffe682,#ffb21a)}
 #hsc-salon .pin.on::after{content:"";position:absolute;inset:-11px;border-radius:50%;border:3px solid #ffc21a;box-shadow:0 0 16px #ffc21a;animation:hsc-pinp 1.4s ease-in-out infinite}
 @keyframes hsc-pinp{50%{transform:scale(1.08);opacity:.7}}
-#hsc-salon .sheet{position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;padding:14px max(14px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));background:linear-gradient(#fff,#e6f0fb);border-top:3px solid ${K};border-radius:28px 28px 0 0;box-shadow:0 -10px 30px #0005}
-#hsc-salon.land .bar{right:calc(430px + 12px)}
-#hsc-salon.land .sheet{left:auto;top:0;width:430px;border-radius:0;border-top:0;border-left:3px solid ${K};padding-top:max(14px,env(safe-area-inset-top))}
+#hsc-salon .sheet{position:absolute;left:0;right:0;bottom:0;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;padding:14px max(14px,var(--ir)) max(16px,var(--ib)) max(14px,var(--il));background:linear-gradient(#fff,#e6f0fb);border-top:3px solid ${K};border-radius:28px 28px 0 0;box-shadow:0 -10px 30px #0005}
+#hsc-salon.land .bar{right:calc(var(--sw,430px) + 12px)}
+/* on its side the sheet stands at the right: the left inset (a notch on the far side) is the picture's, not the sheet's */
+#hsc-salon.land .sheet{left:auto;top:0;width:var(--sw,430px);border-radius:0;border-top:0;border-left:3px solid ${K};padding-top:max(14px,var(--it));padding-left:14px}
 #hsc-salon .namer{display:flex;align-items:center;gap:10px;flex:none;height:52px;padding:0 6px 0 12px;border-radius:14px;border:3px solid ${K};background:#fff;font-weight:900}
 #hsc-salon .namer[hidden]{display:none}
 #hsc-salon .namer label{flex:none;max-width:45%}
-#hsc-salon .namer input{flex:1;min-width:0;height:38px;border:0;background:none;text-align:end;font:900 17px "Arial Rounded MT Bold","Nunito",system-ui,sans-serif;color:${K};outline:none}
+#hsc-salon .namer input{flex:1;min-width:0;height:44px;border:0;background:none;text-align:end;font:900 17px "Arial Rounded MT Bold","Nunito",system-ui,sans-serif;color:${K};outline:none}
 #hsc-salon .cats{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 8px;flex:none}
 #hsc-salon .cats::-webkit-scrollbar{display:none}
 #hsc-salon .cats .j{flex:none;flex-direction:column;gap:2px;width:66px;height:66px;border-radius:14px;font-size:12px;padding:0 2px}
@@ -223,7 +229,8 @@
 #hsc-salon .cats img{width:34px;height:34px;object-fit:cover;border-radius:7px;border:2px solid ${K}}
 #hsc-salon .cats .hsc-lbl{max-width:100%}
 #hsc-salon .cards{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 30px) / 4);gap:10px;overflow-x:auto;scrollbar-width:none;flex:1;min-height:120px;padding:2px 2px 8px}
-#hsc-salon.land .cards{grid-auto-flow:row;grid-template-columns:1fr 1fr;grid-auto-columns:auto;overflow-y:auto;overflow-x:hidden;grid-auto-rows:150px}
+/* on a short screen on its side a row of cards is never taller than the space it has, so its prices show */
+#hsc-salon.land .cards{grid-auto-flow:row;grid-template-columns:1fr 1fr;grid-auto-columns:auto;overflow-y:auto;overflow-x:hidden;grid-auto-rows:min(150px,100%)}
 #hsc-salon .cards::-webkit-scrollbar{display:none}
 #hsc-salon .card{position:relative;display:flex;flex-direction:column;border-radius:16px;border:3px solid ${K};background:#fff;box-shadow:0 4px 0 ${K};overflow:hidden;cursor:pointer;padding:0;font:inherit;color:${K}}
 #hsc-salon .card.sel{box-shadow:0 4px 0 ${K},0 0 0 4px #ffc21a}
@@ -251,11 +258,11 @@
 @keyframes hsc-push{from{transform:scale(1.08)}to{transform:scale(1)}}
 #hsc-reveal .shade{position:absolute;inset:0;background:linear-gradient(#0000 60%,#10223f66)}
 #hsc-reveal .sui{position:absolute;inset:0;zoom:var(--hsc-s,1)}
-#hsc-reveal .sign{position:absolute;left:50%;top:calc(max(14px,env(safe-area-inset-top)) + 54px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;max-width:92%}
+#hsc-reveal .sign{position:absolute;left:50%;top:calc(max(14px,var(--it)) + 54px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;max-width:92%}
 #hsc-reveal .sign b{max-width:100%;box-sizing:border-box;padding:10px 26px;border-radius:18px;background:linear-gradient(#fff,#f1e6d0);border:3px solid ${K};box-shadow:0 6px 0 ${K},0 12px 24px #0004;font-size:30px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;unicode-bidi:plaintext}
 #hsc-reveal .sign b .hsc-ic{width:44px;height:44px}
 #hsc-reveal .sign i{font-style:normal;padding:2px 12px;border-radius:13px;background:#36b83a;color:#fff;font-size:15px;font-weight:900}
-#hsc-reveal .go{position:absolute;left:50%;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 18px);transform:translateX(-50%);width:min(340px,80%);display:flex;flex-direction:column;align-items:center;gap:10px}
+#hsc-reveal .go{position:absolute;left:50%;bottom:calc(max(16px,var(--ib)) + 18px);transform:translateX(-50%);width:min(340px,80%);display:flex;flex-direction:column;align-items:center;gap:10px}
 #hsc-reveal .mode{display:flex;align-items:center;gap:8px;height:52px;padding:0 20px;border-radius:26px;background:linear-gradient(#ffe682,#ffb21a);border:3px solid ${K};box-shadow:0 5px 0 ${K};font-size:22px;font-weight:900}
 #hsc-reveal .mode .hsc-ic{width:34px;height:34px}
 #hsc-reveal .bar{width:100%;height:16px;border-radius:8px;background:#10223f99;border:2px solid #fff6;overflow:hidden}
@@ -288,7 +295,7 @@
       const name = () => { const want = nm.value.trim(), got = setName(want); if (want && !got && want !== t('shopname')) { nm.value = shown(); if (HSC.nope) HSC.nope(nm); } };
       nm.addEventListener('input', () => { clearTimeout(wait); wait = setTimeout(name, 700); });
       nm.addEventListener('change', () => { clearTimeout(wait); name(); });
-      nm.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') nm.blur(); });
+      nm.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') nm.blur(); });
       nm.addEventListener('keyup', (e) => e.stopPropagation());
       this.el.buy.addEventListener('click', () => this.act());
       // the wishlist: mark the shown part or shop as the salon target (tap again to clear)
@@ -301,11 +308,21 @@
         if (HSC.fx) HSC.fx.play('tap');
         this.render();
       });
+      // back (Escape) leaves the shop like its back button (a panel opened over it closes first)
+      addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.open_() && !document.querySelector('#hsc-set.open,#hsc-panel.open')) { e.preventDefault(); this.close(); } });
       addEventListener('resize', () => { schedule(); if (this.open_()) { this.layout(); this.draw(); } });
       setInterval(() => this.tick(), 500);
     },
     open_() { return this.el.panel && this.el.panel.classList.contains('open'); },
-    open(tab) { this.build(); this.el.panel.classList.add('open'); this.tab = tab || 'parts'; this.pick = null; this.region = null; this.render(); },
+    // resume: back from the coins the picked part or shop was short of (one video closed the gap), so it is still picked
+    open(tab, resume) {
+      this.build(); this.el.panel.classList.add('open'); this.tab = tab || 'parts';
+      const r = resume && this.resume && this.resume.tab === this.tab ? this.resume : null;
+      this.resume = null;
+      if (r) this.slot = r.slot;
+      this.pick = r ? r.pick : null; this.region = r ? r.region : null;
+      this.render();
+    },
     hide() { if (!this.el.panel) return; this.pick = null; this.region = null; this.el.panel.classList.remove('open'); },
     close() { if (HSC.fx) HSC.fx.play('back'); this.hide(); if (HSC.menu) HSC.menu.view('home', true); },
     button() {
@@ -326,13 +343,34 @@
       if (this.tab === 'parts' && this.pick) return Object.assign({}, cur().parts, { [this.slot]: this.pick });
       return cur().parts;
     },
+    // Wide: the sheet at the side, 430 at the screen's scale but never more than half the screen (and the inset at its
+    // side), so the picture keeps room for the back button, the title and the coins; when a long translation's tabs
+    // do not fit one row there, the sheet grows by what they lack (to 62% of the screen at most: a second row of tabs
+    // would cost the cards their room). Tall: the sheet below, near half the screen, but never shorter than its
+    // contents need (tabs, the name and Buy, the parts and a row of cards: 344 plus the bottom margin and a second row
+    // of tabs on a narrow phone, at the screen's scale), up to two thirds of the screen on a short or square one (and
+    // that second row on top, so the cards and their prices stay whole)
     layout() {
       const land = innerWidth > innerHeight, z = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hsc-s')) || 1;
+      const tabs = this.el.panel.querySelector('.hsc-stabs'), fit = () => (HSC.shop && HSC.shop.fit ? HSC.shop.fit(tabs) : 0);
       this.el.panel.classList.toggle('land', land);
-      const sheetPx = land ? 430 * z : 0;
-      this.el.view.style.right = land ? sheetPx + 'px' : '0';
-      this.el.sheet.style.height = land ? '' : Math.round(Math.min(innerHeight * 0.46, 420 * z) / z) + 'px';
-      this.el.view.style.bottom = land ? '0' : Math.round(Math.min(innerHeight * 0.46, 420 * z) - 20 * z) + 'px';
+      // half the screen for the sheet's contents: a safe-area inset at its side comes on top
+      const inset = land ? Math.max(0, (parseFloat(getComputedStyle(this.el.sheet).paddingRight) || 14) - 14) * z : 0;
+      let sheetPx = land ? Math.min(430 * z, innerWidth * 0.5 + inset) : 0;
+      const side = () => { this.el.panel.style.setProperty('--sw', sheetPx / z + 'px'); this.el.view.style.right = land ? sheetPx + 'px' : '0'; };
+      side();
+      // the tabs fit the sheet's new width
+      const short = fit();
+      if (land && short > 0) { sheetPx = Math.min(sheetPx + Math.ceil(short) + 1, Math.max(sheetPx, innerWidth * 0.62)); side(); fit(); }
+      let h = 0;
+      if (!land) {
+        this.el.sheet.style.height = '';
+        const pad = parseFloat(getComputedStyle(this.el.sheet).paddingBottom) || 16;
+        const rows = tabs ? Math.max(0, tabs.getBoundingClientRect().height / z - 44) : 0;
+        h = Math.round(Math.min(Math.max(Math.min(innerHeight * 0.46 / z, 420), 344 + pad + rows), innerHeight * 0.66 / z + rows));
+      }
+      this.el.sheet.style.height = land ? '' : h + 'px';
+      this.el.view.style.bottom = land ? '0' : Math.round((h - 20) * z) + 'px';
     },
     // render the shop into the view (sharp), with its hot spots
     draw() {
@@ -356,11 +394,17 @@
     pinsFor(hot, k, r) {
       const z = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hsc-s')) || 1;
       const html = [];
+      // a pin is shown only where all of it (the picked one is 54 across) is in the free picture: below the bar, clear of
+      // the sheet (the picture runs a little under it), and inside the side margins and safe-area insets
+      const bar = this.el.panel.querySelector('.bar').getBoundingClientRect(), sh = this.el.sheet.getBoundingClientRect(), m = 27 * z;
+      const land = this.el.panel.classList.contains('land');
+      // on its side the picture runs to the screen's foot: a pin keeps clear of the gesture bar there too
+      const x0 = bar.left - r.left + m, x1 = bar.right - r.left - m, y0 = bar.bottom - r.top + m, y1 = (land ? Math.min(r.height, innerHeight - insetB() - r.top) : Math.min(r.height, sh.top - r.top)) - m;
       if (this.tab === 'parts') for (const s of [...SLOTS, 'tv']) {
         const p = hot[s];
         if (!p || !p[2]) continue;
         const x = p[0] / k, y = p[1] / k;
-        if (x < 28 || x > r.width - 28 || y < 76 * z || y > r.height - 24) continue;
+        if (x < x0 || x > x1 || y < y0 || y > y1) continue;
         html.push(`<button class="pin ${s === this.slot ? 'on' : ''}" type="button" data-s="${s}" style="left:${(r.left + x) / z}px;top:${(r.top + y) / z}px" aria-label="${s}">${s === 'tv' ? I('styles', 26) : '+'}</button>`);
       }
       this.el.pins.innerHTML = html.join('');
@@ -462,7 +506,7 @@
     },
     async act() {
       const b = this.el.buy;
-      if (b.dataset.short) { if (HSC.shop) HSC.shop.go('coins', (this.tab === 'parts' ? priceOf(this.slot, this.pick) : regionPrice(this.region)) - coins(), this.tab); return; } // short of coins: the way to more
+      if (b.dataset.short) { this.resume = { tab: this.tab, slot: this.slot, pick: this.pick, region: this.region }; if (HSC.shop) HSC.shop.go('coins', (this.tab === 'parts' ? priceOf(this.slot, this.pick) : regionPrice(this.region)) - coins(), this.tab); return; } // short of coins: the way to more
       b.disabled = true;
       const ok = this.tab === 'parts' ? await buyPart(this.slot, this.pick) : await buyRegion(this.region);
       if (ok) { if (HSC.fx) HSC.fx.play('reward'); this.pick = null; this.region = null; } else if (HSC.fx) HSC.fx.play('nope');
@@ -473,6 +517,16 @@
   };
   const regionThumb = new Map();
   // label texts in the player's language, then fitted to their boxes
+  // the bottom safe-area inset in screen pixels (inside the zoomed controls env() would be multiplied by the scale)
+  let probe = null;
+  function insetB() {
+    if (!probe || !probe.isConnected) {
+      probe = document.createElement('div');
+      probe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding-bottom:env(safe-area-inset-bottom)';
+      document.body.appendChild(probe);
+    }
+    return parseFloat(getComputedStyle(probe).paddingBottom) || 0;
+  }
   function fill(root) { root.querySelectorAll('.hsc-lbl[data-k]').forEach((e) => { e.textContent = t(e.dataset.k); }); if (HSC.fitLabels) HSC.fitLabels(root); }
 
   // ---- the first customer of a session opens on the shop ----
@@ -525,7 +579,7 @@
   HSC.salon = {
     state: () => S, SLOTS, OPTIONS, REGIONS: REGION_IDS, NAME_MAX, priceOf, regionPrice, targets,
     name: () => (S ? S.name : ''), shown: () => (S ? shown() : ''), setName, cleanName, graphemes,
-    buyPart, buyRegion, equip, useRegion, open: (tab) => { reconcile(); ui.open(tab); }, hide: () => ui.hide(), reveal, reconcile,
+    buyPart, buyRegion, equip, useRegion, open: (tab, resume) => { reconcile(); ui.open(tab, resume); }, hide: () => ui.hide(), reveal, reconcile,
     // a career branch's look in place of the founding salon (null: the founding salon); which city is on show
     homePicture, owns, look: () => ({ parts: Object.assign({}, cur().parts), region: cur().region }),
     // tests

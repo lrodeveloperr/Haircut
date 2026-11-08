@@ -1,6 +1,7 @@
 """Package the working Sites engine for Android; adapt only host services and Android reward/title policy."""
 from pathlib import Path
 import importlib.util
+import re
 import shutil
 import subprocess
 import sys
@@ -54,6 +55,12 @@ game = replace(game, 'e.colour>=0&&e.colour<cc.length',
 (out / 'runtime/game.js').write_text(game)
 
 client = (out / 'runtime/local-preview-client.js').read_text()
+# The web page lifecycle and one-tab guard of the standalone web target (youtube/sites-preview.py) are not
+# Android's: the Android host owns pause and resume, and one app has one WebView.
+web_only = re.compile(r'[ ]*// web-only:start\n.*?// web-only:end\n', re.S)
+if len(web_only.findall(client)) != 2:
+    raise ValueError('Android host adaptation expected the two web-only blocks')
+client = web_only.sub('', client)
 client = replace(client, 'HSC.createLocalPreviewClient', 'HSC.createAndroidClient')
 client = replace(client, 'HSC.isLocalPreview = true;', 'HSC.isLocalPreview = false;')
 client = replace(client, 'const raw = previewStore.get();', "const raw = await HSC.android.request('load', null);")
@@ -69,7 +76,8 @@ client = replace(client, '    async function advertisement() { return false; }',
       adPending = true;
       let result = false;
       try {
-        await flush();
+        // a failed save, or one that cannot finish within AD_SAVE_MS, refuses the ad (the tap never waits silently)
+        await withinTime(flush(), AD_SAVE_MS);
         if (disposed || state().executionPaused) return false;
         pause('advertisement-request', true);
         if (kind === 'interstitial') lastAttempt = performance.now();
@@ -82,7 +90,9 @@ client = replace(client, '    async function advertisement() { return false; }',
       return result;
     }''')
 client = replace(client, "platformId: 'youtube', language: language || 'en', isLocalPreview: !hosted,", "platformId: 'android', language: language || 'en', isLocalPreview: false,")
-client = replace(client, 'rewardedSupported: false,', 'rewardedSupported: true,')
+# Rewarded videos exist on Android, but one can play only while AdMob has one loaded and consent allows ads
+# (AdsController.publishRewardedReady): until then every video button stays hidden (wardrobe.js canVideo).
+client = replace(client, 'rewardedSupported: false,', "rewardedSupported: true,\n      rewardedReady: () => globalThis.__androidRewardedReady === true,")
 client = replace(client, 'if (!ready) { ready = true; if (HSC.startupTiming)', 'if (!ready) { ready = true; AndroidHost.gameReady(); if (HSC.startupTiming)')
 (out / 'runtime/android-client.js').write_text(client)
 (out / 'runtime/local-preview-client.js').unlink()

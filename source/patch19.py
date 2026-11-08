@@ -19,8 +19,13 @@ s = s[:i] + f + s[j:]
 # eyebrows (state.js cutBrow): a hit on a brow trims it; undo and replay carry the brows
 rep('Ie=ue.kind==="beard"?HSC.cutBeard(s,ye,n.beardSurface):Ts(s,ye,{surface:n.surface})',
     'Ie=ue.kind==="brow"&&HSC.cutBrow?HSC.cutBrow(s,ye):ue.kind==="beard"?HSC.cutBeard(s,ye,n.beardSurface):Ts(s,ye,{surface:n.surface})')
-rep('async function hs_restore(h,b){', 'async function hs_restore(h,b,w){')
-rep('s=gt(rt({},s),{hair:[...h],beard:Array.isArray(b)?b.slice():s.beard})', 's=gt(rt({},s),{hair:[...h],beard:Array.isArray(b)?b.slice():s.beard},Array.isArray(w)?{brow:w.slice()}:{})')
+# undo carries the brows as a third argument: no brows given keeps the current ones; brows that are not exactly
+# HSC.BROW_N cells of 0 (shaved), 1 (short) or 2 (full) refuse the whole restore, as a wrong-sized hair grid does
+# (applied, HSC.ensure would regrow them full). gt takes two arguments, so the brows join the same object.
+rep('async function hs_restore(h,b){if(c||T||s.status!=="cutting"||!Array.isArray(h)||h.length!==8192)return!1;',
+    'async function hs_restore(h,b,w){if(c||T||s.status!=="cutting"||!Array.isArray(h)||h.length!==8192)return!1;'
+    'if(w!=null&&!(Array.isArray(w)&&globalThis.HSC&&w.length===HSC.BROW_N&&w.every(v=>v===0||v===1||v===2)))return!1;')
+rep('s=gt(rt({},s),{hair:[...h],beard:Array.isArray(b)?b.slice():s.beard})', 's=gt(rt({},s),Object.assign({hair:[...h],beard:Array.isArray(b)?b.slice():s.beard},w!=null?{brow:w.slice()}:{}))')
 rep('cutStrokeCount:0,result:null,guideRemainingMs:0}),x=!1,y=!1,D=0,HSC.clearClippings', 'cutStrokeCount:0,result:null,guideRemainingMs:0,brow:null}),x=!1,y=!1,D=0,HSC.clearClippings')
 # rituals (turkish.js) work anywhere on the head: hs_headHit(x, y) is the raycast's own first stage, the nearest
 # triangle of the (morphed) coarse head, returned as a point and normal in head space

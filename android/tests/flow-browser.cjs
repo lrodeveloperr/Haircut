@@ -13,7 +13,7 @@ const build = path.resolve(__dirname, '../../source/build');
   try {
     const context = await browser.newContext({ viewport: { width: 412, height: 892 } });
     await context.route('http://flow.test/**', (route) => { const u = new URL(route.request().url()), f = path.join(build, u.pathname === '/' ? 'index.html' : u.pathname); return fs.existsSync(f) ? route.fulfill({ path: f }) : route.fulfill({ status: 404, body: '' }); });
-    await context.addInitScript(() => { window.AndroidHost = { request(id, op) { setTimeout(() => __androidHost.complete(id, true, op === 'load' ? '{}' : ''), 0); }, gameReady() {}, showRewarded() {}, showInterstitial() {}, openPrivacy() {}, showPrivacyOptions() {} }; });
+    await context.addInitScript(() => { window.__androidRewardedReady = true; window.AndroidHost = { request(id, op) { setTimeout(() => __androidHost.complete(id, true, op === 'load' ? '{}' : ''), 0); }, gameReady() {}, showRewarded() {}, showInterstitial() {}, openPrivacy() {}, showPrivacyOptions() {} }; });
     const page = await context.newPage();
     page.setDefaultTimeout(120000);
     const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
@@ -81,6 +81,8 @@ const build = path.resolve(__dirname, '../../source/build');
     await page.waitForFunction(() => { const r = document.querySelector('#hsc-req'); return r && !r.hidden && r.querySelector('img').src; });
     assert.equal(await page.locator('#hsc-cmp, #hsc-newc').count(), 0, 'no toggle, no New customer button');
     assert.equal(await page.locator('#hsc-req img').count(), 1, 'one head');
+    // the new customer's picture settles first (a fast device can still show the previous customer's for a moment)
+    await page.waitForFunction(() => { const src = document.querySelector('#hsc-req img').src, t = performance.now(); if (window.__reqSrc !== src) { window.__reqSrc = src; window.__reqAt = t; } return t - window.__reqAt > 800; }, undefined, { polling: 100 });
     const picture = await page.evaluate(() => document.querySelector('#hsc-req img').src);
     await page.evaluate(() => { const g = skinFadeStudio; g.turn(90); });
     await page.waitForFunction((b) => document.querySelector('#hsc-req img').src !== b, picture);
@@ -95,11 +97,11 @@ const build = path.resolve(__dirname, '../../source/build');
     await page.evaluate(() => { HSC.menu.open(); HSC.shop.go('coins', 300, 'gown'); });
     assert.equal(await page.locator('#hsc-menu .cp.hot [data-p]').getAttribute('data-p'), 'coins_500');
     await page.evaluate(() => HSC.shop.go('coins', 4000, 'gown'));
-    assert.equal(await page.locator('#hsc-menu .cp.hot [data-p]').getAttribute('data-p'), await page.evaluate(() => (HSC.meta.data.cuts >= 3 ? 'starter_pack' : 'coins_5000')));
+    assert.equal(await page.locator('#hsc-menu .cp.hot [data-p]').getAttribute('data-p'), await page.evaluate(() => (HSC.meta.data.cuts >= 3 ? 'starter_pack' : 'coins_7500')));
     await page.evaluate(() => { HSC.canVideo = () => true; HSC.watchVideo = async () => true; window.__c = HSC.coins.get(); HSC.shop.go('coins', 20, 'gown'); });
     assert.equal(await page.locator('#hsc-menu .cp.hot').count(), 0, 'no pack is pushed when a video closes the gap');
     await page.locator('#hsc-menu [data-need]').click();
-    await page.waitForFunction(() => HSC.coins.get() === window.__c + 25 && document.querySelector('#hsc-menu .hc.pick'));
+    await page.waitForFunction(() => HSC.coins.get() === window.__c + 40 && document.querySelector('#hsc-menu .hc.pick'));
     ok('short of coins leads to one video or the right pack');
     await page.evaluate(() => HSC.shop.go('coins'));
     assert.equal(await page.locator('#hsc-menu .cp.hot, #hsc-menu [data-need]').count(), 0, 'opening Coins by choice marks nothing');
@@ -136,7 +138,7 @@ const build = path.resolve(__dirname, '../../source/build');
     const taste = await page.evaluate(async () => ({ m: HSC.meta.data.modes.job.m, kind: HSC.modes.econJob(skinFadeStudio.getState()).kind, open: HSC.modes.unlocked('rush'), rescue: HSC.modes.unlocked('fix'), career: HSC.modes.inCareer('fix'), set: await HSC.modes.set('rush'), cur: HSC.modes.current(), req: !document.querySelector('#hsc-req').hidden }));
     assert.deepEqual(taste, { m: 'rush', kind: 'rush', open: false, rescue: true, career: true, set: false, cur: 'requests', req: true });
     await finish(); await reveal();
-    await page.waitForFunction(() => HSC.meta.data.lastRound.paid >= 28);
+    await page.waitForFunction(() => HSC.meta.data.lastRound.paid >= 11); // Rush pays 11+ a job since the owner's 7 November decision
     await next(); await cutting();
     assert.notEqual(await page.evaluate(() => { const j = HSC.meta.data.modes.job; return j && j.n === skinFadeStudio.getState().jobId ? j.m : 'requests'; }), 'rush', 'the taste comes once');
     await page.evaluate(() => { HSC.menu.open(); HSC.menu.view('modes'); });
@@ -168,11 +170,12 @@ const build = path.resolve(__dirname, '../../source/build');
     await cutting();
     await page.evaluate(() => { HSC.meta.data.modes.wait = 0; }); // the wait is random: none left makes the offer certain
     await finish(); await reveal();
-    await page.waitForFunction(() => { const b = document.querySelector('#hsc-score .x3'); return b && getComputedStyle(b).visibility === 'visible' && b.querySelector('span').textContent.trim() === '+10'; }); // Quick Play has its video
+    await page.waitForFunction(() => { const b = document.querySelector('#hsc-score .x3'); return b && getComputedStyle(b).visibility === 'visible' && b.querySelector('span').textContent.trim() === '+15'; }); // Quick Play has its video (floor 15 since the 7 November calibration)
     assert.equal(await page.evaluate(() => HSC.meta.data.lastRound.paid), 5, 'Quick Play pays a little');
+    await page.waitForFunction(() => !HSC.meta.data.lastRound.pend); // the job's own pay lands first (it stays owed until saved)
     const qp = await coins();
     await page.locator('#hsc-score .x3').click();
-    await page.waitForFunction((b) => HSC.coins.get() === b + 10, qp);
+    await page.waitForFunction((b) => HSC.coins.get() === b + 15, qp);
     await page.evaluate(() => { HSC.meta.data.modes.pv.n = 5; HSC.meta.data.modes.qp.n = 10; HSC.meta.data.modes.wait = 0; });
     await next(); await cutting(); await finish(); await reveal();
     assert.deepEqual(await page.evaluate(() => [HSC.meta.data.lastRound.video, HSC.meta.data.lastRound.paid]), [0, 0], 'Quick Play stops paying at its daily limits');
@@ -181,7 +184,7 @@ const build = path.resolve(__dirname, '../../source/build');
     // a level-up always has the video, whatever the hidden wait says
     await page.evaluate(async () => { const d = HSC.meta.data; HSC.menu.open(); await HSC.modes.set('requests'); HSC.menu.close(); d.cuts = 19; d.modes.wait = 4; });
     await cutting(); await finish(); await reveal();
-    assert(await page.evaluate(() => HSC.meta.data.lastRound.video) >= 10, 'a level-up has the video');
+    assert(await page.evaluate(() => HSC.meta.data.lastRound.video) >= 15, 'a level-up has the video');
     await next(); await cutting();
     ok('a result video in every mode, at random, capped in Quick Play');
     ok('Rescue and Beards: no order, no stars, set pay for real work');

@@ -11,6 +11,11 @@
   const KEY = 'skin-fade-studio-progress-v1';
   const M = () => HSC.meta, G = () => globalThis.skinFadeStudio;
   const dayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  // the day the tasks count by: the game's day (meta.js), which never moves backwards, so turning the clock back
+  // cannot bring back a day's tasks
+  const today = () => (M() && M().today ? M().today() : dayKey());
+  // real work (modes.js): hair or beard really changed from the start, never the stroke counter
+  const worked = (s) => !!s && (HSC.modes && HSC.modes.worked ? HSC.modes.worked(s) : s.cutStrokeCount > 0);
   const hash = (str) => { let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
 
   const TASKS = {
@@ -25,7 +30,7 @@
 
   // ---- saved state ----
   let P = null, client = null;
-  const fresh = () => ({ v: 1, tasks: { day: null, list: [] }, level: 0, lastJob: null });
+  const fresh = () => ({ v: 1, tasks: { day: null, list: [] }, days: HSC.dayBook ? HSC.dayBook.fresh() : null, level: 0, lastJob: null });
   function sanitize(d) {
     const f = fresh();
     if (!d || typeof d !== 'object' || d.v !== 1) return f;
@@ -35,22 +40,30 @@
     return {
       v: 1,
       tasks: { day: day(d.tasks && d.tasks.day), list },
-      level: int(d.level, 0, 9999, 0), lastJob: Number.isSafeInteger(d.lastJob) ? d.lastJob : null,
+      days: HSC.dayBook ? HSC.dayBook.clean(d.days, (e) => { const t = sanitize({ v: 1, tasks: e }).tasks; return t.day ? { day: t.day, list: t.list } : null; }, day(d.tasks && d.tasks.day)) : null,
+      level: int(d.level, 0, 9999, 0), lastJob: Number.isSafeInteger(d.lastJob) || (typeof d.lastJob === 'string' && d.lastJob.length <= 160) ? d.lastJob : null,
     };
   }
   const save = () => { if (client && client.saveProgress && P) client.saveProgress(KEY, P).catch(() => {}); };
 
   // ---- daily tasks ----
+  // the tasks keep their own book of days (meta.js HSC.dayBook), filed with their day: meta decides the game day, so a
+  // clock moved back and forth gets each day's own tasks back (claimed ones stay claimed) and never deals a day twice
   function ensureTasks() {
-    const today = dayKey();
-    if (P.tasks.day !== today) {
+    const day = today();
+    if (P.tasks.day !== day && HSC.dayBook) {
+      if (P.tasks.day) HSC.dayBook.put(P.days, { day: P.tasks.day, list: P.tasks.list });
+      const back = HSC.dayBook.take(P.days, day);
+      if (back) { P.tasks = { day, list: back.list }; save(); }
+    }
+    if (P.tasks.day !== day) {
       // goals come only from what this barber can do today (balance model section 11): beards from level 2, regulars
       // once there is one to come back; fades, stars, customers and tips are always reachable, so three always exist
       const hasRegular = Object.values((HSC.careerRun && HSC.careerRun.body && HSC.careerRun.body() && HSC.careerRun.body().regs) || {}).some((l) => l && l.length) || !!(M() && M().data && (M().data.regulars || []).length);
       const keys = Object.keys(TASKS).filter((k) => (k !== 'beard' || (M() && M().level() >= 2)) && (k !== 'regular' || hasRegular)), out = [];
-      let h = hash('tasks|' + today);
+      let h = hash('tasks|' + day);
       while (out.length < 3) { h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0; const k = keys[h % keys.length]; if (!out.includes(k)) out.push(k); }
-      P.tasks = { day: today, list: out.map((k) => ({ k, n: 0, claimed: false })) };
+      P.tasks = { day, list: out.map((k) => ({ k, n: 0, claimed: false })) };
     }
     return P.tasks.list;
   }
@@ -74,10 +87,14 @@
   };
   function afterCut(s) {
     const d = M() && M().data, last = d && d.lastRound;
-    if (!P || !last || last.job !== s.jobId || P.lastJob === s.jobId || !(s.cutStrokeCount > 0)) return;
+    // only a paid customer with real work counts (an untouched one, one with every stroke undone, or a job seen twice)
+    // the job's pay key, not its number, marks it counted (the engine's job numbers can start again)
+    const id = last && (last.key || s.jobId);
+    if (!P || !last || last.job !== s.jobId || P.lastJob === id || !(last.stars > 0) || !worked(s)) return;
+    if (HSC.repeatJob && HSC.repeatJob(s.jobId)) return;
     // Quick Play is outside the tasks (a pressure-free customer cannot farm them)
     if (HSC.modes && HSC.modes.econJob && HSC.modes.econJob(s).kind === 'free') return;
-    P.lastJob = s.jobId;
+    P.lastJob = id;
     const p = s.look && s.look.person, req = HSC.requestFor ? HSC.requestFor(s) : null;
     const beard = Array.isArray(s.beard) && Array.isArray(s.startBeard) && s.beard.some((v, i) => v < s.startBeard[i]);
     track({ stars: last.stars, tips: last.paid, regular: !!(p && p.regular), beard, fade: !!(req && ['skin', 'fade', 'taper', 'temple'].includes(req.style.fam)) });
@@ -96,7 +113,8 @@
     claim(i) {
       const x = P && P.tasks.list[i];
       if (!x || x.claimed || !taskDone(x)) return false;
-      x.claimed = true; pay(taskPay(), 'goal', 'goal:' + dayKey() + ':' + x.k); save();
+      // keyed by the tasks' own day, not the day of the claim (a claim after midnight is still that day's task)
+      x.claimed = true; pay(taskPay(), 'goal', 'goal:' + P.tasks.day + ':' + x.k); save();
       return true;
     },
   };
@@ -104,7 +122,7 @@
   // ---- a new level: the economy's one-time coins, added to the result's one coin number ----
   const ui = {
     reveal(s) {
-      const key = s.jobId + ':' + s.cutStrokeCount;
+      const key = String(s.jobId);
       if (this.revealKey === key) return;
       this.revealKey = key;
       const last = M().data.lastRound, lv = M().level();

@@ -90,7 +90,7 @@ final class HostBridge {
     @JavascriptInterface
     public void gameReady() {
         activity.onGameReady();
-        activity.runOnUiThread(() -> { if (!destroyed) ads.publishPrivacyOptions(); });
+        activity.runOnUiThread(() -> { if (!destroyed) { ads.publishPrivacyOptions(); ads.publishRewardedReady(); } });
     }
 
     @JavascriptInterface
