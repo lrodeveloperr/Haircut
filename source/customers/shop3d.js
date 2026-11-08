@@ -317,6 +317,16 @@
     const b = mesh(new THREE.SphereGeometry(0.04, 16, 12), new THREE.MeshStandardMaterial({ color: '#fff3d6', emissive: '#ffd99a', emissiveIntensity: 3 }), false); b.position.y = -0.04; g.add(b);
     return g;
   }
+  // a pendant in the room hangs on a black cord from a small ceiling cap (owner, 8 November 2026);
+  // the shop's preview of the part shows the shade alone. userData.hang: the height from the light to the ceiling
+  function hung(style) {
+    const g = pendant(style), top = new THREE.Box3().setFromObject(g).max.y, L = 0.3;
+    const blk = new THREE.MeshStandardMaterial({ color: '#16181d', metalness: 0.6, roughness: 0.4 });
+    const cord = mesh(new THREE.CylinderGeometry(0.006, 0.006, L, 10), blk); cord.position.y = top + L / 2; g.add(cord);
+    const cap = mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.03, 24), blk); cap.position.y = top + L - 0.015; g.add(cap);
+    g.userData.hang = top + L;
+    return g;
+  }
   function plant(scale) {
     const g = new THREE.Group();
     const potP = [[0, 0], [0.13, 0], [0.16, 0.05], [0.18, 0.3], [0.19, 0.32], [0.17, 0.32], [0, 0.32]].map(([x, y]) => new THREE.Vector2(x, y));
@@ -455,10 +465,10 @@
     hot.floor = new THREE.Vector3(-1.0, 0, 0.75);
     hot.wall = new THREE.Vector3(-0.85, 2.55, 0.02);
     hot.lower = new THREE.Vector3(-0.6, 0.5, 0.06);
-    // pendants: above the picture's top edge; their light still falls on the wall
+    // pendants on cords from the ceiling, above the picture's top edge; their light still falls on the wall
     for (const x of [-2.2, 0, 2.2]) {
-      const pd = pendant(P.lights); pd.position.set(x, 3.05, 1.0); scene.add(pd);
-      const sl = new THREE.SpotLight(P.lights === 'lantern' ? '#ffc98a' : '#ffe2b8', 2.6, 6, 0.95, 0.85, 2); sl.position.set(x, 2.95, 1.0); sl.target.position.set(x * 0.9, 1.2, 0);
+      const pd = hung(P.lights); pd.position.set(x, Hc - pd.userData.hang, 1.0); scene.add(pd);
+      const sl = new THREE.SpotLight(P.lights === 'lantern' ? '#ffc98a' : '#ffe2b8', 2.6, 6, 0.95, 0.85, 2); sl.position.set(x, pd.position.y - 0.1, 1.0); sl.target.position.set(x * 0.9, 1.2, 0);
       sl.castShadow = info.shadows; sl.shadow.mapSize.set(512, 512); sl.shadow.bias = -0.0005; scene.add(sl); scene.add(sl.target);
     }
     hot.lights = new THREE.Vector3(0, 2.9, 0.4);
