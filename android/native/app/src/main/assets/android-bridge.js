@@ -32,9 +32,18 @@
   const keysOf = (keys) => (Array.isArray(keys) ? keys : [keys]).map(String);
   const text = (v) => (typeof v === 'string' ? v : JSON.stringify(v));
 
+  // Read Android's complete BCP 47 device locale. Keeping the region/script is essential for routing
+  // Traditional Chinese (zh-TW/zh-HK/zh-MO) separately from Simplified Chinese. The browser value is a
+  // safe fallback for older test hosts; it must not be truncated to two letters.
+  const deviceLanguage = (() => {
+    try {
+      if (typeof host.languageTag === 'function') return host.languageTag();
+    } catch (_) {}
+    return (navigator.languages && navigator.languages[0]) || navigator.language || 'en';
+  })();
   const platform = Object.assign(emitter(), {
     id: 'android',
-    language: String((navigator.language || 'en').slice(0, 2)).toLowerCase(),
+    language: String(deviceLanguage || 'en').replace(/_/g, '-'),
     isAudioEnabled: true,
     isPaused: false,
     async sendMessage(message) { if (message === 'game_ready') host.gameReady(); },

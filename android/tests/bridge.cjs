@@ -17,6 +17,7 @@ function fakeHost() {
         __androidHost.complete(id, true, op === 'load' ? localStorage.getItem('fake-android-envelope') || '{}' : '');
       }, __native.delay);
     },
+    homeReady() {},
     gameReady() {__native.ready++;},
     showRewarded(p) {
       __native.ads.push(p);
@@ -74,6 +75,8 @@ function fakeHost() {
       console.log('DOM-RELEASE',JSON.stringify(await page.evaluate(()=>__placementRelease)));
     };
     await boot();
+    // Production launches at Home. This low-level input suite exercises the chair underneath it.
+    await page.evaluate(() => HSC.menu.close());
     const startup=await page.evaluate(()=>HSC.startupTiming);
     assert(startup.adrenoStages>0,'Android startup identifies visible full-detail renderables');
     assert.equal(startup.adrenoStagesComplete,startup.adrenoStages,'all staged shader submissions complete');

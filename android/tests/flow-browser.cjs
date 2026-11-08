@@ -13,7 +13,7 @@ const build = path.resolve(__dirname, '../../source/build');
   try {
     const context = await browser.newContext({ viewport: { width: 412, height: 892 } });
     await context.route('http://flow.test/**', (route) => { const u = new URL(route.request().url()), f = path.join(build, u.pathname === '/' ? 'index.html' : u.pathname); return fs.existsSync(f) ? route.fulfill({ path: f }) : route.fulfill({ status: 404, body: '' }); });
-    await context.addInitScript(() => { window.__androidRewardedReady = true; window.AndroidHost = { request(id, op) { setTimeout(() => __androidHost.complete(id, true, op === 'load' ? '{}' : ''), 0); }, gameReady() {}, showRewarded() {}, showInterstitial() {}, openPrivacy() {}, showPrivacyOptions() {} }; });
+    await context.addInitScript(() => { window.__androidRewardedReady = true; window.AndroidHost = { request(id, op) { setTimeout(() => __androidHost.complete(id, true, op === 'load' ? '{}' : ''), 0); }, homeReady() {}, gameReady() {}, showRewarded() {}, showInterstitial() {}, openPrivacy() {}, showPrivacyOptions() {} }; });
     const page = await context.newPage();
     page.setDefaultTimeout(120000);
     const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
@@ -26,7 +26,10 @@ const build = path.resolve(__dirname, '../../source/build');
     const coins = () => page.evaluate(() => HSC.coins.get());
     const cuts = () => page.evaluate(() => HSC.meta.data.cuts);
 
-    // a new player: the first customer, then Home opens by itself once
+    // Every launch starts at Home. The first customer remains available underneath when Home is closed.
+    await page.waitForFunction(() => document.querySelector('#hsc-menu.open'));
+    assert.equal(await page.locator('.tutorial').count(), 0, 'no first-customer tutorial overlay');
+    ok('a new player starts at Home with no tutorial');
     assert.equal(await page.evaluate(() => HSC.collection.list().length), 0);
     await page.evaluate(() => { window.__smile = 0; const f = HSC.setExpression; HSC.setExpression = function () { window.__smile++; return f.apply(this, arguments); }; });
     await page.evaluate(() => { HSC.collection.open(); });
@@ -36,8 +39,8 @@ const build = path.resolve(__dirname, '../../source/build');
     await finish(); await reveal();
     assert.equal(await page.evaluate(() => HSC.collection.list().length), 1);
     await next(); await cutting();
-    await page.waitForFunction(() => document.querySelector('#hsc-menu.open'));
-    ok('Home opens after the first customer, and that customer is in the Collection');
+    await page.evaluate(() => HSC.menu.open());
+    ok('the completed customer reaches the Collection and Home remains the navigation surface');
     assert.equal(await page.evaluate(() => window.__smile), 0);
     ok('no smile at the reveal');
 

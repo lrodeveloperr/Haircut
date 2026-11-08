@@ -9,7 +9,7 @@
 //   dock     Modes, Shop, Collection, Settings. Shop (shop.js) is one screen of five tabs; Collection is the customers
 //            the barber has really worked with.
 // The features' own buttons wait out of sight in .hold, so each panel opens exactly as before.
-// A returning barber starts here; a first-time player goes straight to the first customer.
+// Every launch starts here. An unfinished customer remains behind Home and can be resumed by closing it.
 // ---------------------------------------------------------------------------------------------
 (function (HSC) {
   'use strict';
@@ -17,6 +17,12 @@
   const K = '#10223f';
   const t = (k) => (HSC.t ? HSC.t(k) : k);
   const I = (n, s) => (HSC.icon ? HSC.icon(n, s) : '');
+  let launchRequested = false, launchOpened = false, launchOpenedAt = 0, launchSettled = false;
+  let launchPicture = '', launchPictureReady = false, launchPaintQueued = false;
+  let launchFallback = false, launchFallbackTimer = 0, launchRevealTimer = 0;
+  const LAUNCH_FALLBACK = 'assets/home-fallback.jpg';
+  const LAUNCH_FALLBACK_MS = Number.isFinite(HSC.__testHomeFallbackMs) ? Math.max(0, HSC.__testHomeFallbackMs) : 12000;
+  const launchWaiters = [];
   // each feature's own button and where it goes on the home screen
   const PLACE = [['#hsc-set-btn', '.hold'], ['.hsc-rw', '.hold'], ['#hsc-salon-btn', '.hold']];
   // the panels that open over the home screen, and every layer that covers the chair
@@ -237,21 +243,7 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       this.tick();
       try { new MutationObserver(() => this.tick()).observe(row, { childList: true }); } catch (e) {}
       setInterval(() => this.tick(), 250);
-      // a new player meets Home once, after the first customer: Career and the modes are found from here
-      const firstHome = () => {
-        const g = globalThis.skinFadeStudio, d = HSC.meta && HSC.meta.data, s = g && g.getState();
-        if (d && d.homeSeen) return;
-        if (d && d.cuts >= 1 && s && s.status === 'cutting' && !s.cutStrokeCount) { d.homeSeen = true; HSC.meta.save(); this.open(); return; }
-        setTimeout(firstHome, 400);
-      };
-      firstHome();
-      // a returning barber starts on the home screen (a first-time player goes straight to the first customer)
-      const home = () => {
-        const g = globalThis.skinFadeStudio, d = HSC.meta && HSC.meta.data;
-        if (!g || !d || !HSC.modes) return setTimeout(home, 250);
-        if (d.cuts >= 1 && g.getState().status === 'cutting' && !g.getState().cutStrokeCount) this.open();
-      };
-      home();
+      settleLaunchHome();
     },
     labels() {
       const m = this.el.menu;
@@ -289,9 +281,12 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
     backdrop() {
       const m = this.el.menu, home = !m.querySelector('.page.home').hidden;
       m.classList.toggle('athome', home);
-      if (!home) { m.style.backgroundImage = ''; return; }
-      const url = HSC.salon && HSC.salon.homePicture ? HSC.salon.homePicture() : null;
-      if (url) m.style.backgroundImage = `url("${url}")`; else m.classList.remove('athome'); // no 3D: the theme's own background
+      if (!home) { m.style.backgroundImage = ''; return null; }
+      const rendered = !HSC.__testForceHomeFallback && HSC.salon && HSC.salon.homePicture ? HSC.salon.homePicture() : null;
+      const url = rendered || (launchFallback ? LAUNCH_FALLBACK : null);
+      if (url) { m.style.backgroundImage = `url("${url}")`; return url; }
+      m.classList.remove('athome'); // covered by Android's platform splash during a launch; other hosts keep the theme
+      return null;
     },
     close() { this.el.menu.classList.remove('open'); },
     view(v, back) {
@@ -310,6 +305,9 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
     async play(mode) {
       const M = HSC.modes;
       const card = this.el.menu.querySelector(mode === 'free' ? '.qp' : '.hero');
+      // Android may expose Home while the heavyweight customer renderer finishes compiling behind it. Navigation is
+      // immediately usable; starting a haircut waits for that one genuine prerequisite instead of showing a loader.
+      if (HSC.androidGameplayReady === false) await new Promise((resolve) => addEventListener('hsc-gameplay-ready', resolve, { once: true }));
       if (mode === 'career' && HSC.careerRun && HSC.careerRun.tooNew()) { this.view('map'); return false; }
       if (!M || !M.unlocked(mode) || (mode === 'career' && !(HSC.careerRun && HSC.careerRun.ready()))) { if (HSC.nope) HSC.nope(card); return false; }
       // Career waits for the player's city choice (the founding city, or the next city after a chapter)
@@ -355,6 +353,10 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       if (m.classList.contains('open') && HSC.fitLabels && [...m.querySelectorAll('.hsc-lbl')].some((e) => e.offsetParent && e.scrollWidth > e.clientWidth + 0.5)) HSC.fitLabels(m);
       // the dock as a whole (after a language change, say): fitLabels() above sees only one label at a time
       if (m.classList.contains('open')) { const d = m.querySelector('.page.home .dock'); if (d && d.offsetParent && d.scrollWidth > d.clientWidth + 0.5) this.dockFit(); }
+      // The menu can precede both the salon save and the 3D renderer on a cold start. Retry the lightweight handoff
+      // until both are ready; homePicture caches the successful render, so this stops doing work immediately after it.
+      if (m.classList.contains('open') && !m.style.backgroundImage && !m.querySelector('.page.home').hidden) this.backdrop();
+      if (launchRequested && !launchSettled) settleLaunchHome();
       // move each feature button into its place as it appears
       for (const [sel, slot] of PLACE) {
         const btn = document.querySelector('#hsc-hud .hsc-row ' + sel);
@@ -366,6 +368,49 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
       if (m.classList.contains('open')) this.refresh();
     },
   };
+  // Android calls this after the first usable game frame and before releasing the platform launch screen. That makes
+  // Home the first interactive frame without making the renderer wait behind an already-open overlay.
+  function settleLaunchHome() {
+    if (!launchRequested || !ui.el.menu) return false;
+    if (launchSettled) return true;
+    // Rendering the furnished salon can take measurable synchronous time on a slow device. Start the reveal delay
+    // after that work, so Android never uncovers Home partway through its page-in animation.
+    if (!launchOpened) { launchOpened = true; ui.open(); launchOpenedAt = performance.now(); }
+    const url = ui.backdrop();
+    if (!url) return false;
+    if (launchPicture !== url) {
+      launchPicture = url;
+      launchPictureReady = false;
+      const image = new Image();
+      const ready = () => {
+        if (launchPicture !== url) return;
+        launchPictureReady = true;
+        settleLaunchHome();
+      };
+      image.onload = ready;
+      image.src = url;
+      if (image.complete && image.naturalWidth) ready();
+      return false;
+    }
+    if (!launchPictureReady || launchPaintQueued) return launchSettled;
+    // The launch Home has a short approved page-in animation. Do not uncover Android onto its transparent first
+    // frames; wait until the controls have fully arrived, even when the recovery picture decodes immediately.
+    const revealDelay = Math.max(0, 450 - (performance.now() - launchOpenedAt));
+    if (revealDelay > 0) {
+      if (!launchRevealTimer) launchRevealTimer = setTimeout(() => { launchRevealTimer = 0; settleLaunchHome(); }, revealDelay);
+      return false;
+    }
+    launchPaintQueued = true;
+    // Do not tell Android to uncover the WebView until the decoded picture has crossed two compositor frames.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      launchSettled = true;
+      launchPaintQueued = false;
+      clearTimeout(launchFallbackTimer);
+      clearTimeout(launchRevealTimer);
+      while (launchWaiters.length) launchWaiters.shift()(true);
+    }));
+    return false;
+  }
   // the features put their buttons in the HUD row; once it exists the home screen takes them in
   const boot = () => { const row = document.querySelector('#hsc-hud .hsc-row'); if (row && document.getElementById('hsc-hud')) ui.build(row); else setTimeout(boot, 200); };
   boot();
@@ -379,8 +424,26 @@ body.hsc-reveal #hsc-menu-btn{visibility:hidden}
     if (v === 'modes') ui.modes();
     if (v && HSC.careerUI) HSC.careerUI.render(v);
   });
+  // Android keeps its icon-free platform splash over the renderer preparation. Other hosts can still open Home
+  // independently; whenever gameplay becomes ready, refresh its furnished barbershop picture.
+  addEventListener('hsc-gameplay-ready', () => {
+    const m = ui.el.menu;
+    if (m && m.classList.contains('open') && !m.querySelector('.page.home').hidden) ui.backdrop();
+  });
   // career(): the home screen on the world map (a city must be chosen before the career can seat anyone)
   HSC.menu = { open: () => ui.open(), close: () => ui.close(), view: (v, back) => ui.view(v, back), career: () => { if (!ui.el.menu) return; ui.open(); ui.view('map'); }, play: (m) => ui.play(m) };
+  HSC.openLaunchHome = function () {
+    launchRequested = true;
+    if (!launchFallbackTimer) launchFallbackTimer = setTimeout(() => {
+      if (launchSettled) return;
+      launchFallback = true;
+      settleLaunchHome();
+    }, LAUNCH_FALLBACK_MS);
+    if (settleLaunchHome()) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      launchWaiters.push(resolve);
+    });
+  };
   // a haircut is under way: the customer in the chair has been touched
   const inProgress = () => {
     const g = globalThis.skinFadeStudio, s = g && g.getState();

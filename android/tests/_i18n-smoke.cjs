@@ -5,16 +5,23 @@ const build = path.resolve(__dirname, '../../source/build');
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE_PATH, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const out = {};
-  for (const lang of ['en', 'ar', 'es', 'pt', 'he']) {
+  const cases = new Map([
+    ['en-US', 'en'], ['ar-EG', 'ar'], ['es-MX', 'es-419'], ['pt-PT', 'pt-BR'], ['he-IL', 'he'],
+    ['zh-TW', 'zh-Hant'], ['zh-HK', 'zh-Hant'], ['zh-CN', 'zh-Hans'], ['nb-NO', 'nb'], ['fr-CA', 'fr'],
+    ['zu-ZA', 'en'],
+  ]);
+  for (const [lang, automatic] of cases) {
     const context = await browser.newContext({ viewport: { width: 412, height: 892 }, locale: lang });
     await context.route('http://flow.test/**', (route) => { const u = new URL(route.request().url()), f = path.join(build, u.pathname === '/' ? 'index.html' : u.pathname); return fs.existsSync(f) ? route.fulfill({ path: f }) : route.fulfill({ status: 404, body: '' }); });
-    await context.addInitScript(() => { window.__androidRewardedReady = true; window.AndroidHost = { request(id, op) { setTimeout(() => __androidHost.complete(id, true, op === 'load' ? '{}' : ''), 0); }, gameReady() {}, showRewarded() {}, showInterstitial() {}, openPrivacy() {}, showPrivacyOptions() {} }; });
+    await context.addInitScript(() => { window.__androidRewardedReady = true; window.AndroidHost = { languageTag() { return navigator.language; }, request(id, op) { setTimeout(() => __androidHost.complete(id, true, op === 'load' ? '{}' : ''), 0); }, gameReady() {}, showRewarded() {}, showInterstitial() {}, openPrivacy() {}, showPrivacyOptions() {} }; });
     const page = await context.newPage(); page.setDefaultTimeout(120000);
     const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
     page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
     await page.goto('http://flow.test/');
     await page.waitForFunction(() => window.skinFadeStudio && HSC.startupTiming?.firstPlayable && HSC.menu && HSC.setLang);
     // an old saved tag (es, pt) and the host language resolve to the canonical packs
+    const initial = await page.evaluate(() => ({lang: HSC.lang(), htmlLang: document.documentElement.lang, dir: document.documentElement.dir}));
+    if (initial.lang !== automatic) errors.push(`automatic locale ${lang} resolved to ${initial.lang}, expected ${automatic}`);
     const r = await page.evaluate(async (lang) => {
       HSC.setLang(lang, false); HSC.menu.open(); HSC.menu.view('home');
       await new Promise((f) => setTimeout(f, 400));

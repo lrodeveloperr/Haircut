@@ -28,8 +28,8 @@ android {
         applicationId = "com.worksbien.barbersimulatorasmr"
         minSdk = 26
         targetSdk = 36
-        versionCode = 14
-        versionName = "1.0.13"
+        versionCode = 17
+        versionName = "1.0.15"
     }
 
     signingConfigs {
@@ -70,7 +70,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/game-assets"))
+    // preBuild depends on bundleGame below, so this generated directory is ready before assets are merged.
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/game-assets").get().asFile)
 }
 
 dependencies {
@@ -81,6 +82,7 @@ dependencies {
     implementation("androidx.fragment:fragment:1.9.1")
     implementation("androidx.webkit:webkit:1.14.0")
     implementation("com.google.android.play:review:2.0.2")
+    implementation("com.android.billingclient:billing:9.1.0")
     // the version audited for the Play Data safety form (android/PRIVACY-RELEASE-CONFIG.md)
     implementation("com.google.android.gms:play-services-ads:25.5.0")
     implementation("com.google.android.ump:user-messaging-platform:4.0.0")
@@ -107,7 +109,7 @@ tasks.named("preBuild") { dependsOn(bundleGame) }
 gradle.taskGraph.whenReady {
     val releasing = allTasks.any { it.project == project && it.name.contains("Release") }
     if (releasing) {
-        val publisher = "8054612600809568"
+        val publisher = "5974311182854367"
         val expected = mapOf(
             "admobAppId" to Regex("ca-app-pub-$publisher~[0-9]{10}"),
             "admobRewardedId" to Regex("ca-app-pub-$publisher/[0-9]{10}"),

@@ -12,7 +12,7 @@
   if (!HSC.PHENOTYPES) return;
   const KEY = 'skin-fade-studio-salon-v1';
   const K = '#10223f';
-  const M = () => HSC.meta, G = () => globalThis.skinFadeStudio, S3 = () => HSC.shop3d;
+  const M = () => HSC.meta, S3 = () => HSC.shop3d;
   const t = (k) => (HSC.t ? HSC.t(k) : k);
   const I = (n, s) => (HSC.icon ? HSC.icon(n, s) : '');
   const PRICE = (HSC.economy && HSC.economy.CONFIG.salon) || [100, 300, 800, 1750];
@@ -549,7 +549,11 @@
     const land = innerWidth > innerHeight, key = land + ':' + innerWidth + 'x' + innerHeight + JSON.stringify([cur().parts, cur().region, shown(), S.year]);
     if (homePic && homeKey === key) return homePic;
     try {
-      const dpr = Math.min(devicePixelRatio || 1, 2), w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+      const dpr = Math.min(devicePixelRatio || 1, 2), rawW = Math.round(innerWidth * dpr), rawH = Math.round(innerHeight * dpr);
+      // The picture is a full-screen JPEG backdrop, not an interactive render target. Bound its temporary WebGL
+      // canvas to 1080p so a 4K/high-density launch cannot add a 33 MB colour buffer while the game renderer boots.
+      const scale = Math.min(1, Math.sqrt((1920 * 1080) / Math.max(1, rawW * rawH)));
+      const w = Math.max(1, Math.round(rawW * scale)), h = Math.max(1, Math.round(rawH * scale));
       homePic = S3().render(look(), land ? 'homeL' : 'homeP', w, h, info()).canvas.toDataURL('image/jpeg', 0.9);
       homeKey = key;
     } catch (e) { console.warn('shop: home picture unavailable', e); return null; }
@@ -591,7 +595,10 @@
   HSC.salonDebug = () => S;
 
   async function boot() {
-    if (!G() || !document.body || !M() || !M().data || !HSC.coins || !document.querySelector('#hsc-hud .hsc-row')) { setTimeout(boot, 300); return; }
+    // Home is the Android launch surface, so its salon save must be ready before the public gameplay API is exposed.
+    // The HUD, meta save and coin model are the actual dependencies; waiting for skinFadeStudio here deadlocks the
+    // furnished Home against the native splash handoff.
+    if (!document.body || !M() || !M().data || !HSC.coins || !document.querySelector('#hsc-hud .hsc-row')) { setTimeout(boot, 300); return; }
     client = M().client;
     const d = client && client.loadProgress ? await client.loadProgress(KEY, null).catch(() => null) : null;
     S = sanitize(d);

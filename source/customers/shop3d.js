@@ -644,7 +644,10 @@
     scene.background = null;
     scene.traverse((x) => { if (x.geometry && !x.geometry.userData.keep) x.geometry.dispose(); if (x.material) { if (x.material.map) x.material.map.dispose(); x.material.dispose(); } });
     shots.set(k, url);
-    while (shots.size > 300) shots.delete(shots.keys().next().value);
+    // Data-URL product shots live in both JS and WebView image memory. Forty-eight covers the selected item, every
+    // card on two phone screens and the two bundle previews, while preventing catalogue browsing from retaining
+    // hundreds of decoded textures on potato devices. Evicted shots are regenerated without changing catalogue art.
+    while (shots.size > 48) shots.delete(shots.keys().next().value);
     return url;
   }
   HSC.shop3d = { SLOTS, PARTS, OPTIONS, REGIONS, VIEWS, render, thumb, item, nameCanvas, drop, ok: () => { try { renderer(); return true; } catch (e) { return false; } } };

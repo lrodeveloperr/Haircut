@@ -1,8 +1,20 @@
 # Google Play Console setup status
 
-Updated 16 October 2026, America/Toronto.
+## Current update — 8 November 2026
 
-## Current release state
+Production release **17 (1.0.15)** was accepted and sent to Google for review. Play Console reports API 26+ / target API 36, 100% rollout in all targeted countries, and zero supported-device loss. The default English release notes are saved. Automated quick checks were still running at submission time; this is a review acknowledgement, not a publication claim.
+
+Google Play Billing 9.1.0 is included in the uploaded bundle. All six one-time products are active: `coins_500`, `coins_3000`, `coins_7500`, `coins_18000`, `starter_pack` and `supporter_bundle`. Play Billing supplies the localized price shown by the purchase controls.
+
+The release uses the AdMob account signed in as `info@worksbienstudios.com`, publisher `pub-5974311182854367`. The exact release bundle contains that company app ID plus its banner, interstitial and rewarded units. The European consent message is published, the company seller record is live at `https://worksbienstudios.com/app-ads.txt`, and all three production ad units are active. App verification succeeded and the AdMob review is in progress; ad serving remains limited until Google finishes that review.
+
+The withdrawn code-16 API 37 artifact remains in Play Console history but is not included in the current release. No internal-testing release was used in this production process.
+
+Validation completed before upload: API 36 installed checks, phone/tablet scale coverage, automatic device-language routing, 40-language completeness, billing bridge tests, release lint/build, signed-bundle validation, save/restore, background/resume and independent Android reviews. The native cream startup screen uses a centered rotating open-ring spinner and transitions to Home. See `android/RELEASE-AAB-1.0.15.md`.
+
+Updated 8 November 2026, America/Toronto.
+
+## Historical release state — 16 October 2026
 
 **Current release: v1.0.7 (8), submission accepted.** The owner explicitly approved replacement/resubmission at 17:41 New York time on 16 October 2026. The withdrawn build 9 release was discarded; its artifact remains in Console history. Original signed build 8 was selected from the existing artifact library, accepted, and marked Ready to release with no release validation error. All 21 changes were sent for review. At 2026-10-16T21:55:47Z, Publishing overview showed **Changes in review**, with automated quick checks still running and the notice that changes will proceed to review once checks complete. This is a submission acknowledgement, not a completed-check, approval or publication claim.
 

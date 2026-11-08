@@ -3,6 +3,7 @@ package com.worksbien.barbersimulatorasmr;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.LocaleList;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 
@@ -19,17 +20,26 @@ final class HostBridge {
     private final MainActivity activity;
     private final AdsController ads;
     private final ReviewController reviews;
+    private final BillingController billing;
     private final WebView web;
     private final SharedPreferences prefs;
     private final ExecutorService storage = Executors.newSingleThreadExecutor();
     private volatile boolean destroyed;
 
-    HostBridge(MainActivity activity, AdsController ads, ReviewController reviews, WebView web) {
+    HostBridge(MainActivity activity, AdsController ads, ReviewController reviews, BillingController billing, WebView web) {
         this.activity = activity;
         this.ads = ads;
         this.reviews = reviews;
+        this.billing = billing;
         this.web = web;
         this.prefs = activity.getSharedPreferences("game-saves", Context.MODE_PRIVATE);
+    }
+
+    @JavascriptInterface
+    public String languageTag() {
+        LocaleList locales = LocaleList.getDefault();
+        if (!locales.isEmpty()) return locales.get(0).toLanguageTag();
+        return "en";
     }
 
     @JavascriptInterface
@@ -88,9 +98,29 @@ final class HostBridge {
     }
 
     @JavascriptInterface
+    public void homeReady() {
+        // The native barbershop loading surface remains over the WebView until Home is fully painted.
+        if (!destroyed) activity.onHomeReady();
+    }
+
+    @JavascriptInterface
     public void gameReady() {
-        activity.onGameReady();
-        activity.runOnUiThread(() -> { if (!destroyed) { ads.publishPrivacyOptions(); ads.publishRewardedReady(); } });
+        activity.runOnUiThread(() -> { if (!destroyed) { ads.publishPrivacyOptions(); ads.publishRewardedReady(); billing.pageReady(); } });
+    }
+
+    @JavascriptInterface
+    public void billingBuy(String productId) {
+        activity.runOnUiThread(() -> { if (!destroyed) billing.buy(productId); });
+    }
+
+    @JavascriptInterface
+    public void billingComplete(String productId, String purchaseToken, boolean granted) {
+        activity.runOnUiThread(() -> { if (!destroyed) billing.complete(productId, purchaseToken, granted); });
+    }
+
+    @JavascriptInterface
+    public void billingRefresh() {
+        activity.runOnUiThread(() -> { if (!destroyed) billing.refresh(); });
     }
 
     @JavascriptInterface

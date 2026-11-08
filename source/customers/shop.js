@@ -21,9 +21,11 @@
 (function (HSC) {
   'use strict';
   if (!HSC.PHENOTYPES) return;
-  const K = '#10223f', STEP = 24;
+  const K = '#10223f', STEP = 9;
   const t = (k) => (HSC.t ? HSC.t(k) : k);
-  const I = (n, s) => (HSC.icon ? HSC.icon(n, s) : '');
+  // Shop reward and price coins are drawn at 18--26 px. Pass that intended size into icons.js so it uses the clean
+  // phone-scale strike; CSS may still size each placement exactly as the approved layout requires.
+  const I = (n, s) => (HSC.icon ? HSC.icon(n, s === undefined && n === 'coin' ? 22 : s) : '');
   const fmt = (n) => (HSC.num ? HSC.num(n) : n);
   const A = () => HSC.wardrobeApi, C = () => HSC.catalog, W = () => HSC.wardrobeShop;
   // the 3D product shot; the flat drawing only if 3D is unavailable on this device
@@ -42,8 +44,8 @@
 .hsc-stabs button.on{background:linear-gradient(#ffe682,#ffb21a)}
 .hsc-stabs.two{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 5px}
 .hsc-stabs .dot{position:absolute;right:3px;top:3px;width:11px;height:11px;border-radius:50%;background:#f04436}
-#hsc-menu .shop{grid-template-rows:48px auto minmax(0,1fr)}
-#hsc-menu .sbody{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:2px 2px 12px}
+#hsc-menu .shop{grid-template-rows:48px auto minmax(0,1fr);overflow:hidden}
+#hsc-menu .sbody{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:2px 2px 12px;overscroll-behavior:contain}
 #hsc-menu .sbody[hidden]{display:none}
 #hsc-menu .hc{box-sizing:border-box;border:3px solid ${K};border-radius:22px;padding:12px;box-shadow:0 5px 0 ${K};color:${K};font-weight:900;flex:none}
 #hsc-menu .hc.gift{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;background:linear-gradient(#ffd6e6,#ff8db8)}
@@ -72,7 +74,10 @@
 #hsc-menu .cp{box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 10px;border-radius:18px;border:3px solid ${K};background:#fff;color:${K};font-weight:900;font-size:22px;font-variant-numeric:tabular-nums;box-shadow:0 4px 0 ${K}}
 #hsc-menu .cp .pile{display:flex;align-items:center;justify-content:center;width:100%;height:104px;background:radial-gradient(closest-side,#ffe9a066,#ffe9a000)}
 #hsc-menu .cp .pile>span{position:relative;display:block}
-#hsc-menu .cp .pile .hsc-ic{position:absolute;filter:drop-shadow(0 2px 1px #7a4a0066)}
+#hsc-menu .cp .pile .hsc-ic{position:absolute;shape-rendering:geometricPrecision;filter:drop-shadow(0 2px 0 #7a4a004d)}
+/* The 36 fine milled-rim marks read as grit when several small coins overlap. Keep the original coin SVG
+   everywhere else, but simplify only the shop piles so the purchase cards stay clean at phone scale. */
+#hsc-menu .cp .pile .hsc-ic>path:first-of-type{display:none}
 /* a pack's Buy keeps the shop's one button size: flex:none, or the column squeezes it under the coins */
 #hsc-menu .cp .sb{flex:none;width:100%;height:50px}
 #hsc-menu .cp.hot{box-shadow:0 0 0 4px #5cff7a,0 4px 0 ${K};animation:hsc-hot 1.1s ease-in-out infinite}
@@ -97,7 +102,7 @@
 #hsc-menu .goal .pgb i{display:block;height:100%;background:linear-gradient(#b5ff7a,#46c43a)}
 #hsc-menu .goal .hsc-ic{width:20px;height:20px}
 #hsc-menu .wg{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;flex:none}
-#hsc-menu .wi{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px;border-radius:16px;border:3px solid ${K};background:#fff;color:${K};font:900 15px "Arial Rounded MT Bold","Nunito",system-ui,sans-serif;font-variant-numeric:tabular-nums;cursor:pointer;min-height:48px}
+#hsc-menu .wi{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px;border-radius:16px;border:3px solid ${K};background:#fff;color:${K};font:900 15px "Arial Rounded MT Bold","Nunito",system-ui,sans-serif;font-variant-numeric:tabular-nums;cursor:pointer;min-height:48px;overflow:hidden}
 #hsc-menu .wi img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:11px}
 #hsc-menu .wi span{display:flex;align-items:center;gap:2px;height:22px}
 #hsc-menu .wi .hsc-ic{width:18px;height:18px}
@@ -152,6 +157,11 @@
     // Shops and Parts live over the 3D picture; the other tabs on this page
     // resume: back to the item the coins were for, still picked
     go(tab, need = 0, back = null, resume = false) {
+      // Stop any catalogue renderer before changing pages. Detached images used to keep generating after Free/Coins
+      // opened, exhausting weak WebView tile memory and allowing an old pink/card tile to reappear over the new page.
+      this.job++;
+      const old = this.page() && this.page().querySelector('.sbody');
+      if (old) { old.onscroll = null; old.scrollTop = 0; }
       this.tab = tab; this.need = need; this.back = back;
       if (tab === 'shops' || tab === 'parts') { if (HSC.salon) HSC.salon.open(tab, resume); return; }
       if (HSC.salon && HSC.salon.hide) HSC.salon.hide();
@@ -170,11 +180,13 @@
     },
     free() {
       const box = this.page().querySelector('.sbody'), g = HSC.gift.state(), v = HSC.wishVideo ? HSC.wishVideo.state() : null, list = HSC.tasks ? HSC.tasks.list() : [], can = !!(HSC.canVideo && HSC.canVideo());
+      box.onscroll = null; box.scrollTop = 0;
       const gift = g.done ? `<div class="hc gift done">${I('gift')}<span>${TICK}</span></div>`
         : g.ready ? `<div class="hc gift">${I('gift')}<span class="tm">${I('coin', 30)} +${fmt(g.pay)}</span><div class="btns"><button class="sb gold" type="button" data-g="1">${I('coin')}+${fmt(g.pay)}</button>${can ? `<button class="sb vid" type="button" data-g="2">${I('video')}+${fmt(g.pay * 2)}</button>` : ''}</div></div>`
           : `<div class="hc gift">${I('gift')}<span class="tm">${this.clock(g.left)}</span></div>`;
       const vid = v && v.left > 0 ? `<button class="sb vid vr" type="button" data-v="1"><span style="display:flex;align-items:center;gap:6px">${I('video')}${I('coin')}+${fmt(v.coins)}</span><em>${fmt(v.left)}</em></button>` : '';
       box.innerHTML = gift + vid + list.map((x, i) => `<div class="tk"><span>${x.text}</span><span class="pgb"><i style="width:${Math.round(100 * x.n / x.goal)}%"></i></span><button class="sb ${x.done && !x.claimed ? 'gold' : ''}" type="button" data-t="${i}" ${x.done && !x.claimed ? '' : 'disabled'}>${x.claimed ? TICK : I('coin') + fmt(x.pay)}</button></div>`).join('');
+      void box.offsetHeight; // commit the replacement before a WebView reuses this scroll layer
       box.querySelectorAll('[data-g]').forEach((b) => b.addEventListener('click', async () => { b.disabled = true; const n = await HSC.gift.claim(b.dataset.g === '2'); if (n === false) { b.disabled = false; if (HSC.nope) HSC.nope(b); return; } if (HSC.fx) HSC.fx.play('coin'); this.render(); }));
       const vb = box.querySelector('[data-v]');
       if (vb) vb.addEventListener('click', async () => { vb.disabled = true; await HSC.wishVideo.run(); this.render(); });
@@ -182,7 +194,7 @@
     },
     // the game's own coin, stacked in a tidy pyramid that grows with the pack: rows from the back, the front row on top
     pile(tier) {
-      const rows = [[1], [2, 1], [3, 2, 1], [4, 3, 2, 1]][tier].slice().reverse(), size = [68, 54, 46, 40][tier], dx = size * 0.76, dy = size * 0.5;
+      const rows = [[1], [2, 1], [3, 2, 1], [4, 3, 2, 1]][tier].slice().reverse(), size = [66, 52, 43, 37][tier], dx = size * 0.76, dy = size * 0.5;
       const W = (rows[rows.length - 1] - 1) * dx + size, H = (rows.length - 1) * dy + size;
       const coins = rows.map((n, r) => Array.from({ length: n }, (_, i) => I('coin').replace('<svg ', `<svg style="left:${(W - ((n - 1) * dx + size)) / 2 + i * dx}px;top:${r * dy}px;width:${size}px;height:${size}px" `)).join('')).join('');
       return `<span class="pile"><span style="width:${W}px;height:${H}px">${coins}</span></span>`;
@@ -229,7 +241,7 @@
     },
     coins() {
       const box = this.page().querySelector('.sbody'), cfg = HSC.economy.CONFIG, B = HSC.billing, d = HSC.meta.data;
-      box.onscroll = null;
+      box.onscroll = null; box.scrollTop = 0;
       const esc = (x) => String(x).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
       const buy = (id) => { const p = this.price(id); return `<button class="sb gold${p ? ' pr' : ''}" type="button" data-p="${id}">${p ? esc(p) : t('buy')}</button>`; };
       const owned = (id) => !!(B && B.owned && B.owned(id));
@@ -244,6 +256,7 @@
       const hot = !need || closes ? null : starter && need > cfg.packs[0].coins ? 'starter_pack' : (cfg.packs.find((x) => x.coins >= need) || cfg.packs[cfg.packs.length - 1]).id;
       const row = closes ? `<button class="sb vid vr" type="button" data-need="1"><span style="display:flex;align-items:center;gap:6px">${I('video')}${I('coin')}+${fmt(v.coins)}</span><em>${fmt(v.left)}</em></button>` : '';
       box.innerHTML = `${row}${starter}<div class="cg2">${cfg.packs.map((x, i) => `<div class="cp">${this.pile(i)}<span>${fmt(x.coins)}</span>${buy(x.id)}</div>`).join('')}</div>${bundle}`;
+      void box.offsetHeight; // commit the replacement before a WebView reuses this scroll layer
       this.fitPrices(box);
       const mark = hot && box.querySelector(`[data-p="${hot}"]`);
       if (mark) { const card = mark.closest('.cp'); card.classList.add('hot'); box.scrollTop = Math.max(0, card.offsetTop - box.offsetTop - 12); }
@@ -272,6 +285,10 @@
     },
     wear(tool) {
       const box = this.page().querySelector('.sbody'), a = A(), d = this.focus(tool), own = a.owns(d.key), worn = d.id === a.worn(tool), pr = W().price(d);
+      box.onscroll = null; box.scrollTop = 0;
+      // A focus/buy/wear redraw returns to the first catalogue screen. Keeping a deep scroll count here used to ask a
+      // weak phone to recreate every image the player had passed in one burst.
+      this.shown = STEP;
       const today = a.todays().includes(d.key), can = !!(HSC.canVideo && HSC.canVideo()), coins = HSC.coins.get(), key = 'wardrobe:' + d.key;
       const wishes = HSC.econ && HSC.econ.wishes ? HSC.econ.wishes() : {}, wished = !!(wishes.cosmetic && wishes.cosmetic.key === key), target = HSC.econ && HSC.econ.wishTarget ? HSC.econ.wishTarget() : null;
       const btns = own ? `<button class="sb gold" type="button" data-a="wear" ${worn ? 'disabled' : ''}>${worn ? TICK : I('wardrobe')}</button>`
@@ -285,22 +302,23 @@
       this.more(++this.job, 0);
       box.onscroll = () => { if (box.scrollTop + box.clientHeight > box.scrollHeight - 300 && this.shown < this.all.length) { const from = this.shown; this.shown += STEP; this.more(this.job, from); } };
     },
-    // the grid fills in steps, a few pictures a frame, so the tab opens at once
+    // The grid fills one picture per frame. Nine cards keep the approved first screen full without making a weak
+    // WebView decode dozens of JPEG data URLs in one burst; more are appended only as the player scrolls.
     more(job, from) {
       const grid = this.page().querySelector('.wg'), a = A(), rows = this.all.slice(from, this.shown), todo = [];
       if (!grid) return; // another tab took the page
       for (const d of rows) {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'wi'; b.dataset.k = d.key;
-        b.innerHTML = `<img alt=""><span>${a.owns(d.key) ? (d.id === a.worn(d.tool) ? TICK : I('wardrobe')) : I('coin') + fmt(W().price(d))}</span>`;
+        b.innerHTML = `<img alt="" loading="lazy" decoding="async"><span>${a.owns(d.key) ? (d.id === a.worn(d.tool) ? TICK : I('wardrobe')) : I('coin') + fmt(W().price(d))}</span>`;
         b.addEventListener('click', () => { this.pick[d.tool] = d.key; this.render(); this.page().querySelector('.sbody').scrollTop = 0; });
         grid.appendChild(b);
         todo.push([b.querySelector('img'), d]);
       }
       const step = () => {
-        if (job !== this.job) return;
-        const t0 = performance.now();
-        while (todo.length && performance.now() - t0 < 20) { const [img, d] = todo.shift(); img.src = art(d, 192); }
+        if (job !== this.job || !grid.isConnected) return;
+        const next = todo.shift();
+        if (next) { const [img, d] = next; if (img.isConnected) img.src = art(d, 144); }
         if (todo.length) requestAnimationFrame(step);
       };
       requestAnimationFrame(step);

@@ -128,8 +128,15 @@ async function privacy(layout) {
       if(attempt===2)throw error;
     }
   }
-  await tap('#hsc-menu .dock [data-b=settings]');
-  await page.waitForFunction(()=>document.querySelector('#hsc-set.open .hsc-privacy'));
+  for(let attempt=1;;attempt++){
+    await tap('#hsc-menu .dock [data-b=settings]');
+    try{await page.waitForFunction(()=>document.querySelector('#hsc-set.open .hsc-privacy'),undefined,{timeout:10000});break;}
+    catch(error){
+      (layout.settingsTapMisses??=[]).push({attempt});
+      console.log('settings tap missed',attempt);
+      if(attempt===2)throw error;
+    }
+  }
   await page.evaluate(()=>{
     const style=document.createElement('style');style.id='privacy-capture-stability';
     style.textContent='*{animation:none!important;transition:none!important}';document.head.append(style);
@@ -327,6 +334,7 @@ async function nativeWebViewBounds(){
       {name:'tablet-portrait',size:'1600x2560',density:'320',rotation:0},
       {name:'tablet-landscape',size:'2560x1600',density:'320',rotation:1},
     ];
+    let layoutOrdinal=0;
     for(const spec of lifecycleOnly?specs.slice(0,1):specs){
       if(browser){await browser.close();browser=null;}
       adb('shell','am','force-stop',app);
@@ -336,6 +344,14 @@ async function nativeWebViewBounds(){
       // Fresh WebView per density: do not carry stale page scale between fake devices.
       adb('shell','am','start','-W','-n',activity);
       await connect();page.on('pageerror',e=>errors.push(e.message));await ready();
+      // Every synthetic device gets a fresh customer so its native cutting probe does not depend on hair
+      // removed by the preceding layout. The final layout still keeps its own cut for persistence checks below.
+      if(layoutOrdinal++){
+        assert.equal(await page.evaluate(()=>skinFadeStudio.skip()),true,'layout isolation must start a fresh customer');
+        await ready();
+      }
+      // Production launches at Home; the layout matrix probes the chair controls underneath it.
+      await page.evaluate(()=>HSC.menu.close());
       await page.waitForFunction(landscape=>(innerWidth>innerHeight)===landscape,spec.rotation===1);
       assert.equal(await page.evaluate(async()=>(await HSC.youtubeClientPromise).platformId),'android');
       const nativeBounds=await nativeWebViewBounds();

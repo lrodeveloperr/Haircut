@@ -1,29 +1,31 @@
 package com.worksbien.barbersimulatorasmr;
 
 import android.annotation.SuppressLint;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.util.Base64;
+import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.LinearInterpolator;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.view.View;
 
 import androidx.activity.ComponentActivity;
 import androidx.activity.OnBackPressedCallback;
 import androidx.core.content.FileProvider;
-import androidx.core.graphics.Insets;
 import androidx.core.splashscreen.SplashScreen;
-import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -43,34 +45,35 @@ public class MainActivity extends ComponentActivity {
     static final String ORIGIN = "https://appassets.androidplatform.net";
     private static final String GAME_URL = ORIGIN + "/assets/game/index.html";
     private static final String PLAY_URL = "https://play.google.com/store/apps/details?id=com.worksbien.barbersimulatorasmr";
-    private static final long SPLASH_MAX_MS = 6000;
+    private static final int BANNER_SURFACE = Color.rgb(13, 63, 134);
 
     private WebView web;
     private FrameLayout bannerSlot;
+    private FrameLayout nativeLoading;
+    private ObjectAnimator nativeLoadingSpinner;
     private ReviewController reviews;
     private AdsController ads;
+    private BillingController billing;
     private HostBridge host;
-    private volatile boolean gameReady;
-    private long started;
+    private volatile boolean loadingSurfaceReady;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         SplashScreen splash = SplashScreen.installSplashScreen(this);
-        super.onCreate(savedInstanceState);
-        started = SystemClock.uptimeMillis();
-        splash.setKeepOnScreenCondition(() -> !gameReady && SystemClock.uptimeMillis() - started < SPLASH_MAX_MS);
-
-        // Full screen: the system bars are hidden (a swipe shows them briefly) and the game is kept clear of
-        // any camera cutout and of bars that are showing, so no control sits under them.
+        // Apply immersive edge-to-edge flags before Activity creation swaps the platform starting window for the
+        // post-splash theme. Waiting until setContentView leaves a brief status/navigation-bar flash on API 36.
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        hideSystemBars();
+        super.onCreate(savedInstanceState);
+        // Android's platform splash is icon-free and remains only until our simple cream native loading surface is
+        // attached. The player then sees the moving native spinner while the WebView prepares Home.
+        splash.setKeepOnScreenCondition(() -> !loadingSurfaceReady);
+
+        // Draw the game background edge to edge. The page has viewport-fit=cover and every control surface applies
+        // env(safe-area-inset-*), so controls remain clear of cutouts without turning those insets into dark bands.
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.parseColor("#2b1e17"));
-        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
-            Insets i = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
-            v.setPadding(i.left, i.top, i.right, i.bottom);
-            return WindowInsetsCompat.CONSUMED;
-        });
 
         // The game on top; below it a reserved banner strip: a 16dp gap that takes and ignores every touch (so a tap
         // meant for the game's bottom controls can never land on the ad), then the adaptive banner at a fixed height
@@ -81,16 +84,20 @@ public class MainActivity extends ComponentActivity {
         web.setBackgroundColor(Color.parseColor("#2b1e17"));
         column.addView(web, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         View gap = new View(this);
-        gap.setBackgroundColor(Color.parseColor("#1e1510"));
+        // Navy is the menu's own lower-edge colour, so an offline/no-fill banner remains a deliberate game surface
+        // instead of an unexplained black block. A loaded AdView paints over the slot normally.
+        gap.setBackgroundColor(BANNER_SURFACE);
         gap.setClickable(true);
         gap.setOnTouchListener((v, e) -> true);
         gap.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         column.addView(gap, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Math.round(16 * getResources().getDisplayMetrics().density)));
         bannerSlot = new FrameLayout(this);
-        bannerSlot.setBackgroundColor(Color.parseColor("#1e1510"));
+        bannerSlot.setBackgroundColor(BANNER_SURFACE);
         column.addView(bannerSlot, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0));
         root.addView(column, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        attachNativeLoading(root);
         setContentView(root);
+        loadingSurfaceReady = true;
         hideSystemBars();
 
         WebSettings s = web.getSettings();
@@ -128,10 +135,12 @@ public class MainActivity extends ComponentActivity {
 
         ads = new AdsController(this, web, bannerSlot);
         reviews = new ReviewController(this, web, ads);
-        host = new HostBridge(this, ads, reviews, web);
+        billing = new BillingController(this, web);
+        host = new HostBridge(this, ads, reviews, billing, web);
         web.addJavascriptInterface(host, "AndroidHost");
         web.loadUrl(GAME_URL);
         ads.start();
+        billing.start();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -143,7 +152,50 @@ public class MainActivity extends ComponentActivity {
         });
     }
 
-    void onGameReady() { gameReady = true; }
+    void onHomeReady() {
+        runOnUiThread(() -> {
+            if (isFinishing() || isDestroyed()) return;
+            FrameLayout loading = nativeLoading;
+            if (loading == null) return;
+            nativeLoading = null;
+            loading.animate().alpha(0f).setDuration(180).withEndAction(() -> {
+                stopNativeLoadingSpinner();
+                ViewGroup parent = (ViewGroup) loading.getParent();
+                if (parent != null) parent.removeView(loading);
+            }).start();
+        });
+    }
+
+    private void attachNativeLoading(FrameLayout root) {
+        nativeLoading = new FrameLayout(this);
+        nativeLoading.setBackgroundColor(Color.rgb(255, 246, 230));
+        nativeLoading.setClickable(true);
+        nativeLoading.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+
+        ImageView spinner = new ImageView(this);
+        spinner.setImageResource(R.drawable.loading_spinner_ring);
+        FrameLayout.LayoutParams spinnerLayout = new FrameLayout.LayoutParams(dp(52), dp(52), Gravity.CENTER);
+        nativeLoading.addView(spinner, spinnerLayout);
+
+        nativeLoadingSpinner = ObjectAnimator.ofFloat(spinner, View.ROTATION, 0f, 360f);
+        nativeLoadingSpinner.setDuration(850L);
+        nativeLoadingSpinner.setInterpolator(new LinearInterpolator());
+        nativeLoadingSpinner.setRepeatCount(ValueAnimator.INFINITE);
+        nativeLoadingSpinner.start();
+
+        root.addView(nativeLoading, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private void stopNativeLoadingSpinner() {
+        ObjectAnimator spinner = nativeLoadingSpinner;
+        nativeLoadingSpinner = null;
+        if (spinner != null) spinner.cancel();
+    }
 
     void openPrivacy() {
         // Policy text is maintained on the website, never bundled or displayed inside the game.
@@ -222,13 +274,16 @@ public class MainActivity extends ComponentActivity {
         super.onResume();
         web.onResume();
         if (ads != null) ads.resume();
+        if (billing != null) billing.resume();
         web.evaluateJavascript("window.__androidHost && window.__androidHost.pause(false)", null);
         hideSystemBars();
     }
 
     @Override
     protected void onDestroy() {
+        stopNativeLoadingSpinner();
         host.destroy();
+        billing.destroy();
         reviews.destroy();
         ads.destroy();
         web.destroy();

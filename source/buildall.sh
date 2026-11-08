@@ -15,6 +15,9 @@ case "${TARGET:-playables}" in
 esac
 mkdir -p build/runtime
 cp -r src/assets src/THIRD-PARTY-NOTICES.md src/styles.css build/
+# Last-resort launch recovery only: the normal Home is rendered from the player's current furnished salon.
+# If that canvas render fails, this approved classic salon keeps Android out of the unrelated blue menu theme.
+cp ../docs/mockups/final/img/home.jpg build/assets/home-fallback.jpg
 cp -r src/licenses build/
 cat src/boot-error.css >> build/styles.css
 cp src/runtime/game.js build/runtime/game.js

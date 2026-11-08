@@ -52,6 +52,19 @@ game = replace(game, old_next_ad, '')
 # session whose customer has one of the newer colours must still load, not be replaced by a new session.
 game = replace(game, 'e.colour>=0&&e.colour<cc.length',
                'e.colour>=0&&e.colour<Math.max(cc.length,globalThis.HSC&&HSC.HAIR_DARK?HSC.HAIR_DARK.length:0)')
+# Android always enters through Home, so the old first-customer coach marks have no role. Mark new sessions as
+# already introduced and suppress the overlay for older saves that still carry tutorialSeen=false.
+game = replace(game, 'function Ei({tutorialSeen:e=!1,', 'function Ei({tutorialSeen:e=!0,')
+game = replace(game, 'i&&!t.tutorialSeen&&!r.paused?Qe(sC,{state:t,game:e}):null', 'null')
+game = replace(game, '    await game.renderFirstPlayableFrame();\n    HSC.dismissLoading();', '''    HSC.androidGameplayReady = false;
+    await game.renderFirstPlayableFrame();
+    HSC.androidGameplayReady = true;
+    globalThis.dispatchEvent(new Event("hsc-gameplay-ready"));
+    await HSC.openLaunchHome?.();
+    await client.afterPaint();
+    await client.afterPaint();
+    AndroidHost.homeReady();
+    HSC.dismissLoading();''')
 (out / 'runtime/game.js').write_text(game)
 
 client = (out / 'runtime/local-preview-client.js').read_text()
@@ -106,6 +119,9 @@ shutil.copy2(root / 'android/ad-options.js', out / 'runtime/android-ad-options.j
 shutil.copy2(root / 'android/share.js', out / 'runtime/android-share.js')
 shutil.copy2(root / 'android/review.js', out / 'runtime/android-review.js')
 html = (out / 'index.html').read_text().replace('local-preview-client.js', 'android-client.js').replace('local-preview-startup.js', 'android-startup.js')
+# The native Android launch window already covers genuine renderer initialization. Do not add a second branded
+# loading layer between that window and the ready Home screen.
+html = replace(html, '  <div id="yt-loading" role="status" aria-label="Loading game"><span aria-hidden="true">✂</span><span>Loading…</span></div>\n', '')
 html = replace(html, '  <script src="./runtime/android-client.js', '  <script src="./runtime/android-viewport.js"></script>\n  <script src="./runtime/android-transport.js"></script>\n  <script src="./runtime/android-client.js')
 html = replace(html, '  <script src="./runtime/game.js', '  <script src="./runtime/android-privacy.js"></script>\n  <script src="./runtime/android-ad-options.js"></script>\n  <script src="./runtime/game.js')
 html = replace(html, '  <script src="./runtime/game.js', '  <script src="./runtime/android-share.js"></script>\n  <script src="./runtime/game.js')

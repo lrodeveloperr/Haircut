@@ -42,13 +42,15 @@
   let uid = 0;
   // the coin: a struck gold piece with a milled rim, a bevel, a light from the top left and crossed shears in relief
   function coin(size) {
-    const u = 'hc' + (++uid), S = size ? ` width="${size}" height="${size}"` : '';
-    const ticks = Array.from({ length: 36 }, (_, i) => { const a = (i * Math.PI) / 18, c = Math.cos(a), s = Math.sin(a); return `M${(24 + c * 20.2).toFixed(2)} ${(24 + s * 20.2).toFixed(2)}L${(24 + c * 22.6).toFixed(2)} ${(24 + s * 22.6).toFixed(2)}`; }).join('');
-    return `<svg class="hsc-ic hsc-ic-coin" viewBox="0 0 48 48"${S} aria-hidden="true"><defs>
+    const u = 'hc' + (++uid), S = size ? ` width="${size}" height="${size}"` : '', compact = !!size && size <= 28, count = compact ? 18 : 36;
+    // At 18--28 CSS pixels the original 36 one-pixel rim cuts land between device pixels and read as dirt. The compact
+    // strike keeps the same coin, bevel, shears and highlight, with every other milled cut retained at a drawable width.
+    const ticks = Array.from({ length: count }, (_, i) => { const a = (i * Math.PI * 2) / count, c = Math.cos(a), s = Math.sin(a); return `M${(24 + c * 20.2).toFixed(2)} ${(24 + s * 20.2).toFixed(2)}L${(24 + c * 22.6).toFixed(2)} ${(24 + s * 22.6).toFixed(2)}`; }).join('');
+    return `<svg class="hsc-ic hsc-ic-coin${compact ? ' compact' : ''}" viewBox="0 0 48 48"${S} shape-rendering="geometricPrecision" aria-hidden="true"><defs>
 <radialGradient id="${u}a" cx=".36" cy=".3" r=".85"><stop offset="0" stop-color="#fff3b0"/><stop offset=".42" stop-color="#ffd24a"/><stop offset=".78" stop-color="#f0a315"/><stop offset="1" stop-color="#b86b05"/></radialGradient>
 <linearGradient id="${u}b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff7c9"/><stop offset=".5" stop-color="#f2b021"/><stop offset="1" stop-color="#8f4f02"/></linearGradient>
 <linearGradient id="${u}c" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c47a08"/><stop offset="1" stop-color="#ffe27a"/></linearGradient></defs>
-<circle cx="24" cy="25.4" r="22.6" fill="#7a4300"/><circle cx="24" cy="24" r="22.6" fill="url(#${u}b)"/><path d="${ticks}" stroke="#a9650a" stroke-width="1.5" stroke-linecap="round" opacity=".75"/>
+<circle cx="24" cy="25.4" r="22.6" fill="#7a4300"/><circle cx="24" cy="24" r="22.6" fill="url(#${u}b)"/><path d="${ticks}" stroke="#a9650a" stroke-width="${compact ? 1.8 : 1.5}" stroke-linecap="round" opacity=".75"/>
 <circle cx="24" cy="24" r="19.2" fill="url(#${u}c)"/><circle cx="24" cy="24" r="17.6" fill="url(#${u}a)"/>
 <g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#fff4b8" stroke-width="2.6" transform="translate(-.5 -.6)"><path d="M17.5 14.5L30 31M30.5 14.5L18 31"/><circle cx="16.4" cy="33.4" r="3.1"/><circle cx="31.6" cy="33.4" r="3.1"/></g><g stroke="#a65c04" stroke-width="2.6"><path d="M17.5 14.5L30 31M30.5 14.5L18 31"/><circle cx="16.4" cy="33.4" r="3.1"/><circle cx="31.6" cy="33.4" r="3.1"/></g></g>
 <path d="M9.5 19.5A15.6 15.6 0 0 1 21 8.7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".9"/><circle cx="12.3" cy="13.2" r="1.4" fill="#fff"/></svg>`;

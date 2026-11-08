@@ -1,4 +1,21 @@
-# Production AdMob setup — 16 October 2026
+# Production AdMob setup
+
+## Current company-account correction — 8 November 2026
+
+The Android production release is now wired to the AdMob account signed in as `info@worksbienstudios.com`. The earlier publisher configuration is superseded and was prevented from reaching production.
+
+- Publisher: `pub-5974311182854367`
+- App ID: `ca-app-pub-5974311182854367~9852144059`
+- Banner: `ca-app-pub-5974311182854367/5708672885`
+- Interstitial: `ca-app-pub-5974311182854367/8347490693`
+- Rewarded: `ca-app-pub-5974311182854367/4670923381`
+- European privacy message: published for the Android Barber app; EEA/UK/Switzerland targeting with Consent, Do not consent and Manage options.
+- US-state privacy message: published for the Android Barber app; all current and future supported US states.
+- Live app-ads.txt includes `google.com, pub-5974311182854367, DIRECT, f08c47fec0942fa0`.
+- Company-account approval and the app-specific AdMob review are still pending Google processing, so limited serving may remain until Google completes those external reviews.
+- Corrected Play production release: `1.0.15` (`versionCode` 16), sent for review on 8 November 2026.
+
+## Historical setup record — 16 October 2026
 
 ## Authorized scope and plan
 
@@ -9,8 +26,9 @@ Complete production AdMob setup only. Signing/AAB and Play submission remain sep
 3. Expose Google's separately required ad-consent options only when UMP requests it, using spare wardrobe header space; preserve all existing controls' bounds and the direct policy link.
 4. Verify affected code with test ads, then wire the public production identifiers to release builds only and record evidence.
 
-## Console identifiers observed
+## Superseded console identifiers observed in the historical setup
 
+- These identifiers are retained only as historical context and are not used by the current release.
 - App: Barber Simulator: ASMR Haircut, Android, unpublished.
 - App ID: `ca-app-pub-8054612600809568~2715928050`.
 - `barber_rewarded`: `ca-app-pub-8054612600809568/6612520040`.
