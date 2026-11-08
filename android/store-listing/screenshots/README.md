@@ -17,7 +17,7 @@ no device frames. Four show a cut in progress with the clipper on the hair; four
 | `6-ginger-taper-finished.png` | mixed heritage, 20s | curly ginger, clean-shaven | behind | carbon, sky | classic | finished low taper |
 | `7-coily-temple-fade.png` | East African, 25 | coily black, handlebar moustache | side | marble, magenta | London | temple skin fade, in progress |
 | `8-high-fade-finished.png` | Latino, 30s | brown, anchor beard | front three-quarter | leopard, green | Mexico City | finished high fade |
-| `../en-US/images/featureGraphic.png` (1024×500) | Northern European, 30s | dark brown, balbo beard | side | red chevron, purple | Istanbul | skin fade in progress, buttons hidden |
+| `../en-US/images/featureGraphic.png` (1024×500) | Mediterranean, 20s | dark curly hair, stubble | from behind | red chevron, yellow | London | layered skin fade (guards 0 to 3) done all around the back, clipper finishing the last strip; buttons hidden |
 
 Phone shots are 1080×1920 (9:16), 24-bit PNG without transparency.
 

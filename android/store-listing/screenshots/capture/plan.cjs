@@ -20,5 +20,5 @@ module.exports={
  '7-fade-coily':async(p,B,L)=>{await L.strokes(p,0,band(160,250,300,355));await L.strokes(p,1,band(160,250,276,300));await clear(p);await L.strokes(p,0,band(225,250,300,355));await L.hold(p,0,[[256,350],[257,325],[258,298]]);},
  // finished: high fade, three-quarter front
  '8-crown-high':async(p,B,L)=>{await L.strokes(p,0,band(215,350,320,380));await L.strokes(p,1,band(215,350,296,320));await L.strokes(p,2,band(215,350,276,296));await clear(p);},
- 'F-feature':async(p,B,L)=>{await L.strokes(p,0,band(360,470,232,300,2));await L.strokes(p,1,band(360,470,206,232,2));await L.strokes(p,2,band(360,470,184,206,2));await clear(p);await L.strokes(p,0,band(440,470,232,300,2));await L.hold(p,0,[[478,292],[479,262],[480,232]]);},
+ 'F-feature':async(p,B,L)=>{await L.strokes(p,3,vl(360,615,200,164,2));await L.strokes(p,2,vl(360,615,236,198,2));await L.strokes(p,1,vl(360,615,345,234,2));await L.strokes(p,0,vl(360,548,345,270,2));await clear(p);await L.strokes(p,0,vl(530,548,345,270,2));await L.hold(p,0,[[556,336],[557,304],[558,272]]);},
 };

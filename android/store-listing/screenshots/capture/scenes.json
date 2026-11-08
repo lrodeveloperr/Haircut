@@ -146,21 +146,21 @@
  },
  {
   "id": "F-feature",
-  "region": "istanbul",
+  "region": "london",
   "opts": {
-   "heritage": "north-european",
-   "age": "middle",
+   "heritage": "mediterranean",
+   "age": "young",
    "noLoss": true,
    "grey": 0,
-   "hairColour": 3,
-   "beard": "balbo"
+   "hairColour": 1,
+   "beard": "garibaldi"
   },
-  "pred": "(q,pr)=>q.years>=32&&q.years<=38&&/^(1|2)/.test(q.hair.type)",
+  "pred": "(q,pr)=>true",
   "profile": "s5-b5-t5-even-v0",
-  "yaw": -120,
-  "el": 6,
+  "yaw": -25,
+  "el": 10,
   "clip": 24,
-  "gown": 126,
-  "seed": 2005973601
+  "gown": 46,
+  "seed": 3764668706
  }
 ]
