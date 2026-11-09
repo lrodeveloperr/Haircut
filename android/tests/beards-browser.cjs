@@ -14,7 +14,7 @@ const build = path.resolve(__dirname, '../../source/build');
       const u = new URL(route.request().url()), file = path.join(build, u.pathname === '/' ? 'index.html' : u.pathname);
       return fs.existsSync(file) ? route.fulfill({ path: file }) : route.fulfill({ status: 404, body: '' });
     });
-    await context.addInitScript(() => { window.__androidRewardedReady = true; window.AndroidHost = { request(id, op) { setTimeout(() => __androidHost.complete(id, true, op === 'load' ? '{}' : ''), 0); }, gameReady() {}, showRewarded() {}, showInterstitial() {}, openPrivacy() {}, showPrivacyOptions() {} }; });
+    await context.addInitScript(() => { window.__androidRewardedReady = true; window.AndroidHost = { request(id, op) { setTimeout(() => __androidHost.complete(id, true, op === 'load' ? '{}' : ''), 0); }, gameReady() {}, homeReady() {}, showRewarded() {}, showInterstitial() {}, openPrivacy() {}, showPrivacyOptions() {} }; });
     const page = await context.newPage();
     page.setDefaultTimeout(240000);
     await page.goto('http://beards.test/');
