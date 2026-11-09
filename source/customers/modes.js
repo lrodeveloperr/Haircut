@@ -72,92 +72,167 @@
   const U = (i) => (i % 128) / 128, V = (i) => Math.floor(i / 128) / 64;
   const du = (a, b) => { const d = Math.abs(a - b); return Math.min(d, 1 - d); };
 
-  // ---- M3: a hair disaster from the hair he walked in with ----
-  // every flaw only lowers hair to the repair's own length there, so the repair is always possible
+  // ---- M3: a hair disaster ----
+  // The barber before finished a cut, then got it wrong. The customer arrives with that finished cut and its mistakes
+  // (owner decision, 9 November 2026: a rescue must look like a bad haircut, not a cut half done). Within the game's
+  // parameters (one length per cell, levels 0-5, a clipper that only shortens) a cut can be bad in two ways:
+  //   too short  gouge, chunks, tracks, a ledge (step), a bowl line, a fade taken too high on one side (fadehigh), one
+  //              sideburn higher, a crooked neckline (nape), a crooked line-up, a stripe run up the head with no guard,
+  //              a zigzag where the fade should be, one side of the top cut shorter (lopsided), a bite out of the
+  //              front hairline (notch)
+  //   left long  missed patches, one side not done (side), the blend skipped: a hard step (noblend)
+  // The repair (the job's target) is what a barber does with a clipper: what was left long is cut to the style, a
+  // one-sided mistake is matched on the other side, a crooked line is cut straight at its highest point, and a hole is
+  // faded into the hair round it. It is never longer than what he walked in with, so it is always possible.
   const REPAIR_MIN = 120; // cells still longer than the repair: twice what counts as real work (MIN_WORK)
+  const SEEN_MIN = 150; // cells at least two lengths (6 mm) off the style, or bare where the style keeps hair: a mistake that shows
+  // two lengths apart (6 mm) shows, and so does hair against bare skin (3 mm regrowth on a shaved head)
+  const shows = (a, b) => Math.abs(a - b) >= 2 || (Math.min(a, b) === 0 && Math.max(a, b) >= 1);
+  const mirrorCell = (i) => (i & ~127) | ((128 - (i & 127)) & 127); // the same place on the other side of the head (front u = 0)
+  // a faded repair: one length per 2.5 cells round the head and per 3.5 cells up it (hair grid cells are taller than wide)
+  function fadeInto(t2, seeds) {
+    const f = Float32Array.from(t2), q = seeds.slice(), inQ = new Uint8Array(8192);
+    for (const i of q) inQ[i] = 1;
+    const STEP_U = 1 / 2.5, STEP_V = 1 / 3.5;
+    while (q.length) {
+      const i = q.pop(); inQ[i] = 0;
+      const cx = i & 127, cy = i >> 7;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const yy = cy + dy; if (yy < 0 || yy > 63) continue;
+        const n = yy * 128 + ((cx + dx + 128) & 127), c = f[i] + (dx ? STEP_U : STEP_V);
+        if (c < f[n] - 1e-4) { f[n] = c; if (!inQ[n]) { inQ[n] = 1; q.push(n); } }
+      }
+    }
+    for (let i = 0; i < 8192; i++) t2[i] = Math.min(t2[i], Math.round(f[i]));
+  }
   function disaster(person, start, R, force, beard) {
     // a repair needs room to show a mistake: only styles that take a real amount off, the biggest change if none does
     const room = (t) => { let n = 0; for (let i = 0; i < 8192; i++) if (start[i] - t[i] >= 2) n++; return n; };
     const all = options(person, start).map((o) => [o, room(o[2])]);
-    if (!all.length) return null;
-    const big = all.filter((o) => o[1] >= 700), opts = big.length ? big.map((o) => o[0]) : [all.reduce((a, b) => (b[1] > a[1] ? b : a))[0]];
-    const [, style, target] = choose(R, opts);
-    // mistakes land where a lot comes off, so they read clearly; a head with little to take works with what it has
-    const bad = start.slice();
-    let cut = [];
-    for (let i = 0; i < 8192; i++) if (start[i] - target[i] >= 2) cut.push(i);
-    if (cut.length < 300) { cut = []; for (let i = 0; i < 8192; i++) if (start[i] > target[i]) cut.push(i); }
-    if (cut.length < 120) return null;
-    const lower = (i) => { bad[i] = Math.min(bad[i], target[i]); };
-    const at = () => cut[Math.floor(R.next() * cut.length)];
+    const big = all.filter((o) => o[1] >= 700), opts = big.length ? big.map((o) => o[0]) : all.length ? [all.reduce((a, b) => (b[1] > a[1] ? b : a))[0]] : [];
+    // every Rescue customer has a disaster: with no cut that suits him, it is the cut he walked in with that went wrong
+    const [, style, target] = opts.length ? choose(R, opts) : [0, K().byId.get('trim') || { id: 'trim', fam: 'trim' }, start.slice()];
+    // where hair was left long can show (two lengths over the style), and where there is hair to take too short (on a
+    // 3 mm buzz a slip to the skin shows as clearly as a hole in a longer top)
+    const long = [], thick = [];
+    for (let i = 0; i < 8192; i++) { if (start[i] > target[i] && shows(start[i], target[i])) long.push(i); if (target[i] >= 1) thick.push(i); }
+    const canShort = thick.length >= 200, canLong = long.length >= 200;
+    if (!canShort && !canLong) return null;
+    let bad, fix, holes, names;
+    const pick = (list) => list[Math.floor(R.next() * list.length)];
+    // too short: down to `to` (never below the clipper's 0); a hole is faded in, a line or one side is put right by `fix`
+    const short = (i, to, hole) => { const v = Math.max(0, Math.min(bad[i], to)); if (v < bad[i]) { bad[i] = v; if (hole) holes.push(i); } };
+    const lng = (i) => { bad[i] = Math.max(bad[i], start[i]); }; // left at the length he walked in with
+    const fixTo = (i, v) => fix.push(i, v);
+    const oval = (u0, v0, ru, rv, f) => { for (let i = 0; i < 8192; i++) { const a = du(U(i), u0) / ru, b = (V(i) - v0) / rv; if (a * a + b * b < 1) f(i); } };
+    // the lowest the style goes in this cell's column, below its height: the fade's own bottom length
+    const colMin = new Int8Array(128).fill(9);
+    for (let i = 0; i < 8192; i++) if (V(i) < 0.35 && target[i] > 0) colMin[i & 127] = Math.min(colMin[i & 127], target[i]);
     const KINDS = {
-      // a clipper slipped: a deep oval hole
-      gouge() { const c = at(), u0 = U(c), v0 = V(c), ru = R.range(0.05, 0.08), rv = R.range(0.11, 0.17); for (const i of cut) { const a = du(U(i), u0) / ru, b = (V(i) - v0) / rv; if (a * a + b * b < 1) lower(i); } },
-      // one side done, the other not
-      side() { const u0 = R.next(), w = R.range(0.22, 0.32); for (const i of cut) if (du(U(i), u0) < w) lower(i); },
-      // a ring cut at the wrong height: a step
-      step() { const v0 = R.range(0.2, 0.55), h = R.range(0.04, 0.07); for (const i of cut) if (Math.abs(V(i) - v0) < h) lower(i); },
-      // a home bowl cut: everything below a line taken off unevenly
-      bowl() { const v0 = R.range(0.3, 0.5), tilt = R.range(-0.12, 0.12), ph = R.next(); for (const i of cut) if (V(i) < v0 + tilt * Math.sin((U(i) + ph) * Math.PI * 2)) lower(i); },
+      // a clipper slipped: a deep oval hole, nearly to the skin
+      gouge() { const c = pick(thick.filter((i) => target[i] >= 3).concat(thick)); oval(U(c), V(c), R.range(0.045, 0.07), R.range(0.08, 0.13), (i) => short(i, R.next() < 0.6 || target[i] < 3 ? 0 : 1, true)); },
       // bites taken out here and there
-      chunks() { const n = R.int(5, 8); for (let k = 0; k < n; k++) { const c = at(), u0 = U(c), v0 = V(c), r = R.range(0.02, 0.035); for (const i of cut) { const a = du(U(i), u0) / r, b = (V(i) - v0) / (r * 2.2); if (a * a + b * b < 1) lower(i); } } },
-      // parallel clipper tracks: guard lines left down the head
-      tracks() { const u0 = R.next(), n = R.int(3, 5), gap = R.range(0.05, 0.075), w = R.range(0.012, 0.02); for (const i of cut) for (let k = 0; k < n; k++) if (du(U(i), (u0 + k * gap) % 1) < w) lower(i); },
-      // the job left unfinished: done everywhere except a few missed patches
-      missed() { const ps = Array.from({ length: R.int(3, 5) }, () => { const c = at(); return [U(c), V(c), R.range(0.03, 0.05)]; }); for (const i of cut) if (!ps.some(([u0, v0, r]) => { const a = du(U(i), u0) / r, b = (V(i) - v0) / (r * 2); return a * a + b * b < 1; })) lower(i); },
-      // a crooked neckline: the nape taken up unevenly
-      nape() { const w = R.range(0.1, 0.18), top = R.range(0.14, 0.24), lean = R.range(-0.5, 0.5); for (const i of cut) { const d = du(U(i), 0.5); if (d < w && V(i) < top * (1 + lean * (U(i) - 0.5) / w)) lower(i); } },
-      // one sideburn taken higher than the other
-      sideburn() { const u0 = R.next() < 0.5 ? 0.25 : 0.75, w = R.range(0.04, 0.07), top = R.range(0.3, 0.42); for (const i of cut) if (du(U(i), u0) < w && V(i) < top) lower(i); },
-      // a crooked line-up: the low edge cut up at a slant on one side
-      lineup() { const u0 = R.next(), w = R.range(0.18, 0.3), top = R.range(0.12, 0.22); for (const i of cut) { const d = du(U(i), u0); if (d < w && V(i) < top * (1 - d / w)) lower(i); } },
+      chunks() { const big = thick.filter((i) => target[i] >= 3), from = big.length > 100 ? big : thick; for (let k = R.int(5, 8); k > 0; k--) { const c = pick(from), r = R.range(0.02, 0.032); oval(U(c), V(c), r, r * 2.2, (i) => short(i, target[i] - 3, true)); } },
+      // guard lines: parallel stripes cut two lengths too short
+      tracks() { const c = pick(thick), u0 = U(c), n = R.int(3, 5), gap = R.range(0.05, 0.075), w = R.range(0.01, 0.016), v0 = Math.max(0.15, V(c) - 0.3), v1 = Math.min(1, V(c) + 0.3); for (let i = 0; i < 8192; i++) if (V(i) > v0 && V(i) < v1) for (let k = 0; k < n; k++) if (du(U(i), (u0 + k * gap) % 1) < w) short(i, target[i] - 2, true); },
+      // a ring cut at the wrong height, two lengths too short: a ledge
+      step() { const v0 = R.range(0.35, 0.65), h = R.range(0.03, 0.05); for (const i of thick) if (Math.abs(V(i) - v0) < h) short(i, target[i] - 2, true); },
+      // a home bowl cut: everything below a wobbly line taken right down, no blending
+      bowl() { const v0 = R.range(0.4, 0.55), tilt = R.range(0.04, 0.1), ph = R.next(), to = R.int(0, 1); for (let i = 0; i < 8192; i++) if (V(i) < v0 + tilt * Math.sin((U(i) + ph) * Math.PI * 2)) short(i, to, true); },
+      // the fade taken too high on one side; the repair takes the other side up to match
+      fadehigh() { const u0 = R.next() < 0.5 ? 0.25 : 0.75, w = R.range(0.12, 0.18), top = R.range(0.42, 0.55); for (let i = 0; i < 8192; i++) if (du(U(i), u0) < w && V(i) < top && target[i] > 0) { short(i, Math.min(target[i], colMin[i & 127]), false); fixTo(mirrorCell(i), bad[i]); } },
+      // one sideburn taken right up; the repair takes the other up to match
+      sideburn() { const u0 = R.next() < 0.5 ? 0.25 : 0.75, w = R.range(0.04, 0.065), top = R.range(0.3, 0.42); for (let i = 0; i < 8192; i++) if (du(U(i), u0) < w && V(i) < top) { short(i, 0, false); fixTo(mirrorCell(i), 0); } },
+      // a crooked neckline taken up into the nape; the repair is a straight line at its highest point
+      nape() { const w = R.range(0.1, 0.16), top = R.range(0.12, 0.2), lean = R.range(0.3, 0.6) * (R.next() < 0.5 ? -1 : 1); for (let i = 0; i < 8192; i++) { const d = du(U(i), 0.5); if (d >= w) continue; if (V(i) < top * (1 + lean * (U(i) - 0.5) / w)) short(i, 0, false); if (V(i) < top * (1 + Math.abs(lean))) fixTo(i, 0); } },
+      // a crooked line-up at the front: the edge cut up at a slant; the repair is a straight edge at its highest point
+      lineup() { const u0 = R.range(-0.08, 0.08), w = R.range(0.14, 0.22), top = R.range(0.1, 0.18), sl = R.next() < 0.5 ? -1 : 1; for (let i = 0; i < 8192; i++) { const d = du(U(i), (u0 + 1) % 1); if (d >= w) continue; const sgn = ((U(i) - u0 + 1.5) % 1) - 0.5; if (V(i) < top * (0.5 + 0.5 * sl * sgn / w)) short(i, 0, false); if (V(i) < top) fixTo(i, 0); } },
+      // the clipper run up the head with no guard on: one stripe to the skin
+      stripe() { const c = pick(thick.filter((i) => V(i) > 0.35).concat(thick)), u0 = U(c), w = R.range(0.012, 0.02), v0 = Math.max(0.05, V(c) - R.range(0.25, 0.4)), v1 = Math.min(1, V(c) + R.range(0.2, 0.4)); for (let i = 0; i < 8192; i++) if (V(i) > v0 && V(i) < v1 && du(U(i), u0) < w) short(i, 0, true); },
+      // the fade line wandered: a zigzag where it should run straight; the repair is a straight line at its highest point
+      zigzag() { const v0 = R.range(0.2, 0.32), amp = R.range(0.05, 0.09), f = R.int(10, 16), ph = R.next(); for (let i = 0; i < 8192; i++) { if (!(target[i] > colMin[i & 127]) || colMin[i & 127] > 5) continue; const t = (U(i) * f + ph) % 1, line = v0 + amp * (1 - 2 * Math.abs(t - 0.5)); if (V(i) < line) short(i, colMin[i & 127], false); if (V(i) < v0 + amp) fixTo(i, colMin[i & 127]); } },
+      // one side of the top taken two lengths shorter than the other; the repair takes the other side down to match
+      lopsided() { const u0 = R.next() < 0.5 ? 0.25 : 0.75; for (let i = 0; i < 8192; i++) if (V(i) > 0.5 && du(U(i), u0) < 0.25 && target[i] >= 1) { short(i, target[i] - 2, false); fixTo(mirrorCell(i), bad[i]); } },
+      // a bite out of the front hairline, faded in by the repair
+      notch() { const u0 = R.range(-0.06, 0.06), v0 = R.range(0.04, 0.12); oval((u0 + 1) % 1, v0, R.range(0.025, 0.04), R.range(0.08, 0.14), (i) => short(i, 0, true)); },
+      // the job left unfinished: patches missed, still at the length he walked in with
+      missed() { if (long.length < 200) return; for (let k = R.int(3, 5); k > 0; k--) { const c = pick(long), r = R.range(0.035, 0.055); oval(U(c), V(c), r, r * 2, (i) => { if (start[i] > target[i] && shows(start[i], target[i])) lng(i); }); } },
+      // one side never done
+      side() { if (long.length < 200) return; const c = pick(long), u0 = U(c), w = R.range(0.16, 0.24); for (const i of long) if (du(U(i), u0) < w) lng(i); },
+      // the blend skipped: the in-between lengths left long, so the top drops straight onto the sides
+      noblend() { for (const i of long) if (target[i] > colMin[i & 127] && V(i) < 0.75) lng(i); },
     };
     // what really goes wrong depends on the hair: clipper tracks show in straight hair, a line-up is where tight curls go wrong
     const ty = (person.hair && person.hair.type) || '1b', coily = /^(3c|4)/.test(ty), straight = /^[12]/.test(ty);
-    const odds = { gouge: 2, side: 2, step: 2, missed: 2, nape: 1.5, sideburn: 1.2, chunks: 0.6, bowl: 0.4, tracks: straight ? 2.2 : 0.5, lineup: coily ? 3 : 0.8 };
-    const names = force || [];
-    if (!force) for (let n = R.next() < 0.45 ? 2 : 1; n > 0; n--) { const left = Object.entries(odds).filter(([k]) => !names.includes(k)); names.push(choose(R, left.map(([k, w]) => [w, k]))[1]); }
-    for (const n of names) KINDS[n]();
-    let changed = 0;
-    for (let i = 0; i < 8192; i++) if (bad[i] !== start[i]) changed++;
-    for (let k = 0; k < 4 && changed < 120; k++) { KINDS.chunks(); changed = 0; for (let i = 0; i < 8192; i++) if (bad[i] !== start[i]) changed++; }
-    // a rescue always leaves a real repair to do: 'missed' (done everywhere but a few patches) with a second flaw over
-    // those patches can leave nothing longer than the repair (about 1 job in 330), so a perfect repair could never count
-    // as work. Such a job is made again with the other flaw alone, or none is made
-    const left = () => { let n = 0; for (let i = 0; i < 8192; i++) if (bad[i] > target[i]) n++; return n; };
-    if (!force && left() < REPAIR_MIN) {
-      const rest = names.filter((n) => n !== 'missed');
-      for (let i = 0; i < 8192; i++) bad[i] = start[i];
-      names.splice(0, names.length, ...(rest.length ? rest : ['gouge']));
+    const odds = { gouge: 2, chunks: 1.2, step: 1.4, bowl: 0.6, fadehigh: 1.6, sideburn: 1.2, nape: 1.4, missed: 1.4, side: 1.2, noblend: 1.2, tracks: straight ? 2.2 : 0.5, lineup: coily ? 3 : 0.8, stripe: 1.2, zigzag: 1, lopsided: 1.2, notch: coily ? 1.4 : 0.8 };
+    // a cut right down to the skin can only have been left long; a head with nothing left long only cut too short
+    const LONG = ['missed', 'side', 'noblend'];
+    for (const k of Object.keys(odds)) if (LONG.includes(k) ? !canLong : !canShort) delete odds[k];
+    const seen = () => { let n = 0; for (let i = 0; i < 8192; i++) if (shows(bad[i], target[i])) n++; return n; };
+    let t2;
+    const make = (list) => {
+      bad = target.slice(); fix = []; holes = []; names = list.slice();
       for (const n of names) KINDS[n]();
-      if (left() < REPAIR_MIN) return null;
-    }
+      // a mistake that does not show is not a rescue: add another until it does
+      for (let k = 0; k < 4 && !force && seen() < SEEN_MIN; k++) { const left = Object.entries(odds).filter(([n]) => !names.includes(n)); if (!left.length) break; const n = choose(R, left.map(([k2, w]) => [w, k2]))[1]; names.push(n); KINDS[n](); }
+      t2 = target.map((v, i) => Math.min(v, bad[i]));
+      for (let k = 0; k < fix.length; k += 2) t2[fix[k]] = Math.min(t2[fix[k]], fix[k + 1]);
+      fadeInto(t2, holes);
+      for (let i = 0; i < 8192; i++) if (t2[i] > bad[i]) t2[i] = bad[i];
+    };
+    const draw = () => { const l = []; for (let n = R.next() < 0.45 ? 2 : 1; n > 0; n--) { const left = Object.entries(odds).filter(([k]) => !l.includes(k)); if (left.length) l.push(choose(R, left.map(([k, w]) => [w, k]))[1]); } return l; };
+    const left = () => { let n = 0; for (let i = 0; i < 8192; i++) if (bad[i] > t2[i]) n++; return n; };
+    make(force || draw());
+    // a rescue always leaves a real repair to do and shows its mistakes; otherwise it is drawn again, or none is made
+    const ok = () => left() >= REPAIR_MIN && seen() >= SEEN_MIN;
+    for (let k = 0; k < 3 && !force && !ok(); k++) make(draw());
+    // every Rescue customer has a disaster: the mistakes that always show on what he has
+    for (const l of [['gouge', 'chunks'], ['bowl'], ['side', 'missed'], ['stripe', 'gouge', 'chunks']]) { if (force || ok()) break; if (l.every((n) => odds[n])) make(l); }
+    if (!force && !(left() > 0 && seen() > 0)) return null;
     // a man with a beard may have had that botched too
     const fixBeard = Array.isArray(beard) && !force && R.next() < 0.45 ? beardDisaster(person, beard, R) : null;
-    return { start: bad, target, style, flaws: names, beard: fixBeard };
+    return { start: bad, target: t2, style, flaws: names, beard: fixBeard };
   }
-  // the same rule for a beard: a mistake only takes hair down to the beard he asks for, so the clipper can always even it out
+  // A beard botched the same way: the barber before shaped it, then got one side or a line wrong, or left patches long.
+  // The repair matches the good side to the bad one (or cuts what was left long), only ever with lengths the clipper's
+  // guards reach, so it is always possible.
+  const BEARD_SEEN = 60;
   function beardDisaster(person, start, R) {
     const j = beardJob(person, start, R);
     if (!j) return null;
-    const cut = [];
-    for (let i = 0; i < 8192; i++) if (start[i] - j.target[i] >= 2) cut.push(i);
-    if (cut.length < 150) return null;
-    const bad = start.slice(), lower = (i) => { bad[i] = Math.min(bad[i], j.target[i]); }, BU = (i) => ((i & 127) + 0.5) / 128, BV = (i) => ((i >> 7) + 0.5) / 64;
-    const vs = cut.map(BV), lo = Math.min(...vs), hi = Math.max(...vs), left = R.next() < 0.5, half = (i) => (BU(i) < 0.5) === left;
+    const reach = HSC.beardReach ? HSC.beardReach() : [0];
+    const has = [], long = [];
+    for (let i = 0; i < 8192; i++) { if (j.target[i] >= 3) has.push(i); if (start[i] - j.target[i] >= 2) long.push(i); }
+    if (has.length < 150) return null;
+    const BU = (i) => ((i & 127) + 0.5) / 128, BV = (i) => ((i >> 7) + 0.5) / 64, mirror = (i) => (i & ~127) | (127 - (i & 127));
+    const vs = has.map(BV), lo = Math.min(...vs), hi = Math.max(...vs), side = R.next() < 0.5, half = (i) => (BU(i) < 0.5) === side;
+    const bad = j.target.slice(), fix = [];
+    // one side shorter, or a line cut up on one side: the other side is matched to it
+    const oneSide = (i, to) => { if (to < bad[i]) { bad[i] = to; fix.push(mirror(i), to); } };
+    // a length the guards reach, two or more lengths under the beard's usual length on that side
+    let usual = 0; for (const i of has) usual = Math.max(usual, j.target[i]);
+    const shorter = reach.filter((l) => l <= usual - 3);
     const KINDS = {
-      // one side taken down, the other not
-      lopsided() { for (const i of cut) if (half(i)) lower(i); },
+      // one side taken down a guard too far
+      lopsided() { if (!shorter.length) return; const to = shorter[Math.floor(R.next() * shorter.length)]; for (const i of has) if (half(i) && j.target[i] - to >= 2) oneSide(i, to); },
       // the cheek line pushed up on one side
-      cheek() { const top = hi - (hi - lo) * R.range(0.2, 0.34); for (const i of cut) if (half(i) && BV(i) > top) lower(i); },
-      // the neckline pushed too high
-      neck() { const low = lo + (hi - lo) * R.range(0.16, 0.3); for (const i of cut) if (BV(i) < low) lower(i); },
-      // the clipper slipped: a bald bite out of the beard
-      gouge() { const c = cut[Math.floor(R.next() * cut.length)], u0 = BU(c), v0 = BV(c), ru = R.range(0.03, 0.05), rv = R.range(0.05, 0.09); for (const i of cut) { const a = (BU(i) - u0) / ru, b = (BV(i) - v0) / rv; if (a * a + b * b < 1) lower(i); } },
+      cheek() { const top = hi - (hi - lo) * R.range(0.2, 0.34); for (const i of has) if (half(i) && BV(i) > top) oneSide(i, 0); },
+      // the neckline pushed up on one side
+      neck() { const low = lo + (hi - lo) * R.range(0.16, 0.3); for (const i of has) if (half(i) && BV(i) < low) oneSide(i, 0); },
+      // patches left at the length he walked in with
+      missed() { if (long.length < 100) return; for (let k = R.int(3, 5); k > 0; k--) { const c = long[Math.floor(R.next() * long.length)], u0 = BU(c), v0 = BV(c), r = R.range(0.03, 0.05); for (const i of long) { const a = (BU(i) - u0) / r, b = (BV(i) - v0) / (r * 1.6); if (a * a + b * b < 1) bad[i] = start[i]; } } },
     };
-    const flaw = choose(R, [[2, 'lopsided'], [2, 'cheek'], [1.5, 'neck'], [2, 'gouge']])[1];
-    KINDS[flaw]();
-    return { start: bad, target: j.target, style: j.style, flaw };
+    const seen = () => { let n = 0; for (let i = 0; i < 8192; i++) if (Math.abs(bad[i] - j.target[i]) >= 2) n++; return n; };
+    const order = [];
+    for (let k = 0; k < 4 && seen() < BEARD_SEEN; k++) {
+      const left = [[2, 'lopsided'], [2, 'cheek'], [1.5, 'neck'], [1.5, 'missed']].filter(([, n]) => !order.includes(n));
+      const n = choose(R, left)[1]; order.push(n); KINDS[n]();
+    }
+    if (seen() < BEARD_SEEN) return null;
+    const t2 = j.target.map((v, i) => Math.min(v, bad[i]));
+    for (let k = 0; k < fix.length; k += 2) t2[fix[k]] = Math.min(t2[fix[k]], fix[k + 1]);
+    return { start: bad, target: t2, style: j.style, flaw: order[0], flaws: order };
   }
 
   // ---- M7: a tidy-up: a finished cut with a little regrowth in one or two places ----
