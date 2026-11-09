@@ -304,7 +304,9 @@
       const x = cells[c * 3], y = cells[c * 3 + 1], z = cells[c * 3 + 2];
       if (beardZone(x, y, z) < 0.05) continue;
       // grid cells on the mesh's inner surfaces (inside the head or the mouth) never hold a beard: nothing there is seen or reached
-      if (y > -0.2 && Math.hypot(x / 1.7, (z - 0.1) / 2.2) < 0.78) continue;
+      // (inner cells all lie within |x| 0.8; wider cells are the outer skin under the jaw angles, which this oval
+      // also reaches: excluding them left a bare V-shaped wedge down each side of the jaw into the neck)
+      if (y > -0.2 && Math.abs(x) < 0.9 && Math.hypot(x / 1.7, (z - 0.1) / 2.2) < 0.78) continue;
       if (y > -0.95 && z < 0.75 && Math.abs(x) < 0.9) continue;
       // the very top of the sideburn belongs to the scalp hair, which the clipper cuts there
       if (y > 1.38) continue;
