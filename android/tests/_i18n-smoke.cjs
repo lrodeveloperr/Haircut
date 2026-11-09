@@ -13,7 +13,7 @@ const build = path.resolve(__dirname, '../../source/build');
   for (const [lang, automatic] of cases) {
     const context = await browser.newContext({ viewport: { width: 412, height: 892 }, locale: lang });
     await context.route('http://flow.test/**', (route) => { const u = new URL(route.request().url()), f = path.join(build, u.pathname === '/' ? 'index.html' : u.pathname); return fs.existsSync(f) ? route.fulfill({ path: f }) : route.fulfill({ status: 404, body: '' }); });
-    await context.addInitScript(() => { window.__androidRewardedReady = true; window.AndroidHost = { languageTag() { return navigator.language; }, request(id, op) { setTimeout(() => __androidHost.complete(id, true, op === 'load' ? '{}' : ''), 0); }, gameReady() {}, showRewarded() {}, showInterstitial() {}, openPrivacy() {}, showPrivacyOptions() {} }; });
+    await context.addInitScript(() => { window.__androidRewardedReady = true; window.AndroidHost = { languageTag() { return navigator.language; }, request(id, op) { setTimeout(() => __androidHost.complete(id, true, op === 'load' ? '{}' : ''), 0); }, gameReady() {}, homeReady() {}, showRewarded() {}, showInterstitial() {}, openPrivacy() {}, showPrivacyOptions() {} }; });
     const page = await context.newPage(); page.setDefaultTimeout(120000);
     const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
     page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });

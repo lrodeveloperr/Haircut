@@ -26,7 +26,7 @@ const PER_LEVEL = +process.env.DIRECTOR_BROWSER_CONTRACTS || 160;
     await context.addInitScript(() => {
       window.__androidRewardedReady = true; window.AndroidHost = {
         request(id, op, payload) { setTimeout(() => { if (op === 'save') localStorage.setItem('dir-save', JSON.parse(payload)); __androidHost.complete(id, true, op === 'load' ? localStorage.getItem('dir-save') || '{}' : ''); }, 5); },
-        gameReady() {}, showRewarded() {}, showInterstitial() { setTimeout(() => __androidHost.ad('interstitial', 'failed'), 10); }, openPrivacy() {}, showPrivacyOptions() {},
+        gameReady() {}, homeReady() {}, showRewarded() {}, showInterstitial() { setTimeout(() => __androidHost.ad('interstitial', 'failed'), 10); }, openPrivacy() {}, showPrivacyOptions() {},
       };
     });
     const page = await context.newPage(), errors = [];

@@ -41,8 +41,9 @@
     const yBot = -1.22 + (-0.8 + 1.22) * smooth(0.85, 1.6, ang);
     let m = smooth(yBot - 0.04, yBot + 0.08, y) * (1 - smooth(yTop - 0.08, yTop + 0.03, y));
     m *= 1 - smooth(1.5, 1.64, ang);
-    // the mouth's cut-out stops at the lips, so a full beard closes round the mouth corners
-    m *= 1 - smooth(0.15, 0.5, lipMask(x, y, z) * (1 - smooth(0.42, 0.58, ax)));
+    // the mouth's cut-out covers the whole lip, to its corners: lipMask itself fades out past the lip's ends, so a full
+    // beard still closes round the mouth corners without growing on the lip (glsl.js beardZoneS matches this)
+    m *= 1 - smooth(0.15, 0.5, lipMask(x, y, z));
     return m;
   }
 
@@ -304,8 +305,12 @@
       const x = cells[c * 3], y = cells[c * 3 + 1], z = cells[c * 3 + 2];
       if (beardZone(x, y, z) < 0.05) continue;
       // grid cells on the mesh's inner surfaces (inside the head or the mouth) never hold a beard: nothing there is seen or reached
-      if (y > -0.2 && Math.hypot(x / 1.7, (z - 0.1) / 2.2) < 0.78) continue;
-      if (y > -0.95 && z < 0.75 && Math.abs(x) < 0.9) continue;
+      // (inner cells all lie within |x| 0.8; wider cells are the outer skin under the jaw angles, which this oval
+      // also reaches: excluding them left a bare V-shaped wedge down each side of the jaw into the neck)
+      if (y > -0.2 && Math.abs(x) < 0.9 && Math.hypot(x / 1.7, (z - 0.1) / 2.2) < 0.78) continue;
+      // (inside the neck tube the outermost surface lies within 1.1 of the projection centre; the throat skin under the
+      // jaw angles, which this box also reaches, lies at 1.15-1.45: excluding it left a bare V on the front of the neck)
+      if (y > -0.95 && z < 0.75 && Math.abs(x) < 0.9 && S.maxR[c] < 1.1) continue;
       // the very top of the sideburn belongs to the scalp hair, which the clipper cuts there
       if (y > 1.38) continue;
       if (lipMask(x, y, z) > 0.2 || (Math.abs(x) < 0.45 && Math.abs(y - 0.125) < 0.28 && z < 2.2)) continue;

@@ -210,7 +210,9 @@ float beardZoneS(vec3 p, float soft){
   float yBot = mix(-1.22, -.8, smoothstep(.85, 1.6, ang));
   float m = smoothstep(yBot - .04 * soft, yBot + .08 * soft, p.y) * (1.0 - smoothstep(yTop - .08 * soft, yTop + .03, p.y));
   m *= 1.0 - smoothstep(1.5 - .03 * soft, 1.64, ang);
-  m *= 1.0 - smoothstep(.15, .5, lipMask(p) * (1.0 - smoothstep(.42, .58, ax)));
+  // the whole lip, to its corners: lipMask itself fades out past the lip's ends, so the beard still closes round the
+  // mouth corners without growing (or shading the skin) on the lip
+  m *= 1.0 - smoothstep(.15, .5, lipMask(p));
   return m;
 }
 float beardZone(vec3 p){ return beardZoneS(p, 1.0); }
@@ -703,7 +705,10 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
   // patchy growth on the cheeks and neck for lighter beards
   float cheekW=smoothstep(.45,.9,atan(ax,B.z-.25))*(1.0-smoothstep(-.2,.2,B.y-.9*(1.0-smoothstep(.0,1.0,ax))));
   float ptch=smoothstep(uBeardGrey.z-.15,uBeardGrey.z+.15,n3(B*3.4+aSeed.z*.3)+(1.0-cheekW)*.35);
-  float keep=mix(1.0,ptch,uBeardGrey.z>.01?1.0:0.0)*areataKeep(B);
+  // a patchy beard grows sparser where it is thin, never bare: up to 60% fewer hairs there, the rest a third shorter
+  // (dropping every hair there left bald blotches that read as gaps)
+  float thin=(1.0-ptch)*(uBeardGrey.z>.01?1.0:0.0);
+  float keep=(1.0-step(aSeed.y,thin*.6))*(1.0-.35*thin)*areataKeep(B);
   float L=mm/42.0*(.82+.36*aSeed.x)*uBStyleB.z*keep;
   ${EXH() ? 'L*=1.0-.9*texture2D(uFoam,beardUV(B)).r;' : ''}
   // growth direction: down the face; outward on the moustache; down the neck under the jaw
@@ -750,7 +755,7 @@ ${EX ? EX_RAZOR : ''}      #ifdef HSC_LOW
   float fall=max(.2,-tipDir.y);
   float Lcap=max(0.0,(B.y-yEnd)/fall);
   // only over the lip itself: beside the mouth the hair keeps its length, so the corners stay covered
-  L=mix(L,min(L,Lcap),above*(1.0-smoothstep(.44,.6,ax)));
+  L=mix(L,min(L,Lcap),above*(1.0-smoothstep(.5,.62,ax)));
   float wave=sin(t*6.2831*uBStyleA.y*(1.0+mm/15.0)+aSeed.x*6.2831)*uBStyleA.x*t;
   vec3 p=aRoot+n*.002+curve*(t*L)+tA*wave*L;
   // longer hair gathers into soft clumps

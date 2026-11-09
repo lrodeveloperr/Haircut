@@ -50,7 +50,7 @@ function youtube(options = {}) {
   let raw = options.saved ?? '';
   w.ctx.ytgame = { IN_PLAYABLES_ENV: true,
     system: { isAudioEnabled: () => true, getLanguage: async () => 'en', onPause: () => () => {}, onResume: () => () => {}, onAudioEnabledChange: () => () => {} },
-    game: { async loadData() { return raw; }, async saveData(v) { calls.push('write'); if (options.write) await options.write(v); raw = v; }, gameReady() {} },
+    game: { async loadData() { return raw; }, async saveData(v) { calls.push('write'); if (options.write) await options.write(v); raw = v; }, gameReady() {}, homeReady() {} },
     ads: { async requestRewardedAd() { calls.push('rewarded'); return true; }, async requestInterstitialAd() {} },
     health: { logWarning() {} } };
   vm.runInContext(read('source/youtube/client.js'), w.ctx);

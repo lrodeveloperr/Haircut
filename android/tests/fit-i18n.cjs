@@ -61,7 +61,7 @@ const fails = [];
   try {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await ctx.route('http://fit.test/**', (route) => { const u = new URL(route.request().url()), f = path.join(build, u.pathname === '/' ? 'index.html' : u.pathname); return fs.existsSync(f) ? route.fulfill({ path: f }) : route.fulfill({ status: 404, body: '' }); });
-    await ctx.addInitScript(() => { window.__androidRewardedReady = true; window.AndroidHost = { request(id, op) { setTimeout(() => __androidHost.complete(id, true, op === 'load' ? '{}' : ''), 0); }, gameReady() {}, showRewarded() {}, showInterstitial() {}, openPrivacy() {}, showPrivacyOptions() {} }; });
+    await ctx.addInitScript(() => { window.__androidRewardedReady = true; window.AndroidHost = { request(id, op) { setTimeout(() => __androidHost.complete(id, true, op === 'load' ? '{}' : ''), 0); }, gameReady() {}, homeReady() {}, showRewarded() {}, showInterstitial() {}, openPrivacy() {}, showPrivacyOptions() {} }; });
     const page = await ctx.newPage(); page.setDefaultTimeout(400000);
     const cdp = await ctx.newCDPSession(page);
     const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
