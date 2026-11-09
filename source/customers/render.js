@@ -88,6 +88,22 @@
       // a cell with no roots holds no visible hair (the mesh's inner surfaces share the grid): no beard starts there
       st.surface.rooted = new Uint8Array(8192);
       for (let i = 0; i < model.roots.count; i++) { const c = HSC.beardCell(model.roots.base[i * 3], model.roots.base[i * 3 + 1], model.roots.base[i * 3 + 2]); if (c >= 0) st.surface.rooted[c] = 1; }
+      // the roots are random, so a cell of the outer skin can miss them all. Among rooted cells of the same surface (at
+      // the same distance from the grid's centre) it still holds beard: a zero there thinned the beard and its shadow in
+      // scattered spots, since the length grid is filtered between cells
+      {
+        const R0 = st.surface.rooted.slice(), mr = st.surface.maxR, S0 = st.surface;
+        for (let c = 0; c < 8192; c++) {
+          if (R0[c] || S0.offs[c] === S0.offs[c + 1]) continue;
+          const cx = c & 127, cy = c >> 7;
+          let n = 0;
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            const xx = cx + dx, yy = cy + dy, nb = yy * 128 + xx;
+            if ((dx || dy) && xx >= 0 && xx < 128 && yy >= 0 && yy < 64 && R0[nb] && Math.abs(mr[nb] - mr[c]) < 0.1) n++;
+          }
+          if (n >= 4) st.surface.rooted[c] = 1;
+        }
+      }
       st.beardCells = HSC.beardCellPositions(st.surface, st.base);
       HSC.beardSurface = st.beardCells;
       st.beardMesh = makeBeardMesh(c, st.roots);
@@ -844,9 +860,9 @@
     U.uGreyA.value = [person.hair.grey, 0, toneB + 0.05 * age, 0];
     U.uGreyB.value = { temples: [1.2, 0, 0, 0.4], front: [0, 1.2, 0, 0.35], crown: [0, 0, 1.2, 0.35], even: [0, 0, 0, 0] }[person.hair.greyPattern || 'temples'] || [1.2, 0, 0, 0.4];
     U.uBeardGrey.value = [person.beard.grey, Math.min(0.85, toneB + 0.04), person.beard.patchy, 0];
-    // how far a moustache hangs over the upper lip (never past the mouth line)
-    U.uBeardLip.value = { walrus: 0.95, moustache: 0.45, horseshoe: 0.45, pencil: 0, full: 0.4, long: 0.5, boxed: 0.3, goatee: 0.3, vandyke: 0.3,
-      handlebar: 0.6, anchor: 0, balbo: 0.3, circle: 0.35, ducktail: 0.4, garibaldi: 0.5 }[person.beard.style] ?? 0.3;
+    // how far a moustache hangs over the upper lip (never past the mouth line). A moustache is trimmed to the top of
+    // the lip; only a walrus, which is defined by it, still covers the upper lip
+    U.uBeardLip.value = { walrus: 0.95 }[person.beard.style] ?? 0;
     // Android: brow shape, freckles and dark papules, hairline shape (phenotypes.js); defaults keep the original look
     const ft = HSC.featuresOf ? HSC.featuresOf(person) : null;
     U.uBrowB.value = ft ? ft.brow : [0.08, 0, 1, 0];
